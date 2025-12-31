@@ -6,6 +6,10 @@ this is currently me getting the base cpp implementation up, for those who have 
 example for the replay parser is found in experiment/dagor_replay_test/TestLoadingReplay.cpp
 
 Due to any changes Gaijin may change to the replay format, the Replay Parser will only attempt to be compatable with the most recent non-dev release of warthunder
+
+This attempts to be buildable for
+Windows: using minGW, and MSVC (not recently tested),
+Linux (WSL2): using gcc
 # TODO
 setup abi
 
@@ -31,7 +35,7 @@ ensure LICENCE is correctly setup
 
 the ability to dynamically feed the parser a packet through the abi, and examine the state of the replay at that specific point. no rewinding.
 
-the ability to interact with any entity and get the components of any entity through the abi. 
+the ability to interact with any entity and get the components of any entity through the abi.
 
 the ability to read both chat and battle log messages, with battle logs being translatable.
 
