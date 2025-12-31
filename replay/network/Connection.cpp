@@ -672,8 +672,12 @@ namespace net
     if (!componentsSynced.test(comp.getComponentId(), false)) // FIXME: race on components replication & re-creation
     {
       G_UNUSED(eid);
-      EXCEPTION("");
-      LOGE("Attempt to serialize not-yet synced component <%s> of type <%s>, was entity %d<%s> re-created?")
+      //EXCEPTION("");
+      LOGE("Attempt to serialize not-yet synced component <{}> of type <{}>",
+           ecs::g_ecs_data->getDataComponents()->getName(comp.getComponentId()),
+           ecs::g_ecs_data->getComponentTypes()->getName(comp.getTypeId()),
+           eid.get_handle(),
+           mgr->getEntityTemplateName(eid));
       //logerr("Attempt to serialize not-yet synced component <%s> of type <%s>, was entity %d<%s> re-created?",
       //       mgr->getDataComponents().getComponentNameById(comp.getComponentId()), mgr.getComponentTypes().getTypeNameById(comp.getTypeId()),
       //       (ecs::entity_id_t)eid, mgr.getEntityTemplateName(eid));

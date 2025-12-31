@@ -572,7 +572,7 @@ int32_t Z_EXPORT PREFIX(deflateParams)(PREFIX3(stream) *strm, int32_t level, int
 }
 
 /* ========================================================================= */
-int32_t Z_EXPORTPREFIX(deflateTune)(PREFIX3(stream) *strm, int32_t good_length, int32_t max_lazy, int32_t nice_length,
+int32_t Z_EXPORT PREFIX(deflateTune)(PREFIX3(stream) *strm, int32_t good_length, int32_t max_lazy, int32_t nice_length,
                                     int32_t max_chain) {
   deflate_state *s;
 

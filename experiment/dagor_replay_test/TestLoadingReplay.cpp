@@ -42,7 +42,7 @@ int main()
   fs::path config_file = conf_dir / "dagor_replay_test.blk";
   DataBlock conf_blk;
   g_log_handler.set_default_sink_logfile((conf_dir / "logfile.txt").string());
-  start_log_consumer_thread();
+  g_log_handler.start_thread();
   G_ASSERT(load(conf_blk, config_file.string().c_str()));
   bool is_server_replay = conf_blk.getBool("is_server_replay", false);
   bool source_is_linux_path = conf_blk.getBool("source_is_linux_path", false);

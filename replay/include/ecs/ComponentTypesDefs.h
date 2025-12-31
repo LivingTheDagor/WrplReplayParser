@@ -44,7 +44,9 @@ ECS_DECLARE_CREATABLE_TYPE(nm::list_name)
 POD_DEFS(dm, PartIdList, dm::PartId)
 POD_DEFS(props, PropsIdList, props::PropsId)
 CREATEABLE_DEFS(ecs, StringList, ecs::string)
-ECS_DECLARE_POD_TYPE(ecs::EntityId) namespace ecs { using EidList = ecs::List<ecs::EntityId>;} ECS_DECLARE_BASE_TYPE(ecs::EidList, "ecs::EidList", true);
+ECS_DECLARE_POD_TYPE(ecs::EntityId)
+namespace ecs { using EidList = ecs::List<ecs::EntityId>; }
+ECS_DECLARE_BASE_TYPE(ecs::EidList, "ecs::EidList", true);
 POD_DEFS(ecs, UInt8List, uint8_t)
 POD_DEFS(ecs, UInt16List, uint16_t)
 POD_DEFS(ecs, UInt32List, uint32_t)
@@ -66,6 +68,11 @@ POD_DEFS(ecs, Int64List, int64_t)
 
 typedef ecs::UInt8List ProjectilePhysObject;
 
+namespace dag {
+  template<typename T>
+  struct Vector : public std::vector<T> {
+  };
+}
 
 ECS_DECLARE_CREATABLE_TYPE(dag::Vector<dafg::NodeHandle>)
 
@@ -103,10 +110,9 @@ struct FieldSerializerDict {
     std::ostringstream oss;
     oss << fmt::format("({})", data.size());
     oss << "{";
-    for(const auto &pair : data)
-    {
+    for (const auto &pair: data) {
       oss << fmt::format("{}: b'", pair.first);
-      FormatBytesToStream(oss, std::span<char>((char *)pair.second.data(), pair.second.size()));
+      FormatBytesToStream(oss, std::span<char>((char *) pair.second.data(), pair.second.size()));
       oss << "', ";
     }
     oss << "}";
@@ -174,23 +180,29 @@ namespace ecs {
 
   class FieldSerializerDictIO : public ecs::ComponentSerializer {
   public:
-    void serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
+    void
+    serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
 
-    bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
+    bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint,
+                     ecs::EntityManager *mgr) override;
   };
 
   class RocketSerializer : public ecs::ComponentSerializer {
   public:
-    void serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
+    void
+    serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
 
-    bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
+    bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint,
+                     ecs::EntityManager *mgr) override;
   };
 
-class RendInstDescSerializer : public ecs::ComponentSerializer {
-  void serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
+  class RendInstDescSerializer : public ecs::ComponentSerializer {
+    void
+    serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
 
-  bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
-};
+    bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint,
+                     ecs::EntityManager *mgr) override;
+  };
 }
 
 ECS_DECLARE_CREATABLE_TYPE(Rocket) // these need to be creatable as we have vectors in the struct
@@ -320,9 +332,9 @@ ECS_DECLARE_CREATABLE_TYPE(GuidanceLockPtr)
 ECS_DECLARE_CREATABLE_TYPE(GuidancePtr)
 ECS_DECLARE_CREATABLE_TYPE(AnimIrqToEventComponent)
 ECS_DECLARE_CREATABLE_TYPE(ecs::SharedComponent<SharedPrecomputedWeaponPositions>)
-ECS_DECLARE_CREATABLE_TYPE(ecs::SharedComponent< ::ecs::Array>)
-ECS_DECLARE_CREATABLE_TYPE(ecs::SharedComponent< ::ecs::Object>)
-ECS_DECLARE_CREATABLE_TYPE(ecs::SharedComponent< CapsuleApproximation>)
+ECS_DECLARE_CREATABLE_TYPE(ecs::SharedComponent<::ecs::Array>)
+ECS_DECLARE_CREATABLE_TYPE(ecs::SharedComponent<::ecs::Object>)
+ECS_DECLARE_CREATABLE_TYPE(ecs::SharedComponent<CapsuleApproximation>)
 ECS_DECLARE_CREATABLE_TYPE(PhysRagdoll)
 ECS_DECLARE_CREATABLE_TYPE(PhysBody)
 ECS_DECLARE_CREATABLE_TYPE(LightingAnimchar)
@@ -332,6 +344,7 @@ ECS_DECLARE_CREATABLE_TYPE(FootstepFx)
 ECS_DECLARE_CREATABLE_TYPE(MotionMatchingController)
 ECS_DECLARE_CREATABLE_TYPE(AnimationDataBase)
 ECS_DECLARE_CREATABLE_TYPE(CapsulesAOHolder)
+
 #include "ecs/ComponentPrintingImplementations.h"
 
 #endif //MYEXTENSION_COMPONENTTYPESDEFS_H

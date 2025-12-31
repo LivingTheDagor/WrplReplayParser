@@ -162,9 +162,6 @@ class logger_sink {
 
 
 class log_handler {
-  friend void start_log_consumer_thread();
-
-  friend void *thread_start(void *);
 
   friend file_sink;
 
@@ -180,8 +177,8 @@ class log_handler {
   std::vector<logger_sink *> sinks{};
 
   std::unordered_map<std::string, std::weak_ptr<file_sink>> file_sinks{};
-
-  pthread_t handle; // handle for consumer thread
+  std::thread logger_thread;
+  //pthread_t handle; // handle for consumer thread
 
   logger_sink *get_sink(sink_handle_t s_handle) {
     switch (s_handle) {
@@ -249,6 +246,12 @@ class log_handler {
 
 public:
 
+  void start_thread() {
+    if(!this->logger_thread.joinable()) {
+      this->logger_thread = std::thread(&log_handler::consumer_loop, this);
+    }
+  }
+
   void wait_until_empty() {
     std::unique_lock<std::mutex> lock(cv_mtx);
     size_t len = 0;
@@ -272,7 +275,8 @@ public:
 
   ~log_handler() {
     this->running = false;
-    pthread_join(this->handle, NULL);
+    logger_thread.join();
+
     action(); // do final cleanup, only allow because logger thread has been destroyed
     flush_all();
   }
@@ -357,11 +361,6 @@ public:
 };
 
 extern log_handler g_log_handler;
-
-void *thread_start(void *);
-
-// call to start thread
-void start_log_consumer_thread();
 
 void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL level, std::string &&message);
 

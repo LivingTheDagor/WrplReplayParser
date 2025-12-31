@@ -3,7 +3,6 @@
 #ifndef WTFILEUTILS_LISTTYPE_H
 #define WTFILEUTILS_LISTTYPE_H
 #include "eastl/vector.h"
-#include "ecs/ComponentTypes/dag_vector.h"
 
 namespace ecs {
   class EntityComponentRef;
