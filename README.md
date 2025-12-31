@@ -26,3 +26,13 @@ overhaul directory structure
 ADD COMMENTS
 
 ensure LICENCE is correctly setup
+
+# GOALS
+
+the ability to dynamically feed the parser a packet through the abi, and examine the state of the replay at that specific point. no rewinding.
+
+the ability to interact with any entity and get the components of any entity through the abi. 
+
+the ability to read both chat and battle log messages, with battle logs being translatable.
+
+the ability to see the global states through the mpi, maybe look into code generation for these? the Reflectables are fairly simple structs.
