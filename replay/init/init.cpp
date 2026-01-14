@@ -32,8 +32,8 @@ void initialize(std::string &VromfsPath) {
   fs::path basePath = VromfsPath;
   std::string p1 = (basePath / "aces.vromfs.bin").string();
   std::string p2 = (basePath / "game.vromfs.bin").string();
-  EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p1), "bad");
-  EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p2), "bad");
+  EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p1), "{} does not exist", p1);
+  EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p2), "{} does not exist", p2);
   parseTemplates();
   //ecs::g_ecs_data->getTemplateDB()->DebugPrintTemplate("medic_box_item");
   hello();

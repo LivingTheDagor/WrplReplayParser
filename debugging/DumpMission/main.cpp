@@ -347,7 +347,7 @@ int main() {
   std::ostringstream ss;
   std::ofstream out{dump_path};
   auto cb = &out;
-  EXCEPTION_IF_FALSE(out, "failed to open file for write(%s)", dump_path.c_str());
+  EXCEPTION_IF_FALSE(out, "failed to open file for write({})", dump_path.c_str());
   outBlk->printBlock(0, ss);
   auto s = ss.str();
   cb->write(s.c_str(), s.size());

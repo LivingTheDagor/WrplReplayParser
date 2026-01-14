@@ -180,7 +180,7 @@ bool BitstreamDeserializer::skip(ecs::component_index_t cidx, const ecs::DataCom
   if (need_constructor(componentTypeInfo->flags))
   {
     ctm = componentTypes->getCTM(compInfo.componentIndex);
-    G_ASSERTF(ctm, "type manager for type 0x%X (%d) missing", compInfo.hash, compInfo.componentIndex);
+    G_ASSERTF(ctm, "type manager for type {:#x} ({}) missing", compInfo.hash, compInfo.componentIndex);
   }
   if (ctm)
     ctm->create(tempData, *mgr, ecs::INVALID_ENTITY_ID, compInfo.componentIndex);

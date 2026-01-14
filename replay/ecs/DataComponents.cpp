@@ -21,14 +21,14 @@ namespace ecs
       if (nameStr != nullptr && existing_component->name_index != 0 &&
           strcmp(nameStr, names.getDataRawUnsafe(existing_component->name_index)) != 0) //-V522
       {
-        EXCEPTION("component <%s> with same hash =0x%X as <%s> is already registered, hash collision.",
+        EXCEPTION("component <{}> with same hash ={:#x} as <{}> is already registered, hash collision.",
                   getName(existingId),
                   nameHash, nameStr);
         return INVALID_COMPONENT_INDEX;
       }
       if (existing_component->componentIndex != component_type) {
         if (component_type != INVALID_COMPONENT_TYPE_INDEX) {
-          EXCEPTION("component <%s>(0x%X) with type <%s>(%d) is already registered with different type <%s>(%d)!",
+          EXCEPTION("component <{}>({:#x}) with type <{}>({}) is already registered with different type <{}>({})!",
                     nameStr, nameHash,
                     types.getName(component_type), component_type,
                     types.getName(this->getDataComponent(existingId)->componentIndex),
@@ -54,7 +54,7 @@ namespace ecs
     const uint32_t nameAddr = usedName ? names.addDataRaw(usedName, strlen(usedName) + 1) : 0;
     components.emplace_back(nameHash,component_type, component_type_name, io, this, nameAddr,
                             io ? DataComponent::HAS_SERIALIZER : 0);
-    //return components.size() - 1;
+    return components.size() - 1;
     LOG("create {} ecs component <{}> hash<{:#x}> of component_type {}<{}|{:#x}>", components.size() - 1,
                 usedName,
                 nameHash, component_type, types.getName(component_type).data(), component_type_name);
@@ -64,7 +64,7 @@ namespace ecs
 
   void DataComponents::initialize(ComponentTypes &types) {
     //clear();
-    LOG("ecs: initialize DataComponents Types\n");
+    LOG("ecs: initialize DataComponents Types");
     this->names.addDataRaw("", 1); // ensures the zeroth index is not a valid name / is emtpy name
     createComponent(ECS_HASH("eid"), types.findType(ECS_HASH("ecs::EntityId").hash), nullptr, types);
     // initialize eid and tag first, for debugging purposes?

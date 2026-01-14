@@ -12,7 +12,8 @@
 #include <cstdlib>
 #include <cstdarg>  // for va_list, va_start, va_end
 #include <cstdint>
-#include <stacktrace>
+//#include <cpptrace/cpptrace.hpp>
+#include "utils.h"
 
 #ifdef __analysis_assume
 #define G_ANALYSIS_ASSUME __analysis_assume
@@ -35,23 +36,21 @@
 #endif
 #endif
 [[noreturn]] inline void
-assert_failed(const char *file, int line, const char *function, const char *expression, const char *format, ...) {
-  std::fprintf(stderr, "ASSERTION FAILED:\n %s:%d\nFunction: %s \nExpression: %s \n", file, line, function, expression);
-
-  std::cout.flush();
-  if (format) {
-    va_list args;
-    va_start(args, format);
-    std::vfprintf(stderr, format, args);
-    va_end(args);
-    std::fprintf(stderr, "\n"); // first fprintf does a newln, so this is only needed if we have a format
+assert_failed_ext(const char *file, int line, const char *function, const char *expression, std::string message) {
+  std::cerr << "ASSERT FAILED CERR\n";
+  //std::fprintf(stderr, "ASSERTION FAILED:\n %s:%d\nFunction: %s \nExpression: %s \n", file, line, function, expression);
+  LOGE("ASSERTION FAILED:\n {}:{}\nFunction: {} \nExpression: {} \n", file, line, function, expression);
+  if (!message.empty()) {
+    LOGE("Message: {}", message);
   }
-#ifdef _MSC_VER // stacktrace only exists on msvc :((
-  std::cout << std::stacktrace::current() << std::endl;
-#endif
-  //std::cout << out << "\n";
+  //LOGE("{}", cpptrace::generate_trace().to_string());
+  g_log_handler.wait_until_empty();
+  g_log_handler.flush_all();
   std::exit(EXIT_FAILURE);
 }
+
+#define assert_failed(file, line, func, expr_str, format_, ...) assert_failed_ext(file, line, func, expr_str, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__))
+
 
 #define DAGOR_DBGLEVEL 2
 #if DAGOR_DBGLEVEL < 1
@@ -69,7 +68,7 @@ assert_failed(const char *file, int line, const char *function, const char *expr
   {                                                                       \
     const bool g_assert_result_ = !!(expression);                         \
     if (DAGOR_UNLIKELY(!g_assert_result_))                                \
-      assert_failed(__FILE__, __LINE__, __FUNCTION__, expr_str, nullptr); \
+      assert_failed_ext(__FILE__, __LINE__, __FUNCTION__, expr_str, ""); \
   } while (0)
 
 #define G_ASSERTF_EX(expression, expr_str, fmt, ...)                                   \
@@ -167,7 +166,7 @@ assert_failed(const char *file, int line, const char *function, const char *expr
   {                                                                   \
     bool g_verify_result_ = !!(expression);                           \
     if (DAGOR_UNLIKELY(!g_verify_result_))                            \
-      assert_failed(__FILE__, __LINE__, __FUNCTION__, nullptr, nullptr); \
+      assert_failed_ext(__FILE__, __LINE__, __FUNCTION__, nullptr, ""); \
   } while (0)
 
 #define G_VERIFYF(expression, fmt, ...)                                              \

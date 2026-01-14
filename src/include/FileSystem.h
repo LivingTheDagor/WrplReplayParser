@@ -513,7 +513,7 @@ public:
   SmartFSHandle operator[](const std::string &lookup_name) override {
     auto x = getFSObject(lookup_name);
     if (x == nullptr) {
-      EXCEPTION("indexing of directory '%s' for FSObject '%s' returned null", this->name.string().c_str(), lookup_name.c_str());
+      EXCEPTION("indexing of directory '{}' for FSObject '{}' returned null", this->name.string().c_str(), lookup_name.c_str());
     }
     return SmartFSHandle(x);
   }

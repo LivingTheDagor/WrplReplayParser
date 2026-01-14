@@ -50,12 +50,12 @@ namespace ecs {
       auto cData = this->getComponentData(ctypeId);
       if (strcmp(name, cData->name.data()) != 0)
       {
-        EXCEPTION("component type <%s> with same hash =0x%X as <%s> is already registered, hash collision.", cData->name.data(), type,
+        EXCEPTION("component type <{}> with same hash ={:#x} as <{}> is already registered, hash collision.", cData->name.data(), type,
                   name);
         return INVALID_COMPONENT_TYPE_INDEX;
       }
       // This is not severe error per se but without logger developers are not noticing it during development
-      EXCEPTION("ecs type <%s>(%#x) is already registered", name, type);
+      EXCEPTION("ecs type <{}>({:#x}) is already registered", name, type);
       return ctypeId;
     }
     G_ASSERT_RETURN(getTypeCount() < INVALID_COMPONENT_TYPE_INDEX - 1, INVALID_COMPONENT_TYPE_INDEX);

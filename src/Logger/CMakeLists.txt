@@ -11,7 +11,10 @@ target_include_directories(LOGGER
         ${INCLUDES}
 )
 
-target_link_libraries(LOGGER fmt::fmt)
+target_link_libraries(LOGGER PUBLIC
+        fmt::fmt
+        # cpptrace::cpptrace
+)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_options(LOGGER PUBLIC /Zc:preprocessor) # some of the logging preprossor logic under MSVC needs this

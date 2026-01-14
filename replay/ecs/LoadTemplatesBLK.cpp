@@ -15,7 +15,7 @@ namespace ecs {
     }
     auto index = types->findType(ComponentTypeInfo<T>::type);
     if (index == INVALID_COMPONENT_TYPE_INDEX)
-      EXCEPTION("Unable to find type %s", ComponentTypeInfo<T>::type_name);
+      EXCEPTION("Unable to find type {}", ComponentTypeInfo<T>::type_name);
     return index;
   }
 
@@ -32,7 +32,7 @@ namespace ecs {
     {
       index = types->createComponent(name_hash, idx, nullptr, *cTypes);
       if (index == INVALID_COMPONENT_TYPE_INDEX)
-        EXCEPTION("Unable to create type %s", name);
+        EXCEPTION("Unable to create type {}", name);
     }
     return index;
   }
@@ -296,11 +296,8 @@ namespace ecs {
           out_array.push_back(std::move(*(typename T::value_type *) arrElem.default_component.getRawData()));
         else {
           auto datacmps = g_ecs_data->getDataComponents();
-          EXCEPTION("Wrong type with key '%s' passed to '%s' in template '%s:%s'",
-                    datacmps->getDataComponent(arrElem.comp_type_index)->getName().data(),
-                    blk.getBlockName(), // probably not equiv to what it was before but I dont fucking care
-                    ctx.templName);
-        }
+          EXCEPTION("debug this I dont know how to fix this format string");
+}
 
       }
     });
@@ -382,7 +379,7 @@ namespace ecs {
         } else if (nid == trackId || nid == trackedId || nid == replicateId || nid == replicatedId ||
                    nid == hideId || nid == tagsId || nid == reservedReplId || nid == overrideId) {} // dont care about these right now
         else {
-          EXCEPTION("Unkown reserved name type %s parsing template %s", blk.getParamName(i), blk.getBlockName().data());
+          EXCEPTION("Unkown reserved name type {} parsing template {}", blk.getParamName(i), blk.getBlockName().data());
         }
       } else {
 
@@ -457,7 +454,7 @@ namespace ecs {
 
         component_index_t index = dataComps->getIndex(hash);
         if (index == INVALID_COMPONENT_INDEX)
-          EXCEPTION("Failed to find datacomponent %s", name.c_str());
+          EXCEPTION("Failed to find datacomponent {}", name);
         components->emplace_back(index,
                                  std::move(Component{nullptr,
                                                      hash,
@@ -472,7 +469,7 @@ namespace ecs {
         auto hash = ECS_HASH(type.c_str());
         ecs::type_index_t index = comps->findType(hash.hash);
         if (index == INVALID_COMPONENT_TYPE_INDEX)
-          EXCEPTION("Unable to find type %s", type.c_str());
+          EXCEPTION("Unable to find type {}", type);
         G_ASSERT(this->mangle_type_name.empty()); // this should never encounter name mangling
         //auto name_ = this->mangle_type_name.empty() ? name : mangle_name(name.c_str(), this->mangle_type_name, type);
 
@@ -563,7 +560,7 @@ public:
       std::vector<std::string> files{};
       // imp_fn == path
       const char *fn_with_ext = dd_get_fname(path);
-      G_ASSERTF(strchr(path, '*') >= fn_with_ext, "imp_fn=%s%s", abs_path ? "#" : "", path);
+      G_ASSERTF(strchr(path, '*') >= fn_with_ext, "imp_fn={}{}", abs_path ? "#" : "", path);
       std::string fn_match_re{};
       fn_match_re.reserve((int)strlen(fn_with_ext) * 2 + 1);
       for (const char *p = fn_with_ext; *p; p++)
@@ -606,7 +603,7 @@ public:
         }
       }
       if(!anyFileLoaded && !is_optional)
-        EXCEPTION("No such files on directory <%s>. Please make import_optional or add files to directory", path);
+        EXCEPTION("No such files on directory <{}>. Please make import_optional or add files to directory", path);
       //EXCEPTION("WILD CARD INPUTS NOT SUPPORTED %s %s\n", src_folder.string().c_str(), path);
     } else {
       DataBlock imp_blk;
@@ -621,7 +618,7 @@ public:
       if (load(imp_blk, path_.string().c_str())) {
         resolve_imports(&imp_blk);
       } else if (!is_optional) {
-        EXCEPTION("Failed to load %s", path_.string().c_str());
+        EXCEPTION("Failed to load {}", path_.string());
       }
     }
 

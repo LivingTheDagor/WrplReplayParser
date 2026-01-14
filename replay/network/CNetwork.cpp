@@ -43,7 +43,7 @@ namespace net
         return &bsTemp;
       else
       {
-        EXCEPTION("failed to read compressed packet %d of %d bytes from conn #%d", ctype, BITS_TO_BYTES(bs.GetNumberOfUnreadBits()));
+        EXCEPTION("failed to read compressed packet {} of {} bytes from conn #{}", ctype, BITS_TO_BYTES(bs.GetNumberOfUnreadBits()), -1);
         return nullptr;
       }
     };
@@ -78,7 +78,7 @@ namespace net
           break;
         if (!conn.readReplicationPacket(*bsToRead))
         {
-          EXCEPTION("Failed to read replication packet (%d) of %d bytes", ptype, bsToRead->GetNumberOfBytesUsed());
+          EXCEPTION("Failed to read replication packet ({}) of {} bytes", ptype, bsToRead->GetNumberOfBytesUsed());
           break;
         }
         if(this->peer)
@@ -106,14 +106,14 @@ namespace net
         float cratio = 0;
         bool r = conn.readConstructionPacket(*bsToRead, cratio);
         if (!r)
-          EXCEPTION("Failed to read {} construction packet of %d bytes",
+          EXCEPTION("Failed to read {} construction packet of {} bytes",
                  ptype == ID_ENTITY_CREATION_COMPRESSED ? "compresssed " : "", bsToRead->GetNumberOfBytesUsed());
         break;
       }
       case ID_ENTITY_DESTRUCTION:
       {
         if(!conn.readDestructionPacket(bs))
-          EXCEPTION("Failed to read destruction packet of %d bytes", bs.GetNumberOfBytesUsed());
+          EXCEPTION("Failed to read destruction packet of {} bytes", bs.GetNumberOfBytesUsed());
         break;
       }
     }

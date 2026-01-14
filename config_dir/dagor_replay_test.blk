@@ -1,5 +1,5 @@
 is_server_replay:b=no
 source_is_linux_path:b=no
-source:t="D:\SteamLibrary\steamapps\common\War Thunder\Replays\#2025.12.25 16.34.13.wrpl"
+source:t="D:\SteamLibrary\steamapps\common\War Thunder\Replays\testRpl.wrpl"
 bin_is_linux_path:b=no
 bin_path:t="D:\SteamLibrary\steamapps\common\War Thunder"

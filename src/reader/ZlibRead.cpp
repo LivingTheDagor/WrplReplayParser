@@ -56,7 +56,7 @@ inline int ZlibLoadCB::tryReadImpl(void *ptr, int size) {
     int err = rawInflate ? inflateInit2((z_stream *) &strm, -MAX_WBITS) : inflateInit((z_stream *) &strm);
     if (err != Z_OK) {
       if (fatalErrors) {
-        EXCEPTION("zlib error %d in %s\nsource: '%s'\n", err, "inflateInit", getTargetName());
+        EXCEPTION("zlib error {} in {}; source: '{}'", err, "inflateInit", getTargetName());
       }
       return -1;
     }
@@ -71,7 +71,7 @@ inline int ZlibLoadCB::tryReadImpl(void *ptr, int size) {
   if (res != Z_OK && res != Z_STREAM_END && res != Z_BUF_ERROR) {
     if (fatalErrors) {
 
-      EXCEPTION("zlib error %d (%s) in %s\nsource: '%s'\n", res, ((z_stream *) &strm)->msg, "inflate", getTargetName());
+      EXCEPTION("zlib error {} ({}) in {}; source: '{}'", res, ((z_stream *) &strm)->msg, "inflate", getTargetName());
     }
     return -1;
   }
@@ -129,7 +129,7 @@ bool ZlibLoadCB::ceaseReading() {
 
   bool ret = err == Z_OK;
   if (!ret && fatalErrors) {
-    EXCEPTION("zlib error %d in %s\nsource: '%s'\n", err, "inflateEnd", getTargetName());
+    EXCEPTION("zlib error {} in {}; source: '{}'", err, "inflateEnd", getTargetName());
   }
 
   isFinished = true;

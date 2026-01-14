@@ -6,3 +6,6 @@
 /dumpHere/
 /out/
 /hidden/
+/.venv/
+/replay/codegen/.idea/
+/replay/codegen/.venv/

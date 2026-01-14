@@ -87,7 +87,7 @@ namespace mpi {
   IObject * UnitRef_Dispatch(ObjectID oid, ObjectExtUID extUid, ecs::EntityManager *mgr) {
     if(!extUid)
     {
-      EXCEPTION("dispatch: extended mpi uid is not set for object of type %i", oid>>0xb);
+      EXCEPTION("dispatch: extended mpi uid is not set for object of type {}", oid>>0xb);
     }
     ecs::EntityId eid = ecs::EntityId(extUid << 0x16 | extUid >> 8);
     auto ref = mgr->getNullable<unit::UnitRef>(eid, ECS_HASH("unit__ref"));

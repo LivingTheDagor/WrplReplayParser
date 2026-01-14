@@ -57,7 +57,7 @@ namespace ecs {
 
       // proper copying is important!! this will tell us what failed to copy
       if (!tm->copy(getRawData(), raw_data, componentTypeIndex)) {
-        EXCEPTION("Copy failed for component index %i", componentTypeIndex);
+        EXCEPTION("Copy failed for component index {}", componentTypeIndex);
       }
     }
   }
@@ -120,7 +120,7 @@ namespace ecs {
         ComponentTypeManager *ctm = types->getCTM(componentTypeIndex);
         // proper copying is important!! this will tell us what failed to copy
         if (!ctm->copy(data, this->value, componentTypeIndex)) {
-          EXCEPTION("Copy failed for component index %i", componentTypeIndex);
+          EXCEPTION("Copy failed for component index {}", componentTypeIndex);
         }
       }
     } else // data not initialized, so instead we just initialize the data with our type

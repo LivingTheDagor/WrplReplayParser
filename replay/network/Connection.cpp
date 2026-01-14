@@ -93,10 +93,10 @@ namespace net
         ecs::EntityId eid = deserializeConstruction(bs, serverEid, blockSizeBytes, compression_ratio);
 
         if (!eid)
-          EXCEPTION("Construction of entity of eid 0x%X failed", serverEid);
+          EXCEPTION("Construction of entity of eid {:#x} failed", serverEid);
       }
       else
-        EXCEPTION("Attempt to create already existing network entity %d<%s>", serverEid, mgr->getEntityTemplateName(resolvedEid));
+        EXCEPTION("Attempt to create already existing network entity {}<{}>", serverEid, mgr->getEntityTemplateName(resolvedEid));
       bs.SetReadOffset(startPos + BYTES_TO_BITS(blockSizeBytes)); // generally this isnt actually needed
     }
     return true;
@@ -156,7 +156,7 @@ namespace net
     const char *templName = deserializeTemplate(bs, serverTemplate, templDeserialized);
     if (!templName)
     {
-      logerr("Failed to deserialize template for server entity <%d>", serverId);
+      EXCEPTION("Failed to deserialize template for server entity <%d>", serverId);
       return ecs::INVALID_ENTITY_ID;
     }
     //std::cout << "constructing entity of template: " << templName << "\n";
@@ -218,7 +218,7 @@ namespace net
     else
     {
       // todo: create this template instead! we know everything from server side!
-      EXCEPTION("template <%s> is not in database, and so can't be created", serverTemplates[templateId].c_str());
+      EXCEPTION("template <{}> is not in database, and so can't be created", serverTemplates[templateId].c_str());
     }
     serverToClientTemplates[templateId] = templId;
 
@@ -266,14 +266,14 @@ namespace net
       {
         //int loglev = typeIdx != ecs::INVALID_COMPONENT_TYPE_INDEX ? LOGLEVEL_WARN : LOGLEVEL_ERR;
         //G_UNUSED(loglev);
-        EXCEPTION("component scidx=%d, name=0x%X type=0x%X(%s) is missing in template <%s> on client", serverCidx, name, type,
+        EXCEPTION("component scidx={}, name={:#x} type={:#x}({}) is missing in template <{}> on client", serverCidx, name, type,
                    ecs::g_ecs_data->getComponentTypes()->getName(typeIdx), serverTemplates[templateId].c_str());
       }
       if (typeIdx != ecs::INVALID_COMPONENT_TYPE_INDEX)
         clientCidx =
             ecs::g_ecs_data->createComponent(HashedConstString{nullptr, name}, typeIdx, nullptr);
       else
-        EXCEPTION("Unknown Component found while parsing template. hash: 0x%X", type);
+        EXCEPTION("Unknown Component found while parsing template. hash: {:#x}", type);
     }
     if (serverCidx >= serverToClientCidx.size())
       serverToClientCidx.resize(serverCidx + 1, ecs::INVALID_COMPONENT_INDEX);
@@ -312,7 +312,7 @@ namespace net
       //std::cout << comp << " : " << bs.GetReadOffset() << "\n";
       if (comp >= templateComponentsCount)
       {
-        EXCEPTION("Invalid template component index %d for template local idx %d<%s> (count %d)", comp, server_template,
+        EXCEPTION("Invalid template component index {} for template local idx {}<{}> (count {})", comp, server_template,
                serverTemplates[server_template].c_str(), templateComponentsCount);
         return false;
       }
@@ -353,7 +353,7 @@ namespace net
       }
       else
       {
-        EXCEPTION("Entity 0x%X already destroyed?", serverEid);
+        EXCEPTION("Entity {:#x} already destroyed?", serverEid);
       }
     }
     return true;
@@ -537,7 +537,7 @@ namespace net
 
     // Remove this check when we sure enough that it's not happens and use bitmap for storing info about count < 256 instead
     if (DAGOR_UNLIKELY(componentsInTemplate != serverTemplateComponentsCount[serverWrittenIdx]))
-      logerr("Inconsistent replication components count %d (cur) != %d (initial) in template %d<%s>", componentsInTemplate,
+      LOGE("Inconsistent replication components count %d (cur) != %d (initial) in template %d<%s>", componentsInTemplate,
              serverTemplateComponentsCount[serverWrittenIdx], templateId, mgr->getEntityTemplateName(eid));
 
     if (lessThan256)

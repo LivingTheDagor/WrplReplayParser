@@ -3,7 +3,6 @@
 #ifndef LOGGER_LOGGER_H
 #define LOGGER_LOGGER_H
 
-#include <stdatomic.h>
 #include <condition_variable>
 #include <fstream>
 #include <unordered_map>
@@ -36,7 +35,7 @@ enum LOGLEVEL : uint8_t {
   DEBUG_L1, // debug level 1, most basic messages
   DEBUG_L2, // debug level 2, for messages that can be optionally disabled
   DEBUG_L3, // debug level 3, for messages that can be optionally disabled
-  ERROR, // when an error occurs
+  ERROR_, // when an error occurs
 };
 
 class log_handler;
@@ -104,6 +103,9 @@ class logger_sink {
 
   logger_sink(std::string name, uint64_t start_time) : start_time_ms(start_time), name(std::move(name)) {}
 
+  logger_sink(std::string name, uint64_t start_time, bool print) : start_time_ms(start_time), name(std::move(name)), print_to_console(print) {}
+
+
   logger_sink(const std::string &name, bool print, std::shared_ptr<file_sink> sync/*, sink_handler_t handle*/,
               DEBUG_LEVEL lvl, uint64_t start) {
     this->name = name;
@@ -140,7 +142,7 @@ class logger_sink {
         m = fmt::format("{:.3f} [D2] {}\n", time, msg.msg);
         break;
       }
-      case ERROR: {
+      case ERROR_: {
         m = fmt::format("{:.3f} [E]  {}\n", time, msg.msg);
         break;
       }
@@ -178,6 +180,7 @@ class log_handler {
 
   std::unordered_map<std::string, std::weak_ptr<file_sink>> file_sinks{};
   std::thread logger_thread;
+  bool thread_exists = false;
   bool destructing = false;
   //pthread_t handle; // handle for consumer thread
 
@@ -250,10 +253,13 @@ public:
   void start_thread() {
     if(!this->logger_thread.joinable()) {
       this->logger_thread = std::thread(&log_handler::consumer_loop, this);
+      this->thread_exists = true;
     }
   }
 
   void wait_until_empty() {
+    if(!this->thread_exists)
+      return;
     std::unique_lock<std::mutex> lock(cv_mtx);
     size_t len = 0;
     do {
@@ -278,6 +284,7 @@ public:
     this->destructing = true;
     this->running = false;
     logger_thread.join();
+    this->thread_exists = false;
 
     action(); // do final cleanup, only allow because logger thread has been destroyed
     flush_all();
@@ -310,7 +317,7 @@ public:
       case DEBUG_L3:
         if(sink && sink->level >= 3)
           return true;
-      case ERROR:
+      case ERROR_:
         return true; // we always log error messages, if the sink doesnt exist, we log to default
     }
   }
@@ -325,21 +332,27 @@ public:
     }
   }
 
-  log_handler() : default_sink("default", this->init_time) {}
+  log_handler() : default_sink("default", this->init_time, true) {}
 
   void add_logmessage(std::string &&message, LOGLEVEL lvl, sink_handle_t handler) {
     if (handler == INVALID_SINK_HANDLER) // invalid handle, message wont be added to log queue
     {
-      if(lvl == LOGLEVEL::ERROR)
+      if(lvl == LOGLEVEL::ERROR_)
         handler = DEFAULT_SINK_HANDLER; // we still want errors to be logged
       else {
         return;
       }
     }
     log_msg msg{message, lvl, handler, get_current_time_ms()};
+    if(this->thread_exists) // means thread exists
     {
       std::lock_guard<std::mutex> lock(queue_access_mtx);
       messages.emplace(std::move(msg));
+    }
+    else { // we log it now
+      auto sink = get_sink(msg.sink_handle);
+      if (sink)
+        sink->on_message(msg);
     }
   }
 
@@ -366,15 +379,6 @@ extern log_handler g_log_handler;
 
 void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL level, std::string &&message);
 
-
-constexpr inline std::string format_log_msg(const char *fmt) {
-  return fmt;
-}
-
-template <typename... Args>
-constexpr inline std::string format_log_msg(const char *fmt, Args &&...args) {
-  return fmt::format(fmt, std::forward<Args>(args)...);
-}
 #define LOG_FMT_EXT(sink, level, format_, ...) \
     (log_ext(__FUNCTION__, __LINE__, sink, level, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__)))
 
@@ -389,14 +393,14 @@ constexpr inline std::string format_log_msg(const char *fmt, Args &&...args) {
 #define LOGD1(format_, ...) LOG_FMT_EXT(DEFAULT_SINK_HANDLER, LOGLEVEL::DEBUG_L1, format_, __VA_ARGS__)
 #define LOGD2(format_, ...) LOG_FMT_EXT(DEFAULT_SINK_HANDLER, LOGLEVEL::DEBUG_L2, format_, __VA_ARGS__)
 #define LOGD3(format_, ...) LOG_FMT_EXT(DEFAULT_SINK_HANDLER, LOGLEVEL::DEBUG_L3, format_, __VA_ARGS__)
-#define LOGE(format_, ...) LOG_FMT_EXT(DEFAULT_SINK_HANDLER, LOGLEVEL::ERROR, format_, __VA_ARGS__)
+#define LOGE(format_, ...) LOG_FMT_EXT(DEFAULT_SINK_HANDLER, LOGLEVEL::ERROR_, format_, __VA_ARGS__)
 
 #define ELOGI(sink, format_, ...) LOG_FMT_EXT_CHECK(sink, LOGLEVEL::INFO, format_, __VA_ARGS__)
 #define ELOGD(sink, format_, ...) LOG_FMT_EXT_CHECK(sink, LOGLEVEL::DEBUG_L1, format_, __VA_ARGS__)
 #define ELOGD1(sink, format_, ...) LOG_FMT_EXT_CHECK(sink, LOGLEVEL::DEBUG_L1, format_, __VA_ARGS__)
 #define ELOGD2(sink, format_, ...) LOG_FMT_EXT_CHECK(sink, LOGLEVEL::DEBUG_L2, format_, __VA_ARGS__)
 #define ELOGD3(sink, format_, ...) LOG_FMT_EXT_CHECK(sink, LOGLEVEL::DEBUG_L3, format_, __VA_ARGS__)
-#define ELOGE(sink, format_, ...) LOG_FMT_EXT(sink, LOGLEVEL::ERROR, format_, __VA_ARGS__)
+#define ELOGE(sink, format_, ...) LOG_FMT_EXT(sink, LOGLEVEL::ERROR_, format_, __VA_ARGS__)
 
 
 #define LOG LOGI

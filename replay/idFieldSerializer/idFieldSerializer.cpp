@@ -8,7 +8,7 @@
 
 void writeSize(BitStream &to, uint32_t size_in_bits)
 {
-  assert(size_in_bits);
+  G_ASSERT(size_in_bits);
   uint8_t hdr = 0;
 
   switch (size_in_bits)

@@ -95,7 +95,7 @@ namespace ecs {
     {
       if (i >= size())
       {
-        G_ASSERTF(0, "out of bounds access %d %d", i, size());
+        G_ASSERTF(0, "out of bounds access {} {}", i, size());
         return emptyAttrRO;
       }
       changeGen();
@@ -107,7 +107,7 @@ namespace ecs {
     {
       if (i >= size())
       {
-        G_ASSERTF(0, "out of bounds access %d %d", i, size());
+        G_ASSERTF(0, "out of bounds access {} {}", i, size());
         return emptyAttrRO;
       }
       return (base_type::operator[])(i);

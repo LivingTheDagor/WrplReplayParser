@@ -4,8 +4,8 @@ Decryptor::Decryptor(char *path, bool print)   {
   if(path)
   {
     write = new std::ofstream(path);
-    G_ASSERTF(write, "Unable to write to file %s", path);
-    G_ASSERTF(write->is_open(), "Unable to write to file %s", path);
+    G_ASSERTF(write, "Unable to write to file {}", path);
+    G_ASSERTF(write->is_open(), "Unable to write to file {}", path);
   }
   this->print = print;
   this->index = 0;

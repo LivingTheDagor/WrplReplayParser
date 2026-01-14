@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.22)
 set(CMAKE_CXX_STANDARD 23)
 project(WtFileUtils LANGUAGES C CXX)
 
@@ -6,12 +6,7 @@ include(cmake/functions.cmake)
 set(BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
-if(MSVC)
-#     add_compile_options(/fsanitize=address)
-#     add_link_options(/fsanitize=address)
-endif()
-
-
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_compile_definitions(_TARGET_64BIT)
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_compile_definitions(_TARGET_PC)

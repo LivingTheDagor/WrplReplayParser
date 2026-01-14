@@ -59,7 +59,7 @@ public:
   danet::ReflectionVar<ecs::EntityId> supportUnitRef{"supportUnitRef", &wreckedPartShipUnitRef, 36};
   danet::ReflectionVar<ecs::EntityId> wreckedPartShipUnitRef{"wreckedPartShipUnitRef", &dummyForRoundScore, 37};
   danet::ReflectionVar<danet::RoundScore> dummyForRoundScore{"dummyForRoundScore", &dummyForPlayerStat, 38};
-  danet::ReflectionVar<danet::dummyForPlayerStat> dummyForPlayerStat{"dummyForPlayerStat", &dummyForFootballStat, 39}; // TODO, also fuck that shit
+  danet::ReflectionVar<danet::dummyForPlayerStat> dummyForPlayerStat{"dummyForPlayerStat", &dummyForFootballStat, 39};
   danet::ReflectionVar<danet::dummyForFootballStat> dummyForFootballStat{"dummyForFootballStat", &realNick, 40};
   danet::ReflectionVar<std::string> realNick{"realNick", &squadronId, 41};
   danet::ReflectionVar<uint32_t> squadronId{"squadronId", &forceLockTarget, 42};

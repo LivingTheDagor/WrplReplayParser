@@ -93,7 +93,7 @@ namespace ecs
         // yes, this const cast is ugly. It yet has to be here, there is no other way (besides explicit method in entity manager of
         // course).
         ctm = const_cast<ComponentTypes *>(componentTypes)->getCTM(typeId);
-        G_ASSERTF(ctm, "type manager for type 0x%X (%d) missing", userType, typeId);
+        G_ASSERTF(ctm, "type manager for type {:#x} ({}) missing", userType, typeId);
       }
       if (ctm)
         ctm->create(tempData, *mgr, INVALID_ENTITY_ID, cidx);
@@ -147,7 +147,7 @@ namespace ecs
       return deserializer.read((void *)comp.getRawData(), componentTypeInfo->size * CHAR_BIT, userType);
     else
     {
-      logerr("Attempt to deserialize type 0x%X %d<%s>, which has no typeIO and not pod", userType, typeId,
+      LOGE("Attempt to deserialize type {:#X} {}<{}>, which has no typeIO and not pod", userType, typeId,
              componentTypes->getComponentData(typeId)->name.data());
       return false;
     }

@@ -73,9 +73,9 @@ class VromfsFile : public File {
 public:
   VromfsFile() { data_size = 0; }
 
-  VromfsFile(VROMFs *v_owner, const fs::path &path, const std::shared_ptr<char[]> &owner, int offset, int size) {
+  VromfsFile(VROMFs *v_owner, const fs::path &path, const std::shared_ptr<std::vector<char>> &owner, int offset, int size) {
     this->owner = v_owner;
-    data = std::shared_ptr<char>(owner, owner.get() + offset);
+    data = std::shared_ptr<char>(owner, owner->data() + offset);
     data_size = size;
     init(path);
     vromfsPath = path.relative_path().parent_path();
@@ -107,7 +107,7 @@ public:
     FileReader f(fName);
     if (!load_raw_vromfs_data(f))
       return;
-    BaseReader f2(raw_data.get(), (int) size, false);
+    BaseReader f2(raw_data->data(), (int) size, false);
 
     parse_raw_vromfs_data(f2);
   }
@@ -119,7 +119,7 @@ public:
 
     if (!load_raw_vromfs_data(f))
       return;
-    BaseReader f2(raw_data.get(), (int) size, false);
+    BaseReader f2(raw_data->data(), (int) size, false);
     parse_raw_vromfs_data(f2);
   }
 
@@ -168,13 +168,13 @@ protected:
     //unsigned buf_sizes[] = {sizeof(hdr), 0, sizeof(embedded_md5), 0, 0};
     void *buf = nullptr;
 
-    std::shared_ptr<char[]> fs;
+    std::shared_ptr<std::vector<char>> fs;
 
     std::ofstream outputFile;
 
     if (!reader.readInto(hdr))
       goto load_fail;
-    fs = std::make_shared<char[]>(hdr.fullSz);
+    fs = std::make_shared<std::vector<char>>(hdr.fullSz);
 
     if (hdr.label != _MAKE4C('VRFs') && hdr.label != _MAKE4C('VRFx'))
       goto load_fail;
@@ -210,7 +210,7 @@ protected:
       unsigned long sz = hdr.fullSz;
       if (hdr.zstdPacked()) {
         obfusc_vrom_data(buf, hdr.packedSz());
-        sz = (int) zstd_decompress((unsigned char *) fs.get(), sz, buf, hdr.packedSz());
+        sz = (int) zstd_decompress((unsigned char *) fs->data(), sz, buf, hdr.packedSz());
         if (sz != hdr.fullSz)
           goto load_fail;
         obfusc_vrom_data(buf, hdr.packedSz());
@@ -251,9 +251,9 @@ protected:
     } // do nothing for now
 
     std::vector<std::string_view> file_names(names_count);
-    uint64_t *basePtr = (uint64_t *) (raw_data.get() + names_header);
+    uint64_t *basePtr = (uint64_t *) (raw_data->data() + names_header);
     uint64_t stringStart = 0;
-    char *raw_data_ptr = raw_data.get();
+    char *raw_data_ptr = raw_data->data();
     for (int i = 0; i < names_count; i++) {
       stringStart = basePtr[i];
       file_names[i] = std::string_view(raw_data_ptr + stringStart);
@@ -294,7 +294,7 @@ protected:
   std::string fileName;
   VirtualRomFsDataHdr hdr{};
   VirtualRomFsExtHdr extHdr;
-  std::shared_ptr<char[]> raw_data;
+  std::shared_ptr<std::vector<char>> raw_data;
   unsigned size{};
   std::shared_ptr<Directory> dir;
   std::shared_ptr<NameMap> nm;

@@ -45,9 +45,9 @@ namespace danet
     if (!(var_flags & RVF_EXCLUDED))
   {
     const danet::ReflectionVarMeta *sameNameMeta = robj->searchVarByName(var_name);
-    G_ASSERTF(!sameNameMeta, "duplicate reflection var %s", var_name);
+    G_ASSERTF(!sameNameMeta, "duplicate reflection var {}", var_name);
     const danet::ReflectionVarMeta *sameIdMeta = robj->getVarByPersistentId(persistent_id);
-    G_ASSERTF(!sameIdMeta, "duplicate reflection var id %d", persistent_id);
+    G_ASSERTF(!sameIdMeta, "duplicate reflection var id {}", persistent_id);
   }
 #endif
     if (robj->varList.tail)
@@ -168,8 +168,8 @@ namespace danet
         BitSize_t pos_before_write = bs.GetWriteOffset();
         (*v->coder)(DANET_REFLECTION_OP_ENCODE, v, this, &bs);
         BitSize_t pos_after_write = bs.GetWriteOffset();
-        G_ASSERTF(pos_after_write > pos_before_write, "%s in object '%s' var coder 0x%p for var '%s' (0x%p) did not writed any data",
-                  __FUNCTION__, getClassName(), (void *)v->coder, v->getVarName(), v);
+        G_ASSERTF(pos_after_write > pos_before_write, "{} in object '{}' var coder {} for var '{}' ({}) did not writed any data",
+                  __FUNCTION__, getClassName(), fmt::ptr((void *)v->coder), v->getVarName(), fmt::ptr(v));
         idFieldSerializer.setFieldSize(pos_after_write - pos_before_write);
 
 #if DAGOR_DBGLEVEL > 0
@@ -232,7 +232,7 @@ namespace danet
           bs.AlignWriteToByteBoundary();
           uint32_t data_written = BITS_TO_BYTES(bs.GetWriteOffset() - pos2_before_write);
           (void)data_written;
-          G_ASSERTF(data_written <= 65535, "%s 0x%p type='%s' writed more than 65535 byte data (%d)", __FUNCTION__, r, r->getClassName(),
+          G_ASSERTF(data_written <= 65535, "{} {} type='{}' writed more than 65535 byte data ({})", __FUNCTION__, fmt::ptr(r), r->getClassName(),
                     data_written);
           ++numSerializedReflectables;
         }
@@ -274,7 +274,7 @@ namespace danet
           bs.AlignWriteToByteBoundary();
           uint32_t data_written = BITS_TO_BYTES(bs.GetWriteOffset() - pos2_before_write);
           (void)data_written;
-          G_ASSERTF(data_written <= 65535, "%s 0x%p type='%s' writed more than 65535 byte data (%d)", __FUNCTION__, r, r->getClassName(),
+          G_ASSERTF(data_written <= 65535, "{} {} type='{}' writed more than 65535 byte data ({})", __FUNCTION__, fmt::ptr(r), r->getClassName(),
                     data_written);
           ++numSerializedReflectables;
         }
@@ -397,7 +397,7 @@ namespace danet
         return -2;
 
       G_ASSERTF(BITS_TO_BYTES(bs.GetNumberOfUnreadBits()) >= data_written,
-                "%s unexpected stream end - unreaded %d bytes, data_written=%d bytes", __FUNCTION__, BITS_TO_BYTES(bs.GetNumberOfUnreadBits()),
+                "{} unexpected stream end - unreaded {} bytes, data_written={} bytes", __FUNCTION__, BITS_TO_BYTES(bs.GetNumberOfUnreadBits()),
                 data_written);
       if (BITS_TO_BYTES(bs.GetNumberOfUnreadBits()) < data_written)
         return -3;
@@ -424,9 +424,9 @@ namespace danet
         real_readed = BITS_TO_BYTES(real_readed);
         read_fail = real_readed != data_written;
         G_ASSERTF(real_readed == data_written,
-                  "%s integrity check for reflection packet failed, "
-                  "written (%d) != readed (%d) bytes, obj = %p (0x%x, %s)",
-                  __FUNCTION__, data_written, real_readed, refl, (int)oid, refl ? refl->getClassName() : "");
+                  "{} integrity check for reflection packet failed, "
+                  "written ({}) != readed ({}) bytes, obj = {} ({:#x}, {})",
+                  __FUNCTION__, data_written, real_readed, fmt::ptr(refl), (int)oid, refl ? refl->getClassName() : "");
       }
       if (read_fail)
       {

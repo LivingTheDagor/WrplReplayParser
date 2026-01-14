@@ -87,7 +87,7 @@ namespace ecs {
     template <typename T>
     T &getRW()
     {
-      G_ASSERTF(is<T>() && !isNull(), "0x%X != 0x%X", +ComponentTypeInfo<T>::type, componentType);
+      G_ASSERTF(is<T>() && !isNull(), "{:#x} != {:#x}", +ComponentTypeInfo<T>::type, componentType);
       return *(T *)getTypedData<T>();
     }
 

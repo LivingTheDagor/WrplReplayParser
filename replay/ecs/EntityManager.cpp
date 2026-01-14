@@ -179,10 +179,10 @@ namespace ecs {
     for (auto &initIt : comp_init) {
       if (initIt.cIndex == INVALID_COMPONENT_INDEX) {
         component_index_t initializerIndex = data_state->dataComponents.getIndex(initIt.name);
-        G_ASSERTF(initializerIndex != INVALID_COMPONENT_INDEX, "Invalid initializer index hash: 0x%X\n", initIt.name);
+        G_ASSERTF(initializerIndex != INVALID_COMPONENT_INDEX, "Invalid initializer index hash:{:#x}\n", initIt.name);
         G_ASSERT(data_state->dataComponents.getDataComponent(initializerIndex)->componentHash == initIt.second.getUserType());
         if(DAGOR_UNLIKELY(initializerIndex == INVALID_COMPONENT_INDEX))
-          EXCEPTION("Invalid component of name 0x%X", initIt.name);
+          EXCEPTION("Invalid component of name {:#x}", initIt.name);
         initIt.cIndex = initializerIndex;
       }
     }
@@ -394,7 +394,7 @@ namespace ecs {
 
   void EntityManager::collectEntitiesWithComponent(std::vector<EntityId> &out, HashedConstString component) {
     component_index_t initializerIndex = data_state->dataComponents.getIndex(component.hash);
-    G_ASSERTF(initializerIndex != INVALID_COMPONENT_INDEX, "Unable to find component %s<0x%X>\n", component.str, component.hash);
+    G_ASSERTF(initializerIndex != INVALID_COMPONENT_INDEX, "Unable to find component {}<{:#x}>\n", component.str, component.hash);
     G_ASSERT(false);
     for(int i = 1; i < this->entDescs.entDescs.size(); i++)
     {

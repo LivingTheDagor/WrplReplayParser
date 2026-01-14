@@ -16,48 +16,6 @@ T shld(T shifted, T bit_filler)
   return out;
 }
 
-void ParseLocation(uint32_t x1, uint32_t x2, Point3 &point) {
-  constexpr float xmm13 = 1.0f; // asummed to always be 1.0f
-  constexpr float xmm12 = -99.9;
-  constexpr float FLOAT_146020698 = 4.768372718899627e-07;
-  constexpr float FLOAT_146020650 = 36000.0;
-  constexpr float FLOAT_14602069c = 0.007629402;
-  uint32_t eax = x1;
-  uint32_t ecx = x2;
-  uint32_t edx = eax; // move edx, eax
-  edx = shld<uint32_t, 0xa>(edx, ecx); // shld edx, ecx, A
-  edx &= 0xFFFFF; // and edx, FFFFF
-  eax >>= 0xa; // shr eax, A
-  float xmm0 = 0; // xorps xmm0, xmm0
-  xmm0 = (float)eax; // cvtsi2ss xmm0, eax
-  float xmm3 = FLOAT_146020698; // movss xmm3,dword ptr ds:[7FF7266E0698]
-  xmm0 = xmm0 * xmm3; //mulss xmm0,xmm3
-  float xmm2 = -1.0f; // movss xmm2,dword ptr ds:[7FF7265FF220]
-  xmm0 = xmm0 +  xmm2; // addss xmm0, xmm2
-  float xmm1 = xmm2; // movaps xmm1, xmm2
-  xmm1 = std::max(xmm1, xmm0); // maxss xmm1, xmm0
-  xmm1 = std::min(xmm1, xmm13); // minss xmm1, xmm13
-  xmm0 = 0; // xoprs, xmm0, xmm0
-  xmm0 = (float)edx; // cvtsi2ss xmm0, eax
-  float xmm4 = FLOAT_146020650; // movss xmm4,dword ptr ds:[7FF7266E0650]
-  xmm1 *= xmm4; // mulss xmm1,xmm4
-  point.x = xmm1; // movss dword ptr ss:[rsp+C8],xmm1
-  xmm0 *=FLOAT_14602069c; // mulss xmm0,dword ptr ds:[7FF7266E069C]
-  xmm0 += xmm12; // addss xmm0,xmm12
-  ecx &= 0x3FFFFF; // and ecx,3FFFFF
-  xmm1 = 0; // xorps xmm1,xmm1
-  xmm1 = (float)ecx; // cvtsi2ss xmm1,ecx
-  point.y = xmm0; // movss dword ptr ss:[rsp+CC],xmm0
-  xmm1 *= xmm3; // mulss xmm1,xmm3
-  xmm1 += xmm2; // addss xmm1,xmm2
-  xmm0 = xmm2; // movaps xmm0,xmm2
-  xmm0 = std::max(xmm0, xmm1);
-  xmm0 = std::min(xmm0, xmm13);
-  xmm0 *= xmm4;
-  point.z = xmm0;
-  LOG("%f; %f; %f\n", point.x, point.y, point.z);
-}
-
 namespace mpi {
 #define MAX_CALL_DEPTH (16)
   static IMessageListener *message_listeners = nullptr;

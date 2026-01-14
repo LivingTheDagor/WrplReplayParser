@@ -109,7 +109,7 @@ inline Point2 dir_to_angles(Point3 dir) { return Point2(-atan2f(dir.z, dir.x), a
 
 inline Point2 dir_normalized_to_angles(Point3 dir)
 {
-  G_ASSERTF(fabsf(1.f - dir.lengthSq()) < 2e-4f, "len((%.9f,%.9f,%.9f))=%.9f", P3D(dir), dir.length());
+  G_ASSERTF(fabsf(1.f - dir.lengthSq()) < 2e-4f, "len(({:.9f},{:.9f},{:.9f}))={:.9f}", P3D(dir), dir.length());
   return Point2(-atan2f(dir.z, dir.x), safe_asin(dir.y));
 }
 

@@ -11,7 +11,7 @@ namespace net {
     ecs::EntityId id(eidVal);
     uint32_t index = id.index();
     uint32_t generation = id.get_generation();
-    G_ASSERTF(generation <= UCHAR_MAX, "%u", eidVal);
+    G_ASSERTF(generation <= UCHAR_MAX, "{}", eidVal);
     const bool isShortEid = index < (1 << 14);
     const bool isVeryCompressed = isShortEid && generation <= 1;
     if (isVeryCompressed) {
@@ -27,7 +27,7 @@ namespace net {
       bs.Write((uint8_t) generation); // 16 bits
     } else // !isShortEid
     {
-      G_ASSERTF(index < (1 << 22), "%u", eidVal);
+      G_ASSERTF(index < (1 << 22), "{}", eidVal);
       uint32_t compressedData = 0; // two zeroes at the end means uncompressed + 4byte version
       compressedData |= index << 2;
       compressedData |= generation << 24;

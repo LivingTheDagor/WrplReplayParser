@@ -382,7 +382,7 @@ namespace danet {
   public:
     void checkWatermark() const {
       if (debugWatermark != DANET_WATERMARK)
-        EXCEPTION("Reflection: invalid object 0x%p", this);
+        EXCEPTION("Reflection: invalid object {}", fmt::ptr(this));
     }
 
     void enableReflection() {

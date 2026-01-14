@@ -92,7 +92,7 @@ public:
     FileReader rdr(path);
     if(!rdr.isValid())
     {
-      EXCEPTION("Replay given invalid file path: %s", path.data());
+      EXCEPTION("Replay given invalid file path: {}", path.data());
     }
     data = new ReplayData(rdr);
     parse();

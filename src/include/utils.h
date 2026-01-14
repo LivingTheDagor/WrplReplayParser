@@ -12,40 +12,23 @@
 #include <cstdlib>
 #include <cstdarg>  // for va_list, va_start, va_end
 #include <cstdint>
-#include <stacktrace>
 #include <sstream>
 #include <span>
 #include "Logger.h"
+//#include <cpptrace/cpptrace.hpp>
 
 extern bool DO_VERBOSE;
 
 #define MAKE4C(a, b, c, d) ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
 #define _MAKE4C(x) MAKE4C((int(x) >> 24) & 0xFF, (int(x) >> 16) & 0xFF, (int(x) >> 8) & 0xFF, int(x) & 0xFF)
 
-[[noreturn]] inline void fatal(const char *file, int line, const char *function, const char *format, ...) {
-  std::fprintf(stderr, "Fatal error at %s:%d\nFunction: %s \nMessage: ", file, line, function);
-
-  va_list args;
-  va_start(args, format);
-  std::vfprintf(stderr, format, args);
-  va_end(args);
-
-  std::fprintf(stderr, "\n");
-
-#ifdef _MSC_VER // stacktrace only exists on msvc :((
-  std::cout << std::stacktrace::current() << std::endl;
-#endif
+[[noreturn]] inline void fatal(const char *file, int line, const char *function, std::string message) {
+  std::cerr << "fatal CERR\n";
+  LOGE("Fatal error at {}:{}\nFunction: {} \nMessage: {}", file, line, function, message);
+  //LOGE("{}", cpptrace::generate_trace().to_string());
+  g_log_handler.wait_until_empty();
+  g_log_handler.flush_all();
   std::exit(EXIT_FAILURE);
-}
-
-inline void log(const char *format, ...) {
-
-  va_list args;
-  va_start(args, format);
-  std::vfprintf(stdout, format, args);
-  va_end(args);
-
-  //std::fprintf(stdout, "\n");
 }
 
 
@@ -58,12 +41,7 @@ inline void log(const char *format, ...) {
     log(__VA_ARGS__);     \
 }
 
-#define EXCEPTION(...) fatal(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
-
-template<typename... Args>
-inline void logerr(const Args &...args) {
-  fatal(__FILE__, __LINE__, __FUNCTION__, args...);
-}
+#define EXCEPTION(format_, ...) fatal(__FILE__, __LINE__, __FUNCTION__, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__))
 
 #define EXCEPTION_IF_FALSE(cond, ...) \
     do { \

@@ -116,7 +116,7 @@ public:
 
   [[nodiscard]] int GetIdFromName(const std::string_view &name, bool do_check) const {
     if (do_check && (int) name.find(' ') != -1) {
-      EXCEPTION(R"(Invalid string passed to GetIdFromNameC() "%s', fixed: "%s")", name.data(), format_name(name).data());
+      EXCEPTION(R"(Invalid string passed to GetIdFromNameC() "{}', fixed: "{}")", name.data(), format_name(name).data());
     }
     auto it = this->name_lookup.find(std::string(name));
     if(it == this->name_lookup.end())
@@ -126,7 +126,7 @@ public:
 
   int GetIdFromName(const std::string_view &name) {
     if ((int) name.find(' ') != -1) {
-      EXCEPTION(R"(Invalid string passed to GetIdFromNameC() "%s', fixed: "%s")", name.data(), format_name(name).data());
+      EXCEPTION(R"(Invalid string passed to GetIdFromNameC() "{}', fixed: "{}")", name.data(), format_name(name).data());
     }
     auto it = this->name_lookup.find(std::string(name));
     if(it == this->name_lookup.end())

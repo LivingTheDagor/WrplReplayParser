@@ -3,7 +3,7 @@
 #ifndef MYEXTENSION_HASH_H
 #define MYEXTENSION_HASH_H
 
-
+#include "wyhash.h"
 #include <stdint.h>
 
 template <int HashBits>
