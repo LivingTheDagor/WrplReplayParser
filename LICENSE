@@ -49,6 +49,7 @@ https://github.com/GaijinEntertainment/DagorEngine/blob/main/LICENSE
 
 Other Libraries
 
+taken as is from Dagor Engine Repo, may contain changes made by them
 Links OpenSSL
 3rdParty/arc/fastlz/LICENCE
 3rdParty/arc/lz4/LICENCE
@@ -58,8 +59,11 @@ Links OpenSSL
 3rdParty/arc/zstd-1.4.5/LICENCE
 3rdParty/eastl/LICENCE
 3rdParty/enet/LICENCE
-3rdParty/fmt-12.1.0/LICENCE
 3rdParty/hash/LICENCE
 3rdParty/regExp/NO_LICENCE
 ska hash map (no licence file)
 
+libraries I have added independently
+
+3rdParty/fmt-12.1.0/LICENCE
+3rdParty/cpptrace-1.0.4/LICENSE
