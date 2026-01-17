@@ -1,0 +1,5 @@
+codegen is used for ease of setup for ReflectableObjects
+these objects are often changed in code binary, so having an easy way to update all uses (think def, abi, python api) will be needed for my sanity
+
+/objects are ReflectableObject defs
+types.py are datatype defs

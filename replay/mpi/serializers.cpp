@@ -18,6 +18,7 @@ namespace danet {
 
   int StringCoder(DANET_ENCODER_SIGNATURE) {
     auto data = meta->getValue<std::string>();
+    bs->Write(*data);
     if(op == DANET_REFLECTION_OP_ENCODE)
     {
       bs->WriteCompressed((uint32_t)data->size());

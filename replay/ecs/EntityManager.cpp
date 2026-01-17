@@ -5,7 +5,7 @@ namespace ecs {
 
   EntityManager::EntityManager() {
     // componentTypes and dataComponents initalzied in initialize() in /init/initialze.h
-    wasInit.resize(10000, false); // just in case, current max datacomponents was like 950; edit: its now like 8000 cause of infantry and shit
+    wasInit.resize(10000, false); // just in case, current max datacomponents was like 950; edit: its now like 7000 cause of infantry and shit
   }
 
   inline const EntityDesc * EntityDescs::getEntityDesc(EntityId eid) const{

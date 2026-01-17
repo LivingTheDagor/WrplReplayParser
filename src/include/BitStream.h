@@ -333,7 +333,7 @@ protected:
   }
 
   void writeString(const char *str, size_t str_len) {
-    WriteCompressed((uint16_t) str_len);
+    WriteCompressed((uint32_t) str_len);
     if (str_len)
       Write(str, (uint32_t) str_len);
   }
