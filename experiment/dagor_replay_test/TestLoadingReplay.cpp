@@ -91,13 +91,13 @@ int main()
     {
       case ReplayPacketType::EndMarker:
       {
-        std::cout << "Replay Ending at time " << ((float)pkt->timestamp_ms)/1000 << "\n";
+        LOG("Replay Ending at time {}", ((float)pkt->timestamp_ms)/1000);
         end = true;
         break;
       }
       case ReplayPacketType::StartMarker:
       {
-        std::cout << "Replay StartMarker\n";
+        LOGD("Replay StartMarker\n");
         break;
       }
       case ReplayPacketType::AircraftSmall:
@@ -145,7 +145,6 @@ int main()
   LOG("Aircraft Count: {}", AircraftCount);
   //rpl.HeaderBlk.printBlock(0, std::cout);
   //rpl.FooterBlk.printBlock(0, std::cout);
-  std::cout << "finished parsing" << std::endl;
   //ecs::g_entity_mgr->debugPrintEntities();
   //rpl.HeaderBlk.printBlock(0, std::cout);
   //ecs::g_entity_mgr->getTemplateDB()->DebugPrint();

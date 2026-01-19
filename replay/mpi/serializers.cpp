@@ -18,19 +18,15 @@ namespace danet {
 
   int StringCoder(DANET_ENCODER_SIGNATURE) {
     auto data = meta->getValue<std::string>();
-    bs->Write(*data);
     if(op == DANET_REFLECTION_OP_ENCODE)
     {
-      bs->WriteCompressed((uint32_t)data->size());
-      bs->WriteArray(data->data(), data->size());
+      bs->Write(*data);
       return true;
     }
     if(op == DANET_REFLECTION_OP_DECODE)
     {
       uint32_t sz;
-      REPL_VER(bs->ReadCompressed(sz));
-      data->resize(sz);
-      REPL_VER(bs->ReadArray(data->data(), sz));
+      bs->Read(*data);
       return true;
     }
     return false;

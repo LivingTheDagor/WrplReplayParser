@@ -141,10 +141,16 @@ class DataTypeInst:
         self.datatype = datatype
         self.is_ptr = is_ptr
         self.obj_count = obj_count
-        self.template_args = template_args
+        self.template_args: list[DataTypeInst] = template_args
+        self.build_serializer = False
 
     def is_array(self):
         return self.obj_count > 1
+
+    def set_build(self, do_set: bool):
+        if (do_set is False):
+            return
+        self.build_serializer = do_set
 
     # use datatype for extra info (like template data), the name is actually the name of the object var being written to
 def default_bs_loader(mgr: 'DataTypeRegister', datatype: DataTypeInst, name: str, is_ptr: bool):
@@ -203,7 +209,7 @@ class DataTypeManager:
     def get_type_loader(self, data_type: DataTypeInst) -> str:
         pass
 
-    def get_type_inst(self, type_inst: str) -> DataTypeInst:
+    def get_type_inst(self, type_inst: str, __do_inst=True) -> DataTypeInst:
         """
         
         :param type_inst:
@@ -211,12 +217,16 @@ class DataTypeManager:
         """
         type_inst = type_inst.replace(" ", "").rstrip("\n\r\t").lstrip("\n\r\t")
         get = self.inst_datatypes.get(type_inst, None)
-        if get is None:
+        if get is None: # doesnt exist, lets make it
             namespace, type_name, template_args = parse_cpp_type(type_inst)
             base_type = self.datatypes.lookup(namespace, type_name)
+            assert isinstance(base_type, DataType) # TODO, make actual exception
             parsed_template_args = []
             if template_args:
-                parsed_template_args = [parse_raw_datatype_name(x) for x in template_args]
+                assert len(template_args) == len(base_type.reg.template_type_args)
+                for i in range(len(template_args)):
+                    type_ = base_type.vars
+                parsed_template_args = [self.get_type_inst(x, False) for x in template_args]
 
         return get
 

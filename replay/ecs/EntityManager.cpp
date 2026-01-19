@@ -271,14 +271,16 @@ namespace ecs {
   }
 
   ecs::EntityManager::~EntityManager() {
-    std::cout << "starting EntityManager Destruction\n";
+    LOGD("starting EntityManager Destruction\n");
     for(int i = 1; i < this->entDescs.entDescs.size(); i++)
     {
       if(!this->entDescs.doesEntityExist(i))
         continue;
       destroyEntity(EntityId(i)); //
     }
-    std::cout << "finished EntityManager Destruction" << std::endl;
+    LOGD("finished EntityManager Destruction");
+    g_log_handler.wait_until_empty();
+    g_log_handler.flush_all();
   }
 
   void EntityManager::debugPrintEntities() {
