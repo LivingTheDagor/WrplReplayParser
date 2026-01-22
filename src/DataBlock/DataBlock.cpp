@@ -1219,7 +1219,7 @@ void DataBlock::cleanupParamsByCB(DataBlock::isValidParamCallback cb) {
 bool load(DataBlock &blk, const char *fname) {
   auto file = file_mgr.getFile(fname, true);
   if (file) {
-    //LOG("Loading BLK at path: %s", fname);
+    //LOG("Loading BLK at path: {}", fname);
     return file->loadBlk(blk);
   }
   return false;

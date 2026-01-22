@@ -240,6 +240,8 @@ namespace ecs
     template_t getTemplateIdByName(std::string_view name);
     std::vector<Template> &getTemplates();
 
+    void applyFrom(TemplateDB &&db);
+
 
   protected:
 

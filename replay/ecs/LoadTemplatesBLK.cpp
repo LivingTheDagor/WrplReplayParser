@@ -365,7 +365,7 @@ namespace ecs {
     int tagsId = blk.getNameId("_tags");
     int reservedReplId = blk.getNameId("_skipInitialReplication");
     int overrideId = blk.getNameId("_override");
-    for (uint32_t i = 0; i < blk.paramCount(); i++) {
+    for (int i = 0; i < blk.paramCount(); i++) {
       if (is_reserved_name(blk.getParamName(i))) {
         int nid = blk.getParamNameId(i);
         if (nid == singletonId)
@@ -389,7 +389,7 @@ namespace ecs {
           case DataBlock::TYPE_NONE:
             EXCEPTION("Invalid Type");
           case DataBlock::TYPE_STRING: {
-            comp = std::move(ecs::Component{ecs::string(blk.getStr(i))});
+            comp = ecs::Component{ecs::string(blk.getStr(i))};
             break;
           }
 #define parse_type(case_, ret_name) \
@@ -408,7 +408,7 @@ namespace ecs {
           parse_type(E3DCOLOR, E3DColor)
           parse_type(MATRIX, TMatrix)
           case DataBlock::TYPE_UINT64: {
-            comp = std::move(ecs::Component{blk.getUInt64(i)});
+            comp = ecs::Component{blk.getUInt64(i)};
             break;
           }
           case DataBlock::TYPE_COUNT:
@@ -526,24 +526,44 @@ class LoadContext {
   std::unordered_set<std::string> ResolvedImports; // imports that have already been resolved and parsed
   ecs::TemplateDB *db = ecs::g_ecs_data->getTemplateDB();
 public:
+  bool have_we_parsed(const std::string &path) {
+    std::string copy = path;
+    char * ptr = const_cast<char *>(copy.data());
+    for(size_t i = 0; i < copy.size(); i++) {
+      if(ptr[i] == '\\') {
+        ptr[i] = '/';
+      }
+      ptr[i] = (char)std::tolower(ptr[i]);
+    }
+    auto iter = this->ResolvedImports.find(copy);
+    if(iter == this->ResolvedImports.end())
+    {
+      this->ResolvedImports.emplace(copy);
+      return false;
+    }
+    return true;
+  }
+
   void parse_templates_from_blk(DataBlock *blk, ecs::TemplateDB *overrides) {
-    auto db_ = ecs::g_ecs_data->getTemplateDB();
     for (int i = 0; i < blk->blockCount(); i++) // each 'block' is a template
     {
       DataBlock *tmpl_blk = blk->getBlock(i).get();
+      auto db_ = db;
       if (is_reserved_name(tmpl_blk->getBlockName().data()))
       {
+        //LOGE("Reserved names are not supported");
         continue;
-        EXCEPTION("Reserved names are not supported");
       }
+      if(tmpl_blk->getBool("_override", false))
+        db_ = overrides;
       std::vector<ecs::ComponentTemplInfo> components;
-      components.reserve(500); // there is an issue with the resise op, so we want to avoid it as much as possible.
+      components.reserve(500); // there is an issue with the resise op, so we want to avoid it as much as possible. TODO
       std::vector<ecs::template_t> parents;
       ecs::TemplateParseContext ctx{&components, &parents, db_, blk->getBlockName().data(), blk->getNameId("_value")};
       ctx.templName = tmpl_blk->getBlockName().data();
       ctx.parse(*tmpl_blk);
       ecs::Template templ{std::string(tmpl_blk->getBlockName()), std::move(components), std::move(parents)};
-      db->AddTemplate(std::move(templ));
+      db_->AddTemplate(std::move(templ));
     }
   }
 
@@ -591,10 +611,9 @@ public:
         {
           anyFileLoaded = true;
           DataBlock imp_blk;
-          auto find = ResolvedImports.find(s);
-          if (find != ResolvedImports.end())
+          bool was_parsed = this->have_we_parsed(s);
+          if(was_parsed)
             continue;
-          ResolvedImports.emplace(s);
           if(load(imp_blk, s.c_str()))
           {
             resolve_imports(&imp_blk, overrides);
@@ -608,12 +627,12 @@ public:
       DataBlock imp_blk;
       // if it is a absolute or mounted path, then keep as it
       // if it is not either, then assume its an offset from the current directory
-      auto combined_path = src_folder / path;
+      auto combined_str = src_folder.string() + "/" + std::string(path);
+      auto combined_path = fs::path(combined_str);
       auto path_ = (abs_path || mnt_path) ? path : combined_path;
-      auto find = ResolvedImports.find(path_.string());
-      if (find != ResolvedImports.end())
+      bool was_parsed = this->have_we_parsed(path_.string());
+      if(was_parsed)
         return;
-      ResolvedImports.emplace(path_.string());
       if (load(imp_blk, path_.string().c_str())) {
         resolve_imports(&imp_blk, overrides);
       } else if (!is_optional) {
@@ -653,6 +672,7 @@ public:
     ecs::TemplateDB overrides{};
     G_ASSERT(load(blk, path));
     resolve_imports(&blk, &overrides);
+    ecs::g_ecs_data->getTemplateDB()->applyFrom(std::move(overrides));
   }
 };
 

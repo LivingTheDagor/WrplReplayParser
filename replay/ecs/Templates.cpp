@@ -120,6 +120,34 @@ namespace ecs {
     return this->templates;
   }
 
+  void TemplateDB::applyFrom(TemplateDB &&db) {
+    for(auto &&templ : db.templates) {
+      auto iter = this->template_lookup.find(templ.name);
+      if (iter == this->template_lookup.end()) {
+        this->AddTemplate(std::move(templ));
+        continue;
+      }
+      auto this_templ = this->getTemplate(iter->second);
+
+      for(auto &parent : templ.parents)
+        this_templ->parents.push_back(parent);
+      for(auto &&other_comp : templ.components) {
+        bool set = false;
+        for(auto &comp : this_templ->components) {
+          if(other_comp.comp_type_index == comp.comp_type_index) {
+            comp.default_component.~Component();
+            comp.default_component = std::move(other_comp.default_component);
+            set = true;
+            break;
+          }
+        }
+        if(!set) {
+          this_templ->components.push_back(std::move(other_comp));
+        }
+      }
+    }
+  }
+
   /*InstantiatedTemplate::InstantiatedTemplate(EntityId eid, template_t templ, ComponentsInitializer &&initializer) {
     Template * t = g_entity_mgr->getTemplateDB()->getTemplate(templ);
     components.resize(t->max_component_index);
