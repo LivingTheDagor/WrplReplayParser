@@ -208,8 +208,8 @@ public:
   }
 
   Object() = default;
-  Object(const Object &a) : container(a.container), noCollisions(a.noCollisions), hashContainer(a.hashContainer) { changeGen(); }
-  Object(Object &&a) : container(std::move(a.container)), hashContainer(std::move(a.hashContainer)), noCollisions(a.noCollisions)
+  Object(const Object &a) : container(a.container), hashContainer(a.hashContainer), noCollisions(a.noCollisions) { changeGen(); }
+  Object(Object &&a)  noexcept : container(std::move(a.container)), hashContainer(std::move(a.hashContainer)), noCollisions(a.noCollisions)
   {
     changeGen();
   }

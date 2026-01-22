@@ -82,9 +82,6 @@ namespace danet
       robj->onReflectionVarChanged(meta, new_val);
   }
 
-  static void writeIntBits(BitStream &bs, uint32_t val, uint32_t numBits);
-  static bool readIntBits(BitStream &bs, uint32_t &retVal, uint32_t numBits);
-
   void ReflectableObject::markVarWithFlag(ReflectionVarMeta *var, uint16_t f, bool set)
   {
     checkWatermark();
@@ -193,7 +190,7 @@ namespace danet
       // write total size of writed data
       uint32_t total_data_size = BITS_TO_BYTES(curPos - data_size_pos);
       G_ASSERT(total_data_size <= 65535); // max - 64K per reflectable
-      bs.WriteAt((uint16_t)total_data_size, data_size_pos - BYTES_TO_BITS(sizeof(uint16_t)));
+      bs.WriteAt((uint16_t)total_data_size, data_size_pos - (BitSize_t)BYTES_TO_BITS(sizeof(uint16_t)));
 #if DAGOR_DBGLEVEL > 0
       if (option_flags & DUMP_REFLECTION)
       debug("%s serialized object 0x%p '%s' %u vars %u(+2) bytes", __FUNCTION__, this, getClassName(), numSerializedVars,
@@ -318,7 +315,7 @@ namespace danet
     idFieldSerializer.readFieldsIndex(bs);
     ReflectionVarMeta *v = varList.head;
     //LOG("Deserializing Vars for %p: ", this);
-    for (uint32_t j = 0; j < numVars; ++j)
+    for (uint16_t j = 0; j < numVars; ++j)
     {
       v = getVarByPersistentId(idFieldSerializer.getFieldId(j));
       if (v)
@@ -336,10 +333,10 @@ namespace danet
 
     // read var data
     bool ret = true;
-    for (uint32_t j = 0; j < numVars; ++j)
+    for (uint16_t j = 0; j < numVars; ++j)
     {
       v = varsToRead[j];
-      int old_value = v ? *v->getValue<int>() : 0;
+      //int old_value = v ? *v->getValue<int>() : 0;
       BitSize_t ppp = bs.GetReadOffset();
       if (!v)
       {

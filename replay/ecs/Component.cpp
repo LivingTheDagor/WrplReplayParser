@@ -13,7 +13,7 @@ namespace ecs {
     return getComponentRef() == a;
   }
 
-  Component::Component(void *data, component_type_t type, type_index_t compIndex, uint16_t size) {
+  Component::Component(void *data, component_type_t type, type_index_t compIndex, uint32_t size) {
     componentTypeSize = size;
     componentTypeIndex = compIndex;
     componentType = type;
@@ -81,14 +81,14 @@ namespace ecs {
 
 
 
-  ComponentRef::ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint16_t size) {
+  ComponentRef::ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint32_t size) {
     componentTypeSize = size;
     componentTypeIndex = compIndex;
     componentType = type;
     value = data;
   }
 
-  ComponentRef::ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint16_t size,
+  ComponentRef::ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint32_t size,
                              component_index_t cidx) {
     componentTypeSize = size;
     componentTypeIndex = compIndex;
@@ -171,10 +171,10 @@ namespace ecs {
     if (!types)
       types = g_ecs_data->getComponentTypes();
     auto ctm = types->getCTM(this->componentTypeIndex);
-    return std::move(ctm->toString(ext_data));
+    return ctm->toString(ext_data);
   }
 
   std::string ComponentRef::toString(ComponentTypes *types) const {
-    return std::move(this->toString(this->value, types));
+    return this->toString(this->value, types);
   }
 }

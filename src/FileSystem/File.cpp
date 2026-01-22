@@ -26,7 +26,7 @@ void HostFile::Save(std::ofstream *cb)
 
 bool HostFile::loadBlk(DataBlock &blk) {
   auto data = this->readRaw();
-  BaseReader rdr(data.data(), data.size(), false);
+  BaseReader rdr(data.data(), (int)data.size(), false);
   if (blk.loadFromStream(rdr, nullptr, nullptr))
     return true;
   if (blk.loadText(data))

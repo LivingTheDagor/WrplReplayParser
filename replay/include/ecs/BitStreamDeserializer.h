@@ -28,7 +28,7 @@ struct BitstreamSerializer final : public ecs::SerializerCb
   ecs::EntityManager *mgr;
   InternedStrings *objectKeys = nullptr;
   BitstreamSerializer(ecs::EntityManager &mgr, BitStream &bs_, InternedStrings *keys = nullptr) :
-      mgr(&mgr), bs(bs_), objectKeys(keys)
+      bs(bs_), mgr(&mgr), objectKeys(keys)
   {}
   void write(const void *from, size_t sz_in_bits, ecs::component_type_t user_type) override;
 };

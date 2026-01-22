@@ -131,7 +131,7 @@ namespace ecs {
   inline void write_compressed(SerializerCb &cb, uint32_t v) {
     uint8_t data[sizeof(v) + 1];
     int i = 0;
-    for (; i < sizeof(data); ++i) {
+    for (; i < (int)sizeof(data); ++i) {
       data[i] = uint8_t(v) | (v >= (1 << 7) ? (1 << 7) : 0);
       v >>= 7;
       if (!v) {
@@ -139,12 +139,12 @@ namespace ecs {
         break;
       }
     }
-    cb.write(data, i * CHAR_BIT, 0);
+    cb.write(data, (size_t)i * CHAR_BIT, 0);
   }
 
   inline bool read_compressed(const DeserializerCb &cb, uint32_t &v) {
     v = 0;
-    for (int i = 0; i < sizeof(v) + 1; ++i) {
+    for (int i = 0; i < (int)(sizeof(v) + 1); ++i) {
       uint8_t byte = 0;
       if (!cb.read(&byte, CHAR_BIT, 0))
         return false;
@@ -157,6 +157,7 @@ namespace ecs {
 
 // default serializer is just call as-is.
 // if we want we can register different serializer, with quantization and stuff
+
   class ComponentSerializer {
   public:
     virtual void serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) {
@@ -169,6 +170,7 @@ namespace ecs {
       return cb.read(data, sz * CHAR_BIT, hint);
     }
   };
+
 
   enum ComponentTypeFlags : uint16_t {
     //COMPONENT_TYPE_TRIVIAL = 0, // basically it is pod
@@ -191,7 +193,7 @@ namespace ecs {
                                  create_ctm_t ctm_,
                                  destroy_ctm_t dtm_,
                                  ComponentTypeFlags flags_) :
-        name(name_), name_hash(name_hash_), size(size_), ctm(ctm_), dtm(dtm_), io(io_), flags(flags_) {
+        name(name_), ctm(ctm_), dtm(dtm_), io(io_), name_hash(name_hash_), size(size_), flags(flags_) {
       next = tail;
       tail = this;
     }
@@ -222,7 +224,7 @@ namespace ecs {
   struct ComponentInfo {
   public:
     ComponentSerializer *serializer;
-    uint16_t size;
+    uint32_t size;
     //ComponentTypeFlags flags;
     component_type_t hash;
     std::string_view name; // this name should only be set through preinit, so doesnt need to be a std::string
@@ -237,7 +239,7 @@ namespace ecs {
     std::unordered_map<component_type_t, type_index_t> typesIndex; // hash to index.
 
 
-    type_index_t findOr(component_type_t, component_type_t) const;
+    type_index_t findOr(component_type_t, type_index_t) const;
 
     type_index_t findType(component_type_t) const;
     void initialize();
@@ -301,13 +303,13 @@ namespace ecs {
     uint32_t getComponentsCount() const { return (uint32_t) types.size(); }
 
     // registers a new component
-    type_index_t registerType(const char *name, component_type_t type, uint16_t data_size, ComponentSerializer *io,
+    type_index_t registerType(const char *name, component_type_t type, uint32_t data_size, ComponentSerializer *io,
                               create_ctm_t ctm, destroy_ctm_t dtm, ComponentTypeFlags flag);
 
 
   };
 
-  inline type_index_t ComponentTypes::findOr(component_type_t val, component_type_t ifNotFound) const {
+  inline type_index_t ComponentTypes::findOr(component_type_t val, type_index_t ifNotFound) const {
     auto v = typesIndex.find(val);
     if (v == typesIndex.end()) {
       return ifNotFound;

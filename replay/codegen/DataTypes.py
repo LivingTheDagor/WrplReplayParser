@@ -231,3 +231,5 @@ class DataTypeManager:
         return get
 
 
+#  83.87  IRC numeric event 744 origin chat-lw1.warthunder.com
+#  81.76  IRC got IRC event NOTICE_CHAN by command NOTICE

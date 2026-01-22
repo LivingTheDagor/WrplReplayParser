@@ -30,7 +30,7 @@ add_library(dagECS::dagECS ALIAS dagECS)
 set(INCLUDES
         "${BASE_DIR}/replay/include"
         "${BASE_DIR}/src/include"
-        "${BASE_DIR}/3rdParty"
+        # "${BASE_DIR}/3rdParty"
 )
 
 target_include_directories(dagECS
@@ -38,3 +38,5 @@ target_include_directories(dagECS
         ${INCLUDES}
 )
 
+
+SetGenFlags(dagECS)

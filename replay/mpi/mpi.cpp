@@ -18,7 +18,6 @@ namespace mpi {
   }
   //std::unordered_map<int, std::unordered_map<int, int>> mpi_data{};
   Message *dispatch(const BitStream &bs, ParserState *state, bool copy_payload) {
-    static std::ofstream strm{R"(D:\Python\ReplayerParser\test\plots.txt)"};
     ObjectID oid;
     ObjectExtUID extUid;
     MessageID mid;

@@ -22,6 +22,7 @@ target_include_directories(dagor_rpl_test
         PUBLIC
         "${BASE_DIR}/replay/include"
         "${BASE_DIR}/src/include"
-        "${BASE_DIR}/3rdParty"
+        # "${BASE_DIR}/3rdParty"
 )
 
+# SetGenFlags(dagor_rpl_test)

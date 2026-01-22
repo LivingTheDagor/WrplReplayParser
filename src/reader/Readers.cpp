@@ -33,7 +33,7 @@ BaseReader::~BaseReader()
     read_offset = 0;
 }
 
-bool BaseReader::read(void *ptr, unsigned int size)
+bool BaseReader::read(void *ptr, int size)
 {
     if(read_offset + (int)size > data_size) return false;
     memcpy(ptr, data + read_offset, size);
@@ -131,11 +131,11 @@ inline int ZstdReader::tryReadImpl(void *ptr, int size)
     }
 
     encDataPos = inBuf.pos;
-    return outBuf.pos;
+    return (int)outBuf.pos;
 }
 
 int ZstdReader::tryRead(void *ptr, int size) { return ZstdReader::tryReadImpl(ptr, size); }
-bool ZstdReader::read(void *ptr, unsigned int size)
+bool ZstdReader::read(void *ptr, int size)
 {
     unsigned rd_sz = ZstdReader::tryReadImpl(ptr, (int)size);
     while (rd_sz && rd_sz < size)
@@ -148,13 +148,7 @@ bool ZstdReader::read(void *ptr, unsigned int size)
     if (rd_sz != size)
     {
         termDecoder();
-        char buff[128];
-        sprintf(buff, "Zstd read error: rd_sz=%d != size=%d, encDataBuf=%p,%zu encDataPos=%d", rd_sz, size, encDataBuf.data(), encDataBuf.size(), encDataPos);
-        throw std::invalid_argument(buff);
-        //logerr("Zstd read error: rd_sz=%d != size=%d, encDataBuf=%p,%d encDataPos=%d", rd_sz, size, encDataBuf.data(), encDataBuf.size(),
-        //       encDataPos);
-        termDecoder();
-        //DAGOR_THROW(LoadException("Zstd read error", -1));
+        EXCEPTION("Zstd read error: rd_sz={} != size={}, encDataBuf={},{} encDataPos={}", rd_sz, size, encDataBuf.data(),  encDataBuf.size(), encDataPos);
     }
     return true;
 }
@@ -253,7 +247,7 @@ bool FileReader::isValid() const
     return data_size != -1;
 }
 
-bool FileReader::read(void *ptr, unsigned int size)
+bool FileReader::read(void *ptr, int size)
 {
     if (!isValid())
         return false;

@@ -414,7 +414,7 @@ namespace eastl
 				#ifdef EA_SYSTEM_BIG_ENDIAN
 					return SSOLayout::SSO_CAPACITY - (sso.mRemainingSizeField.mnRemainingSize >> 2);
 				#else
-					return (SSOLayout::SSO_CAPACITY - sso.mRemainingSizeField.mnRemainingSize);
+					return (SSOLayout::SSO_CAPACITY - (size_type)sso.mRemainingSizeField.mnRemainingSize);
 				#endif
 			}
 			inline size_type GetHeapSize() const EA_NOEXCEPT { return heap.mnSize; }

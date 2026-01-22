@@ -76,7 +76,7 @@ public:
   VromfsFile(VROMFs *v_owner, const fs::path &path, const std::shared_ptr<std::vector<char>> &owner, int offset, int size) {
     this->owner = v_owner;
     data = std::shared_ptr<char>(owner, owner->data() + offset);
-    data_size = size;
+    data_size = (size_t)size;
     init(path);
     vromfsPath = path.relative_path().parent_path();
   }
@@ -135,7 +135,7 @@ public:
     if (file.getExtension() != ".blk") {
       return false;
     }
-    BaseReader rdr(data.data(), data.size(), false);
+    BaseReader rdr(data.data(), (int)data.size(), false);
     if (!blk.loadFromStream(rdr, nm, dict))
       return false;
 
@@ -197,20 +197,20 @@ protected:
         fs->version = hdr_ext.version;
       }
       */
-      reader.seekrel(extHdr.size - sizeof(extHdr));
+      reader.seekrel((int)(extHdr.size - sizeof(extHdr)));
     }
 
     if (hdr.packedSz()) {
       buf = malloc(hdr.packedSz());
       if (!buf)
         goto load_fail;
-      if (!reader.read(buf, hdr.packedSz()))
+      if (!reader.read(buf, (int)hdr.packedSz()))
         goto load_fail;
 
-      unsigned long sz = hdr.fullSz;
+      size_t sz = hdr.fullSz;
       if (hdr.zstdPacked()) {
         obfusc_vrom_data(buf, hdr.packedSz());
-        sz = (int) zstd_decompress((unsigned char *) fs->data(), sz, buf, hdr.packedSz());
+        sz = zstd_decompress((unsigned char *) fs->data(), sz, buf, hdr.packedSz());
         if (sz != hdr.fullSz)
           goto load_fail;
         obfusc_vrom_data(buf, hdr.packedSz());
@@ -218,7 +218,7 @@ protected:
         assert(false && "data is zlib compressed!!!!");
       }
     } else {
-      if (!reader.read(fs.get(), hdr.fullSz))
+      if (!reader.read(fs.get(), (int)hdr.fullSz))
         goto load_fail;
     }
 
@@ -250,11 +250,11 @@ protected:
       reader.seekrel(16);
     } // do nothing for now
 
-    std::vector<std::string_view> file_names(names_count);
+    std::vector<std::string_view> file_names((size_t)names_count);
     uint64_t *basePtr = (uint64_t *) (raw_data->data() + names_header);
     uint64_t stringStart = 0;
     char *raw_data_ptr = raw_data->data();
-    for (int i = 0; i < names_count; i++) {
+    for (uint32_t i = 0; i < names_count; i++) {
       stringStart = basePtr[i];
       file_names[i] = std::string_view(raw_data_ptr + stringStart);
     }
@@ -264,23 +264,23 @@ protected:
     bool foundDict = false;
     bool foundNM = false;
 
-    for (int i = 0, z = 0; i < max; i += 4, z++) {
+    for (uint32_t i = 0, z = 0; i < max; i += 4, z++) {
 
       int fileOffset = int_data_ptr[i];
       int fileSize = int_data_ptr[i + 1];
       std::string_view file_name = file_names[z];
       if (!foundNM && file_name == "\xFF\x3Fnm") {
         foundNM = true;
-        auto data = std::span<char>(raw_data_ptr + fileOffset + 40, fileSize - 40);
+        auto data = std::span<char>(raw_data_ptr + fileOffset + 40, (size_t)fileSize - 40);
         ZstdReader zReader(data);
-        int nm_names_count = 0;
+        uint32_t nm_names_count = 0;
         zReader.readCompressedUnsignedGeneric(nm_names_count);
         NameMap::ReadNames(zReader, nm, nm_names_count);
         continue; // prevents adding of NM to output directory
       }
       if (!foundDict && file_name.ends_with(".dict")) {
         foundDict = true;
-        auto data = std::span<char>(raw_data_ptr + fileOffset, fileSize);
+        auto data = std::span<char>(raw_data_ptr + fileOffset, (size_t)fileSize);
         dict = ZSTD_createDDict(data.data(), data.size());
         continue;
       }

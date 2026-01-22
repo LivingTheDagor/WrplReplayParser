@@ -2,7 +2,7 @@
 
 #ifndef MYEXTENSION_ARCHETYPES_H
 #define MYEXTENSION_ARCHETYPES_H
-#include "math.h"
+#include <cmath>
 #include "Logger.h"
 
 
@@ -32,8 +32,8 @@ namespace ecs
     {
       uint8_t *__restrict data = nullptr; // points to chunk start
 
-      inline uint8_t *__restrict getData() const { return data; }
-      inline uint8_t *__restrict getCompArrayUnsafe(uint32_t ofs, uint16_t entity_count) const // pointer to all components of ofs
+      [[nodiscard]] inline uint8_t * getData() const { return data; }
+      [[nodiscard]] inline uint8_t * getCompArrayUnsafe(uint32_t ofs, uint16_t entity_count) const // pointer to all components of ofs
       {
         return getData() + (ofs * entity_count);
       }
@@ -72,19 +72,19 @@ namespace ecs
     {
       if(last_available_slot == INVALID_CHUNK_INDEX_T)
       {
-        last_available_slot = avaiableSlots.size(); // availableSlots.size() will point to the first new data of the new chunk;
+        last_available_slot = (chunk_index_t)avaiableSlots.size(); // availableSlots.size() will point to the first new data of the new chunk;
         AllocateChunk();
       }
       return last_available_slot;
     }
 
-    explicit Archetype(uint16_t entity_size)
+    explicit Archetype(uint32_t entity_size)
     {
       EntityCount = (uint16_t)(MAX_CHUNK_SIZE/entity_size);
       this->entity_size = entity_size;
     }
 
-    inline void* __restrict getCompDataUnsafe(uint32_t comp_ofs, chunk_index_t chunk_id, uint16_t data_size) const
+    [[nodiscard]] inline void* getCompDataUnsafe(uint32_t comp_ofs, chunk_index_t chunk_id, uint32_t data_size) const
     {
       // Calculate which physical chunk contains this entity
       uint32_t chunk_list_index = chunk_id / EntityCount;
@@ -118,7 +118,7 @@ namespace ecs
         }
       }
       // no more free slots, must allocate
-      last_available_slot = avaiableSlots.size(); // availableSlots.size() will point to the first new data of the new chunk;
+      last_available_slot = (chunk_index_t)avaiableSlots.size(); // availableSlots.size() will point to the first new data of the new chunk;
       AllocateChunk();
       return true;
     }
@@ -138,7 +138,7 @@ namespace ecs
 
 
 
-    inline void *__restrict getComponentDataUnsafe(archetype_component_id archetype, component_index_t cidx, chunk_index_t chunkId) const
+    inline void * getComponentDataUnsafe(archetype_component_id archetype, component_index_t cidx, chunk_index_t chunkId) const
     {
       auto arch_data = &archetypes[archetype];
       archetype_component_id cid = arch_data->INFO.getComponentId(cidx);
@@ -147,14 +147,14 @@ namespace ecs
       auto storage = &archetypeComponents[cid+arch_data->COMPONENT_OFS];
       return arch_data->ARCHETYPE.getCompDataUnsafe(storage->DATA_OFFSET, chunkId, storage->DATA_SIZE);
     }
-    inline void *__restrict getComponentDataIdUnsafe(archetype_t archetype, archetype_component_id cid, chunk_index_t chunkId) const
+    inline void * getComponentDataIdUnsafe(archetype_t archetype, archetype_component_id cid, chunk_index_t chunkId) const
     {
       auto arch_data = &archetypes[archetype];
       auto storage = &archetypeComponents[cid+arch_data->COMPONENT_OFS];
       return arch_data->ARCHETYPE.getCompDataUnsafe(storage->DATA_OFFSET, chunkId, storage->DATA_SIZE);
     }
 
-    [[nodiscard]] inline uint16_t getComponentSizeFromOfs(archetype_component_id component_id, uint32_t ofs) const;
+    [[nodiscard]] inline uint32_t getComponentSizeFromOfs(archetype_component_id component_id, uint32_t ofs) const;
     archetype_t createArchetype(const component_index_t *__restrict components, uint32_t components_cnt,
                          DataComponents &dataComponents, ComponentTypes &componentTypes);
     [[nodiscard]] archetype_component_id getComponentsCount(uint32_t archetype) const;
@@ -170,7 +170,7 @@ namespace ecs
     {
       component_index_t firstNonEidIndex, count;
       std::unique_ptr<archetype_component_id[]> componentIndexToArchetypeOffset; // todo: make it soa as well
-      inline archetype_component_id getComponentId(component_index_t cidx) const;
+      [[nodiscard]] inline archetype_component_id getComponentId(component_index_t cidx) const;
     };
 
     struct ArchetypeStorage
@@ -187,7 +187,7 @@ namespace ecs
     {
       component_index_t INDEX;
       uint32_t DATA_OFFSET; // offset into entity where you can find the component data
-      uint16_t DATA_SIZE; // size of a particular data, assumes a components cant be larger than 65535 bytes
+      uint32_t DATA_SIZE; // size of a particular data, assumes a components cant be larger than 65535 bytes
     };
 
     /// archetype storage

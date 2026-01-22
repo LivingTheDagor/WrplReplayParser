@@ -7,7 +7,7 @@ bool isSpacingCharacter(char chr) {
 
 struct TextStream {
   std::span<char> *text;
-  int64_t offset = 0;
+  size_t offset = 0;
 
   bool is_EOF()
   {
@@ -90,7 +90,7 @@ struct TextStream {
   }
 
   bool reverseTillChar(char endChar) {
-    bool fail = false;
+    //bool fail = false;
     for(char c = getCurrent(); c != endChar; c = getCurrent(), this->goBack())
     {}
     return true;
@@ -247,7 +247,7 @@ bool LoadBlock(DataBlock *blk, TextStream &strm, int stack = 0) {
         break;
       }
       case '=': {
-        int start_pos = strm.offset;
+        size_t start_pos = strm.offset;
         strm.reverseTillChar(':');
         name.resize(name.size()-(start_pos-(strm.offset+1)));
 

@@ -16,13 +16,13 @@ namespace net {
     const bool isVeryCompressed = isShortEid && generation <= 1;
     if (isVeryCompressed) {
       uint16_t compressedData = 1;         // one bit
-      compressedData |= (generation << 1); // one bit
-      compressedData |= index << 2;        // 14 bit
+      compressedData |= (uint16_t)(generation << 1); // one bit
+      compressedData |= (uint16_t)(index << 2);        // 14 bit
       bs.Write(compressedData);            // 16 bits
     } else if (isShortEid) {
       // 3 bytes version will assume generation is less than 1<<7, and 4 bytes version that index is 1<<22 (which is currently limit!)
       uint16_t compressedIndex = 2; // less significant is zero meaning uncompressed, next one means that it's 3 byte version
-      compressedIndex |= index << 2;
+      compressedIndex |= (uint16_t)(index << 2);
       bs.Write(compressedIndex);
       bs.Write((uint8_t) generation); // 16 bits
     } else // !isShortEid

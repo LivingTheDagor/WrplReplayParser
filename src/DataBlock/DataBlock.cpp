@@ -465,66 +465,56 @@ void DataBlock::printBlock(int indent, std::basic_ostream<char> &out) const {
       out << this->getNameFromId(p->name_id) << ":";
     }
 
-    char buf[256];
     switch (p->type) {
+
       case TYPE_STRING:
-        out << "t=" << "\"" << p->data.s << "\"\n";
+        out << fmt::format("t=\"{}\"\n", p->data.s);
         break;
       case TYPE_BOOL: {
-        sprintf(buf, "%s", p->data.b ? "yes" : "no");
-        out << "b=" << buf << "\n";
-      }
+        out << fmt::format("b={}\n", p->data.b ? "yes" : "no");
         break;
+      }
       case TYPE_INT: {
-        sprintf(buf, "%d", p->data.i);
-        out << "i=" << buf << "\n";
-      }
+        out << fmt::format("i={}\n", p->data.i);
         break;
+      }
       case TYPE_REAL: {
-        sprintf(buf, "%.16f", p->data.r);
-        out << "r=" << buf << "\n";
-      }
+        out << fmt::format("r={}\n", p->data.r);
         break;
+      }
       case TYPE_POINT2: {
-        sprintf(buf, "%g, %g", p->data.p2.x, p->data.p2.y);
-        out << "p2=" << buf << "\n";
-      }
+        out << fmt::format("p2={}, {}\n", p->data.p2.x, p->data.p2.y);
         break;
+      }
       case TYPE_POINT3: {
-        sprintf(buf, "%g, %g, %g", p->data.p3.x, p->data.p3.y, p->data.p3.z);
-        out << "p3=" << buf << "\n";
-      }
+        out << fmt::format("p3={}, {}, {}\n", p->data.p3.x, p->data.p3.y, p->data.p3.z);
         break;
+      }
       case TYPE_POINT4: {
-        sprintf(buf, "%g, %g, %g, %g", p->data.p4.x, p->data.p4.y, p->data.p4.z, p->data.p4.w);
-        out << "p4=" << buf << "\n";
-      }
+        out << fmt::format("p4={}, {}, {}, {}\n", p->data.p4.x, p->data.p4.y, p->data.p4.z, p->data.p4.w);
         break;
+      }
       case TYPE_IPOINT2: {
-        sprintf(buf, "%d, %d", p->data.ip2.x, p->data.ip2.y);
-        out << "ip2=" << buf << "\n";
-      }
+        out << fmt::format("ip2={}, {}\n", p->data.ip2.x, p->data.ip2.y);
         break;
+      }
       case TYPE_IPOINT3: {
-        sprintf(buf, "%d, %d, %d", p->data.ip3.x, p->data.ip3.y, p->data.ip3.z);
-        out << "ip3=" << buf << "\n";
-      }
+        out << fmt::format("ip3={}, {}, {}\n", p->data.ip3.x, p->data.ip3.y, p->data.ip3.z);
         break;
+      }
       case TYPE_E3DCOLOR: {
-        sprintf(buf, "%d, %d, %d, %d", p->data.c.r, p->data.c.g, p->data.c.b, p->data.c.a);
-        out << "c=" << buf << "\n";
-      }
+        out << fmt::format("c={}, {}, {}, {}\n", p->data.c.r, p->data.c.g, p->data.c.b, p->data.c.a);
         break;
+      }
       case TYPE_MATRIX: {
-        sprintf(buf, "[[%g, %g, %g] [%g, %g, %g] [%g, %g, %g] [%g, %g, %g]]", p->data.tm.m[0][0], p->data.tm[0][1],
-                p->data.tm[0][2], p->data.tm[1][0], p->data.tm[1][1], p->data.tm[1][2], p->data.tm[2][0],
-                p->data.tm[2][1], p->data.tm[2][2], p->data.tm[3][0], p->data.tm[3][1], p->data.tm[3][2]);
-        out << "m=" << buf << "\n";
-      }
+        out << fmt::format("m=[[{}, {}, {}] [{}, {}, {}] [{}, {}, {}] [{}, {}, {}]]\n", p->data.tm.m[0][0], p->data.tm[0][1],
+                           p->data.tm[0][2], p->data.tm[1][0], p->data.tm[1][1], p->data.tm[1][2], p->data.tm[2][0],
+                           p->data.tm[2][1], p->data.tm[2][2], p->data.tm[3][0], p->data.tm[3][1], p->data.tm[3][2]);
         break;
+      }
       case TYPE_UINT64: {
-        snprintf(buf, sizeof(buf), "%lld", p->data.u64);
-        out << "i64=" << buf << "\n";
+        out << fmt::format("i64={}\n", p->data.u64);
+        break;
       }
     }
   }
@@ -647,27 +637,19 @@ static void writeStringValue(std::ostream *cb, const char *s) {
       }
         break;
       case TYPE_REAL: {
-        writeString(cb, ":r=");
-        sprintf(buf, "%g", p.data.r);
-        writeString(cb, buf);
+        writeString(cb, fmt::format(":r={}", p.data.r).c_str());
       }
         break;
       case TYPE_POINT2: {
-        writeString(cb, ":p2=");
-        sprintf(buf, "%g, %g", p.data.p2.x, p.data.p2.y);
-        writeString(cb, buf);
+        writeString(cb, fmt::format(":p2={}, {}", p.data.p2.x, p.data.p2.y).c_str());
       }
         break;
       case TYPE_POINT3: {
-        writeString(cb, ":p3=");
-        sprintf(buf, "%g, %g, %g", p.data.p3.x, p.data.p3.y, p.data.p3.z);
-        writeString(cb, buf);
+        writeString(cb, fmt::format(":p3={}, {}, {}", p.data.p3.x, p.data.p3.y, p.data.p3.z).c_str());
       }
         break;
       case TYPE_POINT4: {
-        writeString(cb, ":p4=");
-        sprintf(buf, "%g, %g, %g, %g", p.data.p4.x, p.data.p4.y, p.data.p4.z, p.data.p4.w);
-        writeString(cb, buf);
+        writeString(cb, fmt::format(":p4={}, {}, {}, {}\n", p.data.p4.x, p.data.p4.y, p.data.p4.z, p.data.p4.w).c_str());
       }
         break;
       case TYPE_IPOINT2: {
@@ -689,11 +671,9 @@ static void writeStringValue(std::ostream *cb, const char *s) {
       }
         break;
       case TYPE_MATRIX: {
-        writeString(cb, ":m=");
-        sprintf(buf, "[[%g, %g, %g] [%g, %g, %g] [%g, %g, %g] [%g, %g, %g]]", p.data.tm.m[0][0], p.data.tm[0][1],
-                p.data.tm[0][2], p.data.tm[1][0], p.data.tm[1][1], p.data.tm[1][2], p.data.tm[2][0],
-                p.data.tm[2][1], p.data.tm[2][2], p.data.tm[3][0], p.data.tm[3][1], p.data.tm[3][2]);
-        writeString(cb, buf);
+        writeString(cb, fmt::format(":m=[[{}, {}, {}] [{}, {}, {}] [{}, {}, {}] [{}, {}, {}]]\n", p.data.tm.m[0][0], p.data.tm[0][1],
+                                    p.data.tm[0][2], p.data.tm[1][0], p.data.tm[1][1], p.data.tm[1][2], p.data.tm[2][0],
+                                    p.data.tm[2][1], p.data.tm[2][2], p.data.tm[3][0], p.data.tm[3][1], p.data.tm[3][2]).c_str());
         break;
       }
       case TYPE_UINT64: {
@@ -760,7 +740,7 @@ static inline const char *resolve_short_type(uint32_t type)
 {
   static const char *types[DataBlock::TYPE_COUNT + 1] = {
       "none", "t", "i", "r", "p2", "p3", "p4", "ip2", "ip3", "b", "c", "m", "i64", "err"};
-  type = type < DataBlock::TYPE_COUNT ? type : DataBlock::TYPE_COUNT;
+  G_ASSERT(type < DataBlock::TYPE_COUNT+1);
   return types[type];
 }
 
@@ -843,36 +823,67 @@ bool DataBlock::writeText(std::ostream *cb, int level) const
     }
     else
     {
-      const char *paramData = &p.data.data_ptr;
-      const int *cdi = (const int *)paramData;
-      const int64_t *cdi64 = (const int64_t *)paramData;
-      const float *cd = (const float *)paramData;
-      char buf[256];
-      switch (p.type)
-      {
-        case TYPE_BOOL: snprintf(buf, sizeof(buf), *paramData ? "yes" : "no"); break;
-        case TYPE_INT: snprintf(buf, sizeof(buf), "%d", cdi[0]); break;
-        case TYPE_REAL: snprintf(buf, sizeof(buf), "%g", cd[0]); break;
-        case TYPE_POINT2: snprintf(buf, sizeof(buf), "%g, %g", cd[0], cd[1]); break;
-        case TYPE_POINT3: snprintf(buf, sizeof(buf), "%g, %g, %g", cd[0], cd[1], cd[2]); break;
-        case TYPE_POINT4: snprintf(buf, sizeof(buf), "%g, %g, %g, %g", cd[0], cd[1], cd[2], cd[3]); break;
-        case TYPE_IPOINT2: snprintf(buf, sizeof(buf), "%d, %d", cdi[0], cdi[1]); break;
-        case TYPE_IPOINT3: snprintf(buf, sizeof(buf), "%d, %d, %d", cdi[0], cdi[1], cdi[2]); break;
-        case TYPE_E3DCOLOR:
-        {
-          E3DCOLOR c = p.data.c;
-          snprintf(buf, sizeof(buf), "%d, %d, %d, %d", c.r, c.g, c.b, c.a);
+      //const char *paramData = &p.data.data_ptr;
+      //const int *cdi = (const int *)paramData;
+      //const int64_t *cdi64 = (const int64_t *)paramData;
+      //const float *cd = (const float *)paramData;
+      std::string out;
+      switch (p.type) {
+
+        case TYPE_STRING:
+          out = fmt::format("\"{}\"\n", p.data.s);
+          break;
+        case TYPE_BOOL: {
+          out = fmt::format("{}\n", p.data.b ? "yes" : "no");
           break;
         }
-        case TYPE_MATRIX:
-          snprintf(buf, sizeof(buf), "[[%g, %g, %g] [%g, %g, %g] [%g, %g, %g] [%g, %g, %g]]", cd[0 * 3 + 0], cd[0 * 3 + 1],
-                   cd[0 * 3 + 2], cd[1 * 3 + 0], cd[1 * 3 + 1], cd[1 * 3 + 2], cd[2 * 3 + 0], cd[2 * 3 + 1], cd[2 * 3 + 2], cd[3 * 3 + 0],
-                   cd[3 * 3 + 1], cd[3 * 3 + 2]);
+        case TYPE_INT: {
+          out = fmt::format("{}\n", p.data.i);
           break;
-        case TYPE_UINT64: snprintf(buf, sizeof(buf), "%lld", (long long int)*cdi64); break;
-        default: G_ASSERT(0);
+        }
+        case TYPE_REAL: {
+          out = fmt::format("{}\n", p.data.r);
+          break;
+        }
+        case TYPE_POINT2: {
+          out = fmt::format("{}, {}\n", p.data.p2.x, p.data.p2.y);
+          break;
+        }
+        case TYPE_POINT3: {
+          out = fmt::format("{}, {}, {}\n", p.data.p3.x, p.data.p3.y, p.data.p3.z);
+          break;
+        }
+        case TYPE_POINT4: {
+          out = fmt::format("{}, {}, {}, {}\n", p.data.p4.x, p.data.p4.y, p.data.p4.z, p.data.p4.w);
+          break;
+        }
+        case TYPE_IPOINT2: {
+          out = fmt::format("{}, {}\n", p.data.ip2.x, p.data.ip2.y);
+          break;
+        }
+        case TYPE_IPOINT3: {
+          out = fmt::format("{}, {}, {}\n", p.data.ip3.x, p.data.ip3.y, p.data.ip3.z);
+          break;
+        }
+        case TYPE_E3DCOLOR: {
+          out = fmt::format("{}, {}, {}, {}\n", p.data.c.r, p.data.c.g, p.data.c.b, p.data.c.a);
+          break;
+        }
+        case TYPE_MATRIX: {
+          out = fmt::format("[[{}, {}, {}] [{}, {}, {}] [{}, {}, {}] [{}, {}, {}]]\n", p.data.tm.m[0][0],
+                            p.data.tm[0][1],
+                            p.data.tm[0][2], p.data.tm[1][0], p.data.tm[1][1], p.data.tm[1][2], p.data.tm[2][0],
+                            p.data.tm[2][1], p.data.tm[2][2], p.data.tm[3][0], p.data.tm[3][1], p.data.tm[3][2]);
+          break;
+        }
+        case TYPE_UINT64: {
+          out = fmt::format("{}\n", p.data.u64);
+          break;
+        }
+        default:
+          G_ASSERT(0);
       }
-      writeString(cb, buf);
+      writeString(cb, out.c_str());
     }
     if (level < 0 && paramCount() == 1 && blockCount() == 0)
       cb->write(";", 1);

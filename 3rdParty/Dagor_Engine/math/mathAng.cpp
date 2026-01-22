@@ -135,14 +135,14 @@ void matrix_to_euler(const TMatrix &tm, real &heading, real &attitude, real &ban
   m.setcol(1, normalize(tm.getcol(1)));
   m.setcol(2, normalize(tm.getcol(2)));
 
-  if (m[0][1] > 0.9999)
+  if (m[0][1] > 0.9999f)
   {
     heading = safe_atan2(m.m[2][0], m.m[2][2]);
     attitude = HALFPI;
     bank = 0;
     return;
   }
-  else if (m[0][1] < -0.9999)
+  else if (m[0][1] < -0.9999f)
   {
     heading = -safe_atan2(m.m[2][0], m.m[2][2]);
     attitude = -HALFPI;
@@ -174,7 +174,7 @@ real get_axis_angle(const TMatrix &tm, int axis /*1-x; 2-y; 3-z*/)
       proj = normalize(Point3(0, vz.y, vz.z));
       ort = Point3(0, 0, 1);
 
-      if (proj.length() < 0.0001)
+      if (proj.length() < 0.0001f)
       {
         proj = normalize(Point3(0, vy.y, vy.z));
         ort = Point3(0, 1, 0);
@@ -185,7 +185,7 @@ real get_axis_angle(const TMatrix &tm, int axis /*1-x; 2-y; 3-z*/)
       proj = normalize(Point3(vx.x, 0, vx.z));
       ort = Point3(1, 0, 0);
 
-      if (proj.length() < 0.0001)
+      if (proj.length() < 0.0001f)
       {
         proj = normalize(Point3(vz.x, 0, vz.z));
         ort = Point3(0, 0, 1);
@@ -196,7 +196,7 @@ real get_axis_angle(const TMatrix &tm, int axis /*1-x; 2-y; 3-z*/)
       proj = normalize(Point3(vy.x, vy.y, 0));
       ort = Point3(0, 1, 0);
 
-      if (proj.length() < 0.0001)
+      if (proj.length() < 0.0001f)
       {
         proj = normalize(Point3(vx.x, vx.y, 0));
         ort = Point3(1, 0, 0);

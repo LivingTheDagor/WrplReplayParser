@@ -60,7 +60,7 @@ namespace ecs {
     this->wasInit.clear();
     validateInitializer(templId, initializer); // ensures the initializer has cIndex populated
     InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(templId);
-    G_ASSERTF(instTempl, "Template {} not initialized", data_state->templates.getTemplate(templId)->name.c_str());
+    G_ASSERTF(instTempl, "Template {} not initialized", data_state->templates.getTemplate(templId)->name);
     LOG("Creating new entity {:#x} of template '{}'", eid.handle, data_state->templates.getTemplate(templId)->name.c_str());
     if(eid.handle == 0x4008a3) {
       //LOG("{} instTemplate components:", g_ecs_data->templates.getTemplate(instTempl->parent)->name);
@@ -93,7 +93,6 @@ namespace ecs {
                   // like render or sound.
       //LOG("%s(%s) data:", dataComponents.getName(comp.cIndex).data(), componentTypes.getName(comp.second.getTypeId()).data());
       //comp.second.getComponentRef().print(&componentTypes);
-
       G_ASSERT(id != INVALID_ARCHETYPE_COMPONENT_ID); // component exists for us
       auto curr_info = ComponentInfo[id];
       auto data =info->ARCHETYPE.getCompDataUnsafe(curr_info.DATA_OFFSET, chunk_id, curr_info.DATA_SIZE);
@@ -202,11 +201,11 @@ namespace ecs {
 		return false;
     auto desc = this->entDescs.getEntityDesc(eid);
     LOG("Destroying entity {:#x} of template {}", eid.handle, data_state->templates.getTemplate(desc->templ_id)->name.c_str());
-    const InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(desc->templ_id);
+    //const InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(desc->templ_id);
     archetype_t archetype_id = desc->archetype_id;
     auto info = &this->archetypes.archetypes[archetype_id];
     auto ComponentInfo = &this->archetypes.archetypeComponents[info->COMPONENT_OFS];
-    auto archInfo = &info->INFO;
+    //auto archInfo = &info->INFO;
     //if (eid.handle == 0x4008a3) {
     //  LOG("WOMP");
     //  g_log_handler.wait_until_empty();
@@ -299,12 +298,12 @@ namespace ecs {
     {
       auto desc= this->entDescs.getEntityDesc(eid);
       eid = desc->eid;
-      const InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(desc->templ_id);
+      //const InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(desc->templ_id);
 
       archetype_t archetype_id = desc->archetype_id;
       auto info = &this->archetypes.archetypes[archetype_id];
       auto ComponentInfo = &this->archetypes.archetypeComponents[info->COMPONENT_OFS];
-      auto archInfo = &info->INFO;
+      //auto archInfo = &info->INFO;
       LOG("DebugPrint of Entity {:#x} of template '{}' of archetype_id {}", eid.handle, this->data_state->templates.getTemplate(desc->templ_id)->name.c_str(), archetype_id);
       for(auto comp_info = ComponentInfo; comp_info != ComponentInfo+info->COMPONENT_COUNT; comp_info++)
       {
@@ -322,7 +321,7 @@ namespace ecs {
     }
   }
 
-  void *__restrict EntityManager::getNullable(EntityId eid, component_index_t index, archetype_t &archetype) const {
+  void * EntityManager::getNullable(EntityId eid, component_index_t index, archetype_t &archetype) const {
     if(!this->entDescs.doesEntityExist(eid))
       return nullptr;
     auto desc = this->entDescs[eid.index()];
@@ -332,7 +331,7 @@ namespace ecs {
     return archetypes.getComponentDataUnsafe(archetype, index, desc.chunk_id);
   }
 
-  void *__restrict EntityManager::getNullableUnsafe(EntityId eid, component_index_t index, archetype_t &archetype) const {
+  void * EntityManager::getNullableUnsafe(EntityId eid, component_index_t index, archetype_t &archetype) const {
     G_ASSERT(this->entDescs.doesEntityExist(eid)); // sanity check in dev only
     auto desc = this->entDescs[eid.index()];
     archetype = desc.archetype_id; // should always be valid

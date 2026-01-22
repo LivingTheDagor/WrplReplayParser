@@ -33,7 +33,7 @@ struct ReplayData
   {
     this->size = rdr.getSize()-rdr.readOffset();
     this->data = (unsigned char *)malloc(this->size);
-    rdr.read(data, size);
+    rdr.read(data, (int)size);
   }
 
   [[nodiscard]] std::span<unsigned char> getData() const
@@ -43,6 +43,7 @@ struct ReplayData
 
   [[nodiscard]] std::span<unsigned char> getData(uint64_t offset) const
   {
+    G_ASSERT(data);
     return {(unsigned char *)data+offset, size-offset};
   }
 
@@ -105,7 +106,7 @@ public:
     if (*data->getObj<uint8_t>(MAIN_DATA_START) == 1) // the BLK always starts with 0x01, zlib 0x78
     {
       auto span = data->getData(MAIN_DATA_START);
-      BaseReader rdr(reinterpret_cast<char *>(span.data()), span.size(), false);
+      BaseReader rdr(reinterpret_cast<char *>(span.data()), (int)span.size(), false);
       HeaderBlk.loadFromStream(rdr, nullptr, nullptr);
       zlib_start += rdr.readOffset();
     }
@@ -113,12 +114,12 @@ public:
     {
       zlib_size = footerBlkOffset-zlib_start;
       auto span = data->getData(footerBlkOffset);
-      BaseReader rdr(reinterpret_cast<char *>(span.data()), span.size(), false);
+      BaseReader rdr(reinterpret_cast<char *>(span.data()), (int)span.size(), false);
       FooterBlk.loadFromStream(rdr, nullptr, nullptr);
     }
     else
     {
-      zlib_size = data->size-zlib_start;
+      zlib_size = (uint32_t)data->size-zlib_start;
     }
   }
 

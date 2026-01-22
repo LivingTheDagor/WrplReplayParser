@@ -29,8 +29,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif ()
 
 target_include_directories(ENET
-        PUBLIC
+        SYSTEM PUBLIC
         "${CMAKE_CURRENT_LIST_DIR}/include"
 )
 
 add_library(ENET::ENET ALIAS ENET)
+
+set_target_properties(ENET PROPERTIES
+        COMPILE_OPTIONS --no-warnings
+)

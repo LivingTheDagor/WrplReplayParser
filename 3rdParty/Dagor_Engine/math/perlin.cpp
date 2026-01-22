@@ -295,7 +295,7 @@ static inline float fBm(float point[], float H, float lacunarity, float octaves)
   {
     lastH = H;
     frequency = 1.0;
-    for (i = 0; i <= octaves; i++)
+    for (i = 0; (float)i <= octaves; i++)
     {
       /* compute weight for each frequency */
       exponent_array[i] = powf(frequency, -H);
@@ -314,7 +314,7 @@ static inline float fBm(float point[], float H, float lacunarity, float octaves)
       point[v] *= lacunarity;
   } /* for */
 
-  remainder = octaves - (int)octaves;
+  remainder = octaves - (float)((int)octaves);
   if (remainder > 0.0f) /* add in ``octaves''  remainder */
     value += remainder * noise(point, dimensions) * exponent_array[i];
 

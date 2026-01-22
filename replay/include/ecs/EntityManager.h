@@ -83,8 +83,8 @@ namespace ecs {
 
 
 
-    void*__restrict getNullable(EntityId eid, component_index_t index, archetype_t &archetype) const;
-    void*__restrict getNullableUnsafe(EntityId eid, component_index_t index, archetype_t &archetype) const;
+    void* getNullable(EntityId eid, component_index_t index, archetype_t &archetype) const;
+    void* getNullableUnsafe(EntityId eid, component_index_t index, archetype_t &archetype) const;
     template <class T>
     T* getNullable(EntityId eid, HashedConstString component) {
       if(!this->entDescs.doesEntityExist(eid))
@@ -92,7 +92,7 @@ namespace ecs {
       auto cidx = this->data_state->dataComponents.getIndex(component.hash);
       if(cidx == INVALID_COMPONENT_INDEX)
         return nullptr;
-      auto comp = this->data_state->dataComponents.getDataComponent(cidx);
+      //auto comp = this->data_state->dataComponents.getDataComponent(cidx);
       archetype_t arch = INVALID_ARCHETYPE;
       return (T*)this->getNullableUnsafe(eid, cidx, arch);
     }
@@ -132,7 +132,7 @@ namespace ecs {
       auto it = this->initialized_archetypes.find(inst);
       if(it == this->initialized_archetypes.end())
       {
-        archetype_t arch = this->archetypes.createArchetype(inst->component_indexes.data(), inst->component_indexes.size(), data_state->dataComponents, data_state->componentTypes);;
+        archetype_t arch = this->archetypes.createArchetype(inst->component_indexes.data(), (uint32_t)inst->component_indexes.size(), data_state->dataComponents, data_state->componentTypes);;
         this->initialized_archetypes.emplace(inst, arch);
         return arch;
       }

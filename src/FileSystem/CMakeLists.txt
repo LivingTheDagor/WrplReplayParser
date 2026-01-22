@@ -10,6 +10,7 @@ target_link_libraries(FS
         ZSTD::ZSTD
         Zlib::Zlib
         DAG_MATH::DAG_MATH
+        BLK::BLK
 )
 
 add_library(FS::FS ALIAS FS)
@@ -23,3 +24,5 @@ target_include_directories(FS
         ${INCLUDES}
 )
 
+
+SetGenFlags(FS)

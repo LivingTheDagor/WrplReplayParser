@@ -7,12 +7,12 @@ namespace ecs
 {
 
 
-  inline uint16_t Archetypes::getComponentSizeFromOfs(archetype_component_id component_id, uint32_t ofs) const
+  inline uint32_t Archetypes::getComponentSizeFromOfs(archetype_component_id component_id, uint32_t ofs) const
   {
     return archetypeComponents[component_id + ofs].DATA_SIZE;
   }
 
-  uint16_t calculate_true_size(uint16_t sz)
+  uint32_t calculate_true_size(uint32_t sz)
   {
     switch(sz) {
       case 0:
@@ -25,14 +25,14 @@ namespace ecs
       case 4:
         return 4;
       default:
-        return ((sz + 3) / 4) * 4; // ensure packing to 4
+        return (uint16_t)(((sz + 3) / 4) * 4); // ensure packing to 4
     }
   }
 
   archetype_t Archetypes::createArchetype(const component_index_t *__restrict components, uint32_t components_cnt,
                                    DataComponents &dataComponents, ComponentTypes &componentTypes) {
     //TODO: add support for findArchetype, only plan to do it if we 1: plan to use east::tuple_vector or make our own, what it does makes that much easier
-    uint16_t entitySize = 0;
+    uint32_t entitySize = 0;
     const uint32_t componentsAt = (uint32_t)archetypeComponents.size();
     archetypeComponents.resize(componentsAt + components_cnt);
 
@@ -49,8 +49,8 @@ namespace ecs
       auto x = components[i];
       const auto typeIndex = dataComponents.getDataComponent(x)->componentIndex;
       const auto type = componentTypes.getComponentData(typeIndex);
-      uint16_t true_size = calculate_true_size(type->size); // this ensures larger structs are stored optimally
-      if(auto offset = entitySize%4) // if offset is > 0, then we arnt alligned to 4 bytes
+      uint32_t true_size = calculate_true_size(type->size); // this ensures larger structs are stored optimally
+      if(uint32_t offset = entitySize%4) // if offset is > 0, then we arnt alligned to 4 bytes
       {
         // components smaller than 4 bytes we dont care about alligned storage
         if(true_size >= 4) // components at least 4 bytes in size we want to allign
@@ -75,7 +75,7 @@ namespace ecs
       uint32_t indicesCount = lastIndex - firstNonEidIndex + 1;
       std::unique_ptr<uint16_t[]> indicesMap(new uint16_t[indicesCount]);
       memset(indicesMap.get(), 0xFF, indicesCount * sizeof(uint16_t));
-      for (int i = 1; i < components_cnt; ++i)
+      for (uint16_t i = 1; i < components_cnt; ++i)
       {
         G_ASSERT(components[i] >= firstNonEidIndex && components[i] <= lastIndex);
         indicesMap[components[i] - firstNonEidIndex] = i;
@@ -95,7 +95,7 @@ namespace ecs
       info = ArchetypeInfo{INVALID_COMPONENT_INDEX, 0, nullptr};
     G_ASSERT(components_cnt < 65535 && entitySize <= 65535);
     archetypes.emplace_back(Archetype{entitySize}, componentsAt, std::move(info), components_cnt);
-    return (uint32_t)archetypes.size() - 1;
+    return (archetype_t)archetypes.size() - 1;
   }
 
   archetype_component_id Archetypes::getComponentsCount(uint32_t archetype) const {

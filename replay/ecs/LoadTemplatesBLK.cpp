@@ -68,11 +68,11 @@ namespace ecs {
     std::vector<ecs::ComponentTemplInfo> *components;
     std::vector<ecs::template_t> *parents;
     TemplateDB *db;
-    const char *templName;
+    std::string templName;
     int valueNid;
     bool singleton = false;
     static const std::unordered_set<std::string> allowed_tags;
-    std::string mangle_type_name = "";
+    std::string mangle_type_name{};
 
     void parse(DataBlock &blk);
   };
@@ -271,7 +271,7 @@ namespace ecs {
 
   static inline ecs::Array load_array_impl(TemplateParseContext &ctx, DataBlock &blk) {
     ecs::Array out_array;
-    out_array.reserve(blk.paramCount() + blk.blockCount());
+    out_array.reserve((ecs::Array::base_type::size_type)(blk.paramCount() + blk.blockCount()));
     load_component_list_impl(ctx, blk, "ecs_array", [&out_array](std::vector<ecs::ComponentTemplInfo> &&clist) {
       for (auto &&arrElem: clist)
         out_array.push_back(std::move(arrElem.default_component));
@@ -287,7 +287,7 @@ namespace ecs {
   static inline T load_array_impl(TemplateParseContext &ctx, DataBlock &blk) {
     T out_array; // ecs::list<T>
 
-    out_array.reserve(blk.paramCount() + blk.blockCount());
+    out_array.reserve((typename T::size_type)(blk.paramCount() + blk.blockCount()));
     std::string mangle_name = typeid(T).name();
     mangle_name += "ecs_list_";
     load_component_list_impl(ctx, blk, mangle_name, [&ctx, &out_array, blk](std::vector<ecs::ComponentTemplInfo> &&clist) {
@@ -295,7 +295,6 @@ namespace ecs {
         if (arrElem.default_component.is<typename T::value_type>())
           out_array.push_back(std::move(*(typename T::value_type *) arrElem.default_component.getRawData()));
         else {
-          auto datacmps = g_ecs_data->getDataComponents();
           EXCEPTION("debug this I dont know how to fix this format string");
 }
 
@@ -366,7 +365,7 @@ namespace ecs {
     int tagsId = blk.getNameId("_tags");
     int reservedReplId = blk.getNameId("_skipInitialReplication");
     int overrideId = blk.getNameId("_override");
-    for (int i = 0; i < blk.paramCount(); i++) {
+    for (uint32_t i = 0; i < blk.paramCount(); i++) {
       if (is_reserved_name(blk.getParamName(i))) {
         int nid = blk.getParamNameId(i);
         if (nid == singletonId)
@@ -443,7 +442,7 @@ namespace ecs {
       auto comps = ecs::g_ecs_data->getComponentTypes();
       std::string name, type;
       parseNameType(std::string(subBlock->getBlockName()), name, type);
-      component_index_t comp_index = INVALID_COMPONENT_INDEX;
+      //component_index_t comp_index = INVALID_COMPONENT_INDEX;
       if (!type.empty()) {
         if (type.starts_with(SHARED_PREFIX)) // cant handle those
           continue;
@@ -456,11 +455,11 @@ namespace ecs {
         if (index == INVALID_COMPONENT_INDEX)
           EXCEPTION("Failed to find datacomponent {}", name);
         components->emplace_back(index,
-                                 std::move(Component{nullptr,
+                                 Component{nullptr,
                                                      hash,
                                                      dataComps->getDataComponent(index)->componentIndex,
                                                      comps->getComponentData(
-                                                         dataComps->getDataComponent(index)->componentIndex)->size}));
+                                                         dataComps->getDataComponent(index)->componentIndex)->size});
         continue;
       } else if (auto typeLoader = find_type_block_loader(type)) {
         typeLoader->load(*this,name.c_str(), *subBlock);
@@ -474,9 +473,9 @@ namespace ecs {
         //auto name_ = this->mangle_type_name.empty() ? name : mangle_name(name.c_str(), this->mangle_type_name, type);
 
         component_index_t idx = dataComps->createComponent(ECS_HASH(name.c_str()), index, nullptr, *comps);
-        components->emplace_back(idx, std::move(Component{
+        components->emplace_back(idx, Component{
             nullptr, hash.hash, index, comps->getComponentData(index)->size
-        }));
+        });
       }
     }
   }
@@ -527,7 +526,7 @@ class LoadContext {
   std::unordered_set<std::string> ResolvedImports; // imports that have already been resolved and parsed
   ecs::TemplateDB *db = ecs::g_ecs_data->getTemplateDB();
 public:
-  void parse_templates_from_blk(DataBlock *blk) {
+  void parse_templates_from_blk(DataBlock *blk, ecs::TemplateDB *overrides) {
     auto db_ = ecs::g_ecs_data->getTemplateDB();
     for (int i = 0; i < blk->blockCount(); i++) // each 'block' is a template
     {
@@ -550,7 +549,7 @@ public:
 
 
   /// resolves the imports for one path
-  void resolve_one_import(const char *path, fs::path &src_folder, bool is_optional) {
+  void resolve_one_import(const char *path, fs::path &src_folder, bool is_optional, ecs::TemplateDB *overrides) {
     bool abs_path = (path[0] == '#');
     bool mnt_path = (path[0] == '%');
     if (abs_path)
@@ -562,7 +561,7 @@ public:
       const char *fn_with_ext = dd_get_fname(path);
       G_ASSERTF(strchr(path, '*') >= fn_with_ext, "imp_fn={}{}", abs_path ? "#" : "", path);
       std::string fn_match_re{};
-      fn_match_re.reserve((int)strlen(fn_with_ext) * 2 + 1);
+      fn_match_re.reserve(strlen(fn_with_ext) * 2 + 1);
       for (const char *p = fn_with_ext; *p; p++)
         if (*p == '*')
           fn_match_re += ".*";
@@ -598,7 +597,7 @@ public:
           ResolvedImports.emplace(s);
           if(load(imp_blk, s.c_str()))
           {
-            resolve_imports(&imp_blk);
+            resolve_imports(&imp_blk, overrides);
           }
         }
       }
@@ -616,7 +615,7 @@ public:
         return;
       ResolvedImports.emplace(path_.string());
       if (load(imp_blk, path_.string().c_str())) {
-        resolve_imports(&imp_blk);
+        resolve_imports(&imp_blk, overrides);
       } else if (!is_optional) {
         EXCEPTION("Failed to load {}", path_.string());
       }
@@ -626,7 +625,7 @@ public:
 
   /// attempts to resolve all the imports for a template blk.
   /// once those are resolved, it will initiate parsing of blk
-  void resolve_imports(DataBlock *blk) {
+  void resolve_imports(DataBlock *blk, ecs::TemplateDB *overrides) {
 
     const char *src_fn = blk->resolveFilename();
     if (src_fn) {
@@ -639,20 +638,21 @@ public:
         if (paramNid == importNid || paramNid == importOptionalNid) {
           const bool isOptional = paramNid == importOptionalNid;
           //std::cout << "resolving import: " << blk->getStr(i) << "\n";
-          resolve_one_import(blk->getStr(i), path, isOptional);
+          resolve_one_import(blk->getStr(i), path, isOptional, overrides);
         }
       }
     }
 
     //std::cout << "parsing file: " <<  src_fn << "\n";
-    parse_templates_from_blk(blk);
+    parse_templates_from_blk(blk, overrides);
   }
 
   // entry point
   void parse_blk(const char *path) {
     DataBlock blk{};
+    ecs::TemplateDB overrides{};
     G_ASSERT(load(blk, path));
-    resolve_imports(&blk);
+    resolve_imports(&blk, &overrides);
   }
 };
 

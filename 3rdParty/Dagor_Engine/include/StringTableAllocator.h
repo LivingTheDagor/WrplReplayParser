@@ -8,76 +8,6 @@
 #ifndef __forceinline
 #define __forceinline inline
 #endif
-#if _TARGET_SIMD_SSE || defined(__GNUC__) || (_TARGET_SIMD_NEON && defined(_MSC_VER))
-#define HAS_BIT_SCAN_FORWARD 1
-#if defined(__GNUC__) || defined(__clang__)
-
-inline unsigned __bsf(int v) { return v ? __builtin_ctz(v) : 32; }
-
-inline unsigned __bsf_unsafe(int v) // undefined for 0
-{
-  return __builtin_ctz(v);
-}
-
-inline int __bit_scan_forward(unsigned long &index, unsigned int val)
-{
-  if (!val)
-    return 0;
-  index = __builtin_ctz(val);
-  return 1;
-}
-
-inline unsigned __bsr(int v) { return v ? 31 - __builtin_clz(v) : 32; }
-
-inline unsigned __bsr_unsafe(int v) // undefined for 0
-{
-  return 31 - __builtin_clz(v);
-}
-
-inline int __bit_scan_reverse(unsigned long &index, unsigned int val)
-{
-  if (!val)
-    return 0;
-  index = 31 - __builtin_clz(val);
-  return 1;
-}
-
-#elif _TARGET_PC_WIN | _TARGET_XBOX
-
-inline unsigned __bsf(int v)
-{
-  unsigned long r;
-  return _BitScanForward(&r, v) ? r : 32;
-}
-
-inline unsigned __bsf_unsafe(int v) // undefined for 0
-{
-  unsigned long r;
-  _BitScanForward(&r, v);
-  return r;
-}
-
-inline int __bit_scan_forward(unsigned long &index, unsigned int val) { return _BitScanForward(&index, val); }
-
-inline unsigned __bsr(int v)
-{
-  unsigned long r;
-  return _BitScanReverse(&r, v) ? r : 32;
-}
-
-inline unsigned __bsr_unsafe(int v) // undefined for 0
-{
-  unsigned long r;
-  _BitScanReverse(&r, v);
-  return r;
-}
-
-inline int __bit_scan_reverse(unsigned long &index, unsigned int val) { return _BitScanReverse(&index, val); }
-#endif
-
-#else
-#define HAS_BIT_SCAN_FORWARD 0
-#endif
 
 #pragma pack(push, 4)
 struct StringTableAllocator
@@ -152,9 +82,9 @@ struct StringTableAllocator
     for (;;)
     {
       page_shift = min8(page_shift + 1, max_page_shift);
-      if (len > (1 << max_page_shift) && page_shift == max_page_shift)
+      if (len > (uint32_t)(1 << max_page_shift) && page_shift == max_page_shift)
         return addPageUnsafe(len);
-      if (len <= (1 << page_shift))
+      if (len <= (uint32_t)(1 << page_shift))
         return addPageUnsafe(1 << page_shift);
       addPageUnsafe(0, nullptr); // save some memory, 'empty' page allocated
     }

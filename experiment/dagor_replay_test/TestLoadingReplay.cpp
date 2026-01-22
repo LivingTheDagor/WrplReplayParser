@@ -23,11 +23,11 @@
 std::string convert_os_path_to_wsl2(std::string &str) { // this function assumes a windows os with a wsl2 linux
   G_ASSERTF(str[1] == ':', "must be an absolute path");
   std::string payload = "/mnt/";
-  payload += std::tolower(str[0]);
+  payload += static_cast<char>(std::tolower(str[0]));
   payload += "/";
   payload += str.substr(3);
   std::replace(payload.begin(), payload.end(), '\\', '/');
-  return std::move(payload);
+  return payload;
 }
 
 std::string convert_os_path_to_wsl2(const char *str) {
@@ -52,6 +52,8 @@ int main()
   auto bin_path = conf_blk.getStr("bin_path", nullptr);
   std::string rpl_path_str = replay_path;
   std::string bin_path_str = bin_path;
+  G_UNUSED(source_is_linux_path);
+  G_UNUSED(bin_is_linux_path);
 #ifdef Linux
   if(!source_is_linux_path) {
     rpl_path_str = convert_os_path_to_wsl2(replay_path);
@@ -61,7 +63,7 @@ int main()
   }
 #endif
   initialize(bin_path_str);
-  auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
+  //auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
   IReplayReader *rdr = nullptr;
   ServerReplay *srv_rpl = nullptr;
   Replay *rpl = nullptr;
@@ -108,7 +110,6 @@ int main()
       case ReplayPacketType::Chat:
         break;
       case ReplayPacketType::MPI: {
-        //LOG("Current Time: %f\n", ((float)pkt->timestamp_ms)/1000);
         auto m = mpi::dispatch(pkt->stream, &state, false);
         if(m != nullptr)
         {
@@ -134,14 +135,14 @@ int main()
     //std::cout.flush();
   }
   //auto ptr = &mpi::players;
-  for(auto &data : mpi::mpi_data)
-  {
-    LOG("OID: {:#x}", data.first);
-    for(auto &data2: data.second)
-    {
-      LOG("    mid: {:#x}; count: {}", data2.first, data2.second);
-    }
-  }
+  //for(auto &data : mpi::mpi_data)
+  //{
+  //  LOG("OID: {:#x}", data.first);
+  //  for(auto &data2: data.second)
+  //  {
+  //    LOG("    mid: {:#x}; count: {}", data2.first, data2.second);
+  //  }
+  //}
   LOG("Aircraft Count: {}", AircraftCount);
   //rpl.HeaderBlk.printBlock(0, std::cout);
   //rpl.FooterBlk.printBlock(0, std::cout);

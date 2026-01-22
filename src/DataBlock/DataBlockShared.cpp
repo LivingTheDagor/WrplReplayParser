@@ -5,7 +5,7 @@ DataBlockShared::DataBlockShared(uint32_t complexDataSize,uint32_t ParamCount, u
     this->complexDataSize = complexDataSize;
     this->ParamCount = ParamCount;
     this->BlockCount = BlockCount;
-    BlockOffset = complexDataSize+ParamCount*sizeof(DataBlock::Param);
+    BlockOffset = (uint32_t)(complexDataSize+ParamCount*sizeof(DataBlock::Param));
     data = (char *)malloc(complexDataSize+ParamCount*sizeof(DataBlock::Param)+BlockCount*sizeof(DataBlock));
 }
 

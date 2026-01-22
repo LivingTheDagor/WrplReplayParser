@@ -10,15 +10,14 @@ namespace ecs
   {
   public:
 
-    ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint16_t size);
-    ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint16_t size, component_index_t cidx);
+    ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint32_t size);
+    ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint32_t size, component_index_t cidx);
 
     /// makes this a reference to a particular component
     /// has no knowledge of component lifetime, so the pointer can become undefined
     /// doesnt store a reference to a component, only to a components data
     /// considnering all components store data as pointers, a ref will exist as long as the base component was not destroyed, even if it was moved or copied
     explicit ComponentRef(Component &c) : ComponentRef(c.value, c.componentType, c.componentTypeIndex, c.componentTypeSize) {}
-
 
     // WE DONT OWN DATA
     ComponentRef() = default;

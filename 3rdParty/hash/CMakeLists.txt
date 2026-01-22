@@ -13,10 +13,9 @@ target_link_libraries(XXH3
 )
 
 target_include_directories(XXH3
-        PUBLIC
+        SYSTEM PUBLIC
         "${CMAKE_CURRENT_LIST_DIR}"
         "${BASE_DIR}/3rdParty"
-        "${BASE_DIR}/replay/Gaijin/dagorInclude"
 )
 
 

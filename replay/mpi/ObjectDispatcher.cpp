@@ -89,14 +89,14 @@ namespace mpi {
     {
       EXCEPTION("dispatch: extended mpi uid is not set for object of type {}", oid>>0xb);
     }
-    ecs::EntityId eid = ecs::EntityId(extUid << 0x16 | extUid >> 8);
-    auto ref = mgr->getNullable<unit::UnitRef>(eid, ECS_HASH("unit__ref"));
+    //auto eid = ecs::EntityId(extUid << 0x16 | extUid >> 8);
+    //auto ref = mgr->getNullable<unit::UnitRef>(eid, ECS_HASH("unit__ref"));
     // TODO
     return nullptr;
   }
   IObject *ObjectDispatcher(ObjectID oid, ObjectExtUID extUid, ParserState *state) {
     uint16_t count = oid & 0x7ff;
-    uint8_t obj = oid >> 0xb;
+    uint8_t obj = (uint8_t)(oid >> 0xb);
     switch(obj) {
       case 1:
       case 2:

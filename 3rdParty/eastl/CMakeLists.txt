@@ -14,7 +14,7 @@ add_library(EASTL STATIC
 )
 
 target_include_directories(EASTL
-        PUBLIC
+        SYSTEM PUBLIC
         "${CMAKE_CURRENT_LIST_DIR}/include"
 )
 

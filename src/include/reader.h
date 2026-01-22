@@ -20,7 +20,7 @@ public:
     virtual ~GenReader() = default;
 
     /// reads from the stream, returns nullptr if unable
-    virtual bool read(void * ptr, unsigned int size) = 0;
+    virtual bool read(void * ptr, int size) = 0;
 
     /// returns current position in stream
     virtual int readOffset() = 0;
@@ -54,20 +54,23 @@ public:
         dest = std::string(buff);
         return true;
     }
-    template <typename T>
-    bool readCompressedUnsignedGeneric(T &v)
+  template <typename T>
+  bool readCompressedUnsignedGeneric(T &v)
+  {
+    v = 0;
+    for (uint32_t i = 0; i < sizeof(v) + 1; ++i)
     {
-        v = 0;
-        for (uint32_t i = 0; i < sizeof(v) + 1; ++i)
-        {
-            uint8_t byte = 0;
-            if(!read(&byte, 1)) return false;
-            v |= T(byte & ~(1 << 7)) << (i * 7);
-            if ((byte & (1 << 7)) == 0)
-                break;
-        }
-        return true;
+      uint8_t byte = 0;
+      if(!read(&byte, 1))
+        return false;
+
+      v |= static_cast<T>(static_cast<T>(byte & 0x7F) << (i * 7));
+
+      if ((byte & 0x80) == 0)
+        break;
     }
+    return true;
+  }
 
     static void issueFatal()
     {
@@ -82,7 +85,7 @@ public:
 
     ~BaseReader() override;
 
-    bool read(void * ptr, unsigned int size) override;
+    bool read(void * ptr, int size) override;
 
     int tryRead(void * ptr, int size) override
     {
@@ -119,7 +122,7 @@ public:
 
   std::streamoff getFileSize();
 
-    bool read(void * ptr, unsigned int size) override;
+    bool read(void * ptr, int size) override;
 
     int tryRead(void * ptr, int size) override
     {
@@ -169,7 +172,7 @@ public:
     bool initDecoder(std::span<char> &enc_data, const ZSTD_DDict_s *dict);
     void termDecoder();
 
-    bool read(void *ptr, unsigned int size) override;
+    bool read(void *ptr, int size) override;
     int tryRead(void *ptr, int size) override;
     int getSize() override;
     int readOffset() override
@@ -188,7 +191,7 @@ protected:
     ZSTD_DCtx_s *dstrm = nullptr;
     std::span<char> encDataBuf;
     bool owns;
-    unsigned encDataPos = 0;
+    size_t encDataPos = 0;
 
     virtual bool supplyMoreData() { return false; }
 
@@ -214,7 +217,7 @@ public:
 
 protected:
     static constexpr int RD_BUFFER_SIZE = (32 << 10);
-    unsigned inBufLeft = 0;
+    size_t inBufLeft = 0;
     GenReader *loadCb = nullptr;
     alignas(16) char rdBuf[RD_BUFFER_SIZE];
 
@@ -231,13 +234,13 @@ class ZlibLoadCB : public GenReader
 {
 public:
     ZlibLoadCB(GenReader &in_crd, int in_size, bool raw_inflate = false, bool fatal_errors = true) :
-            loadCb(nullptr), isStarted(false), isFinished(false), fatalErrors(fatal_errors)
+            isFinished(false), isStarted(false), fatalErrors(fatal_errors), loadCb(nullptr)
     {
         open(in_crd, in_size, raw_inflate);
     }
     ~ZlibLoadCB() override { close(); }
 
-    bool read(void *ptr, unsigned size) override;
+    bool read(void *ptr, int size) override;
 
     int tryRead(void *ptr, int size) override;
     int tell()

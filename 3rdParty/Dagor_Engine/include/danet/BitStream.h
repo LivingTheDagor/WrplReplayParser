@@ -9,7 +9,10 @@
 #include <algorithm>
 #include <string>
 
-
+#ifdef __GNUC__ // For GCC and Clang (Clang also defines __GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#endif
 class BitStream {
 public:
   BitStream() {
@@ -351,6 +354,10 @@ protected:
 
   static inline uint32_t bytes2bits(uint32_t by) { return by << 3; }
 
+  static inline uint32_t bits2bytes(size_t bi) { return bits2bytes((uint32_t)bi); }
+
+  static inline uint32_t bytes2bits(size_t by) { return bytes2bits((uint32_t)by); }
+
   uint32_t bitsUsed: 31;
   uint32_t dataOwner: 1;
   uint32_t bitsAllocated;
@@ -358,5 +365,7 @@ protected:
   uint8_t *data;
 
 };
-
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 #endif

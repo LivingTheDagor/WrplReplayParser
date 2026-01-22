@@ -60,9 +60,9 @@ namespace ecs
       default_component = other.default_component.getComponentRef();
       return *this;
     }
-    ComponentRefTemplInfo(ComponentRefTemplInfo &&ref) = default;
+    ComponentRefTemplInfo(ComponentRefTemplInfo &&ref) noexcept = default;
     ComponentRefTemplInfo(ComponentRefTemplInfo &ref) = default;
-    ComponentRefTemplInfo &operator=(ComponentRefTemplInfo &&ref) = default;
+    ComponentRefTemplInfo &operator=(ComponentRefTemplInfo &&ref) noexcept = default;
     ComponentRefTemplInfo &operator=(ComponentRefTemplInfo const &ref) = default;
     ~ComponentRefTemplInfo() = default;
 
@@ -222,7 +222,7 @@ namespace ecs
       templates.push_back(std::move(temp));
       inst_templates.resize(templates.size());
       template_lookup.emplace(p, (template_t)idx);
-      return idx;
+      return (template_t)idx;
     }
 
     // ensures a template of name p will exist in lookup.

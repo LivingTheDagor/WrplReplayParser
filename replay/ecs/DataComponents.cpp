@@ -50,16 +50,16 @@ namespace ecs
 
     component_type_t component_type_name = types.getComponentData(component_type)->hash;
     G_ASSERT_RETURN(components.size() < INVALID_COMPONENT_INDEX - 1, INVALID_COMPONENT_INDEX);
-    componentIndex[nameHash] = components.size();
+    componentIndex[nameHash] = (component_index_t)components.size();
     const uint32_t nameAddr = usedName ? names.addDataRaw(usedName, strlen(usedName) + 1) : 0;
     components.emplace_back(nameHash,component_type, component_type_name, io, this, nameAddr,
                             io ? DataComponent::HAS_SERIALIZER : 0);
-    return components.size() - 1;
+    return (component_index_t)components.size() - 1;
     LOG("create {} ecs component <{}> hash<{:#x}> of component_type {}<{}|{:#x}>", components.size() - 1,
                 usedName,
                 nameHash, component_type, types.getName(component_type).data(), component_type_name);
     G_UNUSED(types);
-    return components.size() - 1;
+    return (component_index_t)components.size() - 1;
   }
 
   void DataComponents::initialize(ComponentTypes &types) {

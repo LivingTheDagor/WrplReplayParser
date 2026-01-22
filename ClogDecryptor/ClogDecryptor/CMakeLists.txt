@@ -13,7 +13,7 @@ target_link_libraries(DECRYPT
 set(INCLUDES
         "${BASE_DIR}/ClogDecryptor/include"
         "${BASE_DIR}/src/include"
-        "${BASE_DIR}/3rdParty/fmt-12.1.0/include"
+        # "${BASE_DIR}/3rdParty/fmt-12.1.0/include"
 )
 
 target_include_directories(DECRYPT

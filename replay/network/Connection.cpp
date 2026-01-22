@@ -37,7 +37,7 @@ namespace net
     if (big >= small)
       return big - small;
     else // overflow
-      return (eastl::numeric_limits<sequence_t>::max() - small) + big + 1;
+      return (T)((eastl::numeric_limits<sequence_t>::max() - small) + big + 1);
   }
 
   void ReliabilitySystem::processAck(sequence_t ack, ack_bits_t ack_bits, packet_event_cb_t packet_acked_cb,
@@ -170,10 +170,9 @@ namespace net
       EXCEPTION("Failed to deserializeComponentConstruction");
 
     ecs::EntityId srvEid(serverId);
-    //ecs::ComponentTypeInfo<ecs::EntityId>::type
+    //ecs::ComponentTypeInfo<ecs::EntityId>::typed
     ainit[ECS_HASH("eid")] = ecs::Component(srvEid);
     mgr->createEntity(srvEid, this->serverToClientTemplates[serverTemplate], std::move(ainit));
-
     return srvEid;
   }
 
@@ -286,7 +285,7 @@ namespace net
   {
     BitstreamDeserializer deserializer(bs, mgr, &objectKeys);
     uint16_t compCount = 0;
-    const uint16_t templateComponentsCount = clientTemplatesComponents[server_template].size();
+    const uint16_t templateComponentsCount = (uint16_t)clientTemplatesComponents[server_template].size();
     if (templateComponentsCount < 256)
     {
       uint8_t compCount8 = 0;
@@ -308,7 +307,7 @@ namespace net
       }
       else if (!bs.ReadCompressed(ofs))
         return false;
-      comp = (i == 0) ? ofs : (comp + ofs + 1);
+      comp = (i == 0) ? ofs : (uint16_t)(comp + ofs + 1);
       //std::cout << comp << " : " << bs.GetReadOffset() << "\n";
       if (comp >= templateComponentsCount)
       {
@@ -440,7 +439,7 @@ namespace net
     //ObjectReplica *replica = getReplicaByEid(eid);
 
     auto iterateReplicatable = [&, componentsCount](auto fn) {
-      for (int cid = 0; cid < componentsCount; ++cid) {
+      for (ecs::archetype_component_id cid = 0; cid < componentsCount; ++cid) {
         auto comp = mgr->getComponentRef(eid, cid);
         if (should_replicate(comp)) // never written
           fn(comp, cid);
@@ -640,31 +639,6 @@ namespace net
          eid.get_handle(),
          this->mgr->getEntityTemplateName(eid));
     return bsds.skip(clientCidx, *datacomp);
-    //EXCEPTION("shit happens idk\n");
-    return false;
-    //ecs::DataComponent compInfo = mgr->getDataComponents().getComponentById(clientCidx);
-    int loglev;
-    const char *logmsg;
-    if (crefIsNull)
-    {
-      // Note: if component is missing then it's might be out-of-sync templates DB (e.g. server has different templates from client)
-      // or race on re-create/replication due to different network channels. Both of this cases are not bugs per-se
-      // (not from POV of this code at least), therefore report it as warning, not as an error.
-      // The only exception when type is also unknown (in which case we can't skip it either)
-      //loglev = (compInfo.componentType != ecs::INVALID_COMPONENT_TYPE_INDEX) ? LOGLEVEL_WARN : LOGLEVEL_ERR;
-      logmsg = "Unknown/missing component";
-    }
-    else // deserialize failed
-    {
-      //loglev = LOGLEVEL_ERR;
-      logmsg = "Failed to deserialize component";
-      bs.SetReadOffset(beforeReadPos);
-    }
-    //logmessage(loglev, "%s: %s <%s|#%X>(ccidx=%d|scidx=%d) of type <%s>(%#X|%d) entity %d<%s>", __FUNCTION__, logmsg,
-    //           mgr.getDataComponents().getComponentNameById(clientCidx), mgr.getDataComponents().getComponentTpById(clientCidx), clientCidx,
-    //           serverCidx, mgr.getComponentTypes().getTypeNameById(compInfo.componentType), compInfo.componentTypeName, compInfo.componentType,
-    //           (ecs::entity_id_t)eid, mgr.getEntityTemplateName(eid));
-    //return bsds.skip(clientCidx, compInfo);
   }
 
   bool Connection::serializeComponentReplication(ecs::EntityId eid, const ecs::ComponentRef &comp, BitStream &bs)

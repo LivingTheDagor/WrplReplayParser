@@ -16,7 +16,7 @@ struct ParserState;
 
 namespace mpi // message passing interface
 {
-  extern std::unordered_map<int, std::unordered_map<int, int>> mpi_data;
+  //extern std::unordered_map<int, std::unordered_map<int, int>> mpi_data;
   class IObject;
 
   class Message;
@@ -112,7 +112,7 @@ namespace mpi // message passing interface
   protected:
     void writeFieldsSize() { idFieldSerializer.writeFieldsSize(payload); }
 
-    void skipReadingField(int index) const { idFieldSerializer.skipReadingField(index, payload); }
+    void skipReadingField(uint8_t index) const { idFieldSerializer.skipReadingField(index, payload); }
 
     uint32_t readFieldsSizeAndFlag() { return idFieldSerializer.readFieldsSizeAndFlag(payload); }
 
@@ -185,3 +185,4 @@ namespace mpi // message passing interface
   IObject *dispatch_object(mpi::ObjectID oid, ObjectExtUID ext_uid, ParserState *state);
 
 }; // namespace mpi
+

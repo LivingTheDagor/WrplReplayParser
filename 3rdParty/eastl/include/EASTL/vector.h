@@ -426,7 +426,7 @@ namespace eastl
 	inline VectorBase<T, Allocator>::~VectorBase()
 	{
 		if(mpBegin)
-			EASTLFree(internalAllocator(), mpBegin, (internalCapacityPtr() - mpBegin) * sizeof(T));
+			(internalAllocator()).deallocate((void*)(mpBegin), ((internalCapacityPtr() - mpBegin) * sizeof(T)));
 	}
 
 

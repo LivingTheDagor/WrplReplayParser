@@ -36,7 +36,7 @@ struct NoScale
 };
 struct InvertedSqrt2Scale
 {
-  constexpr operator float() const { return M_SQRT1_2; }
+  constexpr operator float() const { return (float)M_SQRT1_2; }
 };
 
 #define FVAL_BITS_MASK(PackType, Bits)        (PackType((PackType(1) << (Bits)) - 1))

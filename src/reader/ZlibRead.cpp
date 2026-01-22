@@ -43,9 +43,9 @@ unsigned ZlibLoadCB::fetchInput(void *handle, void *strm) {
   sz = zcrd.loadCb->tryRead(zcrd.buffer, sz);
   G_ASSERT(!zcrd.fatalErrors || sz > 0);
   ((z_stream *) strm)->next_in = zcrd.buffer;
-  ((z_stream *) strm)->avail_in = sz;
+  ((z_stream *) strm)->avail_in = (uint32_t)sz;
   zcrd.inBufLeft -= sz;
-  return sz;
+  return (unsigned)sz;
 }
 
 inline int ZlibLoadCB::tryReadImpl(void *ptr, int size) {
@@ -63,7 +63,7 @@ inline int ZlibLoadCB::tryReadImpl(void *ptr, int size) {
     isStarted = true;
   }
 
-  ((z_stream *) &strm)->avail_out = size;
+  ((z_stream *) &strm)->avail_out = (uint32_t)size;
   ((z_stream *) &strm)->next_out = (Bytef *) ptr;
 
   int res = inflateEx((z_stream *) &strm, Z_SYNC_FLUSH, (in_fetch_func) fetchInput, this);
@@ -75,7 +75,7 @@ inline int ZlibLoadCB::tryReadImpl(void *ptr, int size) {
     }
     return -1;
   }
-  size -= ((z_stream *) &strm)->avail_out;
+  size -= (int)((z_stream *) &strm)->avail_out;
 
   if (res == Z_STREAM_END && !ceaseReading())
     return -1;
@@ -96,7 +96,7 @@ int ZlibLoadCB::tryRead(void *ptr, int size) {
   return total_read_sz;
 }
 
-bool ZlibLoadCB::read(void *ptr, unsigned size) {
+bool ZlibLoadCB::read(void *ptr, int size) {
   int rd_sz = tryRead(ptr, size);
   if (rd_sz != size) {
     isFinished = true;
@@ -112,7 +112,7 @@ bool ZlibLoadCB::seekrel(int ofs) {
   } else
     while (ofs > 0) {
       char buf[4096];
-      int sz = ofs > sizeof(buf) ? sizeof(buf) : ofs;
+      int sz = ofs > sizeof(buf) ? sizeof(buf) : (int)ofs;
       read(buf, sz);
       ofs -= sz;
     }

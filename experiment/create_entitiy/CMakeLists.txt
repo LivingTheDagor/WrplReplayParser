@@ -18,6 +18,6 @@ target_include_directories(create_rpl_packets
         PUBLIC
         "${BASE_DIR}/replay/include"
         "${BASE_DIR}/src/include"
-        "${BASE_DIR}/3rdParty"
+        # "${BASE_DIR}/3rdParty"
 )
 

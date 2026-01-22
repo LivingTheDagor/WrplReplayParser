@@ -52,7 +52,7 @@ void DataBlock::construct_param(ParamBin &p, Param *into) {
       uint8_t a;
     } c;
   } data{};
-  data.val = p.v;
+  data.val = (int)p.v;
   char *shared_params = this->shared->getComplex();
   switch (type) {
     case TYPE_STRING: {
@@ -121,72 +121,60 @@ void DataBlock::construct_param(ParamBin &p, Param *into) {
 
 void DataBlock::printParams(const std::vector<Param> &params_to_print, std::basic_ostream<char> &out) const {
   for (auto &p: params_to_print) {
-    out << this->getNameFromId(p.name_id) << ":";
+    out << fmt::format("{}:", this->getNameFromId(p.name_id));
     switch (p.type) {
 
-      char buf[256];
       case TYPE_STRING:
-        out << "t=" << "\"" << p.data.s << "\"\n";
+        out << fmt::format("t=\"{}\"\n", p.data.s);
         break;
       case TYPE_BOOL: {
-        sprintf(buf, "%s", p.data.b ? "yes" : "no");
-        out << "b=" << buf << "\n";
-      }
+        out << fmt::format("b={}\n", p.data.b ? "yes" : "no");
         break;
+      }
       case TYPE_INT: {
-        sprintf(buf, "%d", p.data.i);
-        out << "i=" << buf << "\n";
-      }
+        out << fmt::format("i={}\n", p.data.i);
         break;
+      }
       case TYPE_REAL: {
-        sprintf(buf, "%g", p.data.r);
-        out << "r=" << buf << "\n";
-      }
+        out << fmt::format("r={}\n", p.data.r);
         break;
+      }
       case TYPE_POINT2: {
-        sprintf(buf, "%g, %g", p.data.p2.x, p.data.p2.y);
-        out << "p2=" << buf << "\n";
-      }
+        out << fmt::format("p2={}, {}\n", p.data.p2.x, p.data.p2.y);
         break;
+      }
       case TYPE_POINT3: {
-        sprintf(buf, "%g, %g, %g", p.data.p3.x, p.data.p3.y, p.data.p3.z);
-        out << "p3=" << buf << "\n";
-      }
+        out << fmt::format("p3={}, {}, {}\n", p.data.p3.x, p.data.p3.y, p.data.p3.z);
         break;
+      }
       case TYPE_POINT4: {
-        sprintf(buf, "%g, %g, %g, %g", p.data.p4.x, p.data.p4.y, p.data.p4.z, p.data.p4.w);
-        out << "p4=" << buf << "\n";
-      }
+        out << fmt::format("p4={}, {}, {}, {}\n", p.data.p4.x, p.data.p4.y, p.data.p4.z, p.data.p4.w);
         break;
+      }
       case TYPE_IPOINT2: {
-        sprintf(buf, "%d, %d", p.data.ip2.x, p.data.ip2.y);
-        out << "ip2=" << buf << "\n";
-      }
+        out << fmt::format("ip2={}, {}\n", p.data.ip2.x, p.data.ip2.y);
         break;
+      }
       case TYPE_IPOINT3: {
-        sprintf(buf, "%d, %d, %d", p.data.ip3.x, p.data.ip3.y, p.data.ip3.z);
-        out << "ip3=" << buf << "\n";
-      }
+        out << fmt::format("ip3={}, {}, {}\n", p.data.ip3.x, p.data.ip3.y, p.data.ip3.z);
         break;
+      }
       case TYPE_E3DCOLOR: {
-        sprintf(buf, "%d, %d, %d, %d", p.data.c.r, p.data.c.g, p.data.c.b, p.data.c.a);
-        out << "c=" << buf << "\n";
-      }
+        out << fmt::format("c={}, {}, {}, {}\n", p.data.c.r, p.data.c.g, p.data.c.b, p.data.c.a);
         break;
+      }
       case TYPE_MATRIX: {
-        sprintf(buf, "[[%g, %g, %g] [%g, %g, %g] [%g, %g, %g] [%g, %g, %g]]", p.data.tm.m[0][0], p.data.tm[0][1],
-                p.data.tm[0][2], p.data.tm[1][0], p.data.tm[1][1], p.data.tm[1][2], p.data.tm[2][0],
-                p.data.tm[2][1], p.data.tm[2][2], p.data.tm[3][0], p.data.tm[3][1], p.data.tm[3][2]);
-        out << "m=" << buf << "\n";
-      }
+        out << fmt::format("m=[[{}, {}, {}] [{}, {}, {}] [{}, {}, {}] [{}, {}, {}]]\n", p.data.tm.m[0][0], p.data.tm[0][1],
+                           p.data.tm[0][2], p.data.tm[1][0], p.data.tm[1][1], p.data.tm[1][2], p.data.tm[2][0],
+                           p.data.tm[2][1], p.data.tm[2][2], p.data.tm[3][0], p.data.tm[3][1], p.data.tm[3][2]);
         break;
+      }
       case TYPE_UINT64: {
-        snprintf(buf, sizeof(buf), "%lld", p.data.u64);
-        out << "i64=" << buf << "\n";
-      }
+        out << fmt::format("i64={}\n", p.data.u64);
         break;
+      }
       default:
-        assert(0);
+        G_ASSERT(0);
     }
   }
 }

@@ -151,7 +151,7 @@ public:
     G_UNUSED(hint);
     G_UNUSED(sz);
     const SerializedType &list = *((const SerializedType *) data);
-    ecs::write_compressed(cb, list.size());
+    ecs::write_compressed(cb, (uint32_t)list.size());
     for (const ItemType &item: list)
       cb.write(&item, itemSizeInBits, itemComponentType);
   }
@@ -189,7 +189,7 @@ public:
     G_UNUSED(hint);
     G_UNUSED(sz);
     const ecs::List<dm::PartId> &list = *((const ecs::List<dm::PartId> *) data);
-    ecs::write_compressed(cb, list.size());
+    ecs::write_compressed(cb, (uint32_t)list.size());
     cb.write(list.data(), (list.size() << 3) * 6, 0);
     //for (const ItemType &item: list)
     //  cb.write(&item, 6, itemComponentType);
@@ -222,7 +222,7 @@ static struct PropsIdListSerializer final : public ecs::ComponentSerializer {
     G_ASSERT(hint == ecs::ComponentTypeInfo<props::PropsIdList>::type);
     G_UNUSED(hint);
     props::PropsIdList &propList = *(props::PropsIdList*) data;
-    write_compressed(cb,propList.size());
+    write_compressed(cb,(uint32_t)propList.size());
     for(auto & prop : propList) {
       write_compressed(cb, prop.data);
     }
@@ -435,7 +435,7 @@ namespace ecs {
       return false;
     }
 
-    for (int i = 0; i < count; ++i) {
+    for (uint16_t i = 0; i < count; ++i) {
       auto fieldId = IdFieldSerilizer.getFieldId(i);
       auto f_size = IdFieldSerilizer.getFieldSize(i);
       (actual->data)[fieldId] = std::vector<unsigned char>(BITS_TO_BYTES(f_size));
@@ -473,12 +473,12 @@ namespace ecs {
     cb.read(&Rocket_data.u4_5, sizeof(Rocket_data.u4_5) * 8, 0);
     uint16_t size1;
     cb.read(&size1, 2 * 8, 0);
-    size1 = (size1 + 7) & 0xfffffff8;
+    size1 = (uint16_t)((size1 + 7) & 0xfffffff8);
     Rocket_data.v1.resize(size1);
     cb.read(Rocket_data.v1.data(), size1, 0);
     uint16_t size2;
     cb.read(&size2, 2 * 8, 0);
-    size2 = (size2 + 7) & 0xfffffff8;
+    size2 = (uint16_t)((size2 + 7) & 0xfffffff8);
     Rocket_data.v1.resize(size2);
     cb.read(Rocket_data.v1.data(), size2, 0);
     cb.read(&Rocket_data.u1_5, sizeof(Rocket_data.u1_5) * 8, 0);

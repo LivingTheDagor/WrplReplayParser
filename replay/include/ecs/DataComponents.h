@@ -18,7 +18,7 @@ namespace ecs {
   struct CompileComponentRegister {
     CompileComponentRegister(const HashedConstString name_, const char *type_name_, component_type_t type_,
                              ComponentSerializer *io_) :
-        name(name_), type(type_), type_name(type_name_), io(io_) {
+        name(name_), type_name(type_name_), io(io_), type(type_) {
       next = tail;
       tail = this;
     }

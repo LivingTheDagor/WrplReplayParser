@@ -47,7 +47,7 @@ class file_sink {
 public:
   ~file_sink();
 
-  file_sink(const std::string &path) : file_sink_path(path), out(path) {
+  explicit file_sink(const std::string &path) : file_sink_path(path), out(path) {
     if (!out.is_open()) {
       throw std::runtime_error("Failed to open log file: " + path);
     }
@@ -66,9 +66,9 @@ public:
 
 struct log_msg {
   std::string msg;
-  LOGLEVEL lvl;
-  sink_handle_t sink_handle;
-  uint64_t time_ms;
+  LOGLEVEL lvl = LOGLEVEL::INFO;
+  sink_handle_t sink_handle = DEFAULT_SINK_HANDLER;
+  uint64_t time_ms = 0;
 
   // Parameterized constructor
   log_msg(std::string message, LOGLEVEL level, sink_handle_t handle, uint64_t time)
@@ -101,14 +101,14 @@ class logger_sink {
   uint64_t start_time_ms;
   std::string name;
 
-  logger_sink(std::string name, uint64_t start_time) : start_time_ms(start_time), name(std::move(name)) {}
+  logger_sink(std::string name_, uint64_t start_time) : start_time_ms(start_time), name(std::move(name_)) {}
 
-  logger_sink(std::string name, uint64_t start_time, bool print) : start_time_ms(start_time), name(std::move(name)), print_to_console(print) {}
+  logger_sink(std::string name_, uint64_t start_time, bool print) : print_to_console(print), start_time_ms(start_time), name(std::move(name_)) {}
 
 
-  logger_sink(const std::string &name, bool print, std::shared_ptr<file_sink> sync/*, sink_handler_t handle*/,
+  logger_sink(const std::string &name_, bool print, std::shared_ptr<file_sink> sync/*, sink_handler_t handle*/,
               DEBUG_LEVEL lvl, uint64_t start) {
-    this->name = name;
+    this->name = name_;
     this->f_sync = std::move(sync);
     //this->handle = handle;
     this->level = lvl;
@@ -192,7 +192,7 @@ class log_handler {
         return &default_sink;
       default:
         if (s_handle > -1 && s_handle < (sink_handle_t) this->sinks.size())
-          return this->sinks[s_handle];
+          return this->sinks[(size_t)s_handle];
         return nullptr;
     }
   }
@@ -295,7 +295,7 @@ public:
       return DEFAULT_SINK_HANDLER;
     std::lock_guard<std::mutex> lock(this->sink_access_mtx);
     for (sink_handle_t i = 0; i < (sink_handle_t) this->sinks.size(); i++) {
-      auto sink = this->sinks[i];
+      auto sink = this->sinks[(size_t)i];
       if (sink && sink->name == name)
         return i;
     }
@@ -308,15 +308,17 @@ public:
       case INFO:
         if(sink)
           return true;
+        return false;
       case DEBUG_L1:
         if(sink && sink->level >= 1)
           return true;
-      case DEBUG_L2:
+      FMT_FALLTHROUGH; case DEBUG_L2:
         if(sink && sink->level >= 2)
           return true;
-      case DEBUG_L3:
+      FMT_FALLTHROUGH; case DEBUG_L3:
         if(sink && sink->level >= 3)
           return true;
+        return false;
       case ERROR_:
         return true; // we always log error messages, if the sink doesnt exist, we log to default
     }
@@ -365,7 +367,7 @@ public:
     auto handler = new logger_sink(name, print_to_console, f_sink, dbg_level,
                                    time_from_start ? this->init_time : get_current_time_ms());
     this->sinks.emplace_back(handler);
-    return this->sinks.size() - 1;
+    return (sink_handle_t)this->sinks.size() - 1;
   }
 
   void set_default_sink_logfile(const std::string &file_name)  {

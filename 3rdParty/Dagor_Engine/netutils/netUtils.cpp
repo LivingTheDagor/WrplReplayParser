@@ -1,10 +1,10 @@
 
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 
-#include <daNet/dag_netUtils.h>
+#include <danet/dag_netUtils.h>
 
 
-#include <bitStream.h>
+#include <danet/bitStream.h>
 #include <DataBlock.h>
 #include "reader.h"
 #include "consts.h"

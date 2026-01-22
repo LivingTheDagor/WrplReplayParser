@@ -25,7 +25,6 @@ namespace danet {
     }
     if(op == DANET_REFLECTION_OP_DECODE)
     {
-      uint32_t sz;
       bs->Read(*data);
       return true;
     }

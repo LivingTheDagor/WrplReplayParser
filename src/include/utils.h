@@ -89,31 +89,9 @@ inline void FormatOnlyTextToStream(std::basic_ostream<char> &oss, std::span<char
 }
 
 inline void FormatHexToStream(std::basic_ostream<char> &oss, std::span<char> buff) {
-  for (unsigned char c : buff) {
-    oss << fmt::format("{:02x}", c);
+  for (char c : buff) {
+    oss << fmt::format("{:02x}", (unsigned char)c);
   }
 }
-
-//  std::string toString() const {
-//    std::ostringstream oss;
-//    oss << std::format("({})", data.size());
-//    oss << "{";
-//    for(const auto &pair : data)
-//    {
-//      oss << std::format("{}: b'", pair.first);
-//      for(unsigned char c : pair.second)
-//      {
-//        if(std::isprint(c))
-//        {
-//          oss.write((const char *)&c, 1);
-//        } else {
-//          oss << std::format("\\x{:02X}", c);
-//        }
-//      }
-//      oss << "', ";
-//    }
-//    oss << "}";
-//    return oss.str();
-//  }
 
 #endif //MYEXTENSION_UTILS_H

@@ -3,6 +3,7 @@ set(CMAKE_CXX_STANDARD 23)
 project(WtFileUtils LANGUAGES C CXX)
 
 include(cmake/functions.cmake)
+include(cmake/CompilerWarnings.cmake)
 set(BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
@@ -20,14 +21,12 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     add_compile_definitions(Mac)
 endif ()
 
-add_subdirectory(3rdParty)
-add_subdirectory(src)
-add_subdirectory(replay)
 
 if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR) # not a subproject, include tests
     message(STATUS "WtFileUtils ran as base project")
     print_stats() # print CMAKE stats about compiler and such
     set_compiler_flags() # sets the flags I want, idk how to do flags laugh at me
+
     set_data_folders_loc()
     add_subdirectory(debugging)
     add_subdirectory(ClogDecryptor)
@@ -38,3 +37,7 @@ if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR) # not a subproject, include te
 else()
     message(STATUS "WtFileUtils ran as subproject")
 endif()
+
+add_subdirectory(3rdParty)
+add_subdirectory(src)
+add_subdirectory(replay)

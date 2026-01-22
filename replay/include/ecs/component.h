@@ -18,9 +18,9 @@ namespace ecs {
 
     Component(std::nullptr_t) : Component() {}
 
-    Component(void *data, component_type_t type, type_index_t compIndex, uint16_t size);
+    Component(void *data, component_type_t type, type_index_t compIndex, uint32_t size);
 
-    Component(Component &&a);
+    Component(Component &&a) noexcept;
     Component(const Component &a) : Component() { *this = a; }
     const ComponentRef getComponentRef() const; // this is const reference! you should write to it!
     // creates a copy of the internal data in the provided ptr
@@ -31,7 +31,7 @@ namespace ecs {
       (*this) = t;
     }
     template <typename T, typename = std::enable_if_t<std::is_rvalue_reference<T &&>::value, void>>
-    Component(T &&t)
+    Component(T &&t) noexcept
     {
       (*this) = std::move(t);
     }
@@ -42,7 +42,7 @@ namespace ecs {
     bool operator!=(const Component &a) const { return !(*this == a); }
     bool operator==(const ComponentRef &a) const;
 
-    Component &operator=(Component &&a); // move constructor
+    Component &operator=(Component &&a) noexcept; // move constructor
 
     Component &operator=(const Component &a); // copy constructor
 
@@ -166,7 +166,7 @@ namespace ecs {
   };
 
 //bool Component::operator==(const EntityComponentRef &a) const { return getEntityComponentRef() == a; }
-  inline Component &Component::operator=(Component &&a) {
+  inline Component &Component::operator=(Component &&a) noexcept {
     if (DAGOR_UNLIKELY(this == &a))
       return *this;
     free();
@@ -178,7 +178,7 @@ namespace ecs {
     return *this;
   }
 
-  inline Component::Component(Component &&a)
+  inline Component::Component(Component &&a) noexcept
   {
     memcpy(this, &a, sizeof(*this));
     a.reset();

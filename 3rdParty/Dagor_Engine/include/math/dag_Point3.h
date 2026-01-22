@@ -77,24 +77,25 @@ public:
 
   INLINE Point3 &operator+=(const Point3 &a)
   {
-    x += a.x;
-    y += a.y;
-    z += a.z;
+    x = static_cast<real>(x + a.x);
+    y = static_cast<real>(y + a.y);
+    z = static_cast<real>(z + a.z);
     return *this;
   }
   INLINE Point3 &operator-=(const Point3 &a)
   {
-    x -= a.x;
-    y -= a.y;
-    z -= a.z;
+    x = static_cast<real>(x - a.x);
+    y = static_cast<real>(y - a.y);
+    z = static_cast<real>(z - a.z);
     return *this;
   }
   INLINE Point3 &operator*=(real a)
   {
-    x *= a;
-    y *= a;
-    z *= a;
+    x = static_cast<real>(x * a);
+    y = static_cast<real>(y * a);
+    z = static_cast<real>(z * a);
     return *this;
+
   }
   INLINE Point3 &operator/=(real a) { return operator*=(1.0f / a); }
 
@@ -113,7 +114,7 @@ public:
   template <class T>
   static Point3 xyz(const T &a)
   {
-    return Point3(a.x, a.y, a.z);
+    return Point3(static_cast<real>(a.x), static_cast<real>(a.y), static_cast<real>(a.z));
   }
   template <class T>
   static Point3 xzy(const T &a)
@@ -306,9 +307,9 @@ public:
   }
   INLINE explicit DPoint3(const Point3 &p)
   {
-    x = p.x;
-    y = p.y;
-    z = p.z;
+    x = static_cast<double>(p.x);
+    y = static_cast<double>(p.y);
+    z = static_cast<double>(p.z);
   }
 
   INLINE void zero()
@@ -326,7 +327,7 @@ public:
 
   INLINE const double &operator[](int i) const { return (&x)[i]; }
   INLINE double &operator[](int i) { return (&x)[i]; }
-  INLINE operator Point3() const { return Point3(x, y, z); }
+  INLINE operator Point3() const { return Point3(static_cast<real>(x), static_cast<real>(y), static_cast<real>(z)); }
   INLINE DPoint3 operator-() const { return DPoint3(-x, -y, -z); }
   INLINE DPoint3 operator+() const { return *this; }
 
@@ -358,16 +359,16 @@ public:
   }
   INLINE DPoint3 &operator+=(const Point3 &a)
   {
-    x += a.x;
-    y += a.y;
-    z += a.z;
+    x += static_cast<double>(a.x);
+    y += static_cast<double>(a.y);
+    z += static_cast<double>(a.z);
     return *this;
   }
   INLINE DPoint3 &operator-=(const Point3 &a)
   {
-    x -= a.x;
-    y -= a.y;
-    z -= a.z;
+    x -= static_cast<double>(a.x);
+    y -= static_cast<double>(a.y);
+    z -= static_cast<double>(a.z);
     return *this;
   }
   INLINE DPoint3 &operator*=(double a)
@@ -380,9 +381,9 @@ public:
   INLINE DPoint3 &operator/=(double a) { return operator*=(1.0 / a); }
   INLINE DPoint3 &operator=(const Point3 &a)
   {
-    x = a.x;
-    y = a.y;
-    z = a.z;
+    x = static_cast<double>(a.x);
+    y = static_cast<double>(a.y);
+    z = static_cast<double>(a.z);
     return *this;
   }
 
@@ -395,7 +396,7 @@ public:
   template <class T>
   static DPoint3 xyz(const T &a)
   {
-    return DPoint3(a.x, a.y, a.z);
+    return DPoint3(static_cast<double>(a.x), static_cast<double>(a.y), static_cast<double>(a.z));
   }
   template <class T>
   static DPoint3 xzy(const T &a)
@@ -509,9 +510,9 @@ public:
 
 INLINE Point3::Point3(const DPoint3 &p)
 {
-  x = p.x;
-  y = p.y;
-  z = p.z;
+  x = static_cast<real>(p.x);
+  y = static_cast<real>(p.y);
+  z = static_cast<real>(p.z);
 }
 
 INLINE DPoint3 operator*(double a, const DPoint3 &p) { return DPoint3(p.x * a, p.y * a, p.z * a); }
@@ -537,16 +538,16 @@ INLINE Point3 point3(const Point3 &p) { return p; }
 
 INLINE Point3 perpendicular(const Point3 &v)
 {
-  if (fabs(v.x) < fabs(v.y))
+  if (fabs(static_cast<double>(v.x)) < fabs(static_cast<double>(v.y)))
   {
-    if (fabs(v.x) < fabs(v.z))
+    if (fabs(static_cast<double>(v.x)) < fabs(static_cast<double>(v.z)))
       return normalize(v % Point3(1.0, 0.0, 0.0));
     else
       return normalize(v % Point3(0.0, 0.0, 1.0));
   }
   else
   {
-    if (fabs(v.y) < fabs(v.z))
+    if (fabs(static_cast<double>(v.y)) < fabs(static_cast<double>(v.z)))
       return normalize(v % Point3(0.0, 1.0, 0.0));
     else
       return normalize(v % Point3(1.0, 0.0, 1.0));

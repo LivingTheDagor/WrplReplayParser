@@ -6,6 +6,7 @@ target_link_libraries(FieldSerializer
         PUBLIC
         fmt::fmt
         LOGGER::LOGGER
+        BS::BS
 )
 
 add_library(FieldSerializer:FieldSerializer ALIAS FieldSerializer)
@@ -20,3 +21,5 @@ target_include_directories(FieldSerializer
         ${INCLUDES}
 )
 
+
+SetGenFlags(FieldSerializer)

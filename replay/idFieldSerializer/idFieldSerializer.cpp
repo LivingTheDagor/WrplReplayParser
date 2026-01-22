@@ -188,8 +188,8 @@ void IdFieldSerializer255::writeFieldsIndex(BitStream &to, BitSize_t at) const
     if (indices[j] > maxId)
       maxId = indices[j];
   }
-  Index bitsPerIdToWrite = std::bit_width(maxId) + 1; // __bsr instead of std::bit_width
-  Index countToWrite = currWrId | (bitsPerIdToWrite << BITS_PER_COUNT);
+  Index bitsPerIdToWrite = (Index)(std::bit_width(maxId) + 1); // __bsr instead of std::bit_width
+  Index countToWrite = (Index)(currWrId | (bitsPerIdToWrite << BITS_PER_COUNT));
   to.Write(countToWrite);
   to.SetWriteOffset(endBody);
   for (Index j = 0; j < currWrId; ++j)

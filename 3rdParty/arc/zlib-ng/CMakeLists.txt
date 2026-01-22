@@ -91,9 +91,12 @@ add_library(Zlib
 add_library(Zlib::Zlib ALIAS Zlib)
 
 target_include_directories(Zlib
-        PUBLIC
+        SYSTEM PUBLIC
         ${INCLUDES}
 )
 
-
 target_compile_definitions(Zlib PUBLIC DZLIB_COMPAT=1)
+
+set_target_properties(Zlib PROPERTIES
+        COMPILE_OPTIONS --no-warnings
+)

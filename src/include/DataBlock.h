@@ -68,14 +68,14 @@ private:
     return ret;
   }
 
-  void initialize(std::span<char> &data, int NamesCount)
+  void initialize(std::span<char> &data, uint32_t NamesCount)
   {
     // sets up indexes
     auto namesPtr = data.data();
     auto namesPtrStart = data.data();
     this->name_idx.resize(NamesCount);
-    for (uint32_t i = 0; i < NamesCount; i++) {
-      this->name_idx[i] = (namesPtr-namesPtrStart);
+    for (uint32_t i = 0; i < (uint32_t)NamesCount; i++) {
+      this->name_idx[i] = (int)(namesPtr-namesPtrStart);
       auto len = strlen(namesPtr);
       namesPtr += len + 1;
     }
@@ -95,7 +95,7 @@ public:
     //this->names = std::vector<std::string>(0);
   }
 
-  explicit NameMap(std::span<char> data, int NamesCount) {
+  explicit NameMap(std::span<char> data, uint32_t NamesCount) {
     this->names_ = StringTableAllocator{};
     this->names_.addDataRaw(data.data(), data.size());
     this->initialize(data, NamesCount);
@@ -153,7 +153,7 @@ public:
   }
 
   [[nodiscard]] std::string_view getNameFromId(int name_id) const {
-    return this->names_.getDataRawUnsafe(this->name_idx[name_id]);
+    return this->names_.getDataRawUnsafe((uint32_t)this->name_idx[(size_t)name_id]);
   }
 
 };
@@ -515,8 +515,8 @@ public:
 
 
   inline int findParam(int name_id_) const {
-    for (int i = 0; i < params.size(); i++) {
-      auto &param = this->params[i];
+    for (int i = 0; i < (int)params.size(); i++) {
+      auto &param = this->params[(size_t)i];
       if (param->name_id == name_id_)
         return i;
     }
@@ -528,16 +528,16 @@ public:
     return this->findParam(name_id);
   }
 
-  inline int findParam(int name_id_, int after) const {
-    for (int i = after + 1; i < params.size(); i++) {
-      auto &param = this->params[i];
+  [[nodiscard]] inline int findParam(int name_id_, int after) const {
+    for (int i = after + 1; i < (int)params.size(); i++) {
+      auto &param = this->params[(size_t)i];
       if (param->name_id == name_id_)
         return i;
     }
     return -1;
   }
 
-  const char *getParamName(uint32_t i) const { return this->nm->getNameFromId(getParamNameId(i)).data(); }
+  const char *getParamName(uint32_t i) const { return this->nm->getNameFromId(getParamNameId((int)i)).data(); }
 
   bool getStrCount(const std::string name) const;
 
@@ -731,15 +731,15 @@ public:
   int getBlockNameId() const;
 
   uint8_t getParamType(int param_number) {
-    if (param_number < 0 || param_number >= (int) this->params.size()) return -1;
-    return this->params[param_number]->type;
+    if (param_number < 0 || param_number >= (int) this->params.size()) return (uint8_t)-1;
+    return this->params[(size_t)param_number]->type;
   }
 
   std::vector<int> getParamIndexVector() const {
-    std::vector<int> ret(this->param_count);
-    for (int i = 0; i < (int) this->params.size(); i++) {
+    std::vector<int> ret((size_t)this->param_count);
+    for (size_t i = 0; i <  this->params.size(); i++) {
       if (this->params[i].get()->type != TYPE_NONE) {
-        ret.push_back(i);
+        ret.push_back((int)i);
       }
     }
     return ret;
@@ -763,12 +763,12 @@ public:
     return getNameFromId(this->name_id);
   }
 
-  inline int blockCount() const {
-    return this->blocks.size();
+  [[nodiscard]] inline uint32_t blockCount() const {
+    return (uint32_t)this->blocks.size();
   }
 
-  inline int paramCount() const {
-    return this->params.size();
+  [[nodiscard]] inline uint32_t paramCount() const {
+    return (uint32_t)this->params.size();
   }
 
   const char *resolveFilename() const;
@@ -864,7 +864,7 @@ public:
 
     compiled_param() {
       name = -1;
-      type = -1;
+      type = 255;
       data = -1;
       ptr = -1;
     }

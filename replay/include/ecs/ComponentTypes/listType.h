@@ -19,6 +19,8 @@ namespace ecs {
     typedef typename base_type::reference reference;
     typedef typename base_type::const_iterator const_iterator;
 
+    typedef typename base_type::size_type size_type;
+
     using typename base_type::value_type;
     // Warn: only RO methods are allowed to be reused from vector, RW methods have to call changeGen()
     using base_type::capacity;

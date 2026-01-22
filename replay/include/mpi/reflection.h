@@ -277,7 +277,7 @@ namespace danet {
 
   public:
     ReflectionVar() = delete; // some values NEED to be set
-    void init(const char * name, ReflectionVarMeta *next, uint16_t pid, reflection_var_encoder coder = getCoder(), uint16_t bits = sizeof(T)<<3)
+    void init(const char * name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder = getCoder(), uint16_t bits = sizeof(T)<<3)
     {
       this->name = name;
       this->next = next;
@@ -285,16 +285,16 @@ namespace danet {
       this->numBits = bits;
       this->coder = coder;
     }
-    ReflectionVar(const char * name, ReflectionVarMeta *next, uint16_t pid) : data(), ReflectionVarMeta() {
+    ReflectionVar(const char * name, ReflectionVarMeta *next, uint8_t pid) : ReflectionVarMeta(), data() {
       init(name, next, pid);
     }
-    ReflectionVar(const char * name, ReflectionVarMeta *next, uint16_t pid, reflection_var_encoder coder_) : data(), ReflectionVarMeta() {
+    ReflectionVar(const char * name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder_) : ReflectionVarMeta(), data() {
       init(name, next, pid, coder_);
     }
-    ReflectionVar(const char * name, ReflectionVarMeta *next, uint16_t pid, uint16_t bit_count) : data(), ReflectionVarMeta() {
+    ReflectionVar(const char * name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count) : ReflectionVarMeta(), data() {
       init(name, next, pid, getCoder(), bit_count);
     }
-    ReflectionVar(const char * name, ReflectionVarMeta *next, uint16_t pid, uint16_t bit_count, reflection_var_encoder coder_) : data(), ReflectionVarMeta() {
+    ReflectionVar(const char * name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count, reflection_var_encoder coder_) : ReflectionVarMeta(), data() {
       init(name, next, pid, coder_, bit_count);
     }
     T* Get() const {
@@ -352,9 +352,9 @@ namespace danet {
 #endif
 
     // dummy mpi implementation
-    virtual mpi::Message *dispatchMpiMessage(mpi::MessageID /*mid*/) { return NULL; }
+    virtual mpi::Message *dispatchMpiMessage(mpi::MessageID /*mid*/) override  { return NULL; }
 
-    virtual void applyMpiMessage(const mpi::Message * /*m*/) {}
+    virtual void applyMpiMessage(const mpi::Message * /*m*/) override {}
 
   protected: // only childs can create and delete this class
     static const int EndReflVarQuotaNumber = 0;
@@ -362,12 +362,12 @@ namespace danet {
 
     ReflectableObject(mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) :
         mpi::IObject(uid),
-        reflectionFlags(EXCLUDED),
-        prevChanged(NULL),
-        nextChanged(NULL),
-        prev(NULL),
-        next(NULL),
-        debugWatermark(DANET_WATERMARK) {}
+        debugWatermark(DANET_WATERMARK),
+        prevChanged(nullptr),
+        nextChanged(nullptr),
+        prev(nullptr),
+        next(nullptr),
+        reflectionFlags(EXCLUDED) {}
 
     ReflectableObject(const ReflectableObject &) = default;
 

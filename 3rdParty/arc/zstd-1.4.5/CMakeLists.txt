@@ -31,7 +31,7 @@ add_library(ZSTD STATIC
 )
 
 target_include_directories(ZSTD
-    PUBLIC
+    SYSTEM PUBLIC
         "${CMAKE_CURRENT_LIST_DIR}"
         "${CMAKE_CURRENT_LIST_DIR}/common"
         "${CMAKE_CURRENT_LIST_DIR}/compress"
@@ -42,3 +42,7 @@ target_include_directories(ZSTD
 
 
 add_library(ZSTD::ZSTD ALIAS ZSTD)
+
+set_target_properties(ZSTD PROPERTIES
+        COMPILE_OPTIONS --no-warnings
+)
