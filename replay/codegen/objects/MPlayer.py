@@ -2,7 +2,7 @@ from .obj_base import ReflectableObject
 from .obj_base import ReflectionVarMeta as Var
 
 class MPlayer(ReflectableObject):
-    uid = Var("Uid", 2)
+    uid = Var("danet::Uid", 2)
     invitedNickName = Var("std::string", 3)
     nickLocKey = Var("std::string", 4, "TranslatedCoder")
     ClanTag = Var("std::string", 5)
@@ -11,7 +11,7 @@ class MPlayer(ReflectableObject):
     decals = Var("DataBlock", 8)
     team = Var("uint8_t", 9)
     countryId = Var("uint8_t", 10)
-    memberId = Var("uint8_t", 11)
+    memberId = Var("uint16_t", 11)
     customState = Var("DataBlock", 12)
     score = Var("uint16_t", 13)
     dummyForSupportPlanes = Var("std::array<ecs::EntityId, 20>", 14) # TODO, define custom type?
@@ -22,14 +22,14 @@ class MPlayer(ReflectableObject):
     spareAircraftInSlots = Var("uint32_t", 19)
     ownedSlots = Var("uint32_t", 20)
     classinessMark = Var("uint8_t", 21)
-    timeToRespawn = Var("uint32_t", 22)
-    timeToRespawnInCoop = Var("uint32_t", 23)
+    timeToRespawn = Var("float", 22)
+    timeToRespawnInCoop = Var("float", 23)
     forcedRespawn = Var("bool", 24)
-    timeToKick = Var("uint32_t", 25)
+    timeToKick = Var("float", 25)
     guiState = Var("uint8_t", 26)
     spectatedModelIndex = Var("ecs::EntityId", 27)
     dummyForCountUsedSlots = Var("std::vector<uint8_t>", 28)
-    dummyForSpawnCosts = Var("std::vector<uint8_t>", 29)
+    dummyForSpawnCosts = Var("std::vector<uint32_t>", 29)
     dummyForSpawnDelayTimes = Var("std::vector<uint16_t>", 30)
     dummyForKillStreaksProgress = Var("danet::dummyForKillStreaksProgress", 31)
     state = Var("uint16_t", 32)

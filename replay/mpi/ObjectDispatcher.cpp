@@ -1,6 +1,4 @@
 #include "mpi/ObjectDispatcher.h"
-#include "mpi/MPlayer.h"
-#include "mpi/TeamData.h"
 #include "ecs/EntityManager.h"
 #include "zstd.h"
 #include "state/ParserState.h"
@@ -126,3 +124,6 @@ namespace mpi {
     return nullptr;
   }
 }
+
+ECS_REGISTER_CTM_TYPE(MPlayer, nullptr);
+ECS_AUTO_REGISTER_COMPONENT_BASE(MPlayer, "m_player", nullptr)

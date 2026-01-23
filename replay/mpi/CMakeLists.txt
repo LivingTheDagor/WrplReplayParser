@@ -1,9 +1,9 @@
-add_library(MPI
+add_library(MPI OBJECT
         mpi.cpp
         reflection.cpp
         ObjectDispatcher.cpp
-        MPLayer.cpp
         serializers.cpp
+        codegen/serializers.cpp
 )
 
 
@@ -24,7 +24,6 @@ add_library(MPI::MPI ALIAS MPI)
 set(INCLUDES
         "${BASE_DIR}/replay/include"
         "${BASE_DIR}/src/include"
-        # "${BASE_DIR}/3rdParty"
 )
 
 target_include_directories(MPI
@@ -34,4 +33,4 @@ target_include_directories(MPI
 
 
 SetGenFlags(MPI)
-
+add_dependencies(MPI CodeGeneration)

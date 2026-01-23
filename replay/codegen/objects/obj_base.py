@@ -10,3 +10,8 @@ class ReflectionVarMeta(ABC):
         self.data_type = data_type
         self.var_id = var_id
         self.EncoderName = EncoderName
+        self.has_custom_cider = EncoderName != ""
+
+    def requestCoder(self, mgr: 'DataTypeManager'):
+        if self.EncoderName == "":
+            self.EncoderName = mgr.request_reflectionVar_serializer(self.data_type)

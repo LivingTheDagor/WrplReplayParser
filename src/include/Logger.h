@@ -139,7 +139,7 @@ class logger_sink {
       case DEBUG_L3: {
         if (this->level < 3)
           return;
-        m = fmt::format("{:.3f} [D2] {}\n", time, msg.msg);
+        m = fmt::format("{:.3f} [D3] {}\n", time, msg.msg);
         break;
       }
       case ERROR_: {

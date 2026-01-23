@@ -99,7 +99,7 @@ int main()
       }
       case ReplayPacketType::StartMarker:
       {
-        LOGD("Replay StartMarker\n");
+        LOGD("Replay StartMarker");
         break;
       }
       case ReplayPacketType::AircraftSmall:

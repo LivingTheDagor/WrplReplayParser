@@ -60,7 +60,7 @@ namespace net
         }
         ecs::EntityId eid = ecs::EntityId(serverEid);
         auto name = this->state->g_entity_mgr.getEntityTemplateName(eid);
-        LOG("ID_ENTITY_MSG for entity {:#x} of template {}",  serverEid, name);
+        LOGD3("ID_ENTITY_MSG for entity {:#x} of template {}",  serverEid, name);
         // actual code
         break;
       }

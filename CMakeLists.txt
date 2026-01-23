@@ -7,6 +7,10 @@ include(cmake/CompilerWarnings.cmake)
 set(BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
+# python is required for code generation
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_compile_definitions(_TARGET_64BIT)
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")

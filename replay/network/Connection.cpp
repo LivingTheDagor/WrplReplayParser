@@ -209,7 +209,7 @@ namespace net
 
     if (!bs.Read(serverTemplates[templateId])) // ref to template
       return false;
-    LOG("Parsing new template: {}", serverTemplates[templateId].c_str());
+    LOGD2("Parsing new template: {}", serverTemplates[templateId].c_str());
 
     ecs::template_t templId = mgr->buildTemplateIdByName(serverTemplates[templateId].c_str());
     if (templId != ecs::INVALID_TEMPLATE_INDEX)
@@ -614,7 +614,7 @@ namespace net
 
     if (DAGOR_LIKELY(!crefIsNull && deserialize_component_typeless(cref, bsds, *mgr)))
     {
-      LOG("Replicating Component {}({}) for entity {:#x} for template {}. data: {}",
+      LOGD3("Replicating Component {}({}) for entity {:#x} for template {}. data: {}",
           datacomp->getName(),
           ecs::g_ecs_data->getComponentTypes()->getName(cref.getTypeId()),
           eid.get_handle(),

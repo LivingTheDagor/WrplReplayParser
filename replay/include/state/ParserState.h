@@ -2,8 +2,7 @@
 #define MYEXTENSION_PARSERSTATE_H
 #include "ecs/EntityManager.h"
 #include "mpi/mpi.h"
-#include "mpi/MPlayer.h"
-#include "mpi/TeamData.h"
+#include "mpi/codegen/ReflIncludes.h"
 #include "network/CNetwork.h"
 #include "mpi/ObjectDispatcher.h"
 

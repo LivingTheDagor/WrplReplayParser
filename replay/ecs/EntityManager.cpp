@@ -61,15 +61,7 @@ namespace ecs {
     validateInitializer(templId, initializer); // ensures the initializer has cIndex populated
     InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(templId);
     G_ASSERTF(instTempl, "Template {} not initialized", data_state->templates.getTemplate(templId)->name);
-    LOG("Creating new entity {:#x} of template '{}'", eid.handle, data_state->templates.getTemplate(templId)->name.c_str());
-    if(eid.handle == 0x4008a3) {
-      //LOG("{} instTemplate components:", g_ecs_data->templates.getTemplate(instTempl->parent)->name);
-      //for(auto & c : instTempl->component_indexes) {
-      //  LOG("    {}", g_ecs_data->dataComponents.getName(c));
-      //}
-      //g_log_handler.wait_until_empty();
-      //g_log_handler.flush_all();
-    }
+    LOGD1("Creating new entity {:#x} of template '{}'", eid.handle, data_state->templates.getTemplate(templId)->name.c_str());
     archetype_t archetype_id = this->createArchetype(instTempl);
     auto info = &this->archetypes.archetypes[archetype_id];
     auto chunk_id = info->ARCHETYPE.getNextAvailableChunkId();
@@ -200,7 +192,7 @@ namespace ecs {
     if (!this->doesEntityExist(eid))
 		return false;
     auto desc = this->entDescs.getEntityDesc(eid);
-    LOG("Destroying entity {:#x} of template {}", eid.handle, data_state->templates.getTemplate(desc->templ_id)->name.c_str());
+    LOGD2("Destroying entity {:#x} of template {}", eid.handle, data_state->templates.getTemplate(desc->templ_id)->name.c_str());
     //const InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(desc->templ_id);
     archetype_t archetype_id = desc->archetype_id;
     auto info = &this->archetypes.archetypes[archetype_id];

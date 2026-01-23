@@ -347,13 +347,13 @@ namespace danet
       G_ASSERT(v->coder);
       if (!(*v->coder)(DANET_REFLECTION_OP_DECODE, v, this, &bs))
       {
-        LOG("(REFLECTION) can't decode value for var '{}' in obj {} (type = '{}')", v->getVarName(), fmt::ptr(this), getClassName());
+        LOGE("(REFLECTION) can't decode value for var '{}' in obj {} (type = '{}')", v->getVarName(), fmt::ptr(this), getClassName());
         idFieldSerializer.skipReadingField(j, bs); // skip
         continue;
       }
       if (bs.GetReadOffset() - ppp != idFieldSerializer.getFieldSize(j))
       {
-        LOG("(REFLECTION) Invalid parsed size for var '{}', needed {} but parsed {}", v->getVarName(), idFieldSerializer.getFieldSize(j), bs.GetReadOffset() - ppp);
+        LOGE("(REFLECTION) Invalid parsed size for var '{}', needed {} but parsed {}", v->getVarName(), idFieldSerializer.getFieldSize(j), bs.GetReadOffset() - ppp);
         // e.g. both Ship and HVM have the same MPI_OID_GROUND_MODEL and the same reflection variables persistent ids
         // but WarShip fields really differ from those of HeavyVehicleModel
         bs.SetReadOffset(ppp);

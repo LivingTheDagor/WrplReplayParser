@@ -3,7 +3,8 @@
 #ifndef MYEXTENSION_OBJECTDISPATCHER_H
 #define MYEXTENSION_OBJECTDISPATCHER_H
 
-#include "MPlayer.h"
+#include "codegen/ReflIncludes.h"
+#include "types.h"
 
 struct ParserState;
 namespace mpi

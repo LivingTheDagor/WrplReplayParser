@@ -1,13 +1,14 @@
 from DataTypes import DataTypeRegister
-import custom_rw as rw
-from replay.codegen.DataTypes import default_bs_loader, default_bs_writer
-from replay.codegen.custom_rw import *
+from custom_rw import *
 
 
 class bool_reg(DataTypeRegister):
     name = "bool"
     is_pod = True
 
+class char_reg(DataTypeRegister):
+    name = "char"
+    is_pod = True
 
 class uint8_t_reg(DataTypeRegister):
     name = "uint8_t"
@@ -28,6 +29,13 @@ class uint64_t_reg(DataTypeRegister):
     name = "uint64_t"
     is_pod = True
 
+class int_reg(DataTypeRegister):
+    name = "int"
+    is_pod = True
+
+class float_reg(DataTypeRegister):
+    name = "float"
+    is_pod = True
 
 class std_string_reg(DataTypeRegister):
     name = "std::string"
@@ -55,9 +63,13 @@ class entity_id_t_reg(DataTypeRegister):
 class vector_reg(DataTypeRegister):
     name = "std::vector"
     template_type_args = [DataTypeType]
+    custom_loader = vector_loader
+    custom_writer = vector_writer
 
 
 class array_reg(DataTypeRegister):
     name = "std::array"
     template_type_args = [DataTypeType, int]
+    custom_loader = array_loader
+    custom_writer = array_writer
 
