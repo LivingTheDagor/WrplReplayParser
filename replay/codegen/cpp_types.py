@@ -115,3 +115,14 @@ class WeatherEffects_reg(DataTypeRegister):
         "std::vector<danet::WeatherEffect, uint32_t> effects;",
     ]
 
+class UnitId_reg(DataTypeRegister):
+    name = "danet::UnitId"
+    custom_loader = UnitId_loader
+    custom_writer = UnitId_writer
+
+class UnitIdStruct_reg(DataTypeRegister):
+    name = "danet::UnitIdStruct"
+    members = [
+        "danet::UnitId uid;",
+        "uint8_t thang;"
+    ]

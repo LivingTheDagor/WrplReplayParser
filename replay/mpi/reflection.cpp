@@ -454,21 +454,21 @@ namespace danet
   }
 
 /* static */
-  ReplicatedObject *ReplicatedObject::onRecvReplicationEvent(BitStream &bs)
+  ReplicatedObject *ReplicatedObject::onRecvReplicationEvent(BitStream &bs, ParserState *state)
   {
 
     uint8_t classId = 255;
     if (!bs.Read(classId))
     {
-      LOG("%s can't read classId\n", __FUNCTION__);
+      LOG("can't read classId");
       return NULL;
     }
     if (classId >= num_registered_obj_creators)
     {
-      LOG("%s invalid classId %d, num_registered_obj_creators = %d\n", __FUNCTION__, classId, num_registered_obj_creators);
+      LOG("invalid classId {}, num_registered_obj_creators = {}\n", classId, num_registered_obj_creators);
       return NULL;
     }
-    ReplicatedObject *ret = (*registered_repl_obj_creators[classId].create)(bs);
+    ReplicatedObject *ret = (*registered_repl_obj_creators[classId].create)(bs, state);
 
     return ret;
   }
@@ -488,13 +488,13 @@ namespace danet
     bs.WriteAt((uint16_t)numSerialized, pos);
   }
 
-  bool ReplicatedObject::onRecvReplicationEventForAll(BitStream &bs)
+  bool ReplicatedObject::onRecvReplicationEventForAll(BitStream &bs, ParserState *state)
   {
     uint16_t n;
     if (!bs.Read(n))
       return false;
     for (int i = 0; i < n; ++i)
-      if (!ReplicatedObject::onRecvReplicationEvent(bs))
+      if (!ReplicatedObject::onRecvReplicationEvent(bs, state))
         return false;
     return true;
   }

@@ -72,4 +72,8 @@ namespace danet {
   struct WeatherEffects {
     std::vector<danet::WeatherEffect> effects{};
   };
+  struct UnitIdStruct {
+    danet::UnitId uid{};
+    uint8_t thang{};
+  };
 }

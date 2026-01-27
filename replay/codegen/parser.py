@@ -5,7 +5,7 @@ from io import StringIO
 import builtin_types
 import cpp_types
 import objects.ReflectableObjects as objects
-from objects.obj_base import ReflectableObject, ReflectionVarMeta, InstReflectable
+from objects.obj_base import ReflectableObject, ReplicatedObject, InstReflectable, InstReplicated
 from DataTypes import DataTypeManager
 from write_header import write_header
 from hashCheck import HashChecker
@@ -29,10 +29,14 @@ def generate(header_codegen_path: str, cpp_codegen_path: str, force_gen: bool = 
     for imp in obj_imports:
         for name, obj in inspect.getmembers(imp, inspect.isclass):
             if obj.__module__ == imp.__name__: # only look at objs from file
-                if type(obj) == type(ReflectableObject): # only do work on ReflectableObject
-                    print(f"serializing ReflectableObject {name}")
+                if type(obj) == type(ReflectableObject): # only do work on ReflectableObject / things that inherit it
                     payload: StringIO = io.StringIO()
-                    x = InstReflectable(obj, payload, mgr)
+                    if isinstance(obj(), ReplicatedObject):
+                        x = InstReplicated(obj, payload, mgr)
+                        print(f"serializing ReplicatedObject {name}")
+                    else:
+                        print(f"serializing ReflectableObject {name}")
+                        x = InstReflectable(obj, payload, mgr)
                     x.write_header()
                     x.verify_params()
                     x.serialize_params()

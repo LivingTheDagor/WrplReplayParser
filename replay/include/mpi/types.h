@@ -8,6 +8,9 @@ namespace danet {
 
   template <typename T>
   class zigZagVector : public std::vector<T> {};
+  struct UnitId {
+    uint16_t val{};
+  };
 }
 
 #include "codegen/types.h" // generated types
@@ -22,9 +25,7 @@ namespace danet {
       return std::string_view(name, sizeof(name));
     }
   };
-
 #pragma pack(pop)
-
 
 }
 G_STATIC_ASSERT(sizeof(danet::Uid) == 90);

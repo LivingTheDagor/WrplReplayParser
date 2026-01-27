@@ -319,7 +319,7 @@ namespace danet {
     int *class_id_ptr;
     const char *name;
 
-    ReplicatedObject *(*create)(BitStream &);
+    ReplicatedObject *(*create)(BitStream &, ParserState *);
   };
 
   extern List<ReflectableObject, true> changed_reflectables;
@@ -560,11 +560,11 @@ namespace danet {
     // two proxy functions who create & receieve replication packet
     void genReplicationEvent(BitStream &out_bs) const;
 
-    static ReplicatedObject *onRecvReplicationEvent(BitStream &bs);
+    static ReplicatedObject *onRecvReplicationEvent(BitStream &bs, ParserState *state);
 
     static void genReplicationEventForAll(BitStream &bs);
 
-    static bool onRecvReplicationEventForAll(BitStream &bs);
+    static bool onRecvReplicationEventForAll(BitStream &bs, ParserState *state);
   };
 
 // serialize changed vars, flags parameter means additional flags must exist (all of them)
@@ -658,7 +658,7 @@ namespace danet {
     return you_forget_to_put_IMPLEMENT_REPLICATION_4_##class_name;                        \
   }                                                                                       \
   void serializeReplicaCreationData(BitStream &bs) const override;                 \
-  static danet::ReplicatedObject *createReplicatedObject(BitStream &bs);
+  static danet::ReplicatedObject *createReplicatedObject(BitStream &bs, ParserState *state);
 
 #define DECL_REPLICATION(class_name, base_class) \
   DECL_REFLECTION(class_name, base_class)        \
@@ -689,7 +689,6 @@ namespace danet {
       c.class_id_ptr = &class_name::you_forget_to_put_IMPLEMENT_REPLICATION_4_##templ_name;                          \
       c.create = &class_name::createReplicatedObject;                                                                \
       c.name = #str_name;                                                                                            \
-      std::cout << "REPLICATION: " << c.name << "\n";                                                                                   \
     }                                                                                                                \
   } replication_registrator_4_##class_name;
 

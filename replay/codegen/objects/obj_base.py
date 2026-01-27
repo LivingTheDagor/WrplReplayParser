@@ -16,7 +16,7 @@ class ReflectableObject(ABC):
         pass
 
 
-class ReplicatableObject(ReflectableObject):
+class ReplicatedObject(ReflectableObject):
     def __init__(self):
         super().__init__()
 
@@ -83,3 +83,21 @@ class InstReflectable:
     def write_footer(self):
         self.oss.write("};\n\n")
         self.oss.write(f"ECS_DECLARE_CREATABLE_TYPE({self.obj_name});\n")
+
+class InstReplicated(InstReflectable):
+    def __init__(self, obj: ReflectableObject, oss: StringIO, mgr: 'DataTypeManager'):
+        super().__init__(obj, oss, mgr)
+
+
+    def write_header(self):
+        self.oss.write(f"class {self.obj_name} : public danet::ReplicatedObject")
+        self.oss.write(" {\npublic:\n"f"  DECL_REPLICATION({self.obj_name}, danet::ReplicatedObject)\n")
+
+    def write_ctor(self):
+        self.oss.write(f"  {self.obj_name}() : ReplicatedObject() " " {\n")
+        self.oss.write(f"    varList.head = &{self.first_var};\n")
+        self.oss.write(f"    varList.tail = &{self.last_var};\n")
+        self.oss.write("  }\n")
+
+    def write_footer(self):
+        self.oss.write("};\n\n")

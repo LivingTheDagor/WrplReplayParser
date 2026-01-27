@@ -104,3 +104,9 @@ def zigZagInt_loader(mgr: 'DataTypeManager', datatype: DataTypeInst, name: str):
 
 def zigZagInt_writer(mgr: 'DataTypeManager', datatype: DataTypeInst, name: str):
     return f"      bs->WriteZigZag({datatype.access_var(name)});"
+
+def UnitId_loader(mgr: 'DataTypeManager', datatype: DataTypeInst, name: str):
+    return f"      REPL_VER(bs->ReadBits((uint8_t*)&{datatype.access_var(name)}, 0xb));"
+
+def UnitId_writer(mgr: 'DataTypeManager', datatype: DataTypeInst, name: str):
+    return f"      bs->WriteBits((uint8_t*)&{datatype.access_var(name)}, 0xb);"

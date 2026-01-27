@@ -84,9 +84,15 @@ namespace mpi {
           bs->Read(do_weird_check);
           int16_t sorta_confirms_is_compressed;
           bs->Read(sorta_confirms_is_compressed);
+          if(sorta_confirms_is_compressed > -1) {
+            danet::ReplicatedObject::onRecvReplicationEvent(*bs, this->state);
+          }
+          else {
+            BitStream t{};
+            zstd_decompress(*bs, t);
+            danet::ReplicatedObject::onRecvReplicationEvent(t, this->state);
 
-
-
+          }
         }
       }
     }
@@ -111,6 +117,16 @@ namespace mpi {
         return UnitRef_Dispatch(oid, extUid, &state->g_entity_mgr);
       case 3:
         break;
+      case 5: {
+        LOG("Getting Zone with id {}", count);
+        if (count < state->Zones.size()) {
+          return state->Zones[count];
+        }
+        else {
+          LOGE("Warning, Zone with id {} doesn't exist in Zone array", count);
+        }
+        break;
+      }
       case 0xb: {
         switch(count) {
           case 0x2: {

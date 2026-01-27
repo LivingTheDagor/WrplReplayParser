@@ -11,29 +11,12 @@ public:
   DECL_REPLICATION(Airfield, danet::ReplicatedObject)
 };
 
-// id 1
-class BombingZone : public danet::ReplicatedObject {
-public:
-  DECL_REPLICATION(BombingZone, danet::ReplicatedObject)
-};
-
-// id 2
-class CaptureZone : public danet::ReplicatedObject {
-public:
-  DECL_REPLICATION(CaptureZone, danet::ReplicatedObject)
-};
-
 // id 3
 class DMSquad : public danet::ReplicatedObject {
 public:
   DECL_REPLICATION(DMSquad, danet::ReplicatedObject)
 };
 
-// id 4
-class ExitZone : public danet::ReplicatedObject {
-public:
-  DECL_REPLICATION(ExitZone, danet::ReplicatedObject)
-};
 
 // id 5
 class FlightModelWrap : public danet::ReplicatedObject {
@@ -101,22 +84,10 @@ public:
   DECL_REPLICATION(OrderPlayerProgress, danet::ReplicatedObject)
 };
 
-// id 16
-class PickupZone : public danet::ReplicatedObject {
-public:
-  DECL_REPLICATION(PickupZone, danet::ReplicatedObject)
-};
-
 // id 17
 class RaceMode : public danet::ReplicatedObject {
 public:
   DECL_REPLICATION(RaceMode, danet::ReplicatedObject)
-};
-
-// id 18
-class RearmZone : public danet::ReplicatedObject {
-public:
-  DECL_REPLICATION(RearmZone, danet::ReplicatedObject)
 };
 
 // id 19
