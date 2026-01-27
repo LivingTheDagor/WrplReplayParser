@@ -3,6 +3,7 @@
 
 class GeneralState : public danet::ReflectableObject {
 public:
+  DECL_REFLECTION(GeneralState, danet::ReflectableObject)
   danet::ReflectionVar<float> lastSuperArtilleryTime{"lastSuperArtilleryTime", &dummyForExitZonesSettings, 2};
   danet::ReflectionVar<danet::dummyForExitZonesSettings> dummyForExitZonesSettings{"dummyForExitZonesSettings", &battleAreaChangeTime, 14};
   danet::ReflectionVar<float> battleAreaChangeTime{"battleAreaChangeTime", &battleAreaChangeToId, 3};
@@ -16,7 +17,7 @@ public:
   danet::ReflectionVar<bool> dummyForBombingEvent{"dummyForBombingEvent", &dummyForUnlimitedControlEvent, 7, danet::InvalidSerializer};
   danet::ReflectionVar<bool> dummyForUnlimitedControlEvent{"dummyForUnlimitedControlEvent", &customState, 11, danet::InvalidSerializer};
   danet::ReflectionVar<DataBlock> customState{"customState", nullptr, 8};
-  GeneralState() {
+  GeneralState() : ReflectableObject()  {
     varList.head = &lastSuperArtilleryTime;
     varList.tail = &customState;
   }

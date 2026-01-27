@@ -3,8 +3,9 @@
 
 class GlobalElo : public danet::ReflectableObject {
 public:
+  DECL_REFLECTION(GlobalElo, danet::ReflectableObject)
   danet::ReflectionVar<danet::teamAvgEloRatings> teamAvgEloRatings{"teamAvgEloRatings", nullptr, 2};
-  GlobalElo() {
+  GlobalElo() : ReflectableObject()  {
     varList.head = &teamAvgEloRatings;
     varList.tail = &teamAvgEloRatings;
   }

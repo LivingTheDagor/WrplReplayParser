@@ -3,6 +3,7 @@
 
 class MPlayer : public danet::ReflectableObject {
 public:
+  DECL_REFLECTION(MPlayer, danet::ReflectableObject)
   danet::ReflectionVar<danet::Uid> uid{"uid", &invitedNickName, 2};
   danet::ReflectionVar<std::string> invitedNickName{"invitedNickName", &nickLocKey, 3};
   danet::ReflectionVar<std::string> nickLocKey{"nickLocKey", &ClanTag, 4, danet::TranslatedCoder};
@@ -50,7 +51,7 @@ public:
   danet::ReflectionVar<ecs::EntityId> missionSupportUnitRef{"missionSupportUnitRef", &missionSupportUnitEnabled, 46};
   danet::ReflectionVar<bool> missionSupportUnitEnabled{"missionSupportUnitEnabled", &rageTokens, 47};
   danet::ReflectionVar<uint16_t> rageTokens{"rageTokens", nullptr, 48};
-  MPlayer() {
+  MPlayer() : ReflectableObject()  {
     varList.head = &uid;
     varList.tail = &rageTokens;
   }

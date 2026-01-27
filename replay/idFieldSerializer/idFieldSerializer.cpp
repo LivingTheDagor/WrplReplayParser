@@ -64,7 +64,7 @@ uint32_t readSize(const BitStream &from)
     case 7: return 128; // 16 bytes
   }
 
-  assert(hdr == 0);
+  G_ASSERT(hdr == 0);
   uint32_t sizeInBits = 0;
   ok &= from.ReadCompressed(sizeInBits);
   return ok ? sizeInBits : 0;

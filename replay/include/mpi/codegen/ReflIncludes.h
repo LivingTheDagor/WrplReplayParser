@@ -5,3 +5,4 @@
 #include "mpi/codegen/ReflectableObjects/GlobalElo.h"
 #include "mpi/codegen/ReflectableObjects/MPlayer.h"
 #include "mpi/codegen/ReflectableObjects/TeamData.h"
+#include "mpi/Replication.h"

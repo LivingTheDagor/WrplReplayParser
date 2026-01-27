@@ -456,11 +456,6 @@ namespace danet
 /* static */
   ReplicatedObject *ReplicatedObject::onRecvReplicationEvent(BitStream &bs)
   {
-#if DEBUG_BORDERS_REPLICATION
-    uint8_t border = 0;
-  bs.Read(border);
-  G_ASSERT(border == 113);
-#endif
 
     uint8_t classId = 255;
     if (!bs.Read(classId))
@@ -474,11 +469,6 @@ namespace danet
       return NULL;
     }
     ReplicatedObject *ret = (*registered_repl_obj_creators[classId].create)(bs);
-
-#if DEBUG_BORDERS_REPLICATION
-    bs.Read(border);
-  G_ASSERT(border == 114);
-#endif
 
     return ret;
   }

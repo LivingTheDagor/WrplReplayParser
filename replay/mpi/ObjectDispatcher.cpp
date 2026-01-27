@@ -21,6 +21,7 @@ namespace mpi {
     Message *MainDispatch::dispatchMpiMessage(MessageID mid) {
       //LOG("incoming mid: 0x%x\n", mid);
       switch(mid) {
+        case Replication:
         case Reflection1:
         case Reflection2:
         case ReflectionNoDecompress: {
@@ -76,6 +77,16 @@ namespace mpi {
             outBs = bs;
           }
           danet::deserializeReflectables(*outBs, obj_dispatcher, this->state);
+          break;
+        }
+        case Replication: {
+          uint8_t do_weird_check;
+          bs->Read(do_weird_check);
+          int16_t sorta_confirms_is_compressed;
+          bs->Read(sorta_confirms_is_compressed);
+
+
+
         }
       }
     }

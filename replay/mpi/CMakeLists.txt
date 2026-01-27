@@ -4,6 +4,7 @@ add_library(MPI OBJECT
         ObjectDispatcher.cpp
         serializers.cpp
         codegen/serializers.cpp
+        Replication.cpp
 )
 
 

@@ -3,6 +3,7 @@
 #include "ecs/ComponentTypesDefs.h"
 #include "mpi/ObjectDispatcher.h"
 #include "state/ParserState.h"
+#include "mpi/codegen/ReflIncludes.h"
 
 namespace mpi {
   class BaseListener : public IMessageListener {
@@ -37,5 +38,6 @@ void initialize(std::string &VromfsPath) {
   parseTemplates();
   //ecs::g_ecs_data->getTemplateDB()->DebugPrintTemplate("medic_box_item");
   hello();
+  force_link_replication();
   //mpi::players.hello();
 }

@@ -236,8 +236,8 @@ namespace danet {
     template<class T>
     T *getValue() const {
       // Correct pointer arithmetic using char* as base
-      return reinterpret_cast<T*>(reinterpret_cast<char*>(const_cast<ReflectionVarMeta*>(this)) +
-                                  sizeof(ReflectionVarMeta));
+      return reinterpret_cast<T *>(reinterpret_cast<char *>(const_cast<ReflectionVarMeta *>(this)) +
+                                   sizeof(ReflectionVarMeta));
     }
 
     void setChanged(bool f) {
@@ -246,18 +246,19 @@ namespace danet {
   };
 
 
-  template <typename T>
+  template<typename T>
   struct DefaultEncoderChooser;
 
 
-  template <>
+  template<>
   struct DefaultEncoderChooser<void> {
     static constexpr reflection_var_encoder coder = nullptr; //
   };
 
   // Primary template for detecting if a type has a valid encoder
   template<typename T, typename = void>
-  struct HasValidEncoder : std::false_type {};
+  struct HasValidEncoder : std::false_type {
+  };
 
   // Specialization that checks if DefaultEncoderChooser<T>::coder exists and is not nullptr
   template<typename T>
@@ -266,8 +267,8 @@ namespace danet {
   };
 
 
-  template <typename T>
-  class ReflectionVar: public ReflectionVarMeta {
+  template<typename T>
+  class ReflectionVar : public ReflectionVarMeta {
     T data;
 
     static constexpr reflection_var_encoder getCoder() {
@@ -277,32 +278,41 @@ namespace danet {
 
   public:
     ReflectionVar() = delete; // some values NEED to be set
-    void init(const char * name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder = getCoder(), uint16_t bits = sizeof(T)<<3)
-    {
+    void init(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder = getCoder(),
+              uint16_t bits = sizeof(T) << 3) {
       this->name = name;
       this->next = next;
       this->persistentId = pid;
       this->numBits = bits;
       this->coder = coder;
     }
-    ReflectionVar(const char * name, ReflectionVarMeta *next, uint8_t pid) : ReflectionVarMeta(), data() {
+
+    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid) : ReflectionVarMeta(), data() {
       init(name, next, pid);
     }
-    ReflectionVar(const char * name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder_) : ReflectionVarMeta(), data() {
+
+    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder_)
+        : ReflectionVarMeta(), data() {
       init(name, next, pid, coder_);
     }
-    ReflectionVar(const char * name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count) : ReflectionVarMeta(), data() {
+
+    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count)
+        : ReflectionVarMeta(), data() {
       init(name, next, pid, getCoder(), bit_count);
     }
-    ReflectionVar(const char * name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count, reflection_var_encoder coder_) : ReflectionVarMeta(), data() {
+
+    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count,
+                  reflection_var_encoder coder_) : ReflectionVarMeta(), data() {
       init(name, next, pid, coder_, bit_count);
     }
-    T* Get() const {
+
+    T *Get() const {
       return this->getValue<T>();
     }
   };
 
-  struct Invalid {}; // if you say a ReflectionVar is 'invalid', any warnings during parsing are ignored
+  struct Invalid {
+  }; // if you say a ReflectionVar is 'invalid', any warnings during parsing are ignored
   // in practice, the InvalidCoder returns 2, which says error silently
 
   struct ReplicatedObjectCreator {
@@ -354,7 +364,7 @@ namespace danet {
 #endif
 
     // dummy mpi implementation
-    virtual mpi::Message *dispatchMpiMessage(mpi::MessageID /*mid*/) override  { return NULL; }
+    virtual mpi::Message *dispatchMpiMessage(mpi::MessageID /*mid*/) override { return NULL; }
 
     virtual void applyMpiMessage(const mpi::Message * /*m*/) override {}
 
@@ -384,7 +394,7 @@ namespace danet {
   public:
     void checkWatermark() const {
       if (debugWatermark != DANET_WATERMARK)
-        EXCEPTION("Reflection: invalid object {}", fmt::ptr(this));
+      EXCEPTION("Reflection: invalid object {}", fmt::ptr(this));
     }
 
     void enableReflection() {
@@ -531,12 +541,8 @@ namespace danet {
     // called before serialization (if returned false - no serialization performed, change flags discarded)
     [[nodiscard]] virtual bool isNeedSerialize() const { return true; }
     // implemented automatically in DECL_REFLECTION macros
-#if DAGOR_DBGLEVEL > 0
-    virtual const char *getClassName() const = 0;
-#else
 
-    const char *getClassName() const { return ""; } // in release just stub
-#endif
+    virtual const char *getClassName() const = 0;
   };
 
   class ReplicatedObject : public ReflectableObject {
@@ -577,7 +583,116 @@ namespace danet {
   int deserializeReflectables(BitStream &bs, mpi::object_dispatcher resolver, ParserState *state);
 
   int forceFullSyncForAllReflectables(); // return num reflectables
+
+#define DANET_COMMA ,
+
+#define DANET_DEF_GET_DEBUG_NAME(class_name)                                               \
+  const char *getClassName() const override                                                \
+  {                                                                                        \
+    G_STATIC_ASSERT(danet::IsBase<danet::ReflectableObject DANET_COMMA ThisClass>::Value); \
+    return #class_name;                                                                    \
+  }
+
+
 // this method is needed to guarantee independance of executable build process from replication mechanism
 // (otherwise you need to keep build exactly the same for local and remote machines)
   void normalizeReplication();
+
+  template<class _Ty>
+  class IsPtr;
+
+  template<class _Ty>
+  class IsPtr<_Ty *> {
+  public:
+    static constexpr int Value = 1;
+    typedef _Ty Type;
+  };
+
+  template<class _Ty>
+  class IsPtr {
+  public:
+    static constexpr int Value = 0;
+    typedef _Ty Type;
+  };
+
+  template<typename T>
+  struct DeRef {
+    typedef T Type;
+  };
+  template<typename T>
+  struct DeRef<const T &> {
+    typedef T Type;
+  };
+  template<typename T>
+  struct DeRef<T &> {
+    typedef T Type;
+  };
+
+  template<class Base, class Derived>
+  struct IsBase {
+    typedef char yes[2];
+    typedef char no[1];
+
+    template<class B>
+    static yes &f(B *);
+
+    template<class>
+    static no &f(...);
+
+    static constexpr int Value = (sizeof(f<Base>((Derived *) 0)) == sizeof(yes));
+  };
+
+
+#define DECL_REFLECTION(class_name, base_class)                                              \
+  typedef base_class BaseClass;                                                              \
+  typedef class_name ThisClass;                                                              \
+  static const int StartReflVarQuotaNumber = BaseClass::EndReflVarQuotaNumber + 1;           \
+  static const int EndReflVarQuotaNumber = StartReflVarQuotaNumber + SizeReflVarQuotaNumber; \
+  DANET_DEF_GET_DEBUG_NAME(class_name)
+
+#define DECL_REPLICATION_FOOTER(class_name)                                               \
+  static int you_forget_to_put_IMPLEMENT_REPLICATION_4_##class_name;                      \
+  int getClassId() const override                                                         \
+  {                                                                                       \
+    G_STATIC_ASSERT(danet::IsBase<danet::ReplicatedObject DANET_COMMA ThisClass>::Value); \
+    return you_forget_to_put_IMPLEMENT_REPLICATION_4_##class_name;                        \
+  }                                                                                       \
+  void serializeReplicaCreationData(BitStream &bs) const override;                 \
+  static danet::ReplicatedObject *createReplicatedObject(BitStream &bs);
+
+#define DECL_REPLICATION(class_name, base_class) \
+  DECL_REFLECTION(class_name, base_class)        \
+  DECL_REPLICATION_FOOTER(class_name)
+
+#define DECL_REPLICATION_NO_REFLECTION(class_name) \
+  typedef class_name ThisClass;                    \
+  DANET_DEF_GET_DEBUG_NAME(class_name)             \
+  DECL_REPLICATION_FOOTER(class_name)
+
+#define DECL_REFLECTION_STUB \
+  const char *getClassName() const { return ""; }
+
+#define DECL_REPLICATION_STUB                    \
+  DECL_REFLECTION_STUB                           \
+  int getClassId() const override { return -1; } \
+  void serializeReplicaCreationData(BitStream &) const override {}
+
+#define IMPLEMENT_REPLICATION_BODY(class_name, str_name, templ_name, pref)                                           \
+  pref int class_name::you_forget_to_put_IMPLEMENT_REPLICATION_4_##templ_name = -1;                                  \
+  static struct ReplicationTypeRegistator4_##class_name                                                              \
+  {                                                                                                                  \
+    ReplicationTypeRegistator4_##class_name()                                                                        \
+    {                                                                                                                \
+      G_ASSERT(danet::num_registered_obj_creators < DANET_REPLICATION_MAX_CLASSES);                                  \
+      class_name::you_forget_to_put_IMPLEMENT_REPLICATION_4_##templ_name = danet::num_registered_obj_creators;       \
+      danet::ReplicatedObjectCreator &c = danet::registered_repl_obj_creators[danet::num_registered_obj_creators++]; \
+      c.class_id_ptr = &class_name::you_forget_to_put_IMPLEMENT_REPLICATION_4_##templ_name;                          \
+      c.create = &class_name::createReplicatedObject;                                                                \
+      c.name = #str_name;                                                                                            \
+      std::cout << "REPLICATION: " << c.name << "\n";                                                                                   \
+    }                                                                                                                \
+  } replication_registrator_4_##class_name;
+
+#define IMPLEMENT_REPLICATION(class_name)                   IMPLEMENT_REPLICATION_BODY(class_name, class_name, class_name, )
+#define IMPLEMENT_REPLICATION_TEMPL(class_name, templ_name) IMPLEMENT_REPLICATION_BODY(class_name, class_name, templ_name, template <>)
 }
