@@ -62,7 +62,7 @@ namespace ecs {
 
     typesIndex.emplace(type, getTypeCount());
     types.push_back({io, data_size, type, std::string_view(name), nullptr, ctm, dtm, flags});
-    //return (type_index_t)getTypeCount() - 1;
+    return (type_index_t)getTypeCount() - 1;
     LOG("created component {} that is '{}{}' type <{}> hash<{:#x}> of size {}",
         getTypeCount()-1,
         need_constructor(flags) ? "creatable" : "pod",

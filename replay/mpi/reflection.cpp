@@ -315,7 +315,7 @@ namespace danet
     idFieldSerializer.readFieldsIndex(bs);
     ReflectionVarMeta *v = varList.head;
     //LOG("Deserializing Vars for %p: ", this);
-    for (uint16_t j = 0; j < numVars; ++j)
+    for (uint16_t j = 0; (uint32_t)j < numVars; ++j)
     {
       v = getVarByPersistentId(idFieldSerializer.getFieldId(j));
       if (v)

@@ -32,6 +32,15 @@ template <int HashBits>
 constexpr HashVal<HashBits> str_hash_fnv1(const char *s, HashVal<HashBits> result = FNV1Params<HashBits>::offset_basis)
 {
   HashVal<HashBits> c = 0;
+  while ((c = (uint8_t)*s++) != 0)
+    result = (result * FNV1Params<HashBits>::prime) ^ c;
+  return result;
+}
+
+template <int HashBits>
+constexpr HashVal<HashBits> str_hash_fnv1a(const char *s, HashVal<HashBits> result = FNV1Params<HashBits>::offset_basis)
+{
+  HashVal<HashBits> c = 0;
   while ((c = *s++) != 0)
     result = (FNV1Params<HashBits>::prime) * (result ^ c);
   return result;
@@ -48,10 +57,23 @@ constexpr HashVal<HashBits> mem_hash_fnv1(const char *b, size_t len, HashVal<Has
   return result;
 }
 
+template <int HashBits>
+constexpr HashVal<HashBits> mem_hash_fnv1a(const char *b, size_t len, HashVal<HashBits> result = FNV1Params<HashBits>::offset_basis)
+{
+  for (size_t i = 0; i < len; ++i)
+  {
+    HashVal<HashBits> c = b[i];
+    result = (FNV1Params<HashBits>::prime) * (result ^ c);
+  }
+  return result;
+}
+
 // by default use 32-bit FNV1
 constexpr HashVal<32> str_hash_fnv1(const char *s) { return str_hash_fnv1<32>(s); }
+constexpr HashVal<32> str_hash_fnv1a(const char *s) { return str_hash_fnv1a<32>(s); }
 
 constexpr HashVal<32> mem_hash_fnv1(const char *b, size_t len) { return mem_hash_fnv1<32>(b, len); }
+constexpr HashVal<32> mem_hash_fnv1a(const char *b, size_t len) { return mem_hash_fnv1a<32>(b, len); }
 
 
 #endif //MYEXTENSION_HASH_H

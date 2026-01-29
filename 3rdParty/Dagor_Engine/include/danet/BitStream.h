@@ -268,6 +268,37 @@ public:
     return true;
   }
 
+
+  bool Read(BitStream &bs) const
+  {
+    uint32_t numberOfBitsUsed;
+    if (!ReadCompressed(numberOfBitsUsed))
+      return false;
+    AlignReadToByteBoundary();
+    if (readOffset + numberOfBitsUsed > bitsUsed)
+      return false;
+    bs.bitsUsed = numberOfBitsUsed;
+    uint32_t bytesToCopy = bits2bytes(numberOfBitsUsed);
+    bs.reserveBits(bytes2bits(bytesToCopy));
+    memcpy(bs.GetData(), GetData() + bits2bytes(GetReadOffset()), bytesToCopy);
+    SetReadOffset(GetReadOffset() + bytes2bits(bytesToCopy));
+    return true;
+  }
+
+
+  void Write(const BitStream &bs)
+  {
+    uint32_t numberOfBitsUsed = bs.GetNumberOfBitsUsed();
+    WriteCompressed(numberOfBitsUsed);
+    // If someone ever will try to remove alignment at start/end, be sure to check everything with
+    // 1 2 3 4 5 6 and 7 bits of data in front of the bitstream!
+    AlignWriteToByteBoundary();
+    uint32_t bytesToCopy = bits2bytes(numberOfBitsUsed);
+    reserveBits(bytes2bits(bytesToCopy));
+    memcpy(GetData() + bits2bytes(GetWriteOffset()), bs.GetData(), bytesToCopy);
+    SetWriteOffset(GetWriteOffset() + bytes2bits(bytesToCopy));
+  }
+
   void WriteCompressed(int v) { writeCompressedUnsignedGeneric(v); }
 
   bool ReadCompressed(int &v) const { return readCompressedUnsignedGeneric(v); }

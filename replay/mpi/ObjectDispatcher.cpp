@@ -118,7 +118,7 @@ namespace mpi {
       case 3:
         break;
       case 5: {
-        LOG("Getting Zone with id {}", count);
+        //LOG("Getting Zone with id {}", count);
         if (count < state->Zones.size()) {
           return state->Zones[count];
         }

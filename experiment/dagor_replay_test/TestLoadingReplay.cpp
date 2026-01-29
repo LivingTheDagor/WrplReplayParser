@@ -119,7 +119,7 @@ int main()
         break;
       }
       case ReplayPacketType::NextSegment: {
-        LOG("NEXTSEGMENT\n");
+        LOG("NextSegment");
         break;
       }
       case ReplayPacketType::ECS:
