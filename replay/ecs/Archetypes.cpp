@@ -12,23 +12,6 @@ namespace ecs
     return archetypeComponents[component_id + ofs].DATA_SIZE;
   }
 
-  uint32_t calculate_true_size(uint32_t sz)
-  {
-    switch(sz) {
-      case 0:
-        return 0;
-      case 1:
-        return 1;
-      case 2:
-        return 2;
-      case 3:
-      case 4:
-        return 4;
-      default:
-        return (uint16_t)(((sz + 3) / 4) * 4); // ensure packing to 4
-    }
-  }
-
   archetype_t Archetypes::createArchetype(const component_index_t *__restrict components, uint32_t components_cnt,
                                    DataComponents &dataComponents, ComponentTypes &componentTypes) {
     //TODO: add support for findArchetype, only plan to do it if we 1: plan to use east::tuple_vector or make our own, what it does makes that much easier
@@ -49,7 +32,12 @@ namespace ecs
       auto x = components[i];
       const auto typeIndex = dataComponents.getDataComponent(x)->componentIndex;
       const auto type = componentTypes.getComponentData(typeIndex);
-      uint32_t true_size = calculate_true_size(type->size); // this ensures larger structs are stored optimally
+      //uint32_t true_size = calculate_true_size(type->size); // this ensures larger structs are stored optimally
+      uint32_t true_size = type->size; // The builtin compiler padding does the exact same as my padding lmao (im stupid)
+
+      //LOG("Calculated true size; original size: {}; new size: {}", type->size, true_size);
+      //if(type->size != true_size)
+      //  LOG("DIFFEREEEEENT");
       if(uint32_t offset = entitySize%4) // if offset is > 0, then we arnt alligned to 4 bytes
       {
         // components smaller than 4 bytes we dont care about alligned storage

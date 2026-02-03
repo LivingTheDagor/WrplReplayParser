@@ -1,0 +1,12 @@
+
+
+#ifndef WTFILEUTILS_COREEVENTS_H
+#define WTFILEUTILS_COREEVENTS_H
+
+namespace ecs {
+  ECS_UNICAST_EVENT_TYPE(EventEntityCreated)
+  ECS_UNICAST_EVENT_TYPE(EventEntityDestroyed)
+}
+
+
+#endif //WTFILEUTILS_COREEVENTS_H

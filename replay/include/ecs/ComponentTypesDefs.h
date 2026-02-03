@@ -344,6 +344,8 @@ ECS_DECLARE_CREATABLE_TYPE(FootstepFx)
 ECS_DECLARE_CREATABLE_TYPE(MotionMatchingController)
 ECS_DECLARE_CREATABLE_TYPE(AnimationDataBase)
 ECS_DECLARE_CREATABLE_TYPE(CapsulesAOHolder)
+ECS_DECLARE_CREATABLE_TYPE(ecs::TemplatesListToInstantiate)
+ECS_DECLARE_CREATABLE_TYPE(BehaviourTree)
 
 #include "ecs/ComponentPrintingImplementations.h"
 

@@ -274,6 +274,14 @@ namespace ecs {
 
     }
 
+    inline std::string_view getName(component_t hash) {
+      auto idx = typesIndex[hash];
+      if (idx) {
+        return getName(idx);
+      }
+      return "#NOT_FOUND#";
+    }
+
     inline const ComponentInfo *getComponentData(type_index_t index) const {
       G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid index %i for getComponentData", index);
       return &this->types[index];

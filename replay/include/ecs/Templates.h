@@ -145,6 +145,8 @@ namespace ecs
   /// a compiled form of a template
   /// has a ref to all initialized components
   /// this will be used when an entity is created, as it has all the data efficently stored to init an entity
+  /// TODO: add thread protection, inst templates are created on demand, so sequential replay reads can cause issues
+  ///
   struct InstantiatedTemplate {
   protected:
     friend EntityManager; // this actually creates the entity

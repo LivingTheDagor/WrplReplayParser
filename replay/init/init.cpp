@@ -39,5 +39,6 @@ void initialize(std::string &VromfsPath) {
   //ecs::g_ecs_data->getTemplateDB()->DebugPrintTemplate("medic_box_item");
   hello();
   force_link_replication();
+  force_link_cnet();
   //mpi::players.hello();
 }

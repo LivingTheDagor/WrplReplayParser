@@ -8,9 +8,9 @@
 
 
 #include <cstdint>
+#include "BitStream.h"
 #include "consts.h"
 #include <array>
-#include "BitStream.h"
 
 #ifndef USHRT_MAX
 #define USHRT_MAX 65535

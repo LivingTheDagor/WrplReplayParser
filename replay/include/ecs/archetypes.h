@@ -21,13 +21,12 @@ namespace ecs
   static constexpr uint32_t MAX_CHUNK_SIZE = 64*1024; // 64 kb
 
   /// an archetype is the data holder for a specific template basically
-/// has no knowledge about an Entities real makup
+/// has no knowledge about an Entities real makeup
   class Archetype
   {
   private:
     /// a chunk will store data in a SOA format
     /// the offsets for the SOAs are stored in the Archetype
-    /// TODO: maybe look into AOS instead? considering we might get whole units instead
     struct Chunk
     {
       uint8_t *__restrict data = nullptr; // points to chunk start

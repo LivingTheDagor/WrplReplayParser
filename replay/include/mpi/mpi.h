@@ -5,8 +5,8 @@
 #pragma once
 
 #include "ecs/EntityManager.h"
-#include <idFieldSerializer.h>
 #include "BitStream.h"
+#include <idFieldSerializer.h>
 #include "utils.h"
 #include "dag_assert.h"
 #include "unordered_map"

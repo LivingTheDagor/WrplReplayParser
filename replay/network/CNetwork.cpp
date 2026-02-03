@@ -125,3 +125,6 @@ namespace net
   }
 }
 
+void force_link_cnet() {
+  std::cout << "";
+}

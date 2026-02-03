@@ -444,7 +444,14 @@ namespace ecs {
   struct SharedComponent {
     char data[8];
   };
+  struct TemplatesListToInstantiate {
+    char data[8];
+  };
 }
+
+struct BehaviourTree {
+  char data[8];
+};
 
 struct SharedPrecomputedWeaponPositions {
   char data[8];

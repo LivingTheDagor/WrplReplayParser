@@ -2,6 +2,7 @@ add_library(dag_math
         math3d.cpp
         perlin.cpp
         mathAng.cpp
+        alloc.cpp
 )
 
 

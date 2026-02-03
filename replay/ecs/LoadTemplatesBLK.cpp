@@ -485,6 +485,10 @@ namespace ecs {
                                                                               "ecsDebug",
                                                                               "render",
                                                                               "sound",
+                                                                              "hangar",
+                                                                              "anyScene",
+                                                                              "soundNet",
+                                                                             // "server" // need for Event system
         }; // only care about these
 
 

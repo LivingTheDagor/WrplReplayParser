@@ -50,7 +50,7 @@ namespace net
   class ReliabilitySystem
   {
   public:
-    ReliabilitySystem(sequence_t initial_seq = 0) : localSequence(initial_seq) {}
+    explicit ReliabilitySystem(sequence_t initial_seq = 0) : localSequence(initial_seq) {}
 
     void packetSent(int cur_time, int timeout_ms);
     void packetReceived(sequence_t seq);
@@ -63,8 +63,8 @@ namespace net
       sequence_t rseq;
       ack_bits_t ackBits;
     };
-    AckData genLastSeqAckData() const; // packedReceived() is expected to be called at least once before call to this
-    sequence_t getLocalSequence() const { return localSequence; }
+    [[nodiscard]] AckData genLastSeqAckData() const; // packedReceived() is expected to be called at least once before call to this
+    [[nodiscard]] sequence_t getLocalSequence() const { return localSequence; }
     void incLocalSequence() { ++localSequence; }
 
   private:
@@ -76,13 +76,13 @@ namespace net
       int timeoutAt;
       bool operator<(const PendingAckRec &rhs) const { return timeoutAt < rhs.timeoutAt; }
     };
-    eastl::vector_multiset<PendingAckRec> pendingAcks; // I would stdlib, but dont feel figuring out what these actually do.
-    eastl::vector_set<sequence_t, LessSeq> receivedQueue;
+    eastl::vector_multiset<PendingAckRec> pendingAcks{}; // I would stdlib, but dont feel figuring out what these actually do.
+    eastl::vector_set<sequence_t, LessSeq> receivedQueue{};
   };
 
   class Connection {
   public:
-    Connection(ecs::EntityManager *mgr)
+    explicit Connection(ecs::EntityManager *mgr)
     {
       this->mgr = mgr;
     }

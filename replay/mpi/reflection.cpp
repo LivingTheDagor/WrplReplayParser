@@ -1,6 +1,7 @@
 
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 
+#include "danet/BitStream.h"
 #include <mpi/reflection.h>
 #include <idFieldSerializer.h>
 #include <math/dag_TMatrix.h>

@@ -10,6 +10,8 @@ add_library(dagECS
         Templates.cpp
         Archetypes.cpp
         LoadTemplatesBLK.cpp
+        EventsDB.cpp
+        EntityManagerQuery.cpp
 )
 
 

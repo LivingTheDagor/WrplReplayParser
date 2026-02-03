@@ -642,6 +642,8 @@ namespace ecs {
   ECS_REGISTER_CTM_TYPE(MotionMatchingController, nullptr);
   ECS_REGISTER_CTM_TYPE(AnimationDataBase, nullptr);
   ECS_REGISTER_CTM_TYPE(CapsulesAOHolder, nullptr);
+  ECS_REGISTER_CTM_TYPE(ecs::TemplatesListToInstantiate, nullptr);;
+  ECS_REGISTER_CTM_TYPE(BehaviourTree, nullptr);
 }
 
 class ErrorSerializer final : public ecs::ComponentSerializer {

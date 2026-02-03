@@ -13,7 +13,7 @@ extern "C" {
 #include "consts.h"
 #include "ecs/typesAndLimits.h"
 #include "network/Connection.h"
-
+//#include "network/message.h"
 #include "enet/enet.h"
 
 namespace net
@@ -42,8 +42,9 @@ namespace net
     ParserState *state;
     ENetPeer * peer= nullptr; // only used for networking
   };
-
 } // net
+
+void force_link_cnet();
 
 
 #endif //MYEXTENSION_CNETWORK_H

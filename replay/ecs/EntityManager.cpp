@@ -239,6 +239,8 @@ namespace ecs {
       //}
 
       ref.destructCopy(data, &data_state->componentTypes);
+      if (dataComp->hash == ECS_HASH("eid").hash)
+        *(ecs::EntityId*)data = INVALID_ENTITY_ID; // needed for query system
     }
     /*for(const auto &comp : instTempl->components)
     {
@@ -262,7 +264,7 @@ namespace ecs {
   }
 
   ecs::EntityManager::~EntityManager() {
-    LOGD("starting EntityManager Destruction\n");
+    LOGD("starting EntityManager Destruction");
     for(int i = 1; i < this->entDescs.entDescs.size(); i++)
     {
       if(!this->entDescs.doesEntityExist(i))
@@ -405,5 +407,153 @@ namespace ecs {
         out.push_back(this->entDescs[i].eid);
       }
     }
+  }
+
+  EntityManager::ResolvedStatus EntityManager::resolveQuery(uint32_t index, ResolvedStatus currentStatus, ResolvedQueryDesc &resDesc)
+  {
+    const CopyQueryDesc &copyDesc = queryDescs[index];
+    const char *name = copyDesc.getName();
+    const BaseQueryDesc desc = copyDesc.getDesc();
+    G_UNUSED(name);
+    G_ASSERT(desc.componentsRQ.size() + desc.componentsNO.size() + desc.componentsRW.size() + desc.componentsRO.size() > 0);
+    uint8_t ret = RESOLVED_MASK;
+    int componentsIterated = 0;
+
+    enum ReqType
+    {
+      DATA,
+      REQUIRED,
+      REQUIRED_NOT
+    };
+    auto makeRange = [&](dag::ConstSpan<ComponentDesc> components, ReqType req) -> bool {
+      auto &dest = resDesc.getComponents();
+      for (auto cdI = components.begin(), cdE = components.end(); cdI != cdE; ++cdI, ++componentsIterated)
+      {
+        G_ASSERTF(componentsIterated < dest.size(), "{}: {} < {}", (uint8_t)req, componentsIterated, dest.size());
+        if (dest[componentsIterated] != INVALID_COMPONENT_INDEX)
+        {
+          G_ASSERT(bool(cdI->flags & CDF_OPTIONAL) == resDesc.getOptionalMask()[componentsIterated]);
+          continue;
+        }
+        auto &cd = *cdI;
+        component_index_t id = data_state->dataComponents.getIndex(cd.name);
+        LOGD3("query <{}>, component {:#x}, type {:#x}", name, cd.name, cd.type);
+
+        if (id == INVALID_COMPONENT_INDEX)
+        {
+          if ((req == REQUIRED_NOT) || (cd.flags & CDF_OPTIONAL)) // optional component can be even not registered at all
+          {
+            ret &= ~FULLY_RESOLVED;
+            continue;
+          }
+          ret = NOT_RESOLVED;
+          return false;
+        }
+        // verify type
+        if (cd.type != ComponentTypeInfo<auto_type>::type && (req == DATA)) //-V560
+        {
+          DataComponent *comp = data_state->dataComponents.getDataComponent(id);
+          if (comp->componentHash != cd.type) // cd.type == auto_type is special case, basically it is 'auto' (generic). It is legit
+            // at least in require/require_not
+          {
+            auto dat = data_state;
+            EXCEPTION("component<{}> type mismatch in query <{}>, type is {}({:#x}), required in query <{}>({:#x})",
+                   dat->dataComponents.getName(id), name, dat->componentTypes.getName(comp->componentIndex), comp->componentHash,
+                   dat->componentTypes.getName(cd.type), cd.type);
+            resDesc.reset();
+            // wrong query can not become correct one ever. no need to check it, just assume it is empty query
+            ret = RESOLVED_MASK;
+            return false;
+          }
+        }
+        dest[componentsIterated] = id;
+      }
+      return true;
+    };
+    const bool wasResolved = isResolved(currentStatus);
+    if (!wasResolved)
+    {
+      const uint32_t dataComponentsCount = (uint32_t)desc.componentsRW.size() + (uint32_t)desc.componentsRO.size();
+      const uint32_t totalComponents = (uint32_t)desc.componentsRQ.size() + (uint32_t)desc.componentsNO.size() + dataComponentsCount;
+      G_ASSERT(resDesc.getComponents().size() == 0 || resDesc.getComponents().size() == totalComponents);
+      resDesc.getComponents().reserve(totalComponents);
+      resDesc.getComponents().assign((uint16_t)totalComponents, INVALID_COMPONENT_INDEX);
+      resDesc.getOptionalMask().reset();
+      for (uint32_t i = 0, e = dataComponentsCount; i < e; ++i)
+        if (copyDesc.components[i].flags & CDF_OPTIONAL)
+          resDesc.getOptionalMask().set(i);
+
+      const uint32_t checkComponents = totalComponents;
+
+      // reduce finds in later stages
+      for (uint32_t i = 0, e = checkComponents; i != e; ++i)
+      {
+        auto &cd = copyDesc.components[i];
+        auto cidx = data_state->dataComponents.getIndex(cd.name);
+        if (cidx != INVALID_COMPONENT_INDEX)
+        {
+          DataComponent *comp = data_state->dataComponents.getDataComponent(cidx);
+
+          if (comp->componentHash != cd.type)
+          {
+            if (i < dataComponentsCount || cd.type != ComponentTypeInfo<auto_type>::type)
+            {
+              EXCEPTION("component<{}> type mismatch in query <{}>, type is {}({:#x}), required in query <{}>({:#x})",
+                     data_state->dataComponents.getName(cidx), name, data_state->componentTypes.getName(comp->componentIndex),
+                     comp->componentHash, data_state->componentTypes.getName(cd.type), cd.type);
+              resDesc.reset();
+              // wrong query can not become correct one ever. no need to check it, just assume it is empty query
+              return RESOLVED_MASK;
+            }
+          }
+        }
+        resDesc.getComponents()[i] = cidx;
+      }
+
+      for (uint32_t i = checkComponents, e = totalComponents; i < e; ++i)
+        resDesc.getComponents()[i] = data_state->dataComponents.getIndex(copyDesc.components[i].name);
+      resDesc.getRwCnt() = uint8_t(desc.componentsRW.size());
+      resDesc.getRoCnt() = uint8_t(desc.componentsRO.size());
+      resDesc.getRqCnt() = uint8_t(desc.componentsRQ.size());
+      resDesc.setRequiredComponentsCount(copyDesc.requiredSetCount);
+    }
+    else
+    {
+    }
+    // Note: order of range fill is important
+    if (!makeRange(dag::ConstSpan<ComponentDesc>(copyDesc.components.data(), resDesc.getRwCnt() + resDesc.getRoCnt()), DATA))
+      return (ResolvedStatus)ret;
+    G_ASSERTF(resDesc.getRwCnt() + resDesc.getRoCnt() == componentsIterated,
+                      "we rely on optionalmask to be parallel with data components");
+    if (wasResolved) // if query was partially resolved, it for sure has resolved required components
+      componentsIterated += (int)desc.componentsRQ.size();
+    else
+    {
+      if (!makeRange(desc.componentsRQ, REQUIRED))
+        return (ResolvedStatus)ret;
+    }
+    if (!makeRange(desc.componentsNO, REQUIRED_NOT))
+      return (ResolvedStatus)ret;
+    LOGD3("resolved query <{}>, resolve={}", name, (uint8_t)currentStatus);
+    return (ResolvedStatus)ret;
+  }
+
+  bool EntityManager::resolvePersistentQueryInternal(uint32_t index)
+  {
+    const ResolvedStatus ret = resolveQuery(index, getQueryStatus(index), resolvedQueries[index]);
+    orQueryStatus(index, ret);
+    LOGD3("set resolved query <{}> to {}", queryDescs[index].getName(), isResolved(index));
+    return ret != NOT_RESOLVED;
+  }
+
+  QueryId EntityManager::createQuery(const NamedQueryDesc &desc) {
+    QueryId h = createUnresolvedQuery(desc);
+    if (!h)
+      return h;
+    // return h;
+    uint32_t index = h.index();
+    if (queriesReferences[index] == 1 && resolvePersistentQueryInternal(index)) {} // recently added
+      //makeArchetypesQuery(0, index, false);
+    return h;
   }
 }
