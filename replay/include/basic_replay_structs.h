@@ -1,8 +1,6 @@
 
 #pragma once
-#ifndef MYEXTENSION_BASIC_REPLAY_STRUCTS_H
-#define MYEXTENSION_BASIC_REPLAY_STRUCTS_H
-
+#include "danet/BitStream.h"
 
 enum class ReplayPacketType : uint16_t {
   EndMarker = 0,
@@ -27,4 +25,3 @@ public:
   //uint64_t runtimePayloadSizeBytes{};
   BitStream stream;
 };
-#endif //MYEXTENSION_BASIC_REPLAY_STRUCTS_H

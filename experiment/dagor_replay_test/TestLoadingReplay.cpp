@@ -84,7 +84,6 @@ int main()
   auto *pkt = new ReplayPacket();
   auto start = std::chrono::high_resolution_clock::now();
   ParserState state{};
-  net::CNetwork net{&state};
   //std::exit(0);
   bool end = false;
   int AircraftCount = 0;
@@ -130,7 +129,7 @@ int main()
       }
       case ReplayPacketType::ECS:
       {
-        net.onPacket(pkt, pkt->timestamp_ms);
+        state.onPacket(pkt);
         break;
       }
       case ReplayPacketType::Snapshot: // useless

@@ -194,6 +194,7 @@ namespace danet {
       REPL_VER(bs->ReadCompressed(size));
       if (size > 0)
       {
+        bs->AlignReadToByteBoundary();
         std::vector<char> raw;
         raw.resize(size);
         REPL_VER(bs->ReadArray(raw.data(), size));

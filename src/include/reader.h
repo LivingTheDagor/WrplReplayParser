@@ -150,8 +150,9 @@ protected:
 /// if no new data is written after 10 seconds, it ends the Reading
 class FileStreamReader: public FileReader
 {
+  uint32_t deadline_seconds = 0;
 public:
-  FileStreamReader(const std::string &path) : FileReader(path) {}
+  FileStreamReader(const std::string &path, int deadline=10) : FileReader(path), deadline_seconds(deadline) {}
 
   int tryRead(void *ptr, int size) override;
 };

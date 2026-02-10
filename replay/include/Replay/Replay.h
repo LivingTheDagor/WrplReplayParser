@@ -131,9 +131,9 @@ public:
     return payload;
   }
 
-  ReplayReader* getStreamReader()
+  ReplayReader* getStreamReader(uint32_t time_wait=10)
   {
-    auto* rdr = new FileStreamReader(this->replay_path.string());
+    auto* rdr = new FileStreamReader(this->replay_path.string(), time_wait);
     rdr->seekto(zlib_start);
     auto *payload = new ReplayReader(new ZlibLoadCB(*rdr, 0xFFFFFFF), rdr);
     return payload;

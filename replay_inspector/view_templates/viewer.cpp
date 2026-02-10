@@ -286,8 +286,6 @@ public:
         }
       }
       for(auto &comp: refs) {
-        if(comp.ref->getName() == "sync_player")
-          LOG("womp");
         if(isTemplateValid(&comp)) {
           Templates[curr_size++] = &comp;
         }

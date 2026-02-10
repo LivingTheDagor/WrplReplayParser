@@ -9,3 +9,4 @@
 /.venv/
 /replay/codegen/.idea/
 /replay/codegen/.venv/
+/replay_inspector/repl/

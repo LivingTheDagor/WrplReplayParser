@@ -174,7 +174,7 @@ namespace ecs {
   bool GState::makeArchetypesQuery(archetype_t first_archetype, uint32_t index, bool wasFullyResolved) {
     const ResolvedQueryDesc &resDesc = resolvedQueries[index];
     if (resDesc.isEmpty()) {
-      LOGD3("skipping empty query {}", index);
+      //LOGD3("skipping empty query {}", index);
       return false;
     }
     ArchetypesQuery &query = archetypeQueries[index];
@@ -244,10 +244,10 @@ namespace ecs {
     //dag::RelocatableFixedVector<archetype_t, 4, true, framemem_allocator> queries;
     //dag::RelocatableFixedVector<ArchetypesQuery::offset_type_t, 16, true, framemem_allocator, uint32_t, false> allComponentsArchOffsets;
 
-    LOGD2("adding {} archetypes to query {}", archetypesCount - first_archetype,
-          &query >= archetypeQueries.begin().base() && &query < archetypeQueries.end().base() ? &query -
-                                                                                                archetypeQueries.begin().base()
-                                                                                              : -1);
+    //LOGD2("adding {} archetypes to query {}", archetypesCount - first_archetype,
+    //      &query >= archetypeQueries.begin().base() && &query < archetypeQueries.end().base() ? &query -
+    //                                                                                             archetypeQueries.begin().base()
+    //                                                                                          : -1);
 
     // we don't want to add same archetypes to query list
     // chose max between next after last already found (query.queriesEnd()[-1] + 1) and first_archetype to add
@@ -518,15 +518,10 @@ namespace ecs {
 
   __forceinline bool
   GState::updatePersistentQueryInternal(archetype_t last_arch_count, uint32_t index, bool should_re_resolve) {
-    LOGD3("updatePersistent = {}, index = {}", queryDescs[index].name, index);
-    LOGD2("update = {}, current resolved= {}", queryDescs[index].name, (uint8_t) getQueryStatus(index));
+    //LOGD3("updatePersistent = {}, index = {}", queryDescs[index].name, index);
+    //LOGD2("update = {}, current resolved= {}", queryDescs[index].name, (uint8_t) getQueryStatus(index));
     const bool ret = makeArchetypesQueryInternal(last_arch_count, index, should_re_resolve);
-#if DAGOR_DBGLEVEL > 0
-    if (!ret)
-  {
-    DEBUG_VERBOSE_QUERY("no archs {}", queryDescs[index].name.c_str());
-  }
-#endif
+
     return ret;
   }
 

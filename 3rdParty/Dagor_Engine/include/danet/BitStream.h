@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <string>
 
-#ifdef __GNUC__ // For GCC and Clang (Clang also defines __GNUC__)
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
 #endif

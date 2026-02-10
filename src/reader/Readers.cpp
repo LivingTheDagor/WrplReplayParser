@@ -297,7 +297,7 @@ int FileStreamReader::tryRead(void *ptr, int size) {
   else
   {
     auto start = std::chrono::steady_clock::now();
-    auto deadline = start + std::chrono::seconds(10);
+    auto deadline = start + std::chrono::seconds(deadline_seconds);
     while (std::chrono::steady_clock::now() < deadline) {
       std::this_thread::sleep_for(std::chrono::milliseconds(200)); // Polling interval
       uintmax_t currentSize = fs::file_size(this->fName, ec);

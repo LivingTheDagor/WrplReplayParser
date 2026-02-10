@@ -25,6 +25,9 @@ struct ParserState {
       delete v;
     }
   }
+  void onPacket(ReplayPacket *pkt) {
+    conn.onPacket(pkt, pkt->timestamp_ms);
+  }
 };
 
 

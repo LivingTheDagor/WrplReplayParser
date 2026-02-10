@@ -269,7 +269,6 @@ namespace danet {
 
   template<typename T>
   class ReflectionVar : public ReflectionVarMeta {
-    T data;
 
     static constexpr reflection_var_encoder getCoder() {
       G_STATIC_ASSERT(HasValidEncoder<T>::value);
@@ -277,6 +276,7 @@ namespace danet {
     }
 
   public:
+    T data;
     ReflectionVar() = delete; // some values NEED to be set
     void init(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder = getCoder(),
               uint16_t bits = sizeof(T) << 3) {
