@@ -4,21 +4,17 @@
 #define MYEXTENSION_COMPONENTPRINTINGIMPLEMENTATIONS_H
 #include <sstream>
 
-// Example basicPrint implementation
+// if no valid printing method found, falls back to this
 template<typename T>
 std::string basicPrint(void* v) {
   return fmt::format("basicPrint<{}> at {:p}", ecs::ComponentTypeInfo<T>::type_name, v);
 }
 
 
-// Primary template: Defaults to false
-template <typename T, typename = void>
-struct has_to_string : std::false_type {};
-
-// Specialization: Checks if `T` has a `.toString()` method
 template <typename T>
-struct has_to_string<T, std::void_t<decltype(std::declval<T>().toString(std::declval<int>()))>> : std::true_type {};
-
+concept has_to_string = requires(T t, int i) {
+  { t.toString(i) } -> std::convertible_to<std::string>;
+};
 
 template<typename T>
 std::string toStringImpl(void *p, int indent) {
@@ -30,7 +26,7 @@ std::string toStringImpl(void *p, int indent) {
   else
   {
     const T* data = (T*)(p);
-    if constexpr (has_to_string<T>::value) {
+    if constexpr (has_to_string<T>) {
       return data->toString(indent);
     }
 
