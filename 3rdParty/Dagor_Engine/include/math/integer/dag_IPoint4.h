@@ -145,7 +145,7 @@ public:
   INLINE float length() const { return sqrtf(lengthSq()); }
   INLINE real lengthF() const { return fastsqrt(lengthSq()); }
 
-  std::string toString() const {return fmt::format("[{}, {}, {}, {}]", this->x, this->y, this->z, this->w);}
+  std::string toString(int indent) const {return fmt::format("[{}, {}, {}, {}]", this->x, this->y, this->z, this->w);}
 };
 
 INLINE IPoint4 operator*(int a, const IPoint4 &p) { return IPoint4(p.x * a, p.y * a, p.z * a, p.w * a); }

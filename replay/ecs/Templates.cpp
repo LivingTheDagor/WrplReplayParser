@@ -26,8 +26,7 @@ namespace ecs {
   }
 
   void TemplateDB::printTempl(const Template &t, int spacing, ComponentTypes &types, DataComponents &comps) {
-    std::string spaces_b;
-    spaces_b.resize(spacing, ' ');
+    std::string spaces_b(spacing, ' ');
     LOG("{}{}:", spaces_b, t.name);
     for(const auto &tid : t.parents)
     {
@@ -37,8 +36,7 @@ namespace ecs {
     {
       auto type_name = types.getComponentData(comp.default_component.getTypeId())->name;
       auto comp_name = comps.getName(comp.comp_type_index);
-      std::string spaces;
-      spaces.resize(spacing+4, ' ');
+      std::string spaces(spacing+4, ' ');
       LOG("{}{}({}); type: {}({})", spaces, comp_name, comp.comp_type_index, type_name, comp.default_component.getTypeId());
     }
   }

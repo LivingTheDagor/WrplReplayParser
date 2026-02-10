@@ -56,7 +56,7 @@ namespace ecs {
                       void * /*from*/) const {} // move constructor. This is called only for NON_TRIVIAL_MOVE. Currently
     // we don't support non memcpy moveable types
 
-    virtual std::string toString(void *) const {return "";}
+    virtual std::string toString(void *, int) const {return "";}
 
     //virtual void
     //clear() {} // this is called on each EntityManager::clear(), after all components were removed. That is used for
@@ -152,9 +152,9 @@ namespace ecs {
     }
 
 
-    std::string toString(void *p) const override {
+    std::string toString(void *p, int indent=0) const override {
           G_FAST_ASSERT(p);
-      return toStringImpl<T>(p);
+      return toStringImpl<T>(p, indent);
       //ComponentPrinter<T>::print(static_cast<T*>(p));
     }
   };
@@ -178,9 +178,9 @@ namespace ecs {
 
     void destroy(void *) override { EXCEPTION("Called CTM for %s", typeid(T).name()); }
 
-    std::string toString(void *p) const override {
+    std::string toString(void *p, int indent = 0) const override {
           G_FAST_ASSERT(p);
-      return toStringImpl<T>(p);
+      return toStringImpl<T>(p, indent);
     }
   };
 

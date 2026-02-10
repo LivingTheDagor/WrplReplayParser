@@ -177,7 +177,7 @@ public:
 
   static const BBox3 IDENT;
 
-  std::string toString() const {return fmt::format("[[{}, {}, {}], [{}, {}, {}]]",
+  std::string toString(int indent) const {return fmt::format("[[{}, {}, {}], [{}, {}, {}]]",
                                                    this->lim[0][0], this->lim[0][1], this->lim[0][2],
                                                    this->lim[1][0], this->lim[1][1], this->lim[1][2]);}
 };

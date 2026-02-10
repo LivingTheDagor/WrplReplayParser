@@ -12,18 +12,12 @@
 
 
 template<typename T>
-std::string toStringImpl(void* p);
+std::string toStringImpl(void* p, int);
 
 // Concept to check if type T supports operator<<
 template<typename T>
 concept HasOstreamOperator = requires(std::ostream& os, const T& t) {
   { os << t } -> std::convertible_to<std::ostream&>;
-};
-
-// Concept to check if type T has a toString() method
-template<typename T>
-concept HasToString = requires(const T& t) {
-  { t.toStringImpl() } -> std::convertible_to<std::string>;
 };
 
 

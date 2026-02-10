@@ -264,7 +264,7 @@ protected:
   void validateExtensive() const {}
 #endif
   public:
-  [[nodiscard]] std::string toString() const;
+  [[nodiscard]] std::string toString(int indent) const;
 };
 
 inline std::string &get_key_string(const Object::iterator &i) { return i->first; }

@@ -145,7 +145,7 @@ public:
     x = (int)a.y, y = (int)a.z;
   }
 
-  std::string toString() const {return fmt::format("[{}, {}]", this->x, this->y);}
+  std::string toString(int indent) const {return fmt::format("[{}, {}]", this->x, this->y);}
 };
 
 INLINE IPoint2 operator*(int a, const IPoint2 &p) { return IPoint2(p.x * a, p.y * a); }

@@ -39,6 +39,10 @@ struct E3DCOLOR
     a = A;
   }
   operator unsigned int() const { return u; }
+
+  inline std::string toString(int indent) const {
+    return fmt::format("r: {}, g: {}, b: {}. a: {}", (int)r, (int)g, (int)b, (int)a);
+  }
 };
 
 #define E3DCOLOR_MAKE(r, g, b, a)         ((E3DCOLOR)(((a) << 24) | ((r) << 16) | ((g) << 8) | (b)))

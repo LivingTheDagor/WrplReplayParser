@@ -17,11 +17,11 @@ struct has_to_string : std::false_type {};
 
 // Specialization: Checks if `T` has a `.toString()` method
 template <typename T>
-struct has_to_string<T, std::void_t<decltype(std::declval<T>().toString())>> : std::true_type {};
+struct has_to_string<T, std::void_t<decltype(std::declval<T>().toString(std::declval<int>()))>> : std::true_type {};
 
 
 template<typename T>
-std::string toStringImpl(void *p) {
+std::string toStringImpl(void *p, int indent) {
   if constexpr (ecs::ComponentTypeInfo<T>::type == ecs::ComponentTypeInfo<ecs::Tag>::type)
     // tags have no data, I think this still makes the constexpr chain still clean during compilation
   {
@@ -31,12 +31,12 @@ std::string toStringImpl(void *p) {
   {
     const T* data = (T*)(p);
     if constexpr (has_to_string<T>::value) {
-      return data->toString();
+      return data->toString(indent);
     }
 
     else if constexpr (ecs::ComponentTypeInfo<T>::type == ecs::ComponentTypeInfo<ecs::string>::type)
     {
-      return std::string(data->c_str()); // remember, ecs::string is a eastl::string, not std::string.
+      return fmt::format("\"{}\"", data->c_str()); // remember, ecs::string is a eastl::string, not std::string.
     }
     else if constexpr (ecs::ComponentTypeInfo<T>::type == ecs::ComponentTypeInfo<float>::type)
     {

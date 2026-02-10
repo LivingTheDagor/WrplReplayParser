@@ -10,26 +10,24 @@ namespace ecs {
   ComponentSerializer default_serializer;
   size_t pull_components_type = 1;
   //const int MAX_STRING_LENGTH = 32768; // just for safety. Keep string size reasonable please!
-  std::string Array::toString() const {
+  std::string Array::toString(int indent) const {
     std::ostringstream os;
     if(this->empty())
     {
-      os << fmt::format("({})[]", this->size());
+      os << fmt::format("(0)[]");
       return os.str();
     }
-    os << fmt::format("({})\n    [\n", this->size());
+    os << fmt::format("({}) [", this->size());
     auto comps = g_ecs_data->getComponentTypes();
     for(const auto &comp : *this)
     {
       auto ctm = comps->getCTM(comp.getTypeId());
-      auto str = ctm->toString((void *)comp.getRawData());
-      os << "        ";
-      os << comps->getName(comp.getTypeId());
-      os << ": ";
-      os << str;
-      os << "        \n";
+      os << fmt::format("{}({}): {}\n",
+                        std::string(indent, ' '),
+                        comps->getName(comp.getTypeId()),
+                        ctm->toString((void *)comp.getRawData(), indent+2));
     }
-    os << "    ]\n";
+    os << fmt::format("{}]", std::string(indent, ' '));
     return os.str();
   }
 
@@ -164,16 +162,20 @@ namespace ecs {
     }
   }
 
-  std::string ecs::Object::toString() const {
+  std::string ecs::Object::toString(int indent) const {
     std::ostringstream oss;
-    oss << "{";
+    oss << " {\n";
     auto comps = g_ecs_data->getComponentTypes();
     for(const auto &s : this->container)
     {
       auto ctm = comps->getCTM(s.second.getTypeId());
-      oss << fmt::format("{}: '{}', ", s.first, ctm->toString((void *)s.second.getRawData()));
+      oss << fmt::format("{}'{}'({}): {}\n",
+                         std::string(indent+2, ' '),
+                         s.first,
+                         comps->getName(s.second.getTypeId()),
+                         ctm->toString((void *)s.second.getRawData(), indent+2));
     }
-    oss << "}";
+    oss << fmt::format("{}}}", std::string(indent, ' '));
     return oss.str();
   }
 

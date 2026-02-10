@@ -158,23 +158,23 @@ namespace ecs {
     if (!types)
       types = g_ecs_data->getComponentTypes();
     auto ctm = types->getCTM(this->componentTypeIndex);
-    LOG("{}", ctm->toString(ext_data));
+    LOG("{}", ctm->toString(ext_data, 0));
   }
 
   void ComponentRef::print(ComponentTypes *types) const {
     print(this->value, types);
   }
 
-  std::string ComponentRef::toString(void *ext_data, ComponentTypes *types) const {
+  std::string ComponentRef::toString(void *ext_data, ComponentTypes *types, int indent) const {
     if (!ext_data)
       return "<NULLPTR>";
     if (!types)
       types = g_ecs_data->getComponentTypes();
     auto ctm = types->getCTM(this->componentTypeIndex);
-    return ctm->toString(ext_data);
+    return ctm->toString(ext_data, indent);
   }
 
-  std::string ComponentRef::toString(ComponentTypes *types) const {
-    return this->toString(this->value, types);
+  std::string ComponentRef::toString(ComponentTypes *types, int indent) const {
+    return this->toString(this->value, types, indent);
   }
 }

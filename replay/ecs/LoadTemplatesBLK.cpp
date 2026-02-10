@@ -28,6 +28,8 @@ namespace ecs {
     }
     auto name_hash = ECS_HASH(name);
     auto index = types->getIndex(name_hash.hash);
+    // ensures our fetched datacomponent has the same type as expected
+    G_ASSERT(index == INVALID_COMPONENT_TYPE_INDEX || types->getDataComponent(name_hash.hash)->componentIndex == idx);
     if (index == INVALID_COMPONENT_TYPE_INDEX)
     {
       index = types->createComponent(name_hash, idx, nullptr, *cTypes);
@@ -51,6 +53,8 @@ inline bool is_reserved_name(std::string_view &name) {
 inline bool is_reserved_name(const char *name) {
   return name[0] == '_';
 }
+// //%_/ is a signifier stating when name mangling ends
+#define MANGLE_BREAK "//%_/"
 
 void parseNameType(const std::string &input, std::string &name, std::string &type) {
   size_t pos = input.find(':');
@@ -242,14 +246,20 @@ namespace ecs {
     //ctx.db = nullptr;
     //auto sets = ctx.sets;
     //ctx.sets = decltype(sets)();
-    ctx.mangle_type_name = type_name;
+    auto old_name = std::move(ctx.mangle_type_name);
+    if(!old_name.empty()) {
+      ctx.mangle_type_name = old_name + "_" + type_name;
+    } else {
+      ctx.mangle_type_name = type_name;
+    }
     ctx.parse(blk);
-    ctx.mangle_type_name = "";
+    auto len = ctx.mangle_type_name.size();
+    ctx.mangle_type_name = std::move(old_name);
     ctx.components = prevList;
     //ctx.info = prevInfo;
     //ctx.db = prevDb;
     //ctx.sets = sets;
-    cb(std::move(olist));
+    cb(std::move(olist), len);
   }
 
   static inline ecs::Object load_object_impl(TemplateParseContext &ctx, DataBlock &blk) {
@@ -257,10 +267,18 @@ namespace ecs {
     uint32_t cap = blk.paramCount() + blk.blockCount();
     out_object.reserve(cap);
     auto datacmps = g_ecs_data->getDataComponents();
-    load_component_list_impl(ctx, blk, "ecs_object", [&out_object, datacmps](std::vector<ecs::ComponentTemplInfo> &&clist) {
-      for (auto &&objElem: clist)
-        out_object.addMember(datacmps->getDataComponent(objElem.comp_type_index)->getName().data(),
+    load_component_list_impl(ctx, blk, "ecs_object", [&out_object, datacmps](std::vector<ecs::ComponentTemplInfo> &&clist, size_t len) {
+      for (auto &&objElem: clist) {
+        auto name = datacmps->getDataComponent(objElem.comp_type_index)->getName();
+        auto name_ptr = name.data();
+        auto mangle_idx = name.find(MANGLE_BREAK);
+        while (mangle_idx != std::string_view::npos) { // find the last occurance of the mangle break
+          name_ptr += mangle_idx + strlen(MANGLE_BREAK);
+          mangle_idx = std::string_view(name_ptr).find(MANGLE_BREAK);
+        }
+        out_object.addMember(name_ptr,
                              std::move(objElem.default_component));
+      }
     });
     if (out_object.size() <=
         ((cap * 3u) / 4u)) // if we are wasting at least 25% or more (TODO: tune this formula according to real
@@ -272,7 +290,7 @@ namespace ecs {
   static inline ecs::Array load_array_impl(TemplateParseContext &ctx, DataBlock &blk) {
     ecs::Array out_array;
     out_array.reserve((ecs::Array::base_type::size_type)(blk.paramCount() + blk.blockCount()));
-    load_component_list_impl(ctx, blk, "ecs_array", [&out_array](std::vector<ecs::ComponentTemplInfo> &&clist) {
+    load_component_list_impl(ctx, blk, "ecs_array", [&out_array](std::vector<ecs::ComponentTemplInfo> &&clist, size_t) {
       for (auto &&arrElem: clist)
         out_array.push_back(std::move(arrElem.default_component));
     });
@@ -290,7 +308,7 @@ namespace ecs {
     out_array.reserve((typename T::size_type)(blk.paramCount() + blk.blockCount()));
     std::string mangle_name = typeid(T).name();
     mangle_name += "ecs_list_";
-    load_component_list_impl(ctx, blk, mangle_name, [&ctx, &out_array, blk](std::vector<ecs::ComponentTemplInfo> &&clist) {
+    load_component_list_impl(ctx, blk, mangle_name, [&ctx, &out_array, blk](std::vector<ecs::ComponentTemplInfo> &&clist, size_t) {
       for (auto &&arrElem: clist) {
         if (arrElem.default_component.is<typename T::value_type>())
           out_array.push_back(std::move(*(typename T::value_type *) arrElem.default_component.getRawData()));
@@ -307,10 +325,21 @@ namespace ecs {
     return std::move(out_array);
   }
 
+  std::string mangle_name(const char * n, const std::string &parent_type, const std::string &child_type) {
+    std::string n1(n);
+
+    n1 = parent_type + "_" + child_type + MANGLE_BREAK + n1;
+    return n1;
+  }
+
   static void load_object(TemplateParseContext &ctx, const char *name, DataBlock &blk) {
     ecs::Object object = load_object_impl(ctx, blk);
     auto cidx = getTypeIndex<ecs::Object>();
-    auto index = getComponentIndex(name, cidx);
+    std::string actual_name = name;
+    if(!ctx.mangle_type_name.empty()) {
+      actual_name = mangle_name(name, ctx.mangle_type_name, "");
+    }
+    auto index = getComponentIndex(actual_name.c_str(), cidx);
     ctx.components->emplace_back(index, std::move(object));
   }
 
@@ -318,15 +347,24 @@ namespace ecs {
   static void load_array(TemplateParseContext &ctx, const char *name, DataBlock &blk) {
     ecs::Array array = load_array_impl(ctx, blk);
     auto cidx = getTypeIndex<ecs::Array>();
-    auto index = getComponentIndex(name, cidx);
+    std::string actual_name = name;
+    if(!ctx.mangle_type_name.empty()) {
+      actual_name = mangle_name(name, ctx.mangle_type_name, "");
+    }
+    auto index = getComponentIndex(actual_name.c_str(), cidx);
     ctx.components->emplace_back(index, std::move(array));
   }
+
 
 
   template<typename T>
   static void load_list(TemplateParseContext &ctx, const char * name, DataBlock &blk) {
     ecs::List<T> list = load_array_impl<ecs::List<T>>(ctx, blk);
-    auto index = getComponentIndex(name, getTypeIndex<ecs::List<T>>());
+    std::string actual_name = name;
+    if(!ctx.mangle_type_name.empty()) {
+      actual_name = mangle_name(name, ctx.mangle_type_name, "");
+    }
+    auto index = getComponentIndex(actual_name.c_str(), getTypeIndex<ecs::List<T>>());
     ctx.components->emplace_back(index, std::move(list));
   }
 
@@ -338,11 +376,6 @@ namespace ecs {
     return it == std::end(block_loaders) ? nullptr : it;
   }
 
-  std::string mangle_name(const char * n, const std::string &parent_type, const std::string &child_type) {
-    std::string n1(n);
-    n1 += "_" + parent_type + "_" + child_type;
-    return n1;
-  }
 
   void TemplateParseContext::parse(DataBlock &blk) {
     //std::cout << "parsing template " << blk.getBlockName() << "\n";
@@ -394,7 +427,7 @@ namespace ecs {
           }
 #define parse_type(case_, ret_name) \
             case DataBlock::TYPE_##case_: {\
-            comp = std::move(ecs::Component{blk.get##ret_name(i)});       \
+            comp = ecs::Component{blk.get##ret_name(i)};       \
               break;               \
             }
           parse_type(INT, Int)
@@ -418,6 +451,8 @@ namespace ecs {
         auto name_ = this->mangle_type_name.empty() ? std::string(blk.getParamName(i)) : mangle_name(blk.getParamName(i), this->mangle_type_name, DataBlock::ParamTypeNames[blk.getParamType(i)]);
         auto hash = ECS_HASH(name_.c_str());
         ecs::component_index_t idx = g_ecs_data->getDataComponents()->getIndex(hash.hash);
+        // object type doesnt do name mangling, so this checks to ensure that doesnt cause issues
+        G_ASSERT(idx == INVALID_COMPONENT_INDEX || g_ecs_data->getDataComponents()->getDataComponent(hash.hash)->componentHash == comp.getUserType());
         if (idx == INVALID_COMPONENT_INDEX) {
           idx = g_ecs_data->createComponent(hash, comp.getTypeId(), nullptr);
         }
@@ -462,7 +497,9 @@ namespace ecs {
                                                          dataComps->getDataComponent(index)->componentIndex)->size});
         continue;
       } else if (auto typeLoader = find_type_block_loader(type)) {
-        typeLoader->load(*this,name.c_str(), *subBlock);
+        // list loaders can add datatypes, so need name mangling (glungarrrrr)
+        auto name_ = this->mangle_type_name.empty() ? name : mangle_name(name.c_str(), this->mangle_type_name, typeLoader->typeName);
+        typeLoader->load(*this,name_.c_str(), *subBlock);
 
       } else {
         auto hash = ECS_HASH(type.c_str());
@@ -470,7 +507,6 @@ namespace ecs {
         if (index == INVALID_COMPONENT_TYPE_INDEX)
           EXCEPTION("Unable to find type {}", type);
         G_ASSERT(this->mangle_type_name.empty()); // this should never encounter name mangling
-        //auto name_ = this->mangle_type_name.empty() ? name : mangle_name(name.c_str(), this->mangle_type_name, type);
 
         component_index_t idx = dataComps->createComponent(ECS_HASH(name.c_str()), index, nullptr, *comps);
         components->emplace_back(idx, Component{

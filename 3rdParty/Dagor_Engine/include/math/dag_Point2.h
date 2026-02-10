@@ -121,7 +121,7 @@ public:
     y = a.z;
   }
 public:
-  std::string toString() const {return fmt::format("[{}, {}]", this->x, this->y);}
+  std::string toString(int indent) const {return fmt::format("[{}, {}]", this->x, this->y);}
 };
 
 /// dot product
@@ -276,7 +276,7 @@ public:
     y = a.z;
   }
 public:
-  std::string toString() const {return fmt::format("[{}, {}]", this->x, this->y);}
+  std::string toString(int indent) const {return fmt::format("[{}, {}]", this->x, this->y);}
 };
 
 /// floor() of all components

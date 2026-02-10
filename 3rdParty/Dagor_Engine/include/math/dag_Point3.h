@@ -222,7 +222,7 @@ public:
   {
     x = a.r, y = a.g, z = a.b;
   }
-  std::string toString() const {return fmt::format("[{}, {}, {}]", this->x, this->y, this->z);}
+  std::string toString(int indent) const {return fmt::format("[{}, {}, {}]", this->x, this->y, this->z);}
 };
 
 /// dot product
@@ -505,7 +505,7 @@ public:
     x = a.r, y = a.g, z = a.b;
   }
 
-  std::string toString() const {return fmt::format("[{}, {}, {}]", this->x, this->y, this->z);}
+  std::string toString(int indent) const {return fmt::format("[{}, {}, {}]", this->x, this->y, this->z);}
 };
 
 INLINE Point3::Point3(const DPoint3 &p)

@@ -53,7 +53,7 @@ namespace ecs {
 
     inline uint32_t get_handle() const { return handle; }
 
-    [[nodiscard]] inline std::string toString() const { return fmt::format("{:#08x}", this->handle); }
+    [[nodiscard]] inline std::string toString(int indent) const { return fmt::format("{:#08x}", this->handle); }
 
   private:
     friend class ecs::EntityManager;

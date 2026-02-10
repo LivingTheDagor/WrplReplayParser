@@ -204,7 +204,7 @@ public:
   {
     x = a.x, y = a.y, z = a.z, w = v;
   }
-  std::string toString() const {return fmt::format("[{}, {}, {}, {}]", this->x, this->y, this->z, this->w);}
+  std::string toString(int indent) const {return fmt::format("[{}, {}, {}, {}]", this->x, this->y, this->z, this->w);}
 };
 
 /// dot product

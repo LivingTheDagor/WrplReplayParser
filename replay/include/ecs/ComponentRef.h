@@ -42,8 +42,8 @@ namespace ecs
     component_index_t getComponentId() const { G_ASSERT(this->componentId != INVALID_COMPONENT_INDEX); return this->componentId; }
     const void *getRawData() const { return this->value; }
 
-    std::string toString(void *ext_data, ComponentTypes *types) const;
-    std::string toString(ComponentTypes *types) const;
+    std::string toString(void *ext_data, ComponentTypes *types, int indent=0) const;
+    std::string toString(ComponentTypes *types, int indent=0) const;
 
     void print(void *ext_data, ComponentTypes *types) const; // prints external data
     void print(ComponentTypes *types) const; // prints internal data

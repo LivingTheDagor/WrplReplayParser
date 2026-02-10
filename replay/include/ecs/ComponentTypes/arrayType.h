@@ -152,7 +152,7 @@ namespace ecs {
       return *this;
     } // do not change generation
 
-    std::string toString() const;
+    std::string toString(int) const;
   protected:
     static Component emptyAttrRO;
     void changeGen() { /*gen++;*/ }

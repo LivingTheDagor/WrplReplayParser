@@ -227,19 +227,22 @@ namespace ecs {
       return *this;
     } // do not change generation
 
-    std::string toString() const {
+    std::string toString(int indent) const {
       std::ostringstream os{};
-      os << fmt::format("({})", this->size());
-      os.write("[", 1);
+
+      if (this->size() == 0) {
+        return fmt::format("(0) (List of {}) []", ComponentTypeInfo<T>::type_name);
+      }
+
+      os << fmt::format("({}) (List of {}) [\n", this->size(), ComponentTypeInfo<T>::type_name);
       for (const auto &val: *this) {
-        auto out = toStringImpl<T>((void *) &val);
-        os.write(out.data(), out.size());
+
+        os << fmt::format("{}{}\n", std::string(indent, ' '), toStringImpl<T>((void *) &val, indent+2));
         //if(i+1 < this->size())
         //{
-        os.write(", ", 2);
         //}
       }
-      os.write("]", 1);
+      os << fmt::format("{}]\n", std::string(indent, ' '));
       return os.str();
     }
 

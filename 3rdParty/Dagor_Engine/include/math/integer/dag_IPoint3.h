@@ -254,7 +254,7 @@ public:
     x = (int)a.x, y = (int)a.z, z = v;
   }
 
-  std::string toString() const {return fmt::format("[{}, {}, {}]", this->x, this->y, this->z);}
+  std::string toString(int indent) const {return fmt::format("[{}, {}, {}]", this->x, this->y, this->z);}
 };
 
 INLINE IPoint3 operator*(int a, const IPoint3 &p) { return IPoint3(p.x * a, p.y * a, p.z * a); }
