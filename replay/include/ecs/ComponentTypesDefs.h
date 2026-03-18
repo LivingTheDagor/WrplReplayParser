@@ -161,6 +161,7 @@ struct Rocket {
   uint32_t u4_5;
   std::vector<char> v1;
   std::vector<char> v2;
+  std::vector<char> v3;
   uint8_t u1_5;
   uint32_t u4_6;
   uint8_t u1_6;
@@ -203,6 +204,7 @@ namespace ecs {
     bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint,
                      ecs::EntityManager *mgr) override;
   };
+
 }
 
 ECS_DECLARE_CREATABLE_TYPE(Rocket) // these need to be creatable as we have vectors in the struct
@@ -348,6 +350,7 @@ ECS_DECLARE_CREATABLE_TYPE(ecs::TemplatesListToInstantiate)
 ECS_DECLARE_CREATABLE_TYPE(BehaviourTree)
 ECS_DECLARE_CREATABLE_TYPE(BufferedHudData)
 ECS_DECLARE_CREATABLE_TYPE(InvalidType)
+ECS_DECLARE_CREATABLE_TYPE(LaserDecalManager)
 
 #include "ecs/ComponentPrintingImplementations.h"
 

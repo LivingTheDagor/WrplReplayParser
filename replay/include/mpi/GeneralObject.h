@@ -67,6 +67,11 @@ namespace mpi {
     uint8_t unitType;
     bool maybe_is_burav_kill; // bit
     uint8_t some_weap_flags; // according to blk
+    std::string weird_str_1{};
+    std::string weird_str_2{};
+    uint32_t weird_val_3{};
+    std::string weird_str_4{};
+
     KillMessage(IObject *o): IBattleMessage(o, GeneralObject::Kill) {}
     bool readPayload(ParserState *state) override;
   };

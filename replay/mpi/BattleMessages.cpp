@@ -86,12 +86,30 @@ namespace mpi {
             RET_FAIL(bs->Read(this->destroyed_weapon));
             break;
           }
+          case 0xd: {
+
+            RET_FAIL(bs->Read(this->weird_str_1));
+            break;
+          }
+          case 0xe: {
+            RET_FAIL(bs->Read(this->weird_str_2));
+            break;
+          }
+          case 0xf: {
+            RET_FAIL(bs->Read(this->weird_val_3));
+            break;
+          }
+          case 0x10: {
+            RET_FAIL(bs->Read(this->weird_str_4));
+            break;
+          }
       MESSAGE_SWITCH_FOOTER
     }
     LOG("KillerPid: {}; KillerUid: {}; KillerVehicle: {}; KillerWeapon: {}", this->offender_pid, killer_uid, this->offender_vehicle, this->used_weapon);
     LOG("VictimPid: {}; VictimUid: {}; DeathType: {}", this->VictimPid, victim_uid, this->DeathType);
     LOG("some_enum: {}; some_weap_flags: {}; unitType: {}", (uint8_t)this->some_enum, this->some_weap_flags, this->unitType);
     LOG("destroyed_weapon: {}", this->destroyed_weapon);
+    LOG("newStr1: {}; newStr2: {}; newVal3: {}; newStr4: {}", this->weird_str_1, this->weird_str_2, this->weird_val_3, this->weird_str_4);
     ecs::string *killer_className, *killer_missionName, *victim_className, *victim_missionName;
     if(this->offender_entity) {
       killer_className = state->g_entity_mgr.getNullable<ecs::string>(this->offender_entity, ECS_HASH("unit__className"));

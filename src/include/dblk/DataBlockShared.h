@@ -7,8 +7,8 @@
 #include "StringTableAllocator.h"
 #include "unordered_map"
 #include "hash.h"
+// using instead of std::unordered_map as hashedKeyMap implements some utils that this expects and would be annoying to port
 #include "dag_hashedKeyMap.h"
-
 namespace dblk {
 
   // most of this is almost directly copied
@@ -88,7 +88,7 @@ namespace dblk {
       if (it == -1)
       {
         uint32_t id = addString(str);
-        hashToStringId.emplace(hash, eastl::move(id));
+        hashToStringId.emplace(hash, std::move(id));
         return id;
       }
       return it;
@@ -151,6 +151,8 @@ namespace dblk {
     }
   };
 
+  // exists as a shared set of data between datablocks, for RO Datablocks (blocks stored in vromfs that exist in a immutable and fast parse state) it functions as a storage for all block data
+  //
   class DataBlockShared {
     DBNameMap rw; // rw is all the names added to a specific block
     DBNameMap *ro; // ro represents the nm file in a vromfs, it is owned by the vromfs, so ensure not to destroy vromfs while having active files from it
@@ -160,7 +162,7 @@ namespace dblk {
     uint32_t param_ofs = 0;
     uint16_t block_count = 0;
     uint16_t param_count = 0;
-    mutable volatile int refs = 0;
+    //mutable volatile int refs = 0;
 
     std::string_view getName(name_id id) const {
       int roc = !ro ? 0 : ro->nameCount();
@@ -232,11 +234,11 @@ namespace dblk {
 
     uint32_t roDataSize() const { return block_ofs + block_count * sizeof(DataBlock) + sizeof(*this); } // blocks are always at the end
 
-    const DataBlock *getROBlockUnsafe(uint32_t i) const { return ((const DataBlock *) getUnsafe(block_ofs)) + i; }
+    [[nodiscard]] const DataBlock *getROBlockUnsafe(uint32_t i) const { return ((const DataBlock *) getUnsafe(block_ofs)) + i; }
 
     DataBlock *getROBlockUnsafe(uint32_t i) { return ((DataBlock *) getUnsafe(block_ofs)) + i; }
 
-    const Param *getParamUnsafe(uint32_t i) const { return ((const Param *) getUnsafe(param_ofs)) + i; }
+    [[nodiscard]] const Param *getParamUnsafe(uint32_t i) const { return ((const Param *) getUnsafe(param_ofs)) + i; }
 
     Param *getParamUnsafe(uint32_t i) { return ((Param *) getUnsafe(param_ofs)) + i; }
 

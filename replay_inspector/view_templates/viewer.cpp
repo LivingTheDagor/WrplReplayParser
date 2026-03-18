@@ -413,8 +413,8 @@ int main(int argc, char* argv[]) {
   ComponentStorage.init();
   DataComponentStorage.init();
   TemplateStorage.init();
-
-  mainloop_sdl2("Template and Component Inspector", cb);
+  setup_sdl2("Template and Component Inspector");
+  mainloop_sdl2(cb);
   // Create window with SDL_Renderer graphics context
   return 0;
 }

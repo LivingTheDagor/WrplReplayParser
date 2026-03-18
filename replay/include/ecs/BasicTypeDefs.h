@@ -499,10 +499,19 @@ struct CapsulesAOHolder {
 };
 
 struct BufferedHudData {
-  char data[8];
+  std::vector<uint8_t> data{};
+  std::string toString(int indent) const {
+    std::ostringstream oss{};
+    FormatHexToStream(oss, std::span((char*)data.data(), data.size()));
+    return fmt::format("{}", oss.str());
+  }
 };
 
 struct InvalidType {
+  char data[8];
+};
+
+struct LaserDecalManager {
   char data[8];
 };
 

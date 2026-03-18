@@ -231,6 +231,7 @@ namespace danet {
     }
     else if (op == DANET_REFLECTION_OP_DECODE) {
       REPL_VER(bs->Read(*(data)));
+      //LOG("new UID data: {}; {}", data->player_id, data->name);
       return true;
     }
     return false;

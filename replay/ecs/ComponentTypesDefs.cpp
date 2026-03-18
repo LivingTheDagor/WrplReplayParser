@@ -11,6 +11,7 @@ void hello() { std::cout << ""; }
 
 namespace ecs {
   //extern int MAX_STRING_LENGTH;
+
 }
 class PartIdSerializer final : public ecs::ComponentSerializer {
   void serialize(ecs::SerializerCb &cb, const void *data, size_t sz, ecs::component_type_t hint, ecs::EntityManager *mgr) override {
@@ -412,6 +413,27 @@ static struct RendInstSerializer final : public ecs::ComponentSerializer
   }
 } rendinst_serializer;
 
+class BufferedHudDataSerializer : public ecs::ComponentSerializer {
+  void
+  serialize(ecs::SerializerCb &cb, const void *data, size_t sz, ecs::component_type_t hint, ecs::EntityManager *mgr) override {
+
+    G_ASSERT(hint == ecs::ComponentTypeInfo<BufferedHudData>::type);
+    EXCEPTION("not implemented");
+  }
+
+  bool deserialize(const ecs::DeserializerCb &cb, void *data, size_t sz, ecs::component_type_t hint,
+                   ecs::EntityManager *mgr) override {
+
+    G_ASSERT(hint == ecs::ComponentTypeInfo<BufferedHudData>::type);
+    BufferedHudData * ptr = (BufferedHudData *)data;
+    uint32_t arr_sz;
+    bool is_ok = read_compressed(cb, arr_sz);
+    ptr->data.resize(arr_sz);
+    is_ok &= cb.read(ptr->data.data(), arr_sz<<3, 0);
+    return is_ok;
+  }
+};
+
 
 namespace ecs {
   void FieldSerializerDictIO::serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) {
@@ -476,11 +498,18 @@ namespace ecs {
     size1 = (uint16_t)((size1 + 7) & 0xfffffff8);
     Rocket_data.v1.resize(size1);
     cb.read(Rocket_data.v1.data(), size1, 0);
+
     uint16_t size2;
     cb.read(&size2, 2 * 8, 0);
     size2 = (uint16_t)((size2 + 7) & 0xfffffff8);
-    Rocket_data.v1.resize(size2);
-    cb.read(Rocket_data.v1.data(), size2, 0);
+    Rocket_data.v2.resize(size2);
+    cb.read(Rocket_data.v2.data(), size2, 0);
+
+    uint16_t size3;
+    cb.read(&size3, 2 * 8, 0);
+    size3 = (uint16_t)((size3 + 7) & 0xfffffff8);
+    Rocket_data.v3.resize(size3);
+    cb.read(Rocket_data.v3.data(), size3, 0);
     cb.read(&Rocket_data.u1_5, sizeof(Rocket_data.u1_5) * 8, 0);
     cb.read(&Rocket_data.u4_6, sizeof(Rocket_data.u4_6) * 8, 0);
     cb.read(&Rocket_data.u1_6, sizeof(Rocket_data.u1_6) * 8, 0);
@@ -644,8 +673,10 @@ namespace ecs {
   ECS_REGISTER_CTM_TYPE(CapsulesAOHolder, nullptr);
   ECS_REGISTER_CTM_TYPE(ecs::TemplatesListToInstantiate, nullptr);;
   ECS_REGISTER_CTM_TYPE(BehaviourTree, nullptr);
-  ECS_REGISTER_CTM_TYPE(BufferedHudData, nullptr);
+  static BufferedHudDataSerializer buffered_hud_data_serializer;
+  ECS_REGISTER_CTM_TYPE(BufferedHudData, &buffered_hud_data_serializer);
   ECS_REGISTER_CTM_TYPE(InvalidType, nullptr);
+  ECS_REGISTER_CTM_TYPE(LaserDecalManager, nullptr);
 }
 
 class ErrorSerializer final : public ecs::ComponentSerializer {

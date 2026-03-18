@@ -31,16 +31,16 @@ namespace mpi {
         }
         case Kill: {
           return new KillMessage(this);
-          //LOG("KILL");
+          LOG("KILL");
           break;
         }
         case Awards: {
-          //LOG("Awards");
+          LOG("Awards");
           break;
 
         }
         case SevereDamage: {
-          //LOG("SevereDamage");
+          LOG("SevereDamage");
           break;
 
         }
@@ -177,7 +177,7 @@ namespace mpi {
         }
       }
     }
-    LOG("unable to dispatch to oid: {:#x}; type: {}; index: {}", oid, obj, count);
+    //LOG("unable to dispatch to oid: {:#x}; type: {}; index: {}", oid, obj, count);
     return nullptr;
   }
 }

@@ -21,4 +21,51 @@ void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL lev
 }
 
 
+#include <cpptrace/cpptrace.hpp>
+#ifdef WIN32
+#include <windows.h>
+// Your custom handler
+LONG WINAPI my_handler(EXCEPTION_POINTERS* ExceptionInfo) {
+// You can filter by exception type:
+  if (ExceptionInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+    LOGE("SIGSEV occured, stacktrace: \n{}", cpptrace::generate_trace().to_string());
+    g_log_handler.wait_until_empty();
+    g_log_handler.flush_all();
+  }
+// Print your stacktrace here...
+// Optionally: exit, abort, etc.
+  return EXCEPTION_EXECUTE_HANDLER;
+}
+
+// Call this function during initialization
+void register_default_sigsev_handler() {
+  SetUnhandledExceptionFilter(my_handler);
+}
+#else
+#include "signal.h"
+
+static void handler(int signum)
+{
+  LOGE("SIGSEV occured, stacktrace: \n{}", cpptrace::generate_trace().to_string());
+  g_log_handler.wait_until_empty();
+  g_log_handler.flush_all();
+  std::exit(1);
+  /* Take appropriate actions for signal delivery */
+}
+
+void register_default_sigsev_handler() {
+  struct sigaction sa;
+
+
+  sa.sa_handler = handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = SA_RESTART; /* Restart functions if
+                                 interrupted by handler */
+  if (sigaction(SIGSEGV, &sa, NULL) == -1)
+    std::cerr << "error installing SIGSEGV handler" << std::endl;
+}
+
+#endif
+
+
 

@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 set(CMAKE_CXX_STANDARD 23)
 project(WtFileUtils LANGUAGES C CXX)
-
 include(cmake/functions.cmake)
 include(cmake/CompilerWarnings.cmake)
 set(BASE_DIR ${CMAKE_CURRENT_LIST_DIR})

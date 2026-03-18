@@ -407,6 +407,8 @@ void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL lev
 
 #define LOG LOGI
 
+void register_default_sigsev_handler();
+
 
 #endif //LOGGER_LOGGER_H
 

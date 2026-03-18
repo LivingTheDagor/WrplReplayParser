@@ -1,8 +1,9 @@
 //
 // Dagor Engine 6.5
-// Copyright (C) 2023  Gaijin Games KFT.  All rights reserved
-// (for conditions of use see prog/license.txt)
+// Copyright (C) Gaijin Games KFT.  All rights reserved.
 //
+
+// pure copy from dagor
 #pragma once
 
 #include <math/dag_adjpow2.h>
@@ -26,192 +27,192 @@
 namespace oa_hashmap_util
 {
 
-template <class Key>
-struct NoHash
-{
-  __forceinline uint32_t hash(const Key &k) { return uint32_t(k); }
-};
-template <class Key>
-struct MumStepHash
-{
-  __forceinline uint32_t hash(const Key &k) { return wyhash64_const(uint64_t(k), _wyp[0]); }
-};
-
-
-inline uint32_t min(uint32_t a, uint32_t b) { return a < b ? a : b; }
-inline uint32_t max(uint32_t a, uint32_t b) { return a < b ? b : a; }
-
-template <class Key, Key EmptyKey, class Hasher>
-inline uint32_t emplace_new(Key key, Key *__restrict to, uint32_t mask)
-{
-  const uint32_t bucketI = Hasher().hash(key) & mask;
-  auto *__restrict tp = to + bucketI, *__restrict e = to + mask + 1;
-  for (;;)
+  template <class Key>
+  struct NoHash
   {
-    do
-    {
-      if (*tp == EmptyKey)
-      {
-        *tp = key;
-        return (uint32_t)(tp - to);
-      }
-    } while ((++tp) != e);
-    tp = to;
-    e = to + bucketI;
-  }
-}
-
-template <class Key, Key EmptyKey, class Hasher>
-inline uint32_t emplace(Key key, Key *__restrict to, uint32_t mask, bool &emplaced_new)
-{
-  const uint32_t bucketI = Hasher().hash(key) & mask;
-  auto *__restrict tp = to + bucketI, *__restrict e = to + mask + 1;
-  for (;;)
+    constexpr uint32_t hash(const Key &k) { return uint32_t(k); }
+  };
+  template <class Key>
+  struct MumStepHash
   {
-    do
-    {
-      if (*tp == EmptyKey)
-      {
-        *tp = key;
-        emplaced_new = true;
-        return (uint32_t)(tp - to);
-      }
-      if (*tp == key)
-      {
-        return (uint32_t)(tp - to);
-      }
-    } while ((++tp) != e);
-    tp = to;
-    e = to + bucketI;
-  }
-}
+    constexpr uint32_t hash(const Key &k) { return wyhash64_const(uint64_t(k), _wyp[0]); }
+  };
 
-template <class Key, Key EmptyKey, class Hasher> // return true, if was missing
-inline bool emplace_if_missing(Key key, Key *__restrict to, uint32_t mask)
-{
-  const uint32_t bucketI = Hasher().hash(key) & mask;
-  auto *__restrict tp = to + bucketI, *__restrict e = to + mask + 1;
-  for (;;)
+
+  constexpr uint32_t min(uint32_t a, uint32_t b) { return a < b ? a : b; }
+  constexpr uint32_t max(uint32_t a, uint32_t b) { return a < b ? b : a; }
+
+  template <class Key, Key EmptyKey, class Hasher>
+  uint32_t emplace_new(Key key, Key *__restrict to, uint32_t mask)
   {
-    do
+    const uint32_t bucketI = Hasher().hash(key) & mask;
+    auto *__restrict tp = to + bucketI, *__restrict e = to + mask + 1;
+    for (;;)
     {
-      if (*tp == EmptyKey)
+      do
       {
-        *tp = key;
-        return true;
-      }
-      if (*tp == key)
-        return false;
-    } while ((++tp) != e);
-    tp = to;
-    e = to + bucketI;
+        if (*tp == EmptyKey)
+        {
+          *tp = key;
+          return (uint32_t)(tp - to);
+        }
+      } while ((++tp) != e);
+      tp = to;
+      e = to + bucketI;
+    }
   }
-}
 
-template <class Key, Key EmptyKey, class Hasher, class KeyIndexCB>
-inline const Key *find_key(Key key, const Key *__restrict begin, uint32_t mask, KeyIndexCB cb)
-{
-  const uint32_t hashedKey = Hasher().hash(key);
-  uint32_t bucketI = hashedKey & mask, bucketE = mask + 1;
-  for (;;)
+  template <class Key, Key EmptyKey, class Hasher>
+  uint32_t emplace(Key key, Key *__restrict to, uint32_t mask, bool &emplaced_new)
   {
-    do
+    const uint32_t bucketI = Hasher().hash(key) & mask;
+    auto *__restrict tp = to + bucketI, *__restrict e = to + mask + 1;
+    for (;;)
     {
-      Key k = begin[bucketI];
-      if (k == EmptyKey)
-        return nullptr;
-      if (k == key && cb(bucketI))
-        return &begin[bucketI];
-    } while ((++bucketI) != bucketE);
-    // since we don't allow fully loaded HT, it can fall through once, in the end of table. after that we will definetly find one 0 or
-    // key itself
-    bucketE = (hashedKey & mask);
-    bucketI = 0;
-  }
-}
-
-template <class Key, Key EmptyKey, class Hasher, class Val, class ValCB>
-const Val find_or(Key key, const Key *__restrict begin, const Val *__restrict vals, const Val def, uint32_t mask, ValCB cb)
-{
-  const uint32_t hashedKey = Hasher().hash(key);
-  uint32_t bucketI = hashedKey & mask, bucketE = mask + 1;
-  for (;;)
-  {
-    do
-    {
-      Key k = begin[bucketI];
-      if (k == EmptyKey)
-        return def;
-      if (k == key)
+      do
       {
-        const Val &v = vals[bucketI];
-        if (cb(v))
-          return v;
-      }
-    } while ((++bucketI) != bucketE);
-    // since we don't allow fully loaded HT, it can fall through once, in the end of table. after that we will definetly find one 0 or
-    // key itself
-    bucketE = (hashedKey & mask);
-    bucketI = 0;
+        if (*tp == EmptyKey)
+        {
+          *tp = key;
+          emplaced_new = true;
+          return (uint32_t)(tp - to);
+        }
+        if (*tp == key)
+        {
+          return (uint32_t)(tp - to);
+        }
+      } while ((++tp) != e);
+      tp = to;
+      e = to + bucketI;
+    }
   }
-}
 
-template <class Key, Key EmptyKey, class Hasher, class Val, class ValCB>
-Val *find_val(Key key, const Key *__restrict begin, Val *__restrict vals, uint32_t mask, ValCB cb)
-{
-  const uint32_t hashedKey = Hasher().hash(key);
-  uint32_t bucketI = hashedKey & mask, bucketE = mask + 1;
-  for (;;)
+  template <class Key, Key EmptyKey, class Hasher> // return true, if was missing
+  bool emplace_if_missing(Key key, Key *__restrict to, uint32_t mask)
   {
-    do
+    const uint32_t bucketI = Hasher().hash(key) & mask;
+    auto *__restrict tp = to + bucketI, *__restrict e = to + mask + 1;
+    for (;;)
     {
-      Key k = begin[bucketI];
-      if (k == EmptyKey)
-        return nullptr;
-      if (k == key)
+      do
       {
-        Val &v = vals[bucketI];
-        if (cb(v))
-          return &v;
-      }
-    } while ((++bucketI) != bucketE);
-    // since we don't allow fully loaded HT, it can fall through once, in the end of table. after that we will definetly find one 0 or
-    // key itself
-    bucketE = (hashedKey & mask);
-    bucketI = 0;
+        if (*tp == EmptyKey)
+        {
+          *tp = key;
+          return true;
+        }
+        if (*tp == key)
+          return false;
+      } while ((++tp) != e);
+      tp = to;
+      e = to + bucketI;
+    }
   }
-}
 
-template <class Val>
-struct DefaultValCB
-{
-  bool operator()(const Val & /*containerVal*/) { return true; }
-};
+  template <class Key, Key EmptyKey, class Hasher, class KeyIndexCB>
+  const Key *find_key(Key key, const Key *__restrict begin, uint32_t mask, KeyIndexCB cb)
+  {
+    const uint32_t hashedKey = Hasher().hash(key);
+    uint32_t bucketI = hashedKey & mask, bucketE = mask + 1;
+    for (;;)
+    {
+      do
+      {
+        Key k = begin[bucketI];
+        if (k == EmptyKey)
+          return nullptr;
+        if (k == key && cb(bucketI))
+          return &begin[bucketI];
+      } while ((++bucketI) != bucketE);
+      // since we don't allow fully loaded HT, it can fall through once, in the end of table. after that we will definetly find one 0 or
+      // key itself
+      bucketE = (hashedKey & mask);
+      bucketI = 0;
+    }
+  }
+
+  template <class Key, Key EmptyKey, class Hasher, class Val, class ValCB>
+  const Val find_or(Key key, const Key *__restrict begin, const Val *__restrict vals, const Val def, uint32_t mask, ValCB cb)
+  {
+    const uint32_t hashedKey = Hasher().hash(key);
+    uint32_t bucketI = hashedKey & mask, bucketE = mask + 1;
+    for (;;)
+    {
+      do
+      {
+        Key k = begin[bucketI];
+        if (k == EmptyKey)
+          return def;
+        if (k == key)
+        {
+          const Val &v = vals[bucketI];
+          if (cb(v))
+            return v;
+        }
+      } while ((++bucketI) != bucketE);
+      // since we don't allow fully loaded HT, it can fall through once, in the end of table. after that we will definetly find one 0 or
+      // key itself
+      bucketE = (hashedKey & mask);
+      bucketI = 0;
+    }
+  }
+
+  template <class Key, Key EmptyKey, class Hasher, class Val, class ValCB>
+  Val *find_val(Key key, const Key *__restrict begin, Val *__restrict vals, uint32_t mask, ValCB cb)
+  {
+    const uint32_t hashedKey = Hasher().hash(key);
+    uint32_t bucketI = hashedKey & mask, bucketE = mask + 1;
+    for (;;)
+    {
+      do
+      {
+        Key k = begin[bucketI];
+        if (k == EmptyKey)
+          return nullptr;
+        if (k == key)
+        {
+          Val &v = vals[bucketI];
+          if (cb(v))
+            return &v;
+        }
+      } while ((++bucketI) != bucketE);
+      // since we don't allow fully loaded HT, it can fall through once, in the end of table. after that we will definetly find one 0 or
+      // key itself
+      bucketE = (hashedKey & mask);
+      bucketI = 0;
+    }
+  }
+
+  template <class Val>
+  struct DefaultValCB
+  {
+    constexpr bool operator()(const Val & /*containerVal*/) { return true; }
+  };
 
 } // namespace oa_hashmap_util
 
 template <class Key, class Value, Key EmptyKey = Key(), class Hasher = oa_hashmap_util::NoHash<Key>,
-  class allocator_type = EASTLAllocatorType, int load_factor_nom = 3, int load_factor_denom = 4>
+    class allocator_type = EASTLAllocatorType, int load_factor_nom = 3, int load_factor_denom = 4>
 struct HashedKeyMap
 {
   typedef Key key_t;
   typedef Value val_t;
   typedef HashedKeyMap<Key, Value, EmptyKey, Hasher, allocator_type, load_factor_nom, load_factor_denom> this_type_t;
-  void emplace(key_t key, val_t val)
+  void emplace(key_t key, const val_t &val)
   {
     G_FAST_ASSERT(key != EmptyKey);
     if (DAGOR_UNLIKELY(used >= mask * load_factor_nom / load_factor_denom))
       rehash(oa_hashmap_util::max(4, mask + mask + 2));
-    vals[oa_hashmap_util::emplace_new<key_t, EmptyKey, Hasher>(key, keys.first(), mask)] = val;
+    new (vals + oa_hashmap_util::emplace_new<key_t, EmptyKey, Hasher>(key, keys.first(), mask)) val_t(val);
     used++;
   }
-  bool emplace_if_missing(key_t key, val_t val)
+  bool emplace_if_missing(key_t key, const val_t &val)
   {
     G_FAST_ASSERT(key != EmptyKey);
     if (DAGOR_UNLIKELY(used >= mask * load_factor_nom / load_factor_denom))
       rehash(oa_hashmap_util::max(4, mask + mask + 2));
     bool emplacedNew = false;
-    vals[oa_hashmap_util::emplace<key_t, EmptyKey, Hasher>(key, keys.first(), mask, emplacedNew)] = val;
+    new (vals + oa_hashmap_util::emplace<key_t, EmptyKey, Hasher>(key, keys.first(), mask, emplacedNew)) val_t(val);
     used += uint32_t(emplacedNew);
     return emplacedNew;
   }
@@ -225,7 +226,7 @@ struct HashedKeyMap
     used += uint32_t(emplacedNew);
     return eastl::pair<val_t *, bool>{vals + id, emplacedNew};
   }
-  void emplace_new(key_t key, val_t val) // that's unsafe emplace, it requires that key hasn't been added before
+  void emplace_new(key_t key, const val_t &val) // that's unsafe emplace, it requires that key hasn't been added before
   {
 #if DAGOR_DBGLEVEL > 1 // ensure constraints
     G_ASSERT(!has_key(key));
@@ -237,11 +238,12 @@ struct HashedKeyMap
   void erase(key_t key, ValCB cb = ValCB())
   {
     const key_t *k =
-      oa_hashmap_util::find_key<key_t, EmptyKey, Hasher>(key, keys.first(), mask, [&](uint32_t i) { return cb(vals[i]); });
+        oa_hashmap_util::find_key<key_t, EmptyKey, Hasher>(key, keys.first(), mask, [&](uint32_t i) { return cb(vals[i]); });
     if (k != nullptr)
     {
       const size_t ind = k - keys.first();
       keys.first()[ind] = EmptyKey;
+      vals[ind].~val_t();
       --used;
       if (keys.first()[(ind + 1) & mask] != EmptyKey)
         rehash(get_capacity(used));
@@ -280,28 +282,17 @@ struct HashedKeyMap
   }
   void clear(uint32_t shrink_sz = 0)
   {
-    const uint32_t new_capacity = get_capacity(shrink_sz);
-    if (shrink_sz && bucket_count() != new_capacity)
+    const uint32_t newCapacity = get_capacity(shrink_sz);
+    const uint32_t oldUsed = eastl::exchange(used, 0);
+    if (shrink_sz && bucket_count() != newCapacity)
+      rehash(newCapacity);
+    else if (oldUsed)
     {
-      used = 0;
-      rehash(new_capacity);
-    }
-    else
-    {
-      if (used)
-      {
-        if (EmptyKey == 0)
-          memset(keys.first(), 0, bucket_count() * sizeof(key_t));
-        else
-          eastl::fill_n(keys.first(), bucket_count(), EmptyKey);
-      }
-      used = 0;
+      iterate([](const auto &, val_t &v) { v.~val_t(); });
+      eastl::fill_n(keys.first(), bucket_count(), EmptyKey);
     }
   }
-  static inline size_t get_capacity(size_t sz)
-  {
-    return oa_hashmap_util::max(4, get_bigger_pow2(sz * load_factor_denom / load_factor_nom));
-  }
+  static size_t get_capacity(size_t sz) { return oa_hashmap_util::max(4, get_bigger_pow2(sz * load_factor_denom / load_factor_nom)); }
   uint32_t bucket_count() const { return mask + 1; }
   uint32_t size() const { return used; }
   bool empty() const { return size() == 0; }
@@ -324,7 +315,7 @@ struct HashedKeyMap
       advance();
       return *this;
     }
-    inline void advance()
+    void advance()
     {
       for (; current != end && *current == EmptyKey; ++current)
         ;
@@ -346,7 +337,7 @@ struct HashedKeyMap
       advance();
       return *this;
     }
-    inline void advance()
+    void advance()
     {
       for (; current != end && *current == EmptyKey; ++current)
         ;
@@ -408,17 +399,20 @@ struct HashedKeyMap
   }
 
 protected:
-  inline key_t *make_zero(size_t n)
+  key_t *make_zero(size_t n)
   {
-    key_t *p = (key_t *)eastl::allocate_memory(internalAllocator(), size_t(n) * sizeof(key_t), EASTL_ALIGN_OF(key_t), 0);
-    if (EmptyKey == 0)
-      memset(p, 0, sizeof(key_t) * n);
+    const size_t size = n * sizeof(key_t);
+    key_t *p = (key_t *)eastl::allocate_memory(internalAllocator(), size, EASTL_ALIGN_OF(key_t), 0);
+    if constexpr (EmptyKey == key_t{0})
+      memset(p, 0, size);
     else
       eastl::fill_n(p, n, EmptyKey);
     return p;
   }
   void deallocate(key_t *n = nullptr, val_t *v = nullptr)
   {
+    if (used)
+      iterate([](const auto &, val_t &v) { v.~val_t(); });
     if (keys.first() != noKey())
       EASTLFree(internalAllocator(), keys.first(), bucket_count() * sizeof(key_t));
     if (vals)
@@ -432,7 +426,7 @@ protected:
   val_t *vals = nullptr;
   allocator_type &internalAllocator() { return keys.second(); }
   key_t *noKey() { return (key_t *)(void *)&used; } //-V580
-  key_t *makeNoKey() { return (EmptyKey != 0) ? make_zero(1) : noKey(); }
+  key_t *makeNoKey() { return (EmptyKey != key_t{0}) ? make_zero(1) : noKey(); }
   void allocate(uint32_t new_capacity, key_t *&k, val_t *&v)
   {
     k = make_zero(new_capacity);
@@ -449,7 +443,8 @@ protected:
       auto *tv = vals;
       for (auto *tp = keys.first(), *e = keys.first() + bucket_count(); tp != e; ++tp, ++tv)
         if (*tp != EmptyKey)
-          newVals[oa_hashmap_util::emplace_new<key_t, EmptyKey, Hasher>(*tp, newKeys, new_mask)] = *tv;
+          new (newVals + oa_hashmap_util::emplace_new<key_t, EmptyKey, Hasher>(*tp, newKeys, new_mask))
+              val_t((val_t &&)*tv);
     }
     deallocate(newKeys, newVals);
     mask = new_mask;
@@ -484,7 +479,7 @@ public:
 };
 
 template <class Key, Key EmptyKey = Key(), class Hasher = oa_hashmap_util::NoHash<Key>, class allocator_type = EASTLAllocatorType,
-  int load_factor_nom = 3, int load_factor_denom = 4>
+    int load_factor_nom = 3, int load_factor_denom = 4>
 struct HashedKeySet
 {
   typedef Key key_t;
@@ -542,28 +537,14 @@ struct HashedKeySet
   }
   void clear(uint32_t shrink_sz = 0)
   {
-    const uint32_t new_capacity = get_capacity(shrink_sz);
-    if (shrink_sz && bucket_count() != new_capacity)
-    {
-      used = 0;
-      rehash(new_capacity);
-    }
-    else
-    {
-      if (used)
-      {
-        if (EmptyKey == 0)
-          memset(keys.first(), 0, bucket_count() * sizeof(key_t));
-        else
-          eastl::fill_n(keys.first(), bucket_count(), EmptyKey);
-      }
-      used = 0;
-    }
+    const uint32_t newCapacity = get_capacity(shrink_sz);
+    const uint32_t oldUsed = eastl::exchange(used, 0);
+    if (shrink_sz && bucket_count() != newCapacity)
+      rehash(newCapacity);
+    else if (oldUsed)
+      eastl::fill_n(keys.first(), bucket_count(), EmptyKey);
   }
-  static inline size_t get_capacity(size_t sz)
-  {
-    return oa_hashmap_util::max(4, get_bigger_pow2(sz * load_factor_denom / load_factor_nom));
-  }
+  static size_t get_capacity(size_t sz) { return oa_hashmap_util::max(4, get_bigger_pow2(sz * load_factor_denom / load_factor_nom)); }
   uint32_t bucket_count() const { return mask + 1; }
   uint32_t size() const { return used; }
   bool empty() const { return size() == 0; }
@@ -586,7 +567,7 @@ struct HashedKeySet
       advance();
       return *this;
     }
-    inline void advance()
+    void advance()
     {
       for (; current != end && *current == EmptyKey; ++current)
         ;
@@ -608,7 +589,7 @@ struct HashedKeySet
       advance();
       return *this;
     }
-    inline void advance()
+    void advance()
     {
       for (; current != end && *current == EmptyKey; ++current)
         ;
@@ -668,11 +649,12 @@ struct HashedKeySet
   }
 
 protected:
-  inline key_t *make_zero(size_t n)
+  key_t *make_zero(size_t n)
   {
-    key_t *p = (key_t *)eastl::allocate_memory(internalAllocator(), size_t(n) * sizeof(key_t), EASTL_ALIGN_OF(key_t), 0);
-    if (EmptyKey == 0)
-      memset(p, 0, sizeof(key_t) * n);
+    const size_t size = n * sizeof(key_t);
+    key_t *p = (key_t *)eastl::allocate_memory(internalAllocator(), size, EASTL_ALIGN_OF(key_t), 0);
+    if constexpr (EmptyKey == key_t{0})
+      memset(p, 0, size);
     else
       eastl::fill_n(p, n, EmptyKey);
     return p;
@@ -686,7 +668,7 @@ protected:
   }
   uint32_t used = 0, mask = 0;
   key_t *noKey() { return (key_t *)&used; }
-  key_t *makeNoKey() { return (EmptyKey != 0) ? make_zero(1) : noKey(); }
+  key_t *makeNoKey() { return (EmptyKey != key_t{0}) ? make_zero(1) : noKey(); }
   eastl::compressed_pair<key_t *, allocator_type> keys;
   allocator_type &internalAllocator() { return keys.second(); }
   void rehash(uint32_t new_capacity)
@@ -713,12 +695,12 @@ struct FixedCapacityHashedKeyMap
   uint32_t mask, used;
   key_t *keys;
   val_t *vals;
-  bool emplace(key_t key, val_t val) // that's unsafe emplace, it requires that key hasn't been added before
+  bool emplace(key_t key, const val_t &val) // that's unsafe emplace, it requires that key hasn't been added before
   {
     G_FAST_ASSERT(key != EmptyKey);
     if (used >= mask) // not enough space
       return false;
-    vals[oa_hashmap_util::emplace_new<key_t, EmptyKey, Hasher>(key, keys, mask)] = val;
+    new (vals + oa_hashmap_util::emplace_new<key_t, EmptyKey, Hasher>(key, keys, mask)) val_t(val);
     used++;
     return true;
   }
@@ -729,13 +711,13 @@ struct FixedCapacityHashedKeyMap
 #endif
     emplace(key, val);
   }
-  bool emplace_if_missing(key_t key, val_t val)
+  bool emplace_if_missing(key_t key, const val_t &val)
   {
     G_FAST_ASSERT(key != EmptyKey);
     if (used >= mask) // not enough space
       return false;
     bool emplacedNew = false;
-    vals[oa_hashmap_util::emplace<key_t, EmptyKey, Hasher>(key, key, mask, emplacedNew)] = val;
+    new (vals + oa_hashmap_util::emplace<key_t, EmptyKey, Hasher>(key, key, mask, emplacedNew)) val_t(val);
     used += uint32_t(emplacedNew);
     return emplacedNew;
   }
@@ -767,7 +749,7 @@ struct FixedCapacityHashedKeyMap
   {
     if (used)
     {
-      if (EmptyKey == 0)
+      if (EmptyKey == key_t{0})
         memset(keys, 0, bucket_count() * sizeof(key_t));
       else
         eastl::fill_n(keys, bucket_count(), EmptyKey);

@@ -75,7 +75,7 @@ class Replay
 #define FOOTER_BLK_OFFSET_LOC 0x000002AC // where the integer that stores the footer blk offset is stored
 #define LEVEL_BIN_PATH_OFFS 0x00000008 // where xxx.bin starts
 #define MISSION_BLK_OFFS 0x00000088
-#define MAIN_DATA_START 0x000004CA // where the 'replay' starts, can either be the header blk or the zlib data
+#define MAIN_DATA_START 0x000004D2 // where the 'replay' starts, can either be the header blk or the zlib data
 
   fs::path replay_path;
   ReplayData *data;
