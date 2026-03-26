@@ -6,7 +6,9 @@ set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 
 # Mark dependencies as system includes (hides them from IDE)
 set(CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")
-
+set(SDL2_STATIC ON)
+set(SDL2_SHARED OFF)
+option(SDL_SHARED OFF)
 # Fetch SDL2
 FetchContent_Declare(
         SDL2
