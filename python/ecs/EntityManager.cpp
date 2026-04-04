@@ -18,5 +18,5 @@ void PyEntityManager::include(py::module_ &m) {
           return py::cast(std::make_unique<Entity>(eid, t, &mgr));
         }
         return py::none{};
-      }, py::arg("uid"));
+      }, py::arg("eid"));
 }

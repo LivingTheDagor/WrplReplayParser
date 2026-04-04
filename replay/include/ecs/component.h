@@ -137,7 +137,7 @@ namespace ecs {
 
     inline void *getRawData() { return value; }
 
-    inline uint32_t getSize() { return componentTypeSize;}
+    inline uint32_t getSize() const { return componentTypeSize;}
 
     ~Component() {
       free();
