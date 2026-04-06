@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
 from io import StringIO
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ..DataTypes import DataTypeManager
 
 
 class NullIndexList:
@@ -7,9 +10,14 @@ class NullIndexList:
         self.ls: list[tuple[str, 'ReflectionVarMeta']] = ls
 
     def __getitem__(self, item):
+        if item == -1:
+            return self.ls[-1]
         if item >= len(self.ls):
             return None
         return self.ls[item]
+
+    def __len__(self):
+        return len(self.ls)
 
 class ReflectableObject(ABC):
     def __init__(self):
@@ -42,6 +50,16 @@ class InstReflectable:
         self.first_var: str = ""
         self.last_var: str = ""
         self.obj_name = self.obj.__name__
+        self.parent_name = self.obj.__bases__[0].__name__
+        self.parent_name_no_namespace = self.parent_name
+        self.parent_obj = None
+        self.is_base = False
+        if self.parent_name in ["ReflectableObject", "ReplicatedObject"]:
+            self.parent_name = "danet::" + self.parent_name
+            self.is_base = True
+        else:
+            self.parent_obj = mgr.RegistredObjects[self.parent_name]
+        mgr.RegistredObjects[self.obj_name] = self
 
     def _iter_vars(self):
         for attr_name, attr_val in self.obj.__dict__.items():
@@ -49,11 +67,11 @@ class InstReflectable:
                 yield (attr_name, attr_val)
 
     def write_header(self):
-        self.oss.write(f"class {self.obj_name} : public danet::ReflectableObject")
-        self.oss.write(" {\npublic:\n"f"  DECL_REFLECTION({self.obj_name}, danet::ReflectableObject)\n")
+        self.oss.write(f"class {self.obj_name} : public {self.parent_name}")
+        self.oss.write(" {\npublic:\n"f"  DECL_REFLECTION({self.obj_name}, {self.parent_name})\n")
 
     def write_header_bindings(self):
-        self.oss.write(f"  py::class_<{self.obj_name}, danet::ReflectableObject, std::unique_ptr<{self.obj_name}, py::nodelete>>(mpi, \"{self.obj_name}\")\n")
+        self.oss.write(f"  py::class_<{self.obj_name}, {self.parent_name}, std::unique_ptr<{self.obj_name}, py::nodelete>>(mpi, \"{self.obj_name}\")\n")
 
     def verify_params(self):
         curr_ids = set()
@@ -77,6 +95,8 @@ class InstReflectable:
         self.vars = NullIndexList(payload)
 
     def serialize_params(self):
+        if len(self.vars.ls) == 0:
+            return
         self.first_var = self.vars[0][0]
         self.last_var = self.vars.ls[-1][0]
         for i in range(len(self.vars.ls)):
@@ -94,30 +114,35 @@ class InstReflectable:
             self.oss.write(f"    .def_property_readonly(\"{v[0]}\", []({self.obj_name}*ths){'{'}return &ths->{v[0]}.data;{'}'})\n")
         self.oss.write("  ;\n")
 
+    def getLastVar(self):
+        if len(self.vars):
+            return self.vars[-1]
+        assert self.parent_obj is not None
+        return self.parent_obj.getLastVar()
 
     def write_ctor(self):
-        self.oss.write(f"  {self.obj_name}() : ReflectableObject() " " {\n")
-        self.oss.write(f"    varList.head = &{self.first_var};\n")
-        self.oss.write(f"    varList.tail = &{self.last_var};\n")
+        self.oss.write(f"  {self.obj_name}() : {self.parent_name_no_namespace}() " " {\n")
+        if self.is_base:
+            self.oss.write(f"    varList.head = &{self.first_var};\n")
+
+        if len(self.vars) > 0:
+            if not self.is_base: # we inherited from another object
+                last_var = self.parent_obj.getLastVar()
+                self.oss.write(f"    {last_var[0]}.next = &{self.first_var};\n")
+            self.oss.write(f"    varList.tail = &{self.last_var};\n")
         self.oss.write("  }\n")
     def write_footer(self):
         self.oss.write("};\n\n")
         self.oss.write(f"ECS_DECLARE_CREATABLE_TYPE({self.obj_name});\n")
 
 class InstReplicated(InstReflectable):
-    def __init__(self, obj: ReflectableObject, oss: StringIO, mgr: 'DataTypeManager'):
+    def __init__(self, obj: ReplicatedObject, oss: StringIO, mgr: 'DataTypeManager'):
         super().__init__(obj, oss, mgr)
 
 
     def write_header(self):
-        self.oss.write(f"class {self.obj_name} : public danet::ReplicatedObject")
-        self.oss.write(" {\npublic:\n"f"  DECL_REPLICATION({self.obj_name}, danet::ReplicatedObject)\n")
-
-    def write_ctor(self):
-        self.oss.write(f"  {self.obj_name}() : ReplicatedObject() " " {\n")
-        self.oss.write(f"    varList.head = &{self.first_var};\n")
-        self.oss.write(f"    varList.tail = &{self.last_var};\n")
-        self.oss.write("  }\n")
+        self.oss.write(f"class {self.obj_name} : public {self.parent_name}")
+        self.oss.write(" {\npublic:\n"f"  DECL_REPLICATION({self.obj_name}, {self.parent_name})\n")
 
     def write_footer(self):
         self.oss.write("};\n\n")

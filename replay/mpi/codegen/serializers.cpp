@@ -4,8 +4,8 @@
 #include "network/eid.h"
 namespace danet {
 
-  int uint8_tCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<uint8_t>();
+  int UidCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<danet::Uid>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
       return true;
@@ -17,8 +17,8 @@ namespace danet {
     return false;
   }
 
-  int uint16_tCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<uint16_t>();
+  int stringCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<std::string>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
       return true;
@@ -30,153 +30,14 @@ namespace danet {
     return false;
   }
 
-  int floatCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<float>();
+  int uint32_tCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<uint32_t>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
       return true;
     }
     else if (op == DANET_REFLECTION_OP_DECODE) {
       REPL_VER(bs->Read(*(data)));
-      return true;
-    }
-    return false;
-  }
-
-  int danetUnitId_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<std::vector<danet::UnitId>>();
-    if (op == DANET_REFLECTION_OP_ENCODE) {
-      bs->Write((uint8_t)data->size());
-      for(auto & v : *(data)) {
-        bs->WriteBits((uint8_t*)&v, 0xb);
-      }
-      return true;
-    }
-    else if (op == DANET_REFLECTION_OP_DECODE) {
-      uint8_t sz;
-      REPL_VER(bs->Read(sz));
-      data->resize(sz);
-      for(auto & v : *(data)) {
-        REPL_VER(bs->ReadBits((uint8_t*)&v, 0xb));
-      }
-      return true;
-    }
-    return false;
-  }
-
-  int danetUnitIdStruct_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<std::vector<danet::UnitIdStruct>>();
-    if (op == DANET_REFLECTION_OP_ENCODE) {
-      bs->Write((uint8_t)data->size());
-      for(auto & v : *(data)) {
-        bs->WriteBits((uint8_t*)&v.uid, 0xb);
-        bs->Write(v.thang);
-      }
-      return true;
-    }
-    else if (op == DANET_REFLECTION_OP_DECODE) {
-      uint8_t sz;
-      REPL_VER(bs->Read(sz));
-      data->resize(sz);
-      for(auto & v : *(data)) {
-        REPL_VER(bs->ReadBits((uint8_t*)&v.uid, 0xb));
-        REPL_VER(bs->Read(v.thang));
-      }
-      return true;
-    }
-    return false;
-  }
-
-  int uint8_t_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<std::vector<uint8_t>>();
-    if (op == DANET_REFLECTION_OP_ENCODE) {
-      bs->Write((uint8_t)data->size());
-      for(auto & v : *(data)) {
-        bs->Write(v);
-      }
-      return true;
-    }
-    else if (op == DANET_REFLECTION_OP_DECODE) {
-      uint8_t sz;
-      REPL_VER(bs->Read(sz));
-      data->resize(sz);
-      for(auto & v : *(data)) {
-        REPL_VER(bs->Read(v));
-      }
-      return true;
-    }
-    return false;
-  }
-
-  int dummyForExitZonesSettingsCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<danet::dummyForExitZonesSettings>();
-    if (op == DANET_REFLECTION_OP_ENCODE) {
-      bs->WriteZigZag((int)data->vals.size());
-      for(auto &v : data->vals) {
-        bs->WriteZigZag(v.v1);
-        bs->WriteZigZag(v.v2);
-      }
-      return true;
-    }
-    else if (op == DANET_REFLECTION_OP_DECODE) {
-      int sz;
-      REPL_VER(bs->ReadZigZag(sz));
-      if(sz > 0) {
-        data->vals.resize(sz);
-        for(auto & v : data->vals) {
-          REPL_VER(bs->ReadZigZag(v.v1));
-          REPL_VER(bs->ReadZigZag(v.v2)); 
-        }
-      }
-      return true;
-    }
-    return false;
-  }
-
-  int intCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<int>();
-    if (op == DANET_REFLECTION_OP_ENCODE) {
-      bs->Write(*(data));
-      return true;
-    }
-    else if (op == DANET_REFLECTION_OP_DECODE) {
-      REPL_VER(bs->Read(*(data)));
-      return true;
-    }
-    return false;
-  }
-
-  int boolCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<bool>();
-    if (op == DANET_REFLECTION_OP_ENCODE) {
-      bs->Write(*(data));
-      return true;
-    }
-    else if (op == DANET_REFLECTION_OP_DECODE) {
-      REPL_VER(bs->Read(*(data)));
-      return true;
-    }
-    return false;
-  }
-
-  int WeatherEffectsCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<danet::WeatherEffects>();
-    if (op == DANET_REFLECTION_OP_ENCODE) {
-      bs->Write((uint32_t)data->effects.size());
-      for(auto & v : data->effects) {
-        bs->Write(v.name);
-        bs->Write(v.effect_data);
-      }
-      return true;
-    }
-    else if (op == DANET_REFLECTION_OP_DECODE) {
-      uint32_t sz;
-      REPL_VER(bs->Read(sz));
-      data->effects.resize(sz);
-      for(auto & v : data->effects) {
-        REPL_VER(bs->Read(v.name));
-        REPL_VER(bs->Read(v.effect_data));
-      }
       return true;
     }
     return false;
@@ -206,25 +67,8 @@ namespace danet {
     return false;
   }
 
-  int teamAvgEloRatingsCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<danet::teamAvgEloRatings>();
-    if (op == DANET_REFLECTION_OP_ENCODE) {
-      bs->Write(data->team1);
-      bs->Write(data->team2);
-      bs->Write(data->team3);
-      return true;
-    }
-    else if (op == DANET_REFLECTION_OP_DECODE) {
-      REPL_VER(bs->Read(data->team1));
-      REPL_VER(bs->Read(data->team2));
-      REPL_VER(bs->Read(data->team3));
-      return true;
-    }
-    return false;
-  }
-
-  int UidCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<danet::Uid>();
+  int uint8_tCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<uint8_t>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
       return true;
@@ -236,21 +80,8 @@ namespace danet {
     return false;
   }
 
-  int stringCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<std::string>();
-    if (op == DANET_REFLECTION_OP_ENCODE) {
-      bs->Write(*(data));
-      return true;
-    }
-    else if (op == DANET_REFLECTION_OP_DECODE) {
-      REPL_VER(bs->Read(*(data)));
-      return true;
-    }
-    return false;
-  }
-
-  int uint32_tCoder(DANET_ENCODER_SIGNATURE) {
-    auto data = meta->getValue<uint32_t>();
+  int uint16_tCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<uint16_t>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
       return true;
@@ -306,6 +137,32 @@ namespace danet {
     return false;
   }
 
+  int floatCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<float>();
+    if (op == DANET_REFLECTION_OP_ENCODE) {
+      bs->Write(*(data));
+      return true;
+    }
+    else if (op == DANET_REFLECTION_OP_DECODE) {
+      REPL_VER(bs->Read(*(data)));
+      return true;
+    }
+    return false;
+  }
+
+  int boolCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<bool>();
+    if (op == DANET_REFLECTION_OP_ENCODE) {
+      bs->Write(*(data));
+      return true;
+    }
+    else if (op == DANET_REFLECTION_OP_DECODE) {
+      REPL_VER(bs->Read(*(data)));
+      return true;
+    }
+    return false;
+  }
+
   int EntityIdCoder(DANET_ENCODER_SIGNATURE) {
     auto data = meta->getValue<ecs::EntityId>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
@@ -314,6 +171,27 @@ namespace danet {
     }
     else if (op == DANET_REFLECTION_OP_DECODE) {
       REPL_VER(net::read_eid(*bs, *(data)));
+      return true;
+    }
+    return false;
+  }
+
+  int uint8_t_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<std::vector<uint8_t>>();
+    if (op == DANET_REFLECTION_OP_ENCODE) {
+      bs->Write((uint8_t)data->size());
+      for(auto & v : *(data)) {
+        bs->Write(v);
+      }
+      return true;
+    }
+    else if (op == DANET_REFLECTION_OP_DECODE) {
+      uint8_t sz;
+      REPL_VER(bs->Read(sz));
+      data->resize(sz);
+      for(auto & v : *(data)) {
+        REPL_VER(bs->Read(v));
+      }
       return true;
     }
     return false;
@@ -480,6 +358,128 @@ namespace danet {
       REPL_VER(bs->Read(data->v1));
       REPL_VER(bs->Read(data->v2));
       REPL_VER(bs->Read(data->v3));
+      return true;
+    }
+    return false;
+  }
+
+  int teamAvgEloRatingsCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<danet::teamAvgEloRatings>();
+    if (op == DANET_REFLECTION_OP_ENCODE) {
+      bs->Write(data->team1);
+      bs->Write(data->team2);
+      bs->Write(data->team3);
+      return true;
+    }
+    else if (op == DANET_REFLECTION_OP_DECODE) {
+      REPL_VER(bs->Read(data->team1));
+      REPL_VER(bs->Read(data->team2));
+      REPL_VER(bs->Read(data->team3));
+      return true;
+    }
+    return false;
+  }
+
+  int dummyForExitZonesSettingsCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<danet::dummyForExitZonesSettings>();
+    if (op == DANET_REFLECTION_OP_ENCODE) {
+      bs->WriteZigZag((int)data->vals.size());
+      for(auto &v : data->vals) {
+        bs->WriteZigZag(v.v1);
+        bs->WriteZigZag(v.v2);
+      }
+      return true;
+    }
+    else if (op == DANET_REFLECTION_OP_DECODE) {
+      int sz;
+      REPL_VER(bs->ReadZigZag(sz));
+      if(sz > 0) {
+        data->vals.resize(sz);
+        for(auto & v : data->vals) {
+          REPL_VER(bs->ReadZigZag(v.v1));
+          REPL_VER(bs->ReadZigZag(v.v2)); 
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
+  int intCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<int>();
+    if (op == DANET_REFLECTION_OP_ENCODE) {
+      bs->Write(*(data));
+      return true;
+    }
+    else if (op == DANET_REFLECTION_OP_DECODE) {
+      REPL_VER(bs->Read(*(data)));
+      return true;
+    }
+    return false;
+  }
+
+  int WeatherEffectsCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<danet::WeatherEffects>();
+    if (op == DANET_REFLECTION_OP_ENCODE) {
+      bs->Write((uint32_t)data->effects.size());
+      for(auto & v : data->effects) {
+        bs->Write(v.name);
+        bs->Write(v.effect_data);
+      }
+      return true;
+    }
+    else if (op == DANET_REFLECTION_OP_DECODE) {
+      uint32_t sz;
+      REPL_VER(bs->Read(sz));
+      data->effects.resize(sz);
+      for(auto & v : data->effects) {
+        REPL_VER(bs->Read(v.name));
+        REPL_VER(bs->Read(v.effect_data));
+      }
+      return true;
+    }
+    return false;
+  }
+
+  int danetUnitId_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<std::vector<danet::UnitId>>();
+    if (op == DANET_REFLECTION_OP_ENCODE) {
+      bs->Write((uint8_t)data->size());
+      for(auto & v : *(data)) {
+        bs->WriteBits((uint8_t*)&v, 0xb);
+      }
+      return true;
+    }
+    else if (op == DANET_REFLECTION_OP_DECODE) {
+      uint8_t sz;
+      REPL_VER(bs->Read(sz));
+      data->resize(sz);
+      for(auto & v : *(data)) {
+        REPL_VER(bs->ReadBits((uint8_t*)&v, 0xb));
+      }
+      return true;
+    }
+    return false;
+  }
+
+  int danetUnitIdStruct_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<std::vector<danet::UnitIdStruct>>();
+    if (op == DANET_REFLECTION_OP_ENCODE) {
+      bs->Write((uint8_t)data->size());
+      for(auto & v : *(data)) {
+        bs->WriteBits((uint8_t*)&v.uid, 0xb);
+        bs->Write(v.thang);
+      }
+      return true;
+    }
+    else if (op == DANET_REFLECTION_OP_DECODE) {
+      uint8_t sz;
+      REPL_VER(bs->Read(sz));
+      data->resize(sz);
+      for(auto & v : *(data)) {
+        REPL_VER(bs->ReadBits((uint8_t*)&v.uid, 0xb));
+        REPL_VER(bs->Read(v.thang));
+      }
       return true;
     }
     return false;

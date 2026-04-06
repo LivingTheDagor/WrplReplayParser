@@ -17,7 +17,7 @@ struct ParserState {
   explicit ParserState(MemoryEfficientServerReplay *replay): players(replay->base_replay->PlayerCount) {}
   ecs::EntityManager g_entity_mgr{};
   std::vector<MPlayer> players;
-  std::vector<danet::ReplicatedObject*> Zones;
+  std::vector<BaseZone*> Zones;
   std::array<TeamData, 3> teams; // team[0] is global data, teams[1] is first team, teams[2] is second team
   GlobalElo glob_elo;
   GeneralState gen_state;

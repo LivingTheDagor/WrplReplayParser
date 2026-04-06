@@ -76,29 +76,25 @@ class GeneralState(ReflectableObject):
     dummyForUnlimitedControlEvent = Var("bool", 0xb, "InvalidSerializer") # TODO dummy value
     customState = Var("DataBlock", 8)
 
-class BombingZone(ReplicatedObject):
+class BaseZone(ReplicatedObject):
     armyNo = Var("uint8_t", 2)
     flags = Var("uint16_t", 3)
+
+class BombingZone(BaseZone):
     curZoneIntegrity = Var("float", 0x43)
 
-class CaptureZone(ReplicatedObject):
-    armyNo = Var("uint8_t", 2)
-    flags = Var("uint16_t", 3)
+class CaptureZone(BaseZone):
     mpTimeX100 = Var("uint8_t", 0x43)
     conqTeam = Var("uint8_t", 0x44)
     iconIdx = Var("uint8_t", 0x45)
     dummyVarForCapturers = Var("std::vector<danet::UnitId, uint8_t>", 0x46)
     dummyVarForCapturePart = Var("std::vector<danet::UnitIdStruct, uint8_t>", 0x47)
     dummyVarForNumOfActiveCapturers = Var("std::vector<uint8_t, uint8_t>", 0x48)
-class RearmZone(ReplicatedObject):
-    armyNo = Var("uint8_t", 2)
-    flags = Var("uint16_t", 3)
+class RearmZone(BaseZone):
+    pass
 
-class ExitZone(ReplicatedObject):
-    armyNo = Var("uint8_t", 2)
-    flags = Var("uint16_t", 3)
+class ExitZone(BaseZone):
+    pass
 
-class PickupZone(ReplicatedObject):
-    armyNo = Var("uint8_t", 2)
-    flags = Var("uint16_t", 3)
+class PickupZone(BaseZone):
     showOnTacticalMap = Var("bool", 0x43)

@@ -6,7 +6,7 @@ import builtin_types
 import cpp_types
 import objects.ReflectableObjects as objects
 from objects.obj_base import ReflectableObject, ReplicatedObject, InstReflectable, InstReplicated
-from DataTypes import DataTypeManager
+from DataTypes import DataTypeManager, iterate_classes_in_source_order
 from write_header import write_header
 from hashCheck import HashChecker
 
@@ -31,7 +31,8 @@ def generate(header_codegen_path: str, cpp_codegen_path: str, force_gen: bool = 
     mgr = DataTypeManager(type_imports)
     refl_include_paths: list[str] = []
     for imp in obj_imports:
-        for name, obj in inspect.getmembers(imp, inspect.isclass):
+        for obj in iterate_classes_in_source_order(imp):
+            name = obj.__name__
             if obj.__module__ == imp.__name__: # only look at objs from file
                 if type(obj) == type(ReflectableObject): # only do work on ReflectableObject / things that inherit it
                     payload: StringIO = io.StringIO()
@@ -84,7 +85,8 @@ def generate_bindings(header_codegen_path: str, cpp_codegen_path: str, force_gen
         f.write("  py_mpi.include(m);\n")
         f.write("  auto mpi = m.def_submodule(\"mpi\");\n")
         for imp in obj_imports:
-            for name, obj in inspect.getmembers(imp, inspect.isclass):
+            for obj in iterate_classes_in_source_order(imp):
+                name = obj.__name__
                 if obj.__module__ == imp.__name__: # only look at objs from file
                     if type(obj) == type(ReflectableObject): # only do work on ReflectableObject / things that inherit it
                         # payload: StringIO = io.StringIO()
@@ -108,9 +110,9 @@ def generate_bindings(header_codegen_path: str, cpp_codegen_path: str, force_gen
 
 
 if __name__ == "__main__":
-    # header_codegen_path = r"D:\ReplayParser\replay\include\mpi\codegen"
-    # cpp_codegen_path = r"D:\ReplayParser\replay\mpi\codegen"
-    # generate(header_codegen_path, cpp_codegen_path, force_gen=True)
+    header_codegen_path = r"D:\ReplayParser\replay\include\mpi\codegen"
+    cpp_codegen_path = r"D:\ReplayParser\replay\mpi\codegen"
+    generate(header_codegen_path, cpp_codegen_path, force_gen=True)
 
     header_codegen_path = r"D:\ReplayParser\python\include\modules\mpi"
     cpp_codegen_path = r"D:\ReplayParser\python\mpi"

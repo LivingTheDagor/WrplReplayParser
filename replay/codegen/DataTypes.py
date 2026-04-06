@@ -3,6 +3,9 @@ import types
 import ast
 from typing import TextIO, Union
 from write_header import write_header
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from objects.obj_base import InstReflectable
 
 # a special type using in template args to represent that this template input is a type
 # think as in std::vector<T>, where T is an arbitrary type
@@ -252,6 +255,7 @@ class DataTypeManager:
     def __init__(self, modules: list[types.ModuleType]):
         self.datatypes = NameSpace("global")
         self.inst_datatypes: dict[str, DataTypeCompiled] = {}
+        self.RegistredObjects: dict[str, 'InstReflectable'] = {}
         for imp in modules:
             for obj in iterate_classes_in_source_order(imp):
                 name = obj.__name__

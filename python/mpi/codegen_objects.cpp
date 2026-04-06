@@ -9,43 +9,6 @@ void PyCodegenObjects::include(py::module_ &m) {
   py_mpi_types.include(m);
   py_mpi.include(m);
   auto mpi = m.def_submodule("mpi");
-  py::class_<BombingZone, danet::ReflectableObject, std::unique_ptr<BombingZone, py::nodelete>>(mpi, "BombingZone")
-    .def_property_readonly("armyNo", [](BombingZone*ths){return &ths->armyNo.data;})
-    .def_property_readonly("flags", [](BombingZone*ths){return &ths->flags.data;})
-    .def_property_readonly("curZoneIntegrity", [](BombingZone*ths){return &ths->curZoneIntegrity.data;})
-  ;
-  py::class_<CaptureZone, danet::ReflectableObject, std::unique_ptr<CaptureZone, py::nodelete>>(mpi, "CaptureZone")
-    .def_property_readonly("armyNo", [](CaptureZone*ths){return &ths->armyNo.data;})
-    .def_property_readonly("flags", [](CaptureZone*ths){return &ths->flags.data;})
-    .def_property_readonly("mpTimeX100", [](CaptureZone*ths){return &ths->mpTimeX100.data;})
-    .def_property_readonly("conqTeam", [](CaptureZone*ths){return &ths->conqTeam.data;})
-    .def_property_readonly("iconIdx", [](CaptureZone*ths){return &ths->iconIdx.data;})
-    .def_property_readonly("dummyVarForCapturers", [](CaptureZone*ths){return &ths->dummyVarForCapturers.data;})
-    .def_property_readonly("dummyVarForCapturePart", [](CaptureZone*ths){return &ths->dummyVarForCapturePart.data;})
-    .def_property_readonly("dummyVarForNumOfActiveCapturers", [](CaptureZone*ths){return &ths->dummyVarForNumOfActiveCapturers.data;})
-  ;
-  py::class_<ExitZone, danet::ReflectableObject, std::unique_ptr<ExitZone, py::nodelete>>(mpi, "ExitZone")
-    .def_property_readonly("armyNo", [](ExitZone*ths){return &ths->armyNo.data;})
-    .def_property_readonly("flags", [](ExitZone*ths){return &ths->flags.data;})
-  ;
-  py::class_<GeneralState, danet::ReflectableObject, std::unique_ptr<GeneralState, py::nodelete>>(mpi, "GeneralState")
-    .def_property_readonly("lastSuperArtilleryTime", [](GeneralState*ths){return &ths->lastSuperArtilleryTime.data;})
-    .def_property_readonly("dummyForExitZonesSettings", [](GeneralState*ths){return &ths->dummyForExitZonesSettings.data;})
-    .def_property_readonly("battleAreaChangeTime", [](GeneralState*ths){return &ths->battleAreaChangeTime.data;})
-    .def_property_readonly("battleAreaChangeToId", [](GeneralState*ths){return &ths->battleAreaChangeToId.data;})
-    .def_property_readonly("forcedMapCellsAir", [](GeneralState*ths){return &ths->forcedMapCellsAir.data;})
-    .def_property_readonly("forcedMapCellsGround", [](GeneralState*ths){return &ths->forcedMapCellsGround.data;})
-    .def_property_readonly("useCustomSuperArtillery", [](GeneralState*ths){return &ths->useCustomSuperArtillery.data;})
-    .def_property_readonly("waterWindStrengthClamp", [](GeneralState*ths){return &ths->waterWindStrengthClamp.data;})
-    .def_property_readonly("weatherEffectsDummyVar", [](GeneralState*ths){return &ths->weatherEffectsDummyVar.data;})
-    .def_property_readonly("timeLeft", [](GeneralState*ths){return &ths->timeLeft.data;})
-    .def_property_readonly("dummyForBombingEvent", [](GeneralState*ths){return &ths->dummyForBombingEvent.data;})
-    .def_property_readonly("dummyForUnlimitedControlEvent", [](GeneralState*ths){return &ths->dummyForUnlimitedControlEvent.data;})
-    .def_property_readonly("customState", [](GeneralState*ths){return &ths->customState.data;})
-  ;
-  py::class_<GlobalElo, danet::ReflectableObject, std::unique_ptr<GlobalElo, py::nodelete>>(mpi, "GlobalElo")
-    .def_property_readonly("teamAvgEloRatings", [](GlobalElo*ths){return &ths->teamAvgEloRatings.data;})
-  ;
   py::class_<MPlayer, danet::ReflectableObject, std::unique_ptr<MPlayer, py::nodelete>>(mpi, "MPlayer")
     .def_property_readonly("uid", [](MPlayer*ths){return &ths->uid.data;})
     .def_property_readonly("invitedNickName", [](MPlayer*ths){return &ths->invitedNickName.data;})
@@ -95,15 +58,6 @@ void PyCodegenObjects::include(py::module_ &m) {
     .def_property_readonly("missionSupportUnitEnabled", [](MPlayer*ths){return &ths->missionSupportUnitEnabled.data;})
     .def_property_readonly("rageTokens", [](MPlayer*ths){return &ths->rageTokens.data;})
   ;
-  py::class_<PickupZone, danet::ReflectableObject, std::unique_ptr<PickupZone, py::nodelete>>(mpi, "PickupZone")
-    .def_property_readonly("armyNo", [](PickupZone*ths){return &ths->armyNo.data;})
-    .def_property_readonly("flags", [](PickupZone*ths){return &ths->flags.data;})
-    .def_property_readonly("showOnTacticalMap", [](PickupZone*ths){return &ths->showOnTacticalMap.data;})
-  ;
-  py::class_<RearmZone, danet::ReflectableObject, std::unique_ptr<RearmZone, py::nodelete>>(mpi, "RearmZone")
-    .def_property_readonly("armyNo", [](RearmZone*ths){return &ths->armyNo.data;})
-    .def_property_readonly("flags", [](RearmZone*ths){return &ths->flags.data;})
-  ;
   py::class_<TeamData, danet::ReflectableObject, std::unique_ptr<TeamData, py::nodelete>>(mpi, "TeamData")
     .def_property_readonly("score", [](TeamData*ths){return &ths->score.data;})
     .def_property_readonly("tickets", [](TeamData*ths){return &ths->tickets.data;})
@@ -111,5 +65,45 @@ void PyCodegenObjects::include(py::module_ &m) {
     .def_property_readonly("orderCooldownLeft", [](TeamData*ths){return &ths->orderCooldownLeft.data;})
     .def_property_readonly("spawnScore", [](TeamData*ths){return &ths->spawnScore.data;})
     .def_property_readonly("roundScore", [](TeamData*ths){return &ths->roundScore.data;})
+  ;
+  py::class_<GlobalElo, danet::ReflectableObject, std::unique_ptr<GlobalElo, py::nodelete>>(mpi, "GlobalElo")
+    .def_property_readonly("teamAvgEloRatings", [](GlobalElo*ths){return &ths->teamAvgEloRatings.data;})
+  ;
+  py::class_<GeneralState, danet::ReflectableObject, std::unique_ptr<GeneralState, py::nodelete>>(mpi, "GeneralState")
+    .def_property_readonly("lastSuperArtilleryTime", [](GeneralState*ths){return &ths->lastSuperArtilleryTime.data;})
+    .def_property_readonly("dummyForExitZonesSettings", [](GeneralState*ths){return &ths->dummyForExitZonesSettings.data;})
+    .def_property_readonly("battleAreaChangeTime", [](GeneralState*ths){return &ths->battleAreaChangeTime.data;})
+    .def_property_readonly("battleAreaChangeToId", [](GeneralState*ths){return &ths->battleAreaChangeToId.data;})
+    .def_property_readonly("forcedMapCellsAir", [](GeneralState*ths){return &ths->forcedMapCellsAir.data;})
+    .def_property_readonly("forcedMapCellsGround", [](GeneralState*ths){return &ths->forcedMapCellsGround.data;})
+    .def_property_readonly("useCustomSuperArtillery", [](GeneralState*ths){return &ths->useCustomSuperArtillery.data;})
+    .def_property_readonly("waterWindStrengthClamp", [](GeneralState*ths){return &ths->waterWindStrengthClamp.data;})
+    .def_property_readonly("weatherEffectsDummyVar", [](GeneralState*ths){return &ths->weatherEffectsDummyVar.data;})
+    .def_property_readonly("timeLeft", [](GeneralState*ths){return &ths->timeLeft.data;})
+    .def_property_readonly("dummyForBombingEvent", [](GeneralState*ths){return &ths->dummyForBombingEvent.data;})
+    .def_property_readonly("dummyForUnlimitedControlEvent", [](GeneralState*ths){return &ths->dummyForUnlimitedControlEvent.data;})
+    .def_property_readonly("customState", [](GeneralState*ths){return &ths->customState.data;})
+  ;
+  py::class_<BaseZone, danet::ReplicatedObject, std::unique_ptr<BaseZone, py::nodelete>>(mpi, "BaseZone")
+    .def_property_readonly("armyNo", [](BaseZone*ths){return &ths->armyNo.data;})
+    .def_property_readonly("flags", [](BaseZone*ths){return &ths->flags.data;})
+  ;
+  py::class_<BombingZone, BaseZone, std::unique_ptr<BombingZone, py::nodelete>>(mpi, "BombingZone")
+    .def_property_readonly("curZoneIntegrity", [](BombingZone*ths){return &ths->curZoneIntegrity.data;})
+  ;
+  py::class_<CaptureZone, BaseZone, std::unique_ptr<CaptureZone, py::nodelete>>(mpi, "CaptureZone")
+    .def_property_readonly("mpTimeX100", [](CaptureZone*ths){return &ths->mpTimeX100.data;})
+    .def_property_readonly("conqTeam", [](CaptureZone*ths){return &ths->conqTeam.data;})
+    .def_property_readonly("iconIdx", [](CaptureZone*ths){return &ths->iconIdx.data;})
+    .def_property_readonly("dummyVarForCapturers", [](CaptureZone*ths){return &ths->dummyVarForCapturers.data;})
+    .def_property_readonly("dummyVarForCapturePart", [](CaptureZone*ths){return &ths->dummyVarForCapturePart.data;})
+    .def_property_readonly("dummyVarForNumOfActiveCapturers", [](CaptureZone*ths){return &ths->dummyVarForNumOfActiveCapturers.data;})
+  ;
+  py::class_<RearmZone, BaseZone, std::unique_ptr<RearmZone, py::nodelete>>(mpi, "RearmZone")
+  ;
+  py::class_<ExitZone, BaseZone, std::unique_ptr<ExitZone, py::nodelete>>(mpi, "ExitZone")
+  ;
+  py::class_<PickupZone, BaseZone, std::unique_ptr<PickupZone, py::nodelete>>(mpi, "PickupZone")
+    .def_property_readonly("showOnTacticalMap", [](PickupZone*ths){return &ths->showOnTacticalMap.data;})
   ;
 }

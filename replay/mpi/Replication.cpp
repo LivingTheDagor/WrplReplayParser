@@ -49,7 +49,7 @@ danet::ReplicatedObject* create_zone(BitStream &bs, uint8_t zone_id, ParserState
   }
   //LOGE("mission_area_id: {}; maybe_team_id: {}, some_val: {}; some_val_2: {}", mission_area_id, maybe_team_id, some_val, some_val_2);
   if(mission_area_id == state->Zones.size()) {
-    danet::ReplicatedObject * obj;
+    BaseZone * obj;
     switch(zone_id) {
       case 0: {obj = new BombingZone(); break;}
       case 1: {obj = new CaptureZone(); break;}
@@ -113,6 +113,11 @@ IMPLEMENT_REPLICATION(Waypoint) // 22
 
 IMPLEMENT_REPLICATION(Wing) // 23
 
+IMPLEMENT_REPLICATION(BaseZone) // 24, but should not be used eveeeeeeer
+
+danet::ReplicatedObject * BaseZone::createReplicatedObject(BitStream &bs, ParserState *state) {
+  EXCEPTION("this should never be created");
+}
 
 danet::ReplicatedObject * Airfield::createReplicatedObject(BitStream &bs, ParserState *state) {
   LOG("Parsing Replicated Airfield");
@@ -259,6 +264,7 @@ danet::ReplicatedObject * Wing::createReplicatedObject(BitStream &bs, ParserStat
 
 
 void Airfield::serializeReplicaCreationData(BitStream &bs) const {}
+void BaseZone::serializeReplicaCreationData(BitStream &bs) const {}
 void BombingZone::serializeReplicaCreationData(BitStream &bs) const {}
 void CaptureZone::serializeReplicaCreationData(BitStream &bs) const {}
 void DMSquad::serializeReplicaCreationData(BitStream &bs) const {}
