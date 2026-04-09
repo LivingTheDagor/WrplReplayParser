@@ -2,6 +2,7 @@
 #include "mpi/GeneralObject.h"
 #include "state/ParserState.h"
 
+
 #define MESSAGE_SWITCH_HEADER \
 uint32_t fields = this->readFieldsSizeAndFlag(); \
 if(fields == 0) /* no data was serialized in a message that expects data*/ \

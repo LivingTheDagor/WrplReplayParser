@@ -63,6 +63,8 @@ void PyReplay::include(py::module_ &m) {
 
   py::class_<ServerReplayReader, IReplayReader>(sub, "ServerReplayReader");
 
+  py::class_<FullDecompressReplayReader, IReplayReader>(sub, "FullDecompressReplayReader");
+
   py::class_<MemoryEfficientServerReplayReader, IReplayReader>(sub, "MemoryEfficientServerReplayReader");
 
   py::class_<Replay>(sub, "Replay")
@@ -80,7 +82,9 @@ void PyReplay::include(py::module_ &m) {
       .def_readonly("header_blk", &Replay::HeaderBlk)
       .def_readonly("footer_blk", &Replay::FooterBlk)
       .def_readonly("player_count", &Replay::PlayerCount)
-      .def("get_replay_reader", &Replay::getRplReader, py::return_value_policy::take_ownership);
+      .def("get_replay_reader", [](Replay &rpl){
+        return rpl.getFullDecompressReplayReader();
+        }, py::return_value_policy::take_ownership);
 
   py::class_<ServerReplay>(sub, "ServerReplay")
       .def(py::init<const std::string &>())

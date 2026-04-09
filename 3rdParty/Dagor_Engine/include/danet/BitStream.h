@@ -45,8 +45,11 @@ public:
   }
 
   ~BitStream() {
-    if (dataOwner)
+    if (dataOwner) {
       free(GetData());
+      this->data = nullptr; // move is needed for python bindings to work, but previous code that wasnt moved is now being moved and that broke stuff and this fixes that
+      this->dataOwner = false;
+    }
   }
 
   void Reset() { bitsUsed = readOffset = 0u; }

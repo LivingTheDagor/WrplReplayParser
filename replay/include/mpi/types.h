@@ -8,6 +8,7 @@
 #include "vector"
 #include "array"
 #include "ecs/entityId.h"
+#include "math/dag_Point3.h"
 namespace danet {
   struct UnitId { // so that Uid and uint16_t can have different encoders
     uint16_t val{};
@@ -28,6 +29,10 @@ namespace danet {
   };
 #pragma pack(pop)
 
+  struct SpaceTime {
+    uint32_t time_ms=0;
+    Point3 location{};
+  };
 }
 G_STATIC_ASSERT(sizeof(danet::Uid) == 90);
 

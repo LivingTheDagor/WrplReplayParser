@@ -6,6 +6,7 @@ add_library(MPI STATIC
         codegen/serializers.cpp
         Replication.cpp
         BattleMessages.cpp
+        PositionSync.cpp
 )
 
 

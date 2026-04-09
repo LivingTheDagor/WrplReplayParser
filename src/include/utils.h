@@ -25,6 +25,8 @@ extern bool DO_VERBOSE;
 [[noreturn]] inline void fatal(const char *file, int line, const char *function, std::string message) {
   std::cerr << "fatal CERR\n";
   LOGE("Fatal error at {}:{}\nFunction: {} \nMessage: {}", file, line, function, message);
+  g_log_handler.wait_until_empty();
+  g_log_handler.flush_all();
   LOGE("{}", cpptrace::generate_trace().to_string());
   g_log_handler.wait_until_empty();
   g_log_handler.flush_all();

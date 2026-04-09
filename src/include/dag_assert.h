@@ -43,6 +43,8 @@ assert_failed_ext(const char *file, int line, const char *function, const char *
   if (!message.empty()) {
     LOGE("Message: {}", message);
   }
+  g_log_handler.wait_until_empty();
+  g_log_handler.flush_all();
   LOGE("{}", cpptrace::generate_trace().to_string());
   g_log_handler.wait_until_empty();
   g_log_handler.flush_all();

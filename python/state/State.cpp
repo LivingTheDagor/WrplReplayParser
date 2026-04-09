@@ -88,6 +88,7 @@ void PyReplayState::include(py::module_ &m) {
           ReplayPacket *)> &func) { // the temporary exists for the entire call of this function, unlike __iter__
         //auto rdr = py_reader.cast<IReplayReader*>();
         py::gil_scoped_release release;
+
         std::thread temp_t(
             [&]() { // this is done purely so python signal handler doesnt come into play and so my signal handler dumps stacktrace
               ReplayPacket pkt{};
@@ -101,6 +102,7 @@ void PyReplayState::include(py::module_ &m) {
                   func(&pkt);
                 }
               } else {
+                LOGE("before while loop");
                 while (!end && rdr.getNextPacket(&pkt)) {
                   ParseSinglePacket(state, pkt, end);
                 }

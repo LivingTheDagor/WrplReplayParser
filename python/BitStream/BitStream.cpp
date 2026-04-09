@@ -5,6 +5,7 @@ extern "C" {
 #include "lz4.h"
 }
 #include "Logger.h"
+#include "span"
 
 using ssize_t = Py_ssize_t;
 PyBitStream py_bitstream{};
@@ -19,7 +20,7 @@ std::optional<py::bytes> read_bits(BitStream &bs, uint32_t bits) {
   }
   return {};
 }
-
+///mnt/d/ReplayParser/cmake-build-wsldebugasan/experiment/python/PyReplayParser.cpython-312-x86_64-linux-gnu.so
 std::span<const char> bytes_to_span(const py::bytes& py_bytes) {
   // Extract data pointer and size from py::bytes
   char* data;
