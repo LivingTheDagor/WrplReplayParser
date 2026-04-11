@@ -75,10 +75,13 @@ enum UnitType: uint8_t {
 
 };
 
+class FieldSerializerDict;
+
 namespace unit {
 
   class Aircraft;
   class Tank;
+
 
   class Unit {
   public:
@@ -90,6 +93,9 @@ namespace unit {
     Tank * AsTank();
     Aircraft * AsAircraft();
   };
+
+
+  bool LoadFromStorage(Unit * unit, FieldSerializerDict * data);
 
   class Aircraft : public Unit {
   public:

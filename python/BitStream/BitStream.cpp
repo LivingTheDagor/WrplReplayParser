@@ -6,6 +6,7 @@ extern "C" {
 }
 #include "Logger.h"
 #include "span"
+#include "idFieldSerializer.h"
 
 using ssize_t = Py_ssize_t;
 PyBitStream py_bitstream{};
@@ -200,4 +201,16 @@ void PyBitStream::include(py::module_ &m) {
   m.def("BITS_TO_BYTES", [](BitSize_t in) {
     return BITS_TO_BYTES(in);
   });
+
+  py::class_<IdFieldSerializer255>(m, "IdFieldSerializer255")
+      .def(py::init<>())
+      .def("readFieldsSizeAndCount", [](IdFieldSerializer255 &serializer255, BitStream &bs) -> py::tuple{
+        BitSize_t end;
+        auto count = serializer255.readFieldsSizeAndCount(bs, end);
+        return py::make_tuple(count, end);
+      }, py::arg("bs"))
+      .def("readFieldsIndex", &IdFieldSerializer255::readFieldsIndex, py::arg("bs"))
+      .def("skipReadingField", &IdFieldSerializer255::skipReadingField, py::arg("index"), py::arg("bs"))
+      .def("getFieldId", &IdFieldSerializer255::getFieldId, py::arg("index"))
+      .def("getFieldSize", &IdFieldSerializer255::getFieldSize, py::arg("index"));
 }

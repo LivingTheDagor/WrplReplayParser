@@ -100,6 +100,33 @@ void PyECSTypes::include(py::module_ &m) {
   py::class_<unit::UnitRef>(unit, "UnitRef")
       .def_readonly("unit", &unit::UnitRef::unit);
 
+  py::class_<FieldSerializerDict>(ecs, "FieldSerializerDict")
+      .def_property_readonly("data", [](FieldSerializerDict &dict) -> py::bytes {
+        std::string data{};
+        data.resize(dict.data.size());
+        memcpy(data.data(), dict.data.data(), dict.data.size());
+        return {data};
+      });
+
+  py::class_<BarrageBalloonStorageComponent, FieldSerializerDict>(ecs, "BarrageBalloonStorageComponent");
+  py::class_<LightVehicleModelStorageComponent, FieldSerializerDict>(ecs, "LightVehicleModelStorageComponent");
+  py::class_<FortificationModelStorageComponent, FieldSerializerDict>(ecs, "FortificationModelStorageComponent");
+  py::class_<WalkerVehicleStorageComponent, FieldSerializerDict>(ecs, "WalkerVehicleStorageComponent");
+  py::class_<HumanStorageComponent, FieldSerializerDict>(ecs, "HumanStorageComponent");
+  py::class_<InfantryTroopStorageComponent, FieldSerializerDict>(ecs, "InfantryTroopStorageComponent");
+  py::class_<WarShipModelStorageComponent, FieldSerializerDict>(ecs, "WarShipModelStorageComponent");
+  py::class_<HeavyVehicleModelStorageComponent, FieldSerializerDict>(ecs, "HeavyVehicleModelStorageComponent");
+  py::class_<FlightModelWrapStorageComponent, FieldSerializerDict>(ecs, "FlightModelWrapStorageComponent");
+
+  REGISTER_TYPE(BarrageBalloonStorageComponent);
+  REGISTER_TYPE(LightVehicleModelStorageComponent);
+  REGISTER_TYPE(FortificationModelStorageComponent);
+  REGISTER_TYPE(WalkerVehicleStorageComponent);
+  REGISTER_TYPE(HumanStorageComponent);
+  REGISTER_TYPE(InfantryTroopStorageComponent);
+  REGISTER_TYPE(WarShipModelStorageComponent);
+  REGISTER_TYPE(HeavyVehicleModelStorageComponent);
+  REGISTER_TYPE(FlightModelWrapStorageComponent);
   REGISTER_TYPE(unit::UnitRef);
   REGISTER_TYPE(ecs::Object);
   REGISTER_TYPE(ecs::EntityId);
