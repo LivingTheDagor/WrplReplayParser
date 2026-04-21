@@ -535,7 +535,7 @@ namespace ecs {
         if(weap) {
           LOGE("new Rocket created is of blk: {}", weap->blk_path);
         } else {
-          LOGE("unable to find blk for rocket of id: {:#x}", Rocket_data.weapon_ref);
+          LOGE("unable to find blk for rocket of id: {:#x}; unit name: {}", Rocket_data.weapon_ref, aircraft->unit_name);
         }
       }
     }

@@ -436,10 +436,19 @@ int DataBlock::addBlock(int name_id_) {
 
 
 int DataBlock::addBlock(SharedPtr<DataBlock> &blk) {
-  blk->updateNameMap(this->nm);
-  this->blocks.emplace_back(blk);
-  this->block_count++;
-  return this->block_count - 1;
+  auto n = this->addBlock(blk->getBlockName().data());
+  auto n_blk = this->getBlock(n);
+  for(auto & p : blk->params) {
+    SharedPtr<Param> new_p = SharedPtr<Param>::make();
+    new_p->data = p->data;
+    new_p->type = p->type;
+    new_p->name_id = this->nm->getIdFromNameAdd(p->getName());
+    n_blk->addParam(new_p);
+  }
+  for(auto &b : blk->blocks) {
+    n_blk->addBlock(b);
+  }
+  return n;
 }
 
 int DataBlock::addBlockUnsafe(SharedPtr<DataBlock> &blk) {

@@ -243,6 +243,8 @@ bool DataBlock::loadFromBinDump(IGenReader &crd, const std::shared_ptr<NameMap> 
       current->construct_param(Params[paramPtr], ParamPtr);
       ++ParamPtr;
     }
+    current->block_count = data.blocksCount;
+    current->param_count = data.paramsCount;
   }
 
   return true;

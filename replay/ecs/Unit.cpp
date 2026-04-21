@@ -245,29 +245,32 @@ namespace unit {
         }
       }
     }
-    if(wp_cost_blk->getBool("hasWeaponSlots", false)) { // hasWeaponSlots:b=true denotes that this unit has custom weapon creation which changes how weapons work
-      int commonWeapons_nid = modules_data.getNameId("commonWeapons");
-      int weapons_nid = modules_data.getNameId("Weapon");
-      bool found = false;
-      for(int i = 0; i < modules_data.blockCount(); i++) {
-        auto mod_blk = modules_data.getBlock(i);
-        if(mod_blk->getBlockNameId() == commonWeapons_nid) {
-          found = true;
-          for(int j = 0; j < mod_blk->blockCount(); j++) {
-            auto weap_blk = mod_blk->getBlock(j);
-            if(weap_blk->getBlockNameId() == weapons_nid)
-              weapon_preset->addBlock(weap_blk);
-          }
-        }
-      }
-      if(!found) {
-        auto mod_blk = blk.getBlock("commonWeapons", 0);
+    int commonWeapons_nid = modules_data.getNameId("commonWeapons");
+    int weapons_nid = modules_data.getNameId("Weapon");
+    bool found = false;
+    for(int i = 0; i < modules_data.blockCount(); i++) {
+      auto mod_blk = modules_data.getBlock(i);
+      if(mod_blk->getBlockNameId() == commonWeapons_nid) {
+        found = true;
         for(int j = 0; j < mod_blk->blockCount(); j++) {
           auto weap_blk = mod_blk->getBlock(j);
           if(weap_blk->getBlockNameId() == weapons_nid)
             weapon_preset->addBlock(weap_blk);
         }
       }
+    }
+    if(!found) {
+      weapons_nid = blk.getNameId("Weapon");
+      auto mod_blk = blk.getBlock("commonWeapons", 0);
+      for(int j = 0; j < mod_blk->blockCount(); j++) {
+        auto weap_blk = mod_blk->getBlock(j);
+        if(weap_blk->getBlockNameId() == weapons_nid)
+          weapon_preset->addBlock(weap_blk);
+      }
+    }
+    std::vector<uint16_t> weapons_count{};
+    weapons_count.resize(0xFF, 0);
+    if(wp_cost_blk->getBool("hasWeaponSlots", false)) { // hasWeaponSlots:b=true denotes that this unit has custom weapon creation which changes how weapons work
       int WeaponSlotNid = blk.getNameId("WeaponSlot"), WeaponPresetNid = blk.getNameId("WeaponPreset");
       int WeaponNid = blk.getNameId("Weapon"), weaponNid = blk.getNameId("weapon");
       auto weapon_blk = blk.getBlock("WeaponSlots", 0).get();
@@ -295,11 +298,9 @@ namespace unit {
         }
       }
       std::sort(launchers.begin(), launchers.end(), [](const LauncherInfo &f, const LauncherInfo &s) {
-        return f.order <= s.order;
+        return f.order < s.order;
       });
       this->weapons.reserve(launchers.size());
-      std::vector<uint16_t> weapons_count{};
-      weapons_count.resize(0xFF, 0);
       for(auto &launcher : launchers) {
         auto trigger = launcher.blk->getStr("trigger", nullptr);
         auto blk_str = launcher.blk->getStr("blk", nullptr);
@@ -320,9 +321,32 @@ namespace unit {
       }
     } else {
 
+      int WeaponNid = weapon_preset->getNameId("Weapon"), weaponNid = weapon_preset->getNameId("weapon");
+      for(int i = 0; i < weapon_preset->blockCount(); i++) {
+        auto curr_preset = weapon_preset->getBlock(i);
+        if(curr_preset->getBlockNameId() == WeaponNid || curr_preset->getBlockNameId() == weaponNid) {
+          auto trigger = curr_preset->getStr("trigger", nullptr);
+          auto blk_str = curr_preset->getStr("blk", nullptr);
+          auto emitter = curr_preset->getStr("emitter", nullptr);
+          if(!trigger || !blk_str || !emitter) {
+            LOGE("error while making final weapon vector for unit {}", this->unit_name);
+            return;
+          }
+          DataBlock launcher_blk{};
+          if(!dblk::load(launcher_blk, blk_str)) {
+            LOGE("error while making final weapon vector for unit {}", this->unit_name);
+            return;
+          }
+          int weapon_id = get_weapon_id(trigger);
+          int weapon_count = weapons_count[weapon_id];
+          weapons_count[weapon_id]++;
+          this->weapons.emplace_back(weapon_id, weapon_count, emitter, blk_str);
+        }
+
+      }
     }
-    std::sort(this->weapons.begin(), this->weapons.end(), [](Weapon &f, Weapon &s) {
-      return f.weapon_id <= s.weapon_id;
+    std::sort(this->weapons.begin(), this->weapons.end(), [](const Weapon &f, const Weapon &s) {
+      return f.weapon_id < s.weapon_id;
     });
   }
 
@@ -336,6 +360,7 @@ namespace unit {
         return &w;
       }
     }
+    return nullptr;
   }
 
 }

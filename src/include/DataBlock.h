@@ -1004,7 +1004,10 @@ struct DataBlockShared {
 
   ~DataBlockShared();
 };
-
-bool load(DataBlock &blk, const char *fname);
+namespace dblk {
+  bool load(DataBlock &blk, const char *fname);
+  bool load(DataBlock &blk, std::string_view fname);
+  bool load(DataBlock &blk, const std::string &fname);
+}
 
 #endif

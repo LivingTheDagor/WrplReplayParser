@@ -39,7 +39,7 @@ void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL lev
 LONG WINAPI my_handler(EXCEPTION_POINTERS* ExceptionInfo) {
 // You can filter by exception type:
   if (ExceptionInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-    const char msg[] = "SIGSEGV detected\n";
+    const char msg[] = "SIGSEGV detected what did you do\n";
     write(STDERR_FILENO, msg, sizeof(msg)-1);
     auto stk = cpptrace::generate_trace().to_string();
     write(STDERR_FILENO, stk.c_str(), strlen(stk.c_str()));

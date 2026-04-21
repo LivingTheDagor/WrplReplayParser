@@ -113,11 +113,18 @@ namespace unit {
     uint16_t count;
   };
 
+  struct Ammunition{
+    int count{};
+    std::string name{};
+  };
+
   struct Weapon {
     int weapon_id = -1;
     int weapon_index = -1;
-    const char * emitter{};
-    const char * blk_path{};
+    std::string emitter{};
+    std::string blk_path{};
+    std::string weapon_name{};
+    std::vector<Ammunition> munitions{};
     //std::string ammunition_count{};
   };
 
