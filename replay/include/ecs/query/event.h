@@ -95,6 +95,7 @@ protected:
   }
 
 public:
+  virtual ~Event() = default; // force RTTI
   static constexpr size_t max_event_size = 1024; // can be increased if needed
   event_type_t getType() const { return type; }
   event_flags_t getFlags() const { return flags; }

@@ -11,9 +11,9 @@
 
 namespace ecs {
   class QueryView;
-
+  typedef eastl::fixed_function<sizeof(void *) * 2, void(EntityManager *mgr, const Event &evt, const QueryView &components)> EventFuncType;
   // mgr added so an event can do actually complex stuff
-  typedef void (*EventFuncType)(EntityManager *mgr, const Event &evt, const QueryView &components);
+  //typedef void (*EventFuncType)(EntityManager *mgr, const Event &evt, const QueryView &components);
 
   struct EntitySystemOps {
     EventFuncType onEvent; // I most definitely will not need an onUpdate system as I have about zero support for that at all and I probably wont care about rw to the Event

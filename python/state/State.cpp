@@ -26,8 +26,8 @@ void PyReplayState::include(py::module_ &m) {
         py::arg("mis") = true,
         "Initialize the ReplayParser with the given VromfsPath and logfile path.");
   m.def("g_log_flush", []() {
-    g_log_handler.wait_until_empty();
-    g_log_handler.flush_all();
+    g_log_handler->wait_until_empty();
+    g_log_handler->flush_all();
   });
   py::class_<ParserState>(m, "ParserState")
       .def(py::init<>())

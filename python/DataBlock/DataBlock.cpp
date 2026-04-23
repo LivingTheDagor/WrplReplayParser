@@ -106,7 +106,7 @@ void BuildDict(py::dict &dict, DataBlock &blk) {
 inline std::span<const char> bytes_to_span(const py::bytes& py_bytes) {
   // Extract data pointer and size from py::bytes
   char* data;
-  ssize_t size;
+  Py_ssize_t size;
   // This will not copy, just gets access to internals
   PYBIND11_BYTES_AS_STRING_AND_SIZE(py_bytes.ptr(), &data, &size);
 

@@ -50,7 +50,6 @@ void initialize(const std::string &VromfsPath, const std::string &logfile_path, 
     file_mgr.loadVromfs(p3); // optional
   if (lang)
     TranslationAllowed = file_mgr.loadVromfs(p4); // optional, TODO
-  parseTemplates();
   //ecs::g_ecs_data->getTemplateDB()->DebugPrintTemplate("medic_box_item");
   hello();
   force_link_replication();
@@ -59,4 +58,5 @@ void initialize(const std::string &VromfsPath, const std::string &logfile_path, 
   if(wp_cost_f)
     wp_cost_f->loadBlk(ecs::g_ecs_data->wp_cost);
   //mpi::players.hello();
+  ecs::g_ecs_data.get();
 }

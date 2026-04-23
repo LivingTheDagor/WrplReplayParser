@@ -47,6 +47,7 @@ int main() {
   auto replay_path = conf_blk.getStr("source", nullptr);
   bool bin_is_linux_path = conf_blk.getBool("bin_is_linux_path", false);
   auto bin_path = conf_blk.getStr("bin_path", nullptr);
+  g_log_handler->loadSinkFromDataBlock(*conf_blk.getBlock("logging", 0));
   std::string rpl_path_str = replay_path;
   std::string bin_path_str = bin_path;
   G_UNUSED(source_is_linux_path);
@@ -61,7 +62,7 @@ int main() {
 #endif
   std::string logfile_str = (conf_dir / "logfile.txt").string();
   initialize(bin_path_str, logfile_str);
-  g_log_handler.start_thread();
+  g_log_handler->start_thread();
   //auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
   IReplayReader *rdr = nullptr;
   MemoryEfficientServerReplay *srv_rpl = nullptr;

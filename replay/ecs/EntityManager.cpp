@@ -8,6 +8,7 @@
 CREATE_HANDLE(handle_ecs, "EntityManager")
 CREATE_HANDLE(handle_entity, "EntityHandling")
 namespace ecs {
+  OnDemandInit<std::vector<after_components_cb>> after_comps_callbacks{};
   OnDemandInit<GState> g_ecs_data{};
 
   CompileTimeQueryDesc *CompileTimeQueryDesc::tail = nullptr;

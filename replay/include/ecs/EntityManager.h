@@ -58,9 +58,11 @@ class PyGState; // for python bindings
 struct ParserState;
 
 namespace ecs {
+  class GState;
   static inline entity_id_t make_eid(uint32_t index, uint32_t gen) { return index | (gen << ENTITY_INDEX_BITS); }
 
-
+  typedef void (*after_components_cb)(GState * state);
+  extern OnDemandInit<std::vector<after_components_cb>> after_comps_callbacks;
   class GState {
     ComponentTypes componentTypes{};
     DataComponents dataComponents{};
@@ -88,6 +90,10 @@ namespace ecs {
     void Init() {
       this->componentTypes.initialize();
       dataComponents.initialize(componentTypes);
+      parseTemplates();
+      for(auto &c : *after_comps_callbacks) {
+        c(this);
+      }
       initCompileTimeQueries();
       resetEsOrder();
     }
