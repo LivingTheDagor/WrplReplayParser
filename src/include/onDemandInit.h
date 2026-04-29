@@ -26,7 +26,7 @@ private:
     }
     return (T*)&obj;
   }
-  mutable uint8_t obj[sizeof(T)];
+  alignas(T) mutable uint8_t obj[sizeof(T)];
   mutable bool initialized = false;
   //T * obj = nullptr;
 };

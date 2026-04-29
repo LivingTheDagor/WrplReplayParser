@@ -124,9 +124,10 @@ void on_callback(ecs::GState * state) {
                 auto eid = components.eid_refs[compBegin];
                 if (eid != ecs::INVALID_ENTITY_ID) {
                   py::tuple tup(c->ro_descs.size()+1);
-                  tup[0] = py::cast(&evt);
+                  tup[0] = py::cast(&evt); // make event first arg
                   for(size_t i = 0; i < c->ro_descs.size(); i++) {
-                    tup[i+1] = castData(c->ro_descs[i].type, ((uint8_t*)components.componentData[i])+compBegin*c->component_sizes[i]);
+                    tup[i+1] = castData(c->ro_descs[i].type, ((uint8_t*)components.componentData[i])+compBegin*c->component_sizes[i]); // pass incoming component data
+                    // we can do this because our EsSystem is made from the function parameters
                   }
                   g_log_handler->wait_until_empty();
                   g_log_handler->flush_all();

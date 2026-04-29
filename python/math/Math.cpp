@@ -186,7 +186,7 @@ void PyMath::include(py::module_ &m) {
       });
   py::class_<E3DCOLOR>(math, "E3DCOLOR")
       .def(py::init<>())
-      .def(py::init<uint8_t, uint8_t, uint8_t, uint8_t>(), py::arg("a"), py::arg("r"), py::arg("b"), py::arg("a")=255)
+      .def(py::init<uint8_t, uint8_t, uint8_t, uint8_t>(), py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a")=255)
       .def_readonly("r", &E3DCOLOR::r)
       .def_readonly("g", &E3DCOLOR::g)
       .def_readonly("b", &E3DCOLOR::b)

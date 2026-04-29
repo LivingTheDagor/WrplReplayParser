@@ -25,7 +25,10 @@ uint32_t getPacketSize(IGenReader &cb) {
         }
       }
     }
-    uint8_t payload[4];
+    union {
+      uint8_t payload[4];
+      uint32_t raw = 0;
+    };
     if(!cb.tryRead(&payload, byte_count))
     {
       return 0;
@@ -41,7 +44,7 @@ uint32_t getPacketSize(IGenReader &cb) {
         }
         else
         {
-          EXCEPTION("reached unkown point");
+          return ((raw>>0x10 & 0xff) | (first_byte<<0x18) | ((raw&0xff) << 0x10) | (payload[1] << 0x8)) ^ 0x10000000;
         }
       }
       else
