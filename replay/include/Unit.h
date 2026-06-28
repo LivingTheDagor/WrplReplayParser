@@ -155,6 +155,7 @@ namespace unit {
     DVMReflectable *base_dvm_data = nullptr;
     uint32_t created_at_ms = 0;
     uint32_t killed_at_ms = 0xFFFFFFFF; // when was killed
+    Point3 killed_position{}; // only valid when killed_at_ms is set
     uint32_t destroyed_at_ms = 0xFFFFFFFF; // when was 'destroyed' in ecs
     uint16_t uid;
     ecs::EntityId curr_eid;

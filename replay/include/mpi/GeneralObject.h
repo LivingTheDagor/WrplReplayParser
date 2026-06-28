@@ -86,7 +86,9 @@ namespace mpi {
     std::string used_weapon; // case 0xa
     std::string destroyed_weapon; // case 0xc
     unit::Unit* offended_unit; // case 3
+    Point3 offended_unit_position{};
     unit::Unit* offender_unit; // case 4
+    Point3 offender_unit_position{};
     int DeathType; //case 0xb
     int offender_pid; // case 1
     int VictimPid; // only filled when a weapon is destroyed

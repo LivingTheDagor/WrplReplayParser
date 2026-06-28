@@ -74,8 +74,9 @@ namespace mpi {
     switch (mid) {
       case Kill: {
         const KillMessage *kill_m = dynamic_cast<const KillMessage *>(m);
-        if (kill_m->offended_unit)
+        if (kill_m->offended_unit) {
           kill_m->offended_unit->killed_at_ms = this->state->curr_time_ms;
+        }
         [[fallthrough]];
       }
       case SevereDamage:

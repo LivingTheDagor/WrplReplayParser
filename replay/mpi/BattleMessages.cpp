@@ -123,6 +123,15 @@ namespace mpi {
         DISPATCHER_LOGD2("victim_className: {}; victim_missionName: {}", *victim_className, *victim_missionName);
       }*/
     }
+
+
+    if (offended_unit) {
+      offended_unit->killed_position = offended_unit->positions.back().location;
+      offended_unit_position = offended_unit->killed_position;
+    }
+    if (offender_unit) {
+      offender_unit_position = offender_unit->positions.back().location;
+    }
     return true;
   }
 
