@@ -47,7 +47,7 @@ VROMFs::VROMFs(const std::string &fName) {
     FullFileLoadCB f{fName.c_str()};
     if (!load_raw_vromfs_data(f))
         return;
-    MemGeneralLoadCB f2(raw_data->data(), (int) size);
+    InPlaceMemLoadCB f2(raw_data->data(), (int) size);
 
     parse_raw_vromfs_data(f2);
 }

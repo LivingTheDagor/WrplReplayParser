@@ -53,14 +53,14 @@ class FullFileLoadCB : public LFileGeneralLoadCB {
 public:
     FullFileLoadCB() = default;;
 
-    inline explicit FullFileLoadCB(const std::string &fname, bool lower_fname = false) {
+    inline explicit FullFileLoadCB(const std::string_view &fname, bool lower_fname = false) {
         fileHandle = nullptr;
         open(fname, lower_fname);
     }
 
     inline ~FullFileLoadCB() override { close(); }
 
-    bool open(const std::string &fname, bool lower_fname = false);
+    bool open(const std::string_view &fname, bool lower_fname = false);
 
     void close();
 

@@ -51,8 +51,8 @@ const VROMFs *LFileGeneralLoadCB::getTargetVromFs() const {
     return fileHandle ? fileHandle->getUnderlyingVromfs() : nullptr;
 }
 
-bool FullFileLoadCB::open(const std::string &fname, bool lower_fname) {
-    close();
+bool FullFileLoadCB::open(const std::string_view &fname, bool lower_fname) {
+  close();
     targetDataSz = -1;
     if (fname.empty())
         return false;

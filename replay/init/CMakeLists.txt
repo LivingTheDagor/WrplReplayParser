@@ -11,6 +11,7 @@ target_link_libraries(INIT
         dagECS::dagECS
         MPI::MPI
         WTEvents::WTEvents
+        Translate::Translate
 )
 
 set(INCLUDES

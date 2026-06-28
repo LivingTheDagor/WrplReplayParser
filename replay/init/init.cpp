@@ -7,6 +7,7 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
+#include "translate.h"
 
 namespace mpi {
   class BaseListener : public IMessageListener {
@@ -46,7 +47,8 @@ void initialize(const std::string &game_path, const std::string &logfile_path, b
     //print_all_files_full_paths();
   if(!logfile_path.empty())
     g_log_handler->set_default_sink_logfile(logfile_path);
-  register_default_sigsev_handler();
+    g_log_handler->start_thread();
+    register_default_sigsev_handler();
   register_listener(&mpi::base);
     file_mgr.add_mount(game_path);
     mpi::register_object_dispatcher(&mpi::ObjectDispatcher);
@@ -65,8 +67,12 @@ void initialize(const std::string &game_path, const std::string &logfile_path, b
   if(mis)
     file_mgr.loadVromfs(p3); // optional
   if (lang)
-    TranslationAllowed = file_mgr.loadVromfs(p4); // optional, TODO
-  //ecs::g_ecs_data->getTemplateDB()->DebugPrintTemplate("medic_box_item");
+      TranslationAllowed = file_mgr.loadVromfs(p4);
+    if (TranslationAllowed) {
+      translate::load_csv("lang/units_modifications.csv");
+      translate::load_csv("lang/units.csv");
+      translate::load_csv("lang/units_weaponry.csv");
+    }
   hello();
   force_link_replication();
   force_link_cnet();
