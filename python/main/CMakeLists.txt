@@ -31,6 +31,7 @@ target_link_libraries(PyReplayParser PRIVATE
         PyReplay::PyReplay
         PyState::PyState
         PyECS::PyECS
+        PyTranslate::PyTranslate
         pybind11::module
 )
 

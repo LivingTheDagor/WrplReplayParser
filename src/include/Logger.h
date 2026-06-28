@@ -103,7 +103,7 @@ class logger_sink {
   friend log_handler;
   // these settings are what the default sink uses
   bool print_to_console = true;
-  DEBUG_LEVEL level = 3;
+  DEBUG_LEVEL level = 0;
   std::shared_ptr<file_sink> f_sync;
   //sink_handler_t handle = DEFAULT_SINK_HANDLER;
   uint64_t start_time_ms;
@@ -424,10 +424,11 @@ void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL lev
 #define LOG_FMT_EXT(sink, level, format_, ...) \
     (log_ext(__FUNCTION__, __LINE__, sink, level, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__)))
 
-#define LOG_FMT_EXT_CHECK(sink, level, format_, ...) \
-  if(g_log_handler->sink_dbg_lvl_allowed(sink, level)) {                                                 \
-    (log_ext(__FUNCTION__, __LINE__, sink, level, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__)));     \
-  }
+#define LOG_FMT_EXT_CHECK(sink, level, format_, ...)                                                                   \
+  do {                                                                                                                 \
+    if (g_log_handler->sink_dbg_lvl_allowed(sink, level)) {                                                            \
+      (log_ext(__FUNCTION__, __LINE__, sink, level, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__)));     \
+  }} while(0)
 
 #define SINK_LOG_ALLOWED(sink, level) (g_log_handler->sink_dbg_lvl_allowed(sink, level))
 //#define ONLY_ERROR_LOGGING 1
@@ -444,10 +445,10 @@ void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL lev
 #define ELOGD3(sink, format_, ...)
 #define ELOGE(sink, format_, ...) LOG_FMT_EXT(sink, LOGLEVEL::ERROR_, format_, __VA_ARGS__)
 #else
-#define LOGI(format_, ...) LOG_FMT_EXT(DEFAULT_SINK_HANDLER, LOGLEVEL::INFO, format_, __VA_ARGS__)
-#define LOGD1(format_, ...) LOG_FMT_EXT(DEFAULT_SINK_HANDLER, LOGLEVEL::DEBUG_L1, format_, __VA_ARGS__)
-#define LOGD2(format_, ...) LOG_FMT_EXT(DEFAULT_SINK_HANDLER, LOGLEVEL::DEBUG_L2, format_, __VA_ARGS__)
-#define LOGD3(format_, ...) LOG_FMT_EXT(DEFAULT_SINK_HANDLER, LOGLEVEL::DEBUG_L3, format_, __VA_ARGS__)
+#define LOGI(format_, ...) LOG_FMT_EXT_CHECK(DEFAULT_SINK_HANDLER, LOGLEVEL::INFO, format_, __VA_ARGS__)
+#define LOGD1(format_, ...) LOG_FMT_EXT_CHECK(DEFAULT_SINK_HANDLER, LOGLEVEL::DEBUG_L1, format_, __VA_ARGS__)
+#define LOGD2(format_, ...) LOG_FMT_EXT_CHECK(DEFAULT_SINK_HANDLER, LOGLEVEL::DEBUG_L2, format_, __VA_ARGS__)
+#define LOGD3(format_, ...) LOG_FMT_EXT_CHECK(DEFAULT_SINK_HANDLER, LOGLEVEL::DEBUG_L3, format_, __VA_ARGS__)
 #define LOGE(format_, ...) LOG_FMT_EXT(DEFAULT_SINK_HANDLER, LOGLEVEL::ERROR_, format_, __VA_ARGS__)
 
 #define ELOGI(sink, format_, ...) LOG_FMT_EXT_CHECK(sink, LOGLEVEL::INFO, format_, __VA_ARGS__)

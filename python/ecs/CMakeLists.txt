@@ -17,8 +17,6 @@ target_link_libraries(pyECS
 
 add_library(PyECS::PyECS ALIAS pyECS)
 
-
-# Set include dirs for Python if needed
 target_include_directories(pyECS PRIVATE
         "${BASE_DIR}/replay/include"
         "${BASE_DIR}/python/include"

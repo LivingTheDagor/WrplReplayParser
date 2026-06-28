@@ -10,8 +10,6 @@ target_link_libraries(PyReplay
 
 add_library(PyReplay::PyReplay ALIAS PyReplay)
 
-
-# Set include dirs for Python if needed
 target_include_directories(PyReplay PRIVATE
         "${BASE_DIR}/replay/include"
         "${BASE_DIR}/python/include"

@@ -11,8 +11,8 @@ void bind_readonly_vector(py::module_ &m, const char *name) {
         if (i >= v.size()) throw py::index_error();
         return v[(typename Vec::size_type) i];
       })
-      .def("__iter__", [](const Vec &v) {
-        return py::make_iterator(v.begin(), v.end());
+      .def(
+          "__iter__", [](const Vec &v) -> py::iterator { return py::make_iterator(v.begin(), v.end());
       }, py::keep_alive<0, 1>()) // Keep vector alive while iterator exists
       .def("__contains__", [](const Vec &v, const typename Vec::value_type &val) {
         return std::find(v.begin(), v.end(), val) != v.end();

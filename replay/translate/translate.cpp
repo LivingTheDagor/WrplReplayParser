@@ -361,7 +361,7 @@ bool translate_table_t::parseCsvV2Full(char *buffer, int len, dag::ConstSpan<int
 
     if (idx != INVALID_TRANSLATE_INDEX) {
       skip_key = true;
-      LOGE("Duplicate key in CSV: {}, row {}, file {}", key_buffer, i + 1, lastFileNameForDebug);
+      LOGD3("Duplicate key in CSV: {}, row {}, file {}", key_buffer, i + 1, lastFileNameForDebug);
     }
 
     if (!skip_key) {

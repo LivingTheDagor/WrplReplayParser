@@ -8,8 +8,6 @@ target_link_libraries(PyDataBlock;
 
 add_library(PyDataBlock::PyDataBlock ALIAS PyDataBlock)
 
-
-# Set include dirs for Python if needed
 target_include_directories(PyDataBlock PRIVATE
         "${BASE_DIR}/replay/include"
         "${BASE_DIR}/python/include"

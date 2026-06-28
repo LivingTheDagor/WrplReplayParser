@@ -78,14 +78,13 @@ namespace translate {
                          ReturnPolicy return_policy = ReturnPolicy::ReturnKey);
 
     /// see translate::localize
-    /// this is basically useless, as it has the same functionality as default localize
-    /// but added for consistency
+    /// explicitly calls localize with ReturnPolicy::ReturnKey
     inline const char *localize_rKey(std::string_view value, Languages lang = Languages::None) {
         return localize(value, lang, ReturnPolicy::ReturnKey);
     }
 
     /// see translate::localize
-    /// explicit calls localize with ReturnPolicy::ReturnNull
+    /// explicitly calls localize with ReturnPolicy::ReturnNull
     inline const char *localize_rNull(std::string_view value, Languages lang = Languages::None) {
         return localize(value, lang, ReturnPolicy::ReturnNull);
     }
