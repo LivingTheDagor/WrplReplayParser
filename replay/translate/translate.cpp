@@ -439,7 +439,7 @@ bool translate_table_t::loadCsvFull(std::string_view filename) {
   lang_col.resize(fullLangList.size() - 1);
   for (int i = 0; i < lang_col.size(); i++) {
     lang_col[i] = getColForLang(buffer, len, fullLangList[i + 1]);
-    G_ASSERT_LOG(lang_col[i] >= 0, "Language '{}' not found. in file {}", fullLangList[i], filename);
+    G_ASSERT_LOG(lang_col[i] >= 0, "Language '{}' not found. in file {}", fullLangList[i + 1], filename);
   }
 
   bool result = parseCsvV2Full(buffer, len, lang_col);
