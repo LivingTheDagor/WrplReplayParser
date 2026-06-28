@@ -336,7 +336,7 @@ int main() {
   std::string p2 = "D:\\WarThunderDev\\cache\\binary.2.52.0\\game-dev.vromfs.bin";
 #endif
   //EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p2), "Ah shit");
-  EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p1), "Ah shit");
+  EXCEPTION_IF_FALSE(file_mgr.mountVromfs(p1), "Ah shit");
   SharedPtr<DataBlock> outBlk = CreateFlatBlk(vromfs_mission_path, 10, false, false, false, false);
   EXCEPTION_IF_FALSE(outBlk, "failed to create flat blk");
   //outBlk->getBlock("triggers", 0)->getBlock("aslt_check_capture", 0)->getBlock("actions", 0)->getBlock("triggerEnable", 0)->addStr("target", "on_capture_respawn");

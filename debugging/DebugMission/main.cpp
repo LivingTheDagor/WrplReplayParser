@@ -204,7 +204,7 @@ int main() {
   std::string dump_path = R"(D:/GoogleDriveWtMission/dump_t.blk)";
   std::string p1 = R"(D:\SteamLibrary\steamapps\common\War Thunder\cache\binary.2.53.0\mis.vromfs.bin)";
 #endif
-  EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p1), "Ah shit");
+  EXCEPTION_IF_FALSE(file_mgr.mountVromfs(p1), "Ah shit");
 
   SharedPtr<DataBlock> blk = SharedPtr<DataBlock>::make();
   //SharedPtr<DataBlock> tblk = SharedPtr<DataBlock>::make();

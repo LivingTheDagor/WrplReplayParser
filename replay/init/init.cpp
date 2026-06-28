@@ -59,19 +59,20 @@ void initialize(const std::string &game_path, const std::string &logfile_path, b
     std::string p5 = ("char.vromfs.bin");
     if(fonts) {
         std::string p6 = ("ui/fonts.vromfs.bin");
-        EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p6), "{} does not exist", p6);
-  }
-  EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p1), "{} does not exist", p1);
-  EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p2), "{} does not exist", p2);
-  EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p5), "{} does not exist", p5);
-  if(mis)
-    file_mgr.loadVromfs(p3); // optional
-  if (lang)
-      TranslationAllowed = file_mgr.loadVromfs(p4);
+        EXCEPTION_IF_FALSE(file_mgr.mountVromfs(p6), "{} does not exist", p6);
+    }
+    EXCEPTION_IF_FALSE(file_mgr.mountVromfs(p1), "{} does not exist", p1);
+    EXCEPTION_IF_FALSE(file_mgr.mountVromfs(p2), "{} does not exist", p2);
+    EXCEPTION_IF_FALSE(file_mgr.mountVromfs(p5), "{} does not exist", p5);
+    if (mis)
+      file_mgr.mountVromfs(p3); // optional
+    if (lang)
+      TranslationAllowed = file_mgr.mountVromfs(p4);
     if (TranslationAllowed) {
       translate::load_csv("lang/units_modifications.csv");
       translate::load_csv("lang/units.csv");
       translate::load_csv("lang/units_weaponry.csv");
+      file_mgr.unmountVromfs("lang.vromfs.bin");
     }
   hello();
   force_link_replication();

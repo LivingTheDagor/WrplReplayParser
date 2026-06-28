@@ -29,7 +29,7 @@ int main() {
   fs::path p12 = war_dir / R"(tex.vromfs.bin)";
   fs::path p13 = war_dir / R"(regional.vromfs.bin)";*/
 
-  EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p1), "Ah shit");
+  EXCEPTION_IF_FALSE(file_mgr.mountVromfs(p1), "Ah shit");
   //EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p2), "Ah shit");
   //EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p3), "Ah shit");
   //EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p4), "Ah shit");

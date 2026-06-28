@@ -4,26 +4,14 @@
 #include <cctype>
 
 
-bool FileManager::loadVromfs(std::string &vromfsPath) {
-
+bool FileManager::mountVromfs(std::string &vromfsPath) {
   ZoneScoped;
   auto file = this->getFile(vromfsPath);
   if (!file)
       return false;
-  if(holder_dir)
-  {
-
-    auto v  = std::make_shared<VROMFs>(vromfsPath, holder_dir); // this automatically loads the data into the holder_dir
-    this->loaded_vromfs.push_back(v);
-    return true;
-  }
-  else
-  {
-    auto v  = std::make_shared<VROMFs>(vromfsPath); // this automatically loads the data into the holder_dir
-    holder_dir = v->getDirectory();
-    this->loaded_vromfs.push_back(v);
-    return true;
-  }
+  // TODO: implement move constructor for VROMFs
+  this->loaded_vromfs.emplace_back(new VROMFs(vromfsPath));
+  return true;
 }
 
 std::unique_ptr<File> FileManager::getFile(const fs::path &path, bool lower, bool prioritizeVromfs) {
@@ -67,22 +55,40 @@ void FileManager::find_vromfs_files_in_folder(std::vector<fs::path> &out_list, c
   }
 }
 
-SmartFSHandle FileManager::getObject(const fs::path& path) {
-  SmartFSHandle curr_ptr;
-  for(const auto &p : path)
-  {
-    if(!curr_ptr)
-    {
-      curr_ptr =  (*holder_dir)[p.string()];
-    }
-    else
-    {
-      curr_ptr = curr_ptr[p.string()];
-    }
-    if (!curr_ptr)
-      return nullptr;
+FileManager::~FileManager() {
+  for (auto vromfs: this->loaded_vromfs) {
+    delete vromfs;
   }
-  return curr_ptr;
+  this->loaded_vromfs.clear();
+}
+
+SmartFSHandle FileManager::getObject(const fs::path& path) {
+  for (auto vromfs: this->loaded_vromfs) {
+    SmartFSHandle curr_ptr;
+    for (const auto &p: path) {
+      if (!curr_ptr) {
+        curr_ptr = (vromfs->getDirectory())[p.string()];
+        if (!curr_ptr)
+          break;
+      } else {
+        curr_ptr = curr_ptr[p.string()];
+      }
+    }
+    if (curr_ptr)
+      return curr_ptr;
+  }
+  return nullptr;
+}
+
+bool FileManager::unmountVromfs(const std::string &vromfs_name) {
+  for (auto it = this->loaded_vromfs.begin(); it != this->loaded_vromfs.end(); ++it) {
+    if ((*it)->getName() == vromfs_name) {
+      this->loaded_vromfs.erase(it);
+      delete *it;
+      return true;
+    }
+  }
+  return false;
 }
 
 std::unique_ptr<File> FileManager::loadRealFsFile(const fs::path &path) {
@@ -111,7 +117,7 @@ std::unique_ptr<File> FileManager::loadRealFsFile(const fs::path &path) {
 }
 
 std::unique_ptr<File> FileManager::loadVromfsFile(const fs::path &path) {
-  if (!this->holder_dir)
+  if (this->loaded_vromfs.empty())
     return nullptr;
   SmartFSHandle file = getObject(path);
   if(!file || file->getFSObjectType() != isFile)

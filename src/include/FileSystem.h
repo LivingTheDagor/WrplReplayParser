@@ -101,7 +101,7 @@ public:
     std::cout << getName() << "\n";
   }
 
-  virtual SmartFSHandle operator[](const std::string &lookup_name) {
+  virtual SmartFSHandle operator[](const std::string &lookup_name) const {
     throw std::runtime_error("Attempted to index an FSObject that is not a directory");
   }
 
@@ -354,7 +354,7 @@ public:
   /// Gets a generic FileSystem Object, indexing calls this
   /// \param name the name to look up in this directory
   /// \return a std::shared_ptr<FsObject> or a nullptr
-  std::shared_ptr<FSObject> getFSObject(const std::string &name) {
+  std::shared_ptr<FSObject> getFSObject(const std::string &name) const {
     std::string to_use;
     if (name.c_str()[0] == '%') {
       to_use = std::string(name.c_str() + 1);
@@ -482,7 +482,7 @@ public:
     }
   }
 
-  SmartFSHandle operator[](const std::string &lookup_name) override {
+  SmartFSHandle operator[](const std::string &lookup_name) const override {
     auto x = getFSObject(lookup_name);
     if (x == nullptr) {
       //LOGD2("indexing of directory '{}' for FSObject '{}' returned null", this->name.string().c_str(), lookup_name.c_str());
@@ -510,12 +510,14 @@ protected:
 class VROMFs;
 
 struct FileManager {
-  bool loadVromfs(std::string &vromfsPath);
+  bool mountVromfs(std::string &vromfsPath);
 
-  bool loadVromfs(fs::path &vromfsPath) {
+  bool mountVromfs(fs::path &vromfsPath) {
     auto str = vromfsPath.string();
-    return loadVromfs(str);
+    return mountVromfs(str);
   }
+
+  bool unmountVromfs(const std::string &vromfs_name);
 
   std::unique_ptr<File> loadRealFsFile(const fs::path &path);
 
@@ -533,17 +535,15 @@ struct FileManager {
     this->real_fs_mounts.push_back(path);
   }
 
-  inline std::shared_ptr<Directory> getDir() {
-    return holder_dir;
-  }
+
+  ~FileManager();
 
 private:
   SmartFSHandle getObject(const fs::path &path);
 
   std::vector<fs::path> real_fs_mounts;
-  std::shared_ptr<Directory> holder_dir;
-
-  std::vector<std::shared_ptr<VROMFs> > loaded_vromfs;
+  std::unordered_map<fs::path, Directory> mounted_vromfs{};
+  std::vector<VROMFs *> loaded_vromfs;
 };
 
 extern FileManager file_mgr;
