@@ -25,7 +25,6 @@ public:
   danet::ReflectionVar<uint8_t> totalDomTeam{"totalDomTeam", &totalDomTime, 16};
   danet::ReflectionVar<uint16_t> totalDomTime{"totalDomTime", &totalDomMult, 17};
   danet::ReflectionVar<uint8_t> totalDomMult{"totalDomMult", nullptr, 18};
-
   GeneralState() : ReflectableObject() {
     varList.head = &lastSuperArtilleryTime;
     varList.tail = &totalDomMult;

@@ -15,22 +15,17 @@ void PyCodegenTypes::include(py::module_ &m) {
   auto gen = mpi.def_submodule("gen");
   py::class_<danet::RoundScore>(mpi, "RoundScore")
     .def_readonly("combined", &danet::RoundScore::combined)
-    .def_readonly("scores", &danet::RoundScore::scores)
-    ;
+    .def_readonly("scores", &danet::RoundScore::scores);
   py::class_<danet::dummyForFootballStat>(mpi, "dummyForFootballStat")
     .def_readonly("v1", &danet::dummyForFootballStat::v1)
     .def_readonly("v2", &danet::dummyForFootballStat::v2)
-    .def_readonly("v3", &danet::dummyForFootballStat::v3)
-    ;
+    .def_readonly("v3", &danet::dummyForFootballStat::v3);
   py::class_<danet::Crew>(mpi, "Crew")
     .def_readonly("e1", &danet::Crew::e1)
     .def_readonly("e2", &danet::Crew::e2)
     .def_readonly("v1", &danet::Crew::v1)
-    .def_readonly("v2", &danet::Crew::v2)
-    ;
-  py::class_<danet::CrewUnitsList>(mpi, "CrewUnitsList")
-    .def_readonly("crew", &danet::CrewUnitsList::crew)
-    ;
+    .def_readonly("v2", &danet::Crew::v2);
+  py::class_<danet::CrewUnitsList>(mpi, "CrewUnitsList").def_readonly("crew", &danet::CrewUnitsList::crew);
   py::class_<danet::dummyForPlayerStat>(mpi, "dummyForPlayerStat")
     .def_readonly("v1", &danet::dummyForPlayerStat::v1)
     .def_readonly("v2", &danet::dummyForPlayerStat::v2)
@@ -55,50 +50,39 @@ void PyCodegenTypes::include(py::module_ &m) {
     .def_readonly("v21", &danet::dummyForPlayerStat::v21)
     .def_readonly("v22", &danet::dummyForPlayerStat::v22)
     .def_readonly("v23", &danet::dummyForPlayerStat::v23)
-    .def_readonly("v24", &danet::dummyForPlayerStat::v24)
-    ;
+    .def_readonly("v24", &danet::dummyForPlayerStat::v24);
   py::class_<danet::streak>(mpi, "streak")
     .def_readonly("v1", &danet::streak::v1)
     .def_readonly("v2", &danet::streak::v2)
-    .def_readonly("v3", &danet::streak::v3)
-    ;
+    .def_readonly("v3", &danet::streak::v3);
   py::class_<danet::dummyForKillStreaksProgress>(mpi, "dummyForKillStreaksProgress")
-    .def_readonly("vals", &danet::dummyForKillStreaksProgress::vals)
-    ;
-  py::class_<danet::teamAvgEloRatings>(mpi, "teamAvgEloRatings")
-    .def_readonly("data", &danet::teamAvgEloRatings::data)
-    ;
+    .def_readonly("vals", &danet::dummyForKillStreaksProgress::vals);
+  py::class_<danet::teamAvgEloRatings>(mpi, "teamAvgEloRatings").def_readonly("data", &danet::teamAvgEloRatings::data);
   py::class_<danet::zigZagPair>(mpi, "zigZagPair")
     .def_readonly("v1", &danet::zigZagPair::v1)
-    .def_readonly("v2", &danet::zigZagPair::v2)
-    ;
+    .def_readonly("v2", &danet::zigZagPair::v2);
   py::class_<danet::dummyForExitZonesSettings>(mpi, "dummyForExitZonesSettings")
-    .def_readonly("vals", &danet::dummyForExitZonesSettings::vals)
-    ;
+    .def_readonly("vals", &danet::dummyForExitZonesSettings::vals);
   py::class_<danet::WeatherEffect>(mpi, "WeatherEffect")
     .def_readonly("name", &danet::WeatherEffect::name)
-    .def_readonly("effect_data", &danet::WeatherEffect::effect_data)
-    ;
-  py::class_<danet::WeatherEffects>(mpi, "WeatherEffects")
-    .def_readonly("effects", &danet::WeatherEffects::effects)
-    ;
+    .def_readonly("effect_data", &danet::WeatherEffect::effect_data);
+  py::class_<danet::WeatherEffects>(mpi, "WeatherEffects").def_readonly("effects", &danet::WeatherEffects::effects);
   py::class_<danet::UnitIdStruct>(mpi, "UnitIdStruct")
     .def_readonly("uid", &danet::UnitIdStruct::uid)
-    .def_readonly("thang", &danet::UnitIdStruct::thang)
-    ;
+    .def_readonly("thang", &danet::UnitIdStruct::thang);
   py::class_<danet::dummyForDeathInfo>(mpi, "dummyForDeathInfo")
-          .def_readonly("v1", &danet::dummyForDeathInfo::v1)
-          .def_readonly("v2", &danet::dummyForDeathInfo::v2)
-          .def_readonly("v3", &danet::dummyForDeathInfo::v3)
-          .def_readonly("v4", &danet::dummyForDeathInfo::v4)
-          .def_readonly("v5", &danet::dummyForDeathInfo::v5);
+    .def_readonly("v1", &danet::dummyForDeathInfo::v1)
+    .def_readonly("v2", &danet::dummyForDeathInfo::v2)
+    .def_readonly("v3", &danet::dummyForDeathInfo::v3)
+    .def_readonly("v4", &danet::dummyForDeathInfo::v4)
+    .def_readonly("v5", &danet::dummyForDeathInfo::v5);
   py::class_<danet::KillerStruct>(mpi, "KillerStruct")
-          .def_readonly("player_id", &danet::KillerStruct::player_id)
-          .def_readonly("uid", &danet::KillerStruct::uid)
-          .def_readonly("vehicle", &danet::KillerStruct::vehicle);
+    .def_readonly("player_id", &danet::KillerStruct::player_id)
+    .def_readonly("uid", &danet::KillerStruct::uid)
+    .def_readonly("vehicle", &danet::KillerStruct::vehicle);
   py::class_<danet::DamagedState>(mpi, "DamagedState")
-          .def_readonly("v1", &danet::DamagedState::v1)
-          .def_readonly("v2", &danet::DamagedState::v2);
+    .def_readonly("v1", &danet::DamagedState::v1)
+    .def_readonly("v2", &danet::DamagedState::v2);
   bind_readonly_vector<std::vector<uint32_t>>(gen, "std_vector_uint32_t_");
 
   bind_readonly_vector<std::vector<danet::Crew>>(gen, "std_vector_danet_Crew_");
@@ -123,7 +107,7 @@ void PyCodegenTypes::include(py::module_ &m) {
 
   bind_array<std::string, 2>(mpi, "std_array_std_string_2_");
 
-  bind_readonly_vector<std::vector<danet::DamagedState> >(gen, "std_vector_danet_DamagedState_");
+  bind_readonly_vector<std::vector<danet::DamagedState>>(gen, "std_vector_danet_DamagedState_");
 
   include_types_0(gen);
 }

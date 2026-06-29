@@ -4,10 +4,8 @@
 class DVMReflectable : public danet::ReflectableObject {
 public:
   DECL_REFLECTION(DVMReflectable, danet::ReflectableObject)
-
   danet::ReflectionVar<std::vector<danet::DamagedState>> dummyVarForDamagedStateReflection{
     "dummyVarForDamagedStateReflection", nullptr, 3, danet::dummyVarForDamagedStateReflectionCoder};
-
   DVMReflectable() : ReflectableObject() {
     varList.head = &dummyVarForDamagedStateReflection;
     varList.tail = &dummyVarForDamagedStateReflection;

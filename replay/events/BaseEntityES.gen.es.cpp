@@ -8,7 +8,7 @@ ECS_DEF_PULL_VAR(BaseEntity);
 static constexpr ecs::ComponentDesc on_tank_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("unit__ref"), ecs::ComponentTypeInfo<unit::UnitRef>()},
-  // start of 2 ro components at [1]
+//start of 2 ro components at [1]
   {ECS_HASH("unit_storage__tank"), ecs::ComponentTypeInfo<HeavyVehicleModelStorageComponent>()},
   {ECS_HASH("uid"), ecs::ComponentTypeInfo<int>()}};
 static void on_tank_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
@@ -35,7 +35,7 @@ static ecs::EntitySystemDesc on_tank_appear_es_es_desc("on_tank_appear_es",
 static constexpr ecs::ComponentDesc on_aircraft_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("unit__ref"), ecs::ComponentTypeInfo<unit::UnitRef>()},
-  // start of 2 ro components at [1]
+//start of 2 ro components at [1]
   {ECS_HASH("unit_storage__aircraft"), ecs::ComponentTypeInfo<FlightModelWrapStorageComponent>()},
   {ECS_HASH("uid"), ecs::ComponentTypeInfo<int>()}};
 static void on_aircraft_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
@@ -84,10 +84,11 @@ static ecs::EntitySystemDesc on_unit_disappear_es_es_desc("on_unit_disappear_es"
 static constexpr ecs::ComponentDesc after_unit_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("unit__ref"), ecs::ComponentTypeInfo<unit::UnitRef>()},
-  // start of 1 ro components at [1]
-  {ECS_HASH("uid"), ecs::ComponentTypeInfo<int>()}};
-static void after_unit_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
-                                            const ecs::QueryView &__restrict components) {
+//start of 1 ro components at [1]
+  {ECS_HASH("uid"), ecs::ComponentTypeInfo<int>()}
+};
+static void after_unit_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt, const ecs::QueryView &__restrict components)
+{
   G_FAST_ASSERT(evt.is<ecs::EventEntityCreated>());
   auto comp = components.begin(), compE = components.end();
   G_ASSERT(comp != compE);
@@ -109,7 +110,7 @@ static ecs::EntitySystemDesc
 static constexpr ecs::ComponentDesc uid_entity_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("unit__ref"), ecs::ComponentTypeInfo<unit::UnitRef>()},
-  // start of 2 ro components at [1]
+//start of 2 ro components at [1]
   {ECS_HASH("eid"), ecs::ComponentTypeInfo<ecs::EntityId>()},
   {ECS_HASH("uid"), ecs::ComponentTypeInfo<int>()}};
 static void uid_entity_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
@@ -174,12 +175,16 @@ static constexpr ecs::ComponentDesc iterate_all_units_ecs_query_comps[] = {
   {ECS_HASH("unit__ref"), ecs::ComponentTypeInfo<unit::UnitRef>()},
   {ECS_HASH("unit__className"), ecs::ComponentTypeInfo<ecs::string>()},
   {ECS_HASH("eid"), ecs::ComponentTypeInfo<ecs::EntityId>()},
-  // start of 1 rq components at [3]
-  {ECS_HASH("playerUnit"), ecs::ComponentTypeInfo<ecs::Tag>()}};
-static ecs::CompileTimeQueryDesc
-  iterate_all_units_ecs_query_desc("iterate_all_units_ecs_query", ecs::empty_span(),
-                                   ecs::make_span(iterate_all_units_ecs_query_comps + 0, 3) /*ro*/,
-                                   ecs::make_span(iterate_all_units_ecs_query_comps + 3, 1) /*rq*/, ecs::empty_span());
+//start of 1 rq components at [3]
+  {ECS_HASH("playerUnit"), ecs::ComponentTypeInfo<ecs::Tag>()}
+};
+static ecs::CompileTimeQueryDesc iterate_all_units_ecs_query_desc
+(
+  "iterate_all_units_ecs_query",
+  ecs::empty_span(),
+  ecs::make_span(iterate_all_units_ecs_query_comps+0, 3)/*ro*/,
+  ecs::make_span(iterate_all_units_ecs_query_comps+3, 1)/*rq*/,
+  ecs::empty_span());
 template<typename Callable>
 inline void iterate_all_units_ecs_query(ecs::EntityManager &manager, Callable function) {
   perform_query(

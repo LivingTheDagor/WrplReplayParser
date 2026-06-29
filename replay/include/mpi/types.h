@@ -157,6 +157,20 @@ namespace danet {
 
     bool operator==(const WeaponsMask &other) const = default;
   };
+
+  enum Country : uint8_t {
+    USA = 1,
+    GERMANY = 2,
+    RUSSIA = 3,
+    BRITAIN = 4,
+    JAPAN = 5,
+    CHINA = 6,
+    FRANCE = 7,
+    ITALY = 8,
+    SWEDEN = 9,
+    ISRAEL = 10
+  };
+
 } // namespace danet
 
 

@@ -4,7 +4,6 @@
 class FMWReflectable : public BaseExtReflectable {
 public:
   DECL_REFLECTION(FMWReflectable, BaseExtReflectable)
-
   FMWReflectable() : BaseExtReflectable() {}
 };
 

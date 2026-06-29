@@ -15,7 +15,7 @@ class MPlayer(ReflectableObject):
     publicFlags = Var("uint32_t", 7)
     decals = Var("DataBlock", 8)
     team = Var("uint8_t", 9)
-    countryId = Var("uint8_t", 10)
+    countryId = Var("danet::Country", 10)
     memberId = Var("uint16_t", 11)
     customState = Var("DataBlock", 12)
     score = Var("uint16_t", 13)

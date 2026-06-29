@@ -14,7 +14,7 @@ public:
   danet::ReflectionVar<uint32_t> publicFlags{"publicFlags", &decals, 7};
   danet::ReflectionVar<DataBlock> decals{"decals", &team, 8};
   danet::ReflectionVar<uint8_t> team{"team", &countryId, 9};
-  danet::ReflectionVar<uint8_t> countryId{"countryId", &memberId, 10};
+  danet::ReflectionVar<danet::Country> countryId{"countryId", &memberId, 10};
   danet::ReflectionVar<uint16_t> memberId{"memberId", &customState, 11};
   danet::ReflectionVar<DataBlock> customState{"customState", &score, 12};
   danet::ReflectionVar<uint16_t> score{"score", &dummyForSupportPlanes, 13};

@@ -8,7 +8,6 @@ ECS_DEF_PULL_VAR(Rocketry);
 static constexpr ecs::ComponentDesc on_rocket_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("rocket_component"), ecs::ComponentTypeInfo<Rocket>()}};
-
 static void on_rocket_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                            const ecs::QueryView &__restrict components) {
   G_FAST_ASSERT(evt.is<ecs::EventEntityCreated>());
@@ -21,7 +20,6 @@ static void on_rocket_appear_es_all_events(ecs::EntityManager &mgr, const ecs::E
     }
   while (++comp != compE);
 }
-
 static ecs::EntitySystemDesc on_rocket_appear_es_es_desc("on_rocket_appear_es",
                                                          "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
                                                          ecs::EntitySystemOps(on_rocket_appear_es_all_events),
@@ -31,7 +29,6 @@ static ecs::EntitySystemDesc on_rocket_appear_es_es_desc("on_rocket_appear_es",
 static constexpr ecs::ComponentDesc on_rocket_disappear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("rocket_component"), ecs::ComponentTypeInfo<Rocket>()}};
-
 static void on_rocket_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                               const ecs::QueryView &__restrict components) {
   G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyed>());
@@ -44,7 +41,6 @@ static void on_rocket_disappear_es_all_events(ecs::EntityManager &mgr, const ecs
     }
   while (++comp != compE);
 }
-
 static ecs::EntitySystemDesc on_rocket_disappear_es_es_desc("on_rocket_disappear_es",
                                                             "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
                                                             ecs::EntitySystemOps(on_rocket_disappear_es_all_events),
@@ -54,7 +50,6 @@ static ecs::EntitySystemDesc on_rocket_disappear_es_es_desc("on_rocket_disappear
 static constexpr ecs::ComponentDesc on_bomb_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("bomb_component"), ecs::ComponentTypeInfo<Bomb>()}};
-
 static void on_bomb_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                          const ecs::QueryView &__restrict components) {
   G_FAST_ASSERT(evt.is<ecs::EventEntityCreated>());
@@ -67,7 +62,6 @@ static void on_bomb_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Eve
     }
   while (++comp != compE);
 }
-
 static ecs::EntitySystemDesc on_bomb_appear_es_es_desc("on_bomb_appear_es",
                                                        "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
                                                        ecs::EntitySystemOps(on_bomb_appear_es_all_events),
@@ -77,7 +71,6 @@ static ecs::EntitySystemDesc on_bomb_appear_es_es_desc("on_bomb_appear_es",
 static constexpr ecs::ComponentDesc on_bomb_disappear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("bomb_component"), ecs::ComponentTypeInfo<Bomb>()}};
-
 static void on_bomb_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                             const ecs::QueryView &__restrict components) {
   G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyed>());
@@ -90,7 +83,6 @@ static void on_bomb_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::
     }
   while (++comp != compE);
 }
-
 static ecs::EntitySystemDesc on_bomb_disappear_es_es_desc("on_bomb_disappear_es",
                                                           "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
                                                           ecs::EntitySystemOps(on_bomb_disappear_es_all_events),
@@ -100,7 +92,6 @@ static ecs::EntitySystemDesc on_bomb_disappear_es_es_desc("on_bomb_disappear_es"
 static constexpr ecs::ComponentDesc on_torpedo_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("torpedo_component"), ecs::ComponentTypeInfo<Torpedo>()}};
-
 static void on_torpedo_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                             const ecs::QueryView &__restrict components) {
   G_FAST_ASSERT(evt.is<ecs::EventEntityCreated>());
@@ -113,7 +104,6 @@ static void on_torpedo_appear_es_all_events(ecs::EntityManager &mgr, const ecs::
     }
   while (++comp != compE);
 }
-
 static ecs::EntitySystemDesc on_torpedo_appear_es_es_desc("on_torpedo_appear_es",
                                                           "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
                                                           ecs::EntitySystemOps(on_torpedo_appear_es_all_events),
@@ -123,7 +113,6 @@ static ecs::EntitySystemDesc on_torpedo_appear_es_es_desc("on_torpedo_appear_es"
 static constexpr ecs::ComponentDesc on_torpedo_disappear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("torpedo_component"), ecs::ComponentTypeInfo<Torpedo>()}};
-
 static void on_torpedo_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                                const ecs::QueryView &__restrict components) {
   G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyed>());
@@ -136,7 +125,6 @@ static void on_torpedo_disappear_es_all_events(ecs::EntityManager &mgr, const ec
     }
   while (++comp != compE);
 }
-
 static ecs::EntitySystemDesc on_torpedo_disappear_es_es_desc(
   "on_torpedo_disappear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
   ecs::EntitySystemOps(on_torpedo_disappear_es_all_events), ecs::make_span(on_torpedo_disappear_es_comps + 0, 1) /*rw*/,
@@ -144,7 +132,6 @@ static ecs::EntitySystemDesc on_torpedo_disappear_es_es_desc(
 static constexpr ecs::ComponentDesc on_payload_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("payload_component"), ecs::ComponentTypeInfo<Payload>()}};
-
 static void on_payload_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                             const ecs::QueryView &__restrict components) {
   G_FAST_ASSERT(evt.is<ecs::EventEntityCreated>());
@@ -157,7 +144,6 @@ static void on_payload_appear_es_all_events(ecs::EntityManager &mgr, const ecs::
     }
   while (++comp != compE);
 }
-
 static ecs::EntitySystemDesc on_payload_appear_es_es_desc("on_payload_appear_es",
                                                           "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
                                                           ecs::EntitySystemOps(on_payload_appear_es_all_events),
@@ -167,7 +153,6 @@ static ecs::EntitySystemDesc on_payload_appear_es_es_desc("on_payload_appear_es"
 static constexpr ecs::ComponentDesc on_payload_disappear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("payload_component"), ecs::ComponentTypeInfo<Payload>()}};
-
 static void on_payload_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                                const ecs::QueryView &__restrict components) {
   G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyed>());
@@ -180,7 +165,6 @@ static void on_payload_disappear_es_all_events(ecs::EntityManager &mgr, const ec
     }
   while (++comp != compE);
 }
-
 static ecs::EntitySystemDesc on_payload_disappear_es_es_desc(
   "on_payload_disappear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
   ecs::EntitySystemOps(on_payload_disappear_es_all_events), ecs::make_span(on_payload_disappear_es_comps + 0, 1) /*rw*/,
@@ -188,7 +172,6 @@ static ecs::EntitySystemDesc on_payload_disappear_es_es_desc(
 static constexpr ecs::ComponentDesc on_jettisoned_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("jettisoned_component"), ecs::ComponentTypeInfo<Jettisoned>()}};
-
 static void on_jettisoned_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                                const ecs::QueryView &__restrict components) {
   G_FAST_ASSERT(evt.is<ecs::EventEntityCreated>());
@@ -201,7 +184,6 @@ static void on_jettisoned_appear_es_all_events(ecs::EntityManager &mgr, const ec
     }
   while (++comp != compE);
 }
-
 static ecs::EntitySystemDesc on_jettisoned_appear_es_es_desc(
   "on_jettisoned_appear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
   ecs::EntitySystemOps(on_jettisoned_appear_es_all_events), ecs::make_span(on_jettisoned_appear_es_comps + 0, 1) /*rw*/,
@@ -209,7 +191,6 @@ static ecs::EntitySystemDesc on_jettisoned_appear_es_es_desc(
 static constexpr ecs::ComponentDesc on_jettisoned_disappear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("jettisoned_component"), ecs::ComponentTypeInfo<Jettisoned>()}};
-
 static void on_jettisoned_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                                   const ecs::QueryView &__restrict components) {
   G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyed>());
@@ -223,7 +204,6 @@ static void on_jettisoned_disappear_es_all_events(ecs::EntityManager &mgr, const
     }
   while (++comp != compE);
 }
-
 static ecs::EntitySystemDesc
   on_jettisoned_disappear_es_es_desc("on_jettisoned_disappear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
                                      ecs::EntitySystemOps(on_jettisoned_disappear_es_all_events),

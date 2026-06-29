@@ -65,6 +65,18 @@ namespace danet {
     return false;
   }
 
+  int CountryCoder(DANET_ENCODER_SIGNATURE) {
+    auto data = meta->getValue<danet::Country>();
+    if (op == DANET_REFLECTION_OP_ENCODE) {
+      bs->Write(*(data));
+      return true;
+    } else if (op == DANET_REFLECTION_OP_DECODE) {
+      REPL_VER(bs->Read(*(data)));
+      return true;
+    }
+    return false;
+  }
+
   int uint16_tCoder(DANET_ENCODER_SIGNATURE) {
     auto data = meta->getValue<uint16_t>();
     if (op == DANET_REFLECTION_OP_ENCODE) {

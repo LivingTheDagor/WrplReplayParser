@@ -4,7 +4,6 @@
 class GM_DVMReflectable : public DVMReflectable {
 public:
   DECL_REFLECTION(GM_DVMReflectable, DVMReflectable)
-
   GM_DVMReflectable() : DVMReflectable() {}
 };
 

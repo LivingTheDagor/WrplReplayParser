@@ -4,7 +4,6 @@
 class GMReflectable : public BaseExtReflectable {
 public:
   DECL_REFLECTION(GMReflectable, BaseExtReflectable)
-
   GMReflectable() : BaseExtReflectable() {}
 };
 

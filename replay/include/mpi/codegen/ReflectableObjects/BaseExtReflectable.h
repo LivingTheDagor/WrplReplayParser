@@ -61,7 +61,6 @@ public:
   danet::ReflectionVar<uint8_t> smokeScreenCount{"smokeScreenCount", &smokeScreenActived, 52};
   danet::ReflectionVar<bool> smokeScreenActived{"smokeScreenActived", &crewStatMult, 53};
   danet::ReflectionVar<float> crewStatMult{"crewStatMult", nullptr, 63};
-
   BaseExtReflectable() : ReflectableObject() {
     varList.head = &isAlternativeShotFreq;
     varList.tail = &crewStatMult;

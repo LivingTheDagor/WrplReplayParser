@@ -160,3 +160,8 @@ class DamagedState_reg(DataTypeRegister):
         "uint16_t v1;",
         "uint8_t v2;"
     ]
+
+
+class country_reg(DataTypeRegister):
+    name = "danet::Country"
+    is_pod = True

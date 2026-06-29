@@ -4,7 +4,6 @@
 class FM_DVMReflectable : public DVMReflectable {
 public:
   DECL_REFLECTION(FM_DVMReflectable, DVMReflectable)
-
   FM_DVMReflectable() : DVMReflectable() {}
 };
 
