@@ -36,8 +36,7 @@ namespace ecs {
     static constexpr component_type_t type = ECS_HASH("ecs::auto_type").hash;
   };
 
-  struct Tag {
-  };
+  struct Tag {};
 #define ECS_TAG_NAME "ecs::Tag"
   template<>
   struct ComponentTypeInfo<Tag> // tag type traits, so it has 0 size
@@ -48,66 +47,59 @@ namespace ecs {
     static constexpr bool has_creator_class = false;
     static constexpr size_t size = 0;
   };
-} // ecs
+} // namespace ecs
 
 #include "ecs/ComponentTypeManager.h"
 // all types are now inplace
-#define ECS_DECLARE_BASE_TYPE(class_type, class_name, has_creator_class_)                                                  \
-  namespace ecs                                                                                                           \
-  {                                                                                                                       \
-  template <>                                                                                                             \
-  struct ComponentTypeInfo<class_type>                                                                                    \
-  {                                                                                                                       \
-    static constexpr const char *type_name = class_name;                                                                  \
-    static constexpr component_type_t type = ECS_HASH(class_name).hash;                                                   \
-    static constexpr bool is_pod_class = !has_creator_class_;                                                              \
-    static constexpr bool has_creator_class = has_creator_class_;                                                        \
-    static constexpr size_t size = sizeof(class_type);                                                                    \
-  };                                                                                                                      \
-  template <>                                                                                                             \
-  struct ComponentTypeInfo<const class_type> : ComponentTypeInfo<class_type>                                              \
-  {};                                                                                                                     \
-  template <>                                                                                                             \
-  struct ComponentTypeInfo<class_type &> : ComponentTypeInfo<class_type>                                                  \
-  {};                                                                                                                     \
-  template <>                                                                                                             \
-  struct ComponentTypeInfo<const class_type &> : ComponentTypeInfo<class_type>                                            \
-  {};                                                                                                                     \
+#define ECS_DECLARE_BASE_TYPE(class_type, class_name, has_creator_class_)            \
+  namespace ecs {                                                                    \
+    template<>                                                                       \
+    struct ComponentTypeInfo<class_type> {                                           \
+      static constexpr const char *type_name = class_name;                           \
+      static constexpr component_type_t type = ECS_HASH(class_name).hash;            \
+      static constexpr bool is_pod_class = !has_creator_class_;                      \
+      static constexpr bool has_creator_class = has_creator_class_;                  \
+      static constexpr size_t size = sizeof(class_type);                             \
+    };                                                                               \
+    template<>                                                                       \
+    struct ComponentTypeInfo<const class_type> : ComponentTypeInfo<class_type> {};   \
+    template<>                                                                       \
+    struct ComponentTypeInfo<class_type &> : ComponentTypeInfo<class_type> {};       \
+    template<>                                                                       \
+    struct ComponentTypeInfo<const class_type &> : ComponentTypeInfo<class_type> {}; \
   }
 
 // this is a type that needs a constructor
-#define ECS_DECLARE_CREATABLE_TYPE(class_type)                                                  \
-  ECS_DECLARE_BASE_TYPE(class_type, #class_type, true);
+#define ECS_DECLARE_CREATABLE_TYPE(class_type) ECS_DECLARE_BASE_TYPE(class_type, #class_type, true);
 
 // pod has no creator class. IE: the type doesnt need a constructor, like a int or float or TMatrix
-#define ECS_DECLARE_POD_TYPE(class_type)                                                        \
-  ECS_DECLARE_BASE_TYPE(class_type, #class_type, false);
+#define ECS_DECLARE_POD_TYPE(class_type) ECS_DECLARE_BASE_TYPE(class_type, #class_type, false);
 
 
-#define ECS_REGISTER_TYPE_BASE(klass, klass_name, io, creator, destroyer, flags_)                                                   \
-  static ecs::CompileComponentTypeRegister MAKE_UNIQUE(ecs_type_rec_, __COUNTER__)(klass_name, ecs::ComponentTypeInfo<klass>::type, \
-    ecs::ComponentTypeInfo<klass>::size, io, creator, destroyer,                                                                    \
-    ecs::ComponentTypeFlags(                                                                                                             \
-    (ecs::ComponentTypeInfo<klass>::has_creator_class ? ecs::COMPONENT_TYPE_NON_TRIVIAL_CREATE : 0) |                                    \
-    (ecs::ComponentTypeInfo<klass>::is_pod_class ? ecs::COMPONENT_TYPE_IS_POD : 0) |                                                     \
-    (io ? ecs::COMPONENT_TYPE_HAS_IO : 0)))
+#define ECS_REGISTER_TYPE_BASE(klass, klass_name, io, creator, destroyer, flags_)                                 \
+  static ecs::CompileComponentTypeRegister MAKE_UNIQUE(ecs_type_rec_, __COUNTER__)(                               \
+    klass_name, ecs::ComponentTypeInfo<klass>::type, ecs::ComponentTypeInfo<klass>::size, io, creator, destroyer, \
+    ecs::ComponentTypeFlags(                                                                                      \
+      (ecs::ComponentTypeInfo<klass>::has_creator_class ? ecs::COMPONENT_TYPE_NON_TRIVIAL_CREATE : 0) |           \
+      (ecs::ComponentTypeInfo<klass>::is_pod_class ? ecs::COMPONENT_TYPE_IS_POD : 0) |                            \
+      (io ? ecs::COMPONENT_TYPE_HAS_IO : 0)))
 
 
-#define ECS_REGISTER_MANAGED_TYPE(klass, io, klass_manager) \
-  G_STATIC_ASSERT(ecs::ComponentTypeInfo<klass>::has_creator_class);                                                          \
-  ECS_REGISTER_TYPE_BASE(klass, ecs::ComponentTypeInfo<klass>::type_name, io, (&ecs::CTMFactory<klass_manager>::create), \
-    (&ecs::CTMFactory<klass_manager>::destroy),                                                                          \
+#define ECS_REGISTER_MANAGED_TYPE(klass, io, klass_manager)                                         \
+  G_STATIC_ASSERT(ecs::ComponentTypeInfo<klass>::has_creator_class);                                \
+  ECS_REGISTER_TYPE_BASE(                                                                           \
+    klass, ecs::ComponentTypeInfo<klass>::type_name, io, (&ecs::CTMFactory<klass_manager>::create), \
+    (&ecs::CTMFactory<klass_manager>::destroy),                                                     \
     ((ecs::HasRequestResources<klass_manager::component_type>::value) ? ecs::COMPONENT_TYPE_NEED_RESOURCES : 0))
 
 
 #define ECS_REGISTER_CTM_TYPE(kl, io) ECS_REGISTER_MANAGED_TYPE(kl, io, ecs::InplaceCreator<kl>)
 
 // while these are PODS, they still 'have' a ctm that simply makes printing easier
-#define ECS_REGISTER_POD_TYPE(klass, io) \
-  G_STATIC_ASSERT(ecs::ComponentTypeInfo<klass>::is_pod_class);                                      \
-  ECS_REGISTER_TYPE_BASE(klass, #klass, io,                                                          \
-  &ecs::CTMFactory<ecs::ReducedCreator<klass>>::create,                                                 \
-  &ecs::CTMFactory<ecs::ReducedCreator<klass>>::destroy, 0)
+#define ECS_REGISTER_POD_TYPE(klass, io)                                                          \
+  G_STATIC_ASSERT(ecs::ComponentTypeInfo<klass>::is_pod_class);                                   \
+  ECS_REGISTER_TYPE_BASE(klass, #klass, io, &ecs::CTMFactory<ecs::ReducedCreator<klass>>::create, \
+                         &ecs::CTMFactory<ecs::ReducedCreator<klass>>::destroy, 0)
 
 namespace ecs {
 
@@ -131,7 +123,7 @@ namespace ecs {
   inline void write_compressed(SerializerCb &cb, uint32_t v) {
     uint8_t data[sizeof(v) + 1];
     int i = 0;
-    for (; i < (int)sizeof(data); ++i) {
+    for (; i < (int) sizeof(data); ++i) {
       data[i] = uint8_t(v) | (v >= (1 << 7) ? (1 << 7) : 0);
       v >>= 7;
       if (!v) {
@@ -139,12 +131,12 @@ namespace ecs {
         break;
       }
     }
-    cb.write(data, (size_t)i * CHAR_BIT, 0);
+    cb.write(data, (size_t) i * CHAR_BIT, 0);
   }
 
   inline bool read_compressed(const DeserializerCb &cb, uint32_t &v) {
     v = 0;
-    for (int i = 0; i < (int)(sizeof(v) + 1); ++i) {
+    for (int i = 0; i < (int) (sizeof(v) + 1); ++i) {
       uint8_t byte = 0;
       if (!cb.read(&byte, CHAR_BIT, 0))
         return false;
@@ -155,32 +147,32 @@ namespace ecs {
     return true;
   }
 
-// default serializer is just call as-is.
-// if we want we can register different serializer, with quantization and stuff
+  // default serializer is just call as-is.
+  // if we want we can register different serializer, with quantization and stuff
 
   class ComponentSerializer {
   public:
-    virtual void serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) {
-      cb.write(data, sz *
-                     CHAR_BIT,
-               hint);
+    virtual void serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint,
+                           ecs::EntityManager *mgr) {
+      cb.write(data, sz * CHAR_BIT, hint);
     }
 
-    virtual bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) {
+    virtual bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint,
+                             ecs::EntityManager *mgr) {
       return cb.read(data, sz * CHAR_BIT, hint);
     }
   };
 
 
   enum ComponentTypeFlags : uint16_t {
-    //COMPONENT_TYPE_TRIVIAL = 0, // basically it is pod
+    // COMPONENT_TYPE_TRIVIAL = 0, // basically it is pod
     COMPONENT_TYPE_NON_TRIVIAL_CREATE = 1,
-    //COMPONENT_TYPE_NON_TRIVIAL_MOVE = 2,
+    // COMPONENT_TYPE_NON_TRIVIAL_MOVE = 2,
     // NO BOXED
-    //COMPONENT_TYPE_CREATE_ON_TEMPL_INSTANTIATE = 8,
-    //COMPONENT_TYPE_NEED_RESOURCES = 16,
+    // COMPONENT_TYPE_CREATE_ON_TEMPL_INSTANTIATE = 8,
+    // COMPONENT_TYPE_NEED_RESOURCES = 16,
     COMPONENT_TYPE_HAS_IO = 32, // that is for optimization, to skip getting io, when io isn't available.
-    //COMPONENT_TYPE_TRIVIAL_MASK = COMPONENT_TYPE_HAS_IO - 1,
+    // COMPONENT_TYPE_TRIVIAL_MASK = COMPONENT_TYPE_HAS_IO - 1,
     COMPONENT_TYPE_IS_POD = 64, // that is just for verification
     COMPONENT_TYPE_REPLICATION = 128,
 
@@ -190,16 +182,14 @@ namespace ecs {
 
   struct CompileComponentTypeRegister {
     CompileComponentTypeRegister(const char *name_, uint32_t name_hash_, uint32_t size_, ComponentSerializer *io_,
-                                 create_ctm_t ctm_,
-                                 destroy_ctm_t dtm_,
-                                 ComponentTypeFlags flags_) :
-        name(name_), ctm(ctm_), dtm(dtm_), io(io_), name_hash(name_hash_), size(size_), flags(flags_) {
+                                 create_ctm_t ctm_, destroy_ctm_t dtm_, ComponentTypeFlags flags_) :
+      name(name_), ctm(ctm_), dtm(dtm_), io(io_), name_hash(name_hash_), size(size_), flags(flags_) {
       next = tail;
       tail = this;
     }
 
   protected:
-    const char *name = nullptr;                   // name of this entity system, must be unique
+    const char *name = nullptr; // name of this entity system, must be unique
     CompileComponentTypeRegister *next = nullptr; // slist
     create_ctm_t ctm = nullptr;
     destroy_ctm_t dtm = nullptr;
@@ -216,32 +206,32 @@ namespace ecs {
 
   inline bool has_io(ComponentTypeFlags flags) { return (flags & COMPONENT_TYPE_HAS_IO) != 0; }
 
-  inline bool need_constructor(ComponentTypeFlags flags) {
-    return (flags & COMPONENT_TYPE_NON_TRIVIAL_CREATE) != 0;
-  }
+  inline bool need_constructor(ComponentTypeFlags flags) { return (flags & COMPONENT_TYPE_NON_TRIVIAL_CREATE) != 0; }
 
 
   struct ComponentInfo {
   public:
     ComponentSerializer *serializer;
     uint32_t size;
-    //ComponentTypeFlags flags;
+    // ComponentTypeFlags flags;
     component_type_t hash;
     std::string_view name; // this name should only be set through preinit, so doesnt need to be a std::string
-    ComponentTypeManager *ctm; // the ctm  manages creation and destruction of a component, should only be used if it needs a construction (ie: an int doesnt need one, but a std::string might)
-    create_ctm_t create; // used to create an instance of the ctm. the ctm is created on demand, if ctm is null, then this is called
+    ComponentTypeManager *ctm; // the ctm  manages creation and destruction of a component, should only be used if it
+                               // needs a construction (ie: an int doesnt need one, but a std::string might)
+    create_ctm_t create; // used to create an instance of the ctm. the ctm is created on demand, if ctm is null, then
+                         // this is called
     destroy_ctm_t destroy; // destroys the ctm.
     ComponentTypeFlags flags;
   };
 
-  template <typename K, typename V>
-  size_t estimateMemoryUsage(const std::unordered_map<K, V>& map) {
+  template<typename K, typename V>
+  size_t estimateMemoryUsage(const std::unordered_map<K, V> &map) {
     // 1. Bucket array: array of pointers, one per bucket
-    size_t bucketArraySize = map.bucket_count() * sizeof(void*);
+    size_t bucketArraySize = map.bucket_count() * sizeof(void *);
 
     // 2. Elements: each entry is stored in a linked-list node
     //    A node typically contains: key, value, hash (sometimes), and a next pointer
-    size_t perNodeOverhead = sizeof(K) + sizeof(V) + sizeof(void*) + sizeof(size_t);
+    size_t perNodeOverhead = sizeof(K) + sizeof(V) + sizeof(void *) + sizeof(size_t);
     size_t nodesSize = map.size() * perNodeOverhead;
 
     // 3. The unordered_map object itself (load factor, size, etc.)
@@ -250,14 +240,14 @@ namespace ecs {
     return objectSize + bucketArraySize + nodesSize;
   }
 
-  template <typename K, typename V, typename NN, typename NNN>
-  size_t estimateMemoryUsage(const std::unordered_map<K, V, NN, NNN>& map) {
+  template<typename K, typename V, typename NN, typename NNN>
+  size_t estimateMemoryUsage(const std::unordered_map<K, V, NN, NNN> &map) {
     // 1. Bucket array: array of pointers, one per bucket
-    size_t bucketArraySize = map.bucket_count() * sizeof(void*);
+    size_t bucketArraySize = map.bucket_count() * sizeof(void *);
 
     // 2. Elements: each entry is stored in a linked-list node
     //    A node typically contains: key, value, hash (sometimes), and a next pointer
-    size_t perNodeOverhead = sizeof(K) + sizeof(V) + sizeof(void*) + sizeof(size_t);
+    size_t perNodeOverhead = sizeof(K) + sizeof(V) + sizeof(void *) + sizeof(size_t);
     size_t nodesSize = map.size() * perNodeOverhead;
 
     // 3. The unordered_map object itself (load factor, size, etc.)
@@ -277,19 +267,19 @@ namespace ecs {
     void initialize();
 
   public:
-    size_t printMemoryUsage(int indent=0) {
+    size_t printMemoryUsage(int indent = 0) {
       std::string indent_str{};
       indent_str.resize(indent, ' ');
       LOGE("{}ComponentTypes memory usage:", indent_str);
-      indent_str.resize(indent+2, ' ');
-      auto types_size = sizeof(ComponentInfo)*types.capacity();
-      for (auto &t : types) {
-        types_size+=t.ctm->getMemSize();
+      indent_str.resize(indent + 2, ' ');
+      auto types_size = sizeof(ComponentInfo) * types.capacity();
+      for (auto &t: types) {
+        types_size += t.ctm->getMemSize();
       }
       LOGE("{}types size: {} bytes in {} components", indent_str, types_size, types.size());
       auto types_index_size = estimateMemoryUsage(this->typesIndex);
       LOGE("{}typesIndex size: {} bytes", indent_str, types_index_size);
-      return types_index_size+types_size;
+      return types_index_size + types_size;
     }
 
     uint32_t getTypeCount() const { return (uint32_t) types.size(); }
@@ -316,8 +306,8 @@ namespace ecs {
     }
     // this is done to prevent any race conditions so that I dont need mutexes here.
     inline void createAllCTMs() {
-      for(auto &info : this->types) {
-        if(!info.ctm) {
+      for (auto &info: this->types) {
+        if (!info.ctm) {
           info.ctm = info.create();
         }
       }
@@ -326,7 +316,6 @@ namespace ecs {
     inline std::string_view getName(type_index_t index) {
       G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), "", "Invalid %i index for getName", index);
       return this->types[index].name;
-
     }
 
     inline std::string_view getName(component_t hash) {
@@ -338,11 +327,13 @@ namespace ecs {
     }
 
     inline const ComponentInfo *getComponentData(type_index_t index) const {
-      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid index %i for getComponentData", index);
+      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid index %i for getComponentData",
+                       index);
       return &this->types[index];
     }
     inline ComponentInfo *getComponentData(type_index_t index) {
-      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid index %i for getComponentData", index);
+      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid index %i for getComponentData",
+                       index);
       return &this->types[index];
     }
 
@@ -368,8 +359,6 @@ namespace ecs {
     // registers a new component
     type_index_t registerType(const char *name, component_type_t type, uint32_t data_size, ComponentSerializer *io,
                               create_ctm_t ctm, destroy_ctm_t dtm, ComponentTypeFlags flag);
-
-
   };
 
   inline type_index_t ComponentTypes::findOr(component_type_t val, type_index_t ifNotFound) const {
@@ -387,11 +376,8 @@ namespace ecs {
 
 #define ECS_PULL_VAR(x)      ecs_pull_##x
 #define ECS_DECL_PULL_VAR(x) extern const size_t ecs_pull_##x
-#define ECS_DEF_PULL_VAR(x)  extern const size_t ecs_pull_##x = (size_t)(&ecs_pull_##x)
-} // ecs
+#define ECS_DEF_PULL_VAR(x)  extern const size_t ecs_pull_##x = (size_t) (&ecs_pull_##x)
+} // namespace ecs
 
 
-
-
-
-#endif //MYEXTENSION_COMPONENTTYPES_H
+#endif // MYEXTENSION_COMPONENTTYPES_H

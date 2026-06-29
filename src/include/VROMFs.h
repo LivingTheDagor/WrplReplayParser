@@ -71,13 +71,11 @@ class VromfsFileIndex : public FileIndex {
 public:
   ~VromfsFileIndex() override = default;
 
-  VromfsFileIndex(const std::string &name, VROMFs *owner, std::span<char> data) : FileIndex(name), data(data),
-    owner(owner) {
-  }
+  VromfsFileIndex(const std::string &name, VROMFs *owner, std::span<char> data) :
+    FileIndex(name), data(data), owner(owner) {}
 
-  VromfsFileIndex(const fs::path &name, VROMFs *owner, std::span<char> data) : FileIndex(name), data(data),
-                                                                               owner(owner) {
-  }
+  VromfsFileIndex(const fs::path &name, VROMFs *owner, std::span<char> data) :
+    FileIndex(name), data(data), owner(owner) {}
 
   std::unique_ptr<File> getFile(std::shared_ptr<FileIndex> ths) override;
 
@@ -85,9 +83,7 @@ public:
 };
 
 class VromfsFile : public File {
-  [[nodiscard]] VromfsFileIndex *asIndex() const {
-    return static_cast<VromfsFileIndex *>(index.get());
-  }
+  [[nodiscard]] VromfsFileIndex *asIndex() const { return static_cast<VromfsFileIndex *>(index.get()); }
 
 public:
   explicit VromfsFile(const std::shared_ptr<FileIndex> &index) : File(index) {
@@ -97,17 +93,13 @@ public:
     vromfsPath = index->getPath().relative_path().parent_path();
   }
 
-  std::span<char> readRaw() override {
-    return {asIndex()->data.data(), asIndex()->data.size()};
-  }
+  std::span<char> readRaw() override { return {asIndex()->data.data(), asIndex()->data.size()}; }
 
   void Save(std::ofstream *cb) override;
 
   bool loadBlk(DataBlock &blk) override;
 
-  const VROMFs *getUnderlyingVromfs() override {
-    return asIndex()->owner;
-  }
+  const VROMFs *getUnderlyingVromfs() override { return asIndex()->owner; }
 
 protected:
   int64_t read_impl(void *ptr, size_t length) override;
@@ -127,7 +119,7 @@ public:
   explicit VROMFs(const std::string &fName, std::shared_ptr<Directory> &dir);
 
   bool parseFileToDatablock(File &file, DataBlock &blk) {
-    //auto data = file.readRaw();
+    // auto data = file.readRaw();
     if (file.getExtension() != ".blk") {
       return false;
     }
@@ -141,21 +133,13 @@ public:
     }
   }
 
-  DBNameMap *getVromfsSharedNameMap() const {
-    return this->nm.get();
-  }
+  DBNameMap *getVromfsSharedNameMap() const { return this->nm.get(); }
 
-  ZSTD_DDict_s *getVromfsBlkDDict() const {
-    return this->dict;
-  }
+  ZSTD_DDict_s *getVromfsBlkDDict() const { return this->dict; }
 
-  const Directory &getDirectory() const {
-    return dir;
-  }
+  const Directory &getDirectory() const { return dir; }
 
-  const std::string &getName() const {
-    return this->fileName;
-  }
+  const std::string &getName() const { return this->fileName; }
 
 protected:
   bool load_raw_vromfs_data(IGenLoad &reader);
@@ -165,7 +149,7 @@ protected:
   std::string fileName;
   VirtualRomFsDataHdr hdr{};
   VirtualRomFsExtHdr extHdr;
-  std::shared_ptr<std::vector<char> > raw_data;
+  std::shared_ptr<std::vector<char>> raw_data;
   unsigned size{};
   Directory dir;
   std::shared_ptr<DBNameMap> nm;
@@ -173,4 +157,4 @@ protected:
 };
 
 
-#endif //MYEXTENSION_VROMFS_H
+#endif // MYEXTENSION_VROMFS_H

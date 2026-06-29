@@ -64,8 +64,7 @@ void unpackTriggers(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from) {
               auto act_blk = bl->getBlock(act_blk_index);
               if (act_blk->getBlockName() == "missionMarkAsRespawnPoint") {
                 if (auto out = act_blk->getStr("loc_name", nullptr)) {
-                  if (strcmp(out, "missions/air_spawn") == 0 && false)
-                  {
+                  if (strcmp(out, "missions/air_spawn") == 0 && false) {
                     std::cout << "REMOVED\n";
                     act_blk->printBlock(0, std::cout);
                     continue;
@@ -108,16 +107,16 @@ void parse(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from, import_data pre
   for (int i = 0; i < blk->blockCount(); i++) {
     auto subBlk = blk->getBlock(i);
     auto subBlk_nid = subBlk->getBlockNameId();
-    //std::cout << subBlk->getBlockName() << "\n";
+    // std::cout << subBlk->getBlockName() << "\n";
     if (subBlk_nid == mission_settingsNid) {
       auto misBlock = subBlk->getBlock("mission", 0);
-      //misBlock->printBlock(4, std::cout);
+      // misBlock->printBlock(4, std::cout);
       continue;
     }
     if (subBlk_nid == importNid) {
 
-      //subBlk->printBlock(4, std::cout);
-      // do nothing this iter
+      // subBlk->printBlock(4, std::cout);
+      //  do nothing this iter
     } else if (subBlk_nid == importAreasNid) {
       if (imp_data.importAreas) {
         auto temp_blk = to->getAddBlock(subBlk->getBlockNameId());
@@ -134,21 +133,20 @@ void parse(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from, import_data pre
               name += 9;
               auto nid = std::stoi(std::string(name));
 
-              //std::cout << name << " : " << nid << "\n";
+              // std::cout << name << " : " << nid << "\n";
               if (nid > max_player_count_per_team)
                 continue;
             }
           }
           temp_blk->addBlock(obj_blk);
-
         }
-        //temp_blk->addBlockInplace(subBlk, false, false); // we dont care about the 'from' blk
+        // temp_blk->addBlockInplace(subBlk, false, false); // we dont care about the 'from' blk
       }
     } else if (subBlk_nid == importTriggersNid) {
       if (imp_data.importTriggers) {
         auto temp_blk = to->getAddBlock(subBlk->getBlockNameId());
         unpackTriggers(temp_blk, subBlk);
-        //temp_blk->addBlockInplace(subBlk, false, false); // we dont care about the 'from' blk
+        // temp_blk->addBlockInplace(subBlk, false, false); // we dont care about the 'from' blk
       }
     } else if (subBlk_nid == importMissionObjectivesNid) {
       if (imp_data.importMissionObjectives) {
@@ -181,7 +179,7 @@ void parse(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from, import_data pre
 
         auto ImportRecordBlk = subBlk->getBlock(z);
         IPoint2 range = ImportRecordBlk->getIPoint2("rankRange", defaultRankRange);
-        //std::cout << range.toString() << "\n";
+        // std::cout << range.toString() << "\n";
         if (rank < range.x || rank > range.y)
           continue;
         G_ASSERT(ImportRecordBlk->getBlockNameId() == importRecordNid);
@@ -202,7 +200,7 @@ void FlattenMissionBlk(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from) {
         auto ImportRecordBlk = block->getBlock(z);
         G_ASSERT(ImportRecordBlk->getBlockNameId() == importRecordNid);
 
-        //ImportRecordBlk->printBlock(4, std::cout);
+        // ImportRecordBlk->printBlock(4, std::cout);
         parse(to, ImportRecordBlk, {});
       }
     } else { // anything that isnt an import gets added to final blk
@@ -216,12 +214,8 @@ void FlattenMissionBlk(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from) {
   }
 }
 
-SharedPtr<DataBlock> CreateFlatBlk(std::string &miss_blk,
-                   int in_rank,
-                   bool addCustomBlock,
-                   bool addCustomScore,
-                   bool addCustomTriggers,
-                   bool addCustomVars) {
+SharedPtr<DataBlock> CreateFlatBlk(std::string &miss_blk, int in_rank, bool addCustomBlock, bool addCustomScore,
+                                   bool addCustomTriggers, bool addCustomVars) {
   ::rank = in_rank;
   SharedPtr<DataBlock> blk = SharedPtr<DataBlock>::make();
   EXCEPTION_IF_FALSE(load(*blk.get(), miss_blk.c_str()), "failed to load mission blk");
@@ -240,10 +234,7 @@ SharedPtr<DataBlock> CreateFlatBlk(std::string &miss_blk,
       std::ifstream file{SettingsBlk};
       EXCEPTION_IF_FALSE(file.is_open(), "failed to open file");
       SharedPtr<DataBlock> _blk = SharedPtr<DataBlock>::make(outBlk->getNameMap());
-      std::vector<char> characters(
-          (std::istreambuf_iterator<char>(file)),
-          std::istreambuf_iterator<char>()
-      );
+      std::vector<char> characters((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
       EXCEPTION_IF_FALSE(_blk->loadText(characters), "Failed to parse CustomBlk");
       mission_blk->addBlockInplace(_blk, false, true);
     }
@@ -252,10 +243,7 @@ SharedPtr<DataBlock> CreateFlatBlk(std::string &miss_blk,
       std::ifstream file{ScoreBlk};
       EXCEPTION_IF_FALSE(file.is_open(), "failed to open file");
       SharedPtr<DataBlock> _blk = SharedPtr<DataBlock>::make(outBlk->getNameMap());
-      std::vector<char> characters(
-          (std::istreambuf_iterator<char>(file)),
-          std::istreambuf_iterator<char>()
-      );
+      std::vector<char> characters((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
       EXCEPTION_IF_FALSE(_blk->loadText(characters), "Failed to parse CustomScoreBlk");
       mission2_blk->addBlockInplace(_blk, false, true);
     }
@@ -263,10 +251,7 @@ SharedPtr<DataBlock> CreateFlatBlk(std::string &miss_blk,
       std::ifstream file{TriggersBlk};
       EXCEPTION_IF_FALSE(file.is_open(), "failed to open file");
       SharedPtr<DataBlock> _blk = SharedPtr<DataBlock>::make(outBlk->getNameMap());
-      std::vector<char> characters(
-          (std::istreambuf_iterator<char>(file)),
-          std::istreambuf_iterator<char>()
-      );
+      std::vector<char> characters((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
       EXCEPTION_IF_FALSE(_blk->loadText(characters), "Failed to parse CustomScoreBlk");
       auto triggers_blk = outBlk->getBlock("triggers", 0);
       for (int b = 0; b < _blk->blockCount(); b++) {
@@ -278,10 +263,7 @@ SharedPtr<DataBlock> CreateFlatBlk(std::string &miss_blk,
       std::ifstream file{VarsBlk};
       EXCEPTION_IF_FALSE(file.is_open(), "failed to open file");
       SharedPtr<DataBlock> _blk = SharedPtr<DataBlock>::make(outBlk->getNameMap());
-      std::vector<char> characters(
-          (std::istreambuf_iterator<char>(file)),
-          std::istreambuf_iterator<char>()
-      );
+      std::vector<char> characters((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
       EXCEPTION_IF_FALSE(_blk->loadText(characters), "Failed to parse CustomVarsBlk");
       auto triggers_blk = outBlk->getBlock("variables", 0);
 
@@ -312,9 +294,9 @@ SharedPtr<DataBlock> CreateFlatBlk(std::string &miss_blk,
 }
 
 int main() {
-  //parsed.emplace("gameData/missions/templates/tank_arcade_streaks_template.blk");
-  //parsed.emplace("gameData/missions/templates/ww_exit_zones.blk");
-  //parsed.emplace("gameData/missions/templates/ww_rearm_zones.blk");
+  // parsed.emplace("gameData/missions/templates/tank_arcade_streaks_template.blk");
+  // parsed.emplace("gameData/missions/templates/ww_exit_zones.blk");
+  // parsed.emplace("gameData/missions/templates/ww_rearm_zones.blk");
   bool addCustomBlock = true;
   bool addCustomScore = false;
   bool addCustomTriggers = true;
@@ -323,25 +305,26 @@ int main() {
   bool disableBomberSpawn = false;
   std::string vromfs_mission_path = "gamedata/missions/cta/tanks/port_novorossiysk/port_novorossiysk_aslt_dom.blk";
   vromfs_mission_path = "gamedata/missions/cta/tanks/tunisia/tunisia_dom.blk";
-  //std::string vromfs_mission_path = "gamedata/missions/cta/tanks/mozdok/mozdok_dom.blk";
-  // AN ERROR HAS OCCURED
+  // std::string vromfs_mission_path = "gamedata/missions/cta/tanks/mozdok/mozdok_dom.blk";
+  //  AN ERROR HAS OCCURED
 #ifdef _TARGET_PC_LINUX
   std::string dump_path = R"(/mnt/d/GoogleDriveWtMission/dumpTest2.blk)";
   std::string p1 = R"(/mnt/d/SteamLibrary/steamapps/common/War Thunder/cache/binary.2.49.0/mis.vromfs.bin)";
 #else
   std::string dump_path = R"(D:/GoogleDriveWtMission/dumpLow.blk)";
   dump_path = "D:/GoogleDriveWtMission/dumpTesting.blk";
-  //std::string p1 = R"(D:\SteamLibrary\steamapps\common\War Thunder\mis.vromfs.bin)";
+  // std::string p1 = R"(D:\SteamLibrary\steamapps\common\War Thunder\mis.vromfs.bin)";
   std::string p1 = R"(D:\SteamLibrary\steamapps\common\War Thunder\mis.vromfs.bin)";
   std::string p2 = "D:\\WarThunderDev\\cache\\binary.2.52.0\\game-dev.vromfs.bin";
 #endif
-  //EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p2), "Ah shit");
+  // EXCEPTION_IF_FALSE(file_mgr.loadVromfs(p2), "Ah shit");
   EXCEPTION_IF_FALSE(file_mgr.mountVromfs(p1), "Ah shit");
   SharedPtr<DataBlock> outBlk = CreateFlatBlk(vromfs_mission_path, 10, false, false, false, false);
   EXCEPTION_IF_FALSE(outBlk, "failed to create flat blk");
-  //outBlk->getBlock("triggers", 0)->getBlock("aslt_check_capture", 0)->getBlock("actions", 0)->getBlock("triggerEnable", 0)->addStr("target", "on_capture_respawn");
-  //outBlk->getBlock("triggers", 0)->getBlock("aslt_spawn_captured", 0)->getBlock("actions", 0)->getBlock("triggerEnable", 0)->addStr("target", "on_capture_respawn");
-  //outBlk->getBlock("variables", 0)->addBool("force_plane_airfield_spawn", true);
+  // outBlk->getBlock("triggers", 0)->getBlock("aslt_check_capture", 0)->getBlock("actions",
+  // 0)->getBlock("triggerEnable", 0)->addStr("target", "on_capture_respawn"); outBlk->getBlock("triggers",
+  // 0)->getBlock("aslt_spawn_captured", 0)->getBlock("actions", 0)->getBlock("triggerEnable", 0)->addStr("target",
+  // "on_capture_respawn"); outBlk->getBlock("variables", 0)->addBool("force_plane_airfield_spawn", true);
 
   std::ostringstream ss;
   std::ofstream out{dump_path};

@@ -29,81 +29,82 @@
 
 
 DEFINE_HANDLE(handle_ecs)
-#define ECS_LOGI(format_, ...) ELOGI(handle_ecs, format_, __VA_ARGS__)
+#define ECS_LOGI(format_, ...)  ELOGI(handle_ecs, format_, __VA_ARGS__)
 #define ECS_LOGD1(format_, ...) ELOGD1(handle_ecs, format_, __VA_ARGS__)
 #define ECS_LOGD2(format_, ...) ELOGD2(handle_ecs, format_, __VA_ARGS__)
 #define ECS_LOGD3(format_, ...) ELOGD3(handle_ecs, format_, __VA_ARGS__)
-#define ECS_LOGE(format_, ...) ELOGE(handle_ecs, format_, __VA_ARGS__)
+#define ECS_LOGE(format_, ...)  ELOGE(handle_ecs, format_, __VA_ARGS__)
 
 DEFINE_HANDLE(handle_ecs_events)
-#define EVENT_LOGI(format_, ...) ELOGI(handle_ecs_events, format_, __VA_ARGS__)
+#define EVENT_LOGI(format_, ...)  ELOGI(handle_ecs_events, format_, __VA_ARGS__)
 #define EVENT_LOGD1(format_, ...) ELOGD1(handle_ecs_events, format_, __VA_ARGS__)
 #define EVENT_LOGD2(format_, ...) ELOGD2(handle_ecs_events, format_, __VA_ARGS__)
 #define EVENT_LOGD3(format_, ...) ELOGD3(handle_ecs_events, format_, __VA_ARGS__)
-#define EVENT_LOGE(format_, ...) ELOGE(handle_ecs_events, format_, __VA_ARGS__)
+#define EVENT_LOGE(format_, ...)  ELOGE(handle_ecs_events, format_, __VA_ARGS__)
 
 DEFINE_HANDLE(handle_ecs_query)
-#define QUERY_LOGI(format_, ...) ELOGI(handle_ecs_query, format_, __VA_ARGS__)
+#define QUERY_LOGI(format_, ...)  ELOGI(handle_ecs_query, format_, __VA_ARGS__)
 #define QUERY_LOGD1(format_, ...) ELOGD1(handle_ecs_query, format_, __VA_ARGS__)
 #define QUERY_LOGD2(format_, ...) ELOGD2(handle_ecs_query, format_, __VA_ARGS__)
 #define QUERY_LOGD3(format_, ...) ELOGD3(handle_ecs_query, format_, __VA_ARGS__)
-#define QUERY_LOGE(format_, ...) ELOGE(handle_ecs_query, format_, __VA_ARGS__)
+#define QUERY_LOGE(format_, ...)  ELOGE(handle_ecs_query, format_, __VA_ARGS__)
 
 DEFINE_HANDLE(handle_entity)
-#define ENTITY_LOGI(format_, ...) ELOGI(handle_entity, format_, __VA_ARGS__)
+#define ENTITY_LOGI(format_, ...)  ELOGI(handle_entity, format_, __VA_ARGS__)
 #define ENTITY_LOGD1(format_, ...) ELOGD1(handle_entity, format_, __VA_ARGS__)
 #define ENTITY_LOGD2(format_, ...) ELOGD2(handle_entity, format_, __VA_ARGS__)
 #define ENTITY_LOGD3(format_, ...) ELOGD3(handle_entity, format_, __VA_ARGS__)
-#define ENTITY_LOGE(format_, ...) ELOGE(handle_entity, format_, __VA_ARGS__)
+#define ENTITY_LOGE(format_, ...)  ELOGE(handle_entity, format_, __VA_ARGS__)
 
 class PyGState; // for python bindings
 struct ParserState;
 extern volatile size_t framework_primary_pulls;
 
 
-namespace dag
-{
-  template <typename Key, typename T, typename Compare = eastl::less<Key>>
+namespace dag {
+  template<typename Key, typename T, typename Compare = eastl::less<Key>>
   using VectorMap = eastl::vector_map<Key, T, Compare>;
 
-  template <typename Key, typename Compare = eastl::less<Key>>
+  template<typename Key, typename Compare = eastl::less<Key>>
   using VectorSet = eastl::vector_set<Key, Compare>;
-}
+} // namespace dag
 
 namespace ecs {
   class GState;
 
-  typedef void (*after_components_cb)(GState * state);
+  typedef void (*after_components_cb)(GState *state);
   extern OnDemandInit<std::vector<after_components_cb>> after_comps_callbacks;
   class GState {
     ComponentTypes componentTypes{};
     DataComponents dataComponents{};
     TemplateDB templates{};
     Archetypes archetypes{};
+
   public:
-    DataBlock wp_cost{}; // I don't feel like implementing blk caching, and this is the most central object. loaded in init.cpp
+    DataBlock
+      wp_cost{}; // I don't feel like implementing blk caching, and this is the most central object. loaded in init.cpp
     GState() { Init(); }
 
-    void printCurrentMemoryUsage(int indent=0) {
+    void printCurrentMemoryUsage(int indent = 0) {
       std::string indent_str{};
 
       indent_str.resize(indent, ' ');
       ECS_LOGI("{}Global State (GState) Memory Usage", indent_str);
-      indent_str.resize(indent+2, ' ');
-      auto component_types_size = this->componentTypes.printMemoryUsage(indent+2);
+      indent_str.resize(indent + 2, ' ');
+      auto component_types_size = this->componentTypes.printMemoryUsage(indent + 2);
       ECS_LOGI("{}Combined Size: {}", indent_str, component_types_size);
-      auto datacomponent_types_size = this->dataComponents.printMemoryUsage(indent+2);
+      auto datacomponent_types_size = this->dataComponents.printMemoryUsage(indent + 2);
       ECS_LOGI("{}Combined Size: {}", indent_str, datacomponent_types_size);
-      auto templates_size = this->templates.printMemoryUsage(indent+2);
+      auto templates_size = this->templates.printMemoryUsage(indent + 2);
       ECS_LOGI("{}Combined Size: {}", indent_str, templates_size);
-      ECS_LOGI("{}Overall Size: {}", indent_str, component_types_size+datacomponent_types_size+templates_size);
+      ECS_LOGI("{}Overall Size: {}", indent_str, component_types_size + datacomponent_types_size + templates_size);
     }
 
     void Init() {
       this->componentTypes.initialize();
       dataComponents.initialize(componentTypes);
       parseTemplates();
-      for(auto &c : *after_comps_callbacks) {
+      for (auto &c: *after_comps_callbacks) {
         c(this);
       }
       std::vector<ecs::ComponentTemplInfo> t_comps{};
@@ -117,35 +118,25 @@ namespace ecs {
       resetEsOrder();
     }
 
-    [[nodiscard]] const ComponentTypes *getComponentTypes() const {
-      return &componentTypes;
-    }
+    [[nodiscard]] const ComponentTypes *getComponentTypes() const { return &componentTypes; }
 
-    [[nodiscard]] ComponentTypes *getComponentTypes() {
-      return &componentTypes;
-    }
+    [[nodiscard]] ComponentTypes *getComponentTypes() { return &componentTypes; }
 
-    [[nodiscard]] const DataComponents *getDataComponents() const {
-      return &dataComponents;
-    }
+    [[nodiscard]] const DataComponents *getDataComponents() const { return &dataComponents; }
 
-    [[nodiscard]] DataComponents *getDataComponents() {
-      return &dataComponents;
-    }
+    [[nodiscard]] DataComponents *getDataComponents() { return &dataComponents; }
 
-    TemplateDB *getTemplateDB() {
-      return &templates;
-    }
+    TemplateDB *getTemplateDB() { return &templates; }
 
-    // because of how the persistent state works, an archetype can exist in GState that has actually not been created in the EntityManager
-    // because that specific archetype was only needed for a previous replay
-    // this is always called within the mutex already, so need for the shared lock
+    // because of how the persistent state works, an archetype can exist in GState that has actually not been created in
+    // the EntityManager because that specific archetype was only needed for a previous replay this is always called
+    // within the mutex already, so need for the shared lock
     inline void ensureArchetypeInStorage(archetype_t arch_index, MgrArchetypeStorage &storage) {
       this->archetypes.createArchetype(arch_index, storage);
     }
 
-    // checks if a state has an archetype index. in most long term parses, the GState will have more archetypes than the ParserState,
-    // so this is needed to not query an archetype data that doesn't exist in a ParserState
+    // checks if a state has an archetype index. in most long term parses, the GState will have more archetypes than the
+    // ParserState, so this is needed to not query an archetype data that doesn't exist in a ParserState
     inline bool doesArchetypeExist(archetype_t arch_index, MgrArchetypeStorage &storage) {
       return this->archetypes.archetypeExists(arch_index, storage);
     }
@@ -154,7 +145,8 @@ namespace ecs {
     // assumes InstTemplate has already been created
     // will create archetype in GState and in storage if not exists
     archetype_t EnsureArchetype(template_t tid, MgrArchetypeStorage &storage) {
-      InstantiatedTemplate *inst = this->templates.getInstTemplate(tid);;
+      InstantiatedTemplate *inst = this->templates.getInstTemplate(tid);
+      ;
 
 
       // Step 2: Check if archetype needs to be created
@@ -166,13 +158,9 @@ namespace ecs {
         // Double-check after acquiring lock
         arch_index = inst->archetype_index;
         if (arch_index == INVALID_ARCHETYPE) {
-          arch_index = this->archetypes.createArchetype(
-              inst->component_indexes.data(),
-              (uint32_t) inst->component_indexes.size(),
-              this->dataComponents,
-              this->componentTypes,
-              tid
-          );
+          arch_index =
+            this->archetypes.createArchetype(inst->component_indexes.data(), (uint32_t) inst->component_indexes.size(),
+                                             this->dataComponents, this->componentTypes, tid);
 
           inst->archetype_index = arch_index;
           updateAllQueries();
@@ -187,21 +175,20 @@ namespace ecs {
     }
 
 
-    inline component_index_t
-    createComponent(const HashedConstString name, type_index_t component_type, ComponentSerializer *io) {
+    inline component_index_t createComponent(const HashedConstString name, type_index_t component_type,
+                                             ComponentSerializer *io) {
       return this->dataComponents.createComponent(name, component_type, io, this->componentTypes);
     }
 
     std::string_view getTemplateName(template_t tid) {
       std::shared_lock lk(this->templates.template_mtx);
       auto templ = this->templates.getTemplateNoLock(tid);
-      if (templ) return templ->getName();
+      if (templ)
+        return templ->getName();
       return "";
     }
 
-    template_t getTemplateIdByName(std::string_view name) {
-      return this->templates.getTemplateIdByName(name);
-    }
+    template_t getTemplateIdByName(std::string_view name) { return this->templates.getTemplateIdByName(name); }
 
     void sendEventImmediate(EntityId eid, Event &evt, EntityManager &mgr);
 
@@ -209,6 +196,7 @@ namespace ecs {
 
     friend Component;
     friend InstantiatedTemplate;
+
   protected:
     void notifyESEventHandlers(EntityId eid, const Event &evt, EntityManager &mgr);
 
@@ -234,19 +222,22 @@ namespace ecs {
     // don't fucking ask me to fully explain why this is like this I don't fucking know
     // the reason all these comments say SOA is probably because you could also just make one big struct per query
     // so instead they made multiple vectors for each subsection of query
-    //I am going to try to offload as much of this as I can to g_data_mgr to prevent a need to reparse every single state creation
-    std::vector<CopyQueryDesc> queryDescs;   // SoA, not empty ONLY if resolvedQueries is not resolved fully
-    // a list of references to a specific QueryId, basically overcomplicated std::shared_ptr managed on the EntityManager level
+    // I am going to try to offload as much of this as I can to g_data_mgr to prevent a need to reparse every single
+    // state creation
+    std::vector<CopyQueryDesc> queryDescs; // SoA, not empty ONLY if resolvedQueries is not resolved fully
+    // a list of references to a specific QueryId, basically overcomplicated std::shared_ptr managed on the
+    // EntityManager level
     std::vector<uint16_t> queriesReferences; // SoA, reference count of ecs_query_handles
     std::vector<uint8_t> queriesGenerations; // SoA, generation in ecs_query_handles. Sanity check.
     uint32_t freeQueriesCount = 0; // keeps count of available query slots within queriesReferences
-    std::unordered_map<query_components_hash, QueryId> queryMap; // used with query hashing to see if a query already exists
+    std::unordered_map<query_components_hash, QueryId>
+      queryMap; // used with query hashing to see if a query already exists
     std::vector<ResolvedQueryDesc> resolvedQueries;
     archetype_t allQueriesUpdatedToArch = 0;
     uint32_t lastQueriesResolvedComponents = 0;
     typedef uint32_t status_word_type_t;
     static constexpr status_word_type_t status_words_shift = get_const_log2(sizeof(status_word_type_t) * 4),
-        status_words_mask = (1 << status_words_shift) - 1;
+                                        status_words_mask = (1 << status_words_shift) - 1;
     // this stores ResolvedStatus with two bits in a vector, so does some funny bit packing
     std::vector<status_word_type_t> resolvedQueryStatus; // SoA, two-bit vector
     // SoA for QueryId
@@ -262,14 +253,18 @@ namespace ecs {
       size_t operator()(const QueryId &h) const { return wyhash64(uint32_t(h), 1); }
     };
 
-    // maps all Events to what query they use, basically reverse of esList, es_index_type indexes into esListQueries and esList
+    // maps all Events to what query they use, basically reverse of esList, es_index_type indexes into esListQueries and
+    // esList
     std::unordered_map<QueryId, std::vector<es_index_type>, QueryHasher> queryToEsMap;
-    std::vector<ArchetypesQuery> archetypeQueries; // SoA, we need to update ArchetypesQuery from ResolvedQueryDesc again, if we add new
+    std::vector<ArchetypesQuery>
+      archetypeQueries; // SoA, we need to update ArchetypesQuery from ResolvedQueryDesc again, if we add new
     // archetype
-    std::vector<ArchetypesEidQuery> archetypeEidQueries; // SoA, we need to update ArchetypesQuery from ResolvedQueryDesc again, if we add
+    std::vector<ArchetypesEidQuery>
+      archetypeEidQueries; // SoA, we need to update ArchetypesQuery from ResolvedQueryDesc again, if we add
     // new archetype
     std::vector<uint16_t> archComponentsSizeContainers;
-    std::unordered_map<event_type_t, std::vector<es_index_type>> esEvents; // maps all the events to what EntitySystems use it
+    std::unordered_map<event_type_t, std::vector<es_index_type>>
+      esEvents; // maps all the events to what EntitySystems use it
     bool updateAllQueries() // lock is done during only access that needs mutex
     {
       if (DAGOR_LIKELY(allQueriesUpdatedToArch == this->archetypes.size()))
@@ -333,7 +328,7 @@ namespace ecs {
 
     bool isQueryValid(QueryId id) const {
       bool ret = isQueryValidGen(id);
-          G_FAST_ASSERT(!ret || queriesReferences[id.index()]);
+      G_FAST_ASSERT(!ret || queriesReferences[id.index()]);
       return ret;
     }
 
@@ -346,11 +341,12 @@ namespace ecs {
 
     void callESEvent(es_index_type esIndex, const Event &evt, QueryView &qv, EntityManager &mgr);
 
-    void performQueryEmptyAllowed(QueryId h, const EventFuncType& fun, const Event &evt, EntityManager &mgr);
+    void performQueryEmptyAllowed(QueryId h, const EventFuncType &fun, const Event &evt, EntityManager &mgr);
 
     void performQueryES(QueryId h, const EventFuncType &fun, const Event &__restrict evt, EntityManager &mgr);
 
-    QueryCbResult performQueryStoppable(EntityManager &mgr, QueryId h, const stoppable_query_cb_t &fun, void *user_data);
+    QueryCbResult performQueryStoppable(EntityManager &mgr, QueryId h, const stoppable_query_cb_t &fun,
+                                        void *user_data);
 
     void performQuery(EntityManager &mgr, QueryId h, const query_cb_t &fun, void *user_data);
 
@@ -361,14 +357,14 @@ namespace ecs {
   extern OnDemandInit<GState> g_ecs_data;
 
 
-
-
   class EntityCreatedAction : public RewindAction {
     EntityId before{}; // holds entity while destroyed
     EntityId after{}; // holds entity while created
     friend EntityManager;
+
   public:
-    EntityCreatedAction(const uint32_t time_ms, const EntityId before, const EntityId after) : RewindAction(time_ms), before(before), after(after) {}
+    EntityCreatedAction(const uint32_t time_ms, const EntityId before, const EntityId after) :
+      RewindAction(time_ms), before(before), after(after) {}
     ~EntityCreatedAction() override = default;
     void forward(EntityManager &mgr) override;
     void backward(EntityManager &mgr) override;
@@ -378,8 +374,10 @@ namespace ecs {
     EntityId before{}; // holds entity while destroyed
     EntityId after{}; // holds entity while created
     friend EntityManager;
+
   public:
-    EntityDestroyedAction(const uint32_t time_ms, const EntityId before, const EntityId after) : RewindAction(time_ms), before(before), after(after) {}
+    EntityDestroyedAction(const uint32_t time_ms, const EntityId before, const EntityId after) :
+      RewindAction(time_ms), before(before), after(after) {}
     ~EntityDestroyedAction() override = default;
     void forward(EntityManager &mgr) override;
     void backward(EntityManager &mgr) override;
@@ -389,21 +387,25 @@ namespace ecs {
   // when action is in fastforward mode, it holds a reference to the old version of the component
   // when action is in rewind mode, it holds a reference to new version of the component
   // we don't want to hold a reference to the entity ptr, as we want to allow an entity to be recreated at any time
-  // and a recreation action now no longer guarantees the entity will be in the same location (even if the recreation was reversed)
+  // and a recreation action now no longer guarantees the entity will be in the same location (even if the recreation
+  // was reversed)
   class ComponentUpdateAction : public RewindAction {
-    void * ptr=nullptr; // better to store it as a ptr so we don't make MAX_ACTION_SIZE too large
+    void *ptr = nullptr; // better to store it as a ptr so we don't make MAX_ACTION_SIZE too large
     EntityId eid; // entity that received replicated component
     ecs::component_index_t cidx; // component index of replicated component
   public:
-    ComponentUpdateAction(const uint32_t time_ms, void *ptr, EntityId eid, ecs::component_index_t cidx) : RewindAction(time_ms), ptr(ptr), eid(eid), cidx(cidx) {}
+    ComponentUpdateAction(const uint32_t time_ms, void *ptr, EntityId eid, ecs::component_index_t cidx) :
+      RewindAction(time_ms), ptr(ptr), eid(eid), cidx(cidx) {}
     // should only be called on emgr destruction
     ~ComponentUpdateAction() override;
     void forward(EntityManager &mgr) override;
     void backward(EntityManager &mgr) override;
   };
 
-  constexpr size_t MAX_ACTION_SIZE = std::max(sizeof(ComponentUpdateAction), std::max(sizeof(EntityCreatedAction), sizeof(EntityDestroyedAction))); // basically useless but hehehe
-  using ACTION_ARRAY_CONTAINER =  std::array<uint8_t, MAX_ACTION_SIZE>;
+  constexpr size_t MAX_ACTION_SIZE =
+    std::max(sizeof(ComponentUpdateAction),
+             std::max(sizeof(EntityCreatedAction), sizeof(EntityDestroyedAction))); // basically useless but hehehe
+  using ACTION_ARRAY_CONTAINER = std::array<uint8_t, MAX_ACTION_SIZE>;
 
 
   class ECSRewindManager : public RewindMgr<ECSRewindManager, ACTION_ARRAY_CONTAINER> {
@@ -420,32 +422,33 @@ namespace ecs {
       auto action = reinterpret_cast<RewindAction *>(data.data.data());
       action->backward(*mgr);
     }
+
   public:
     ~ECSRewindManager() {
-        for (auto &obj: this->timeStates) {
-          auto action = reinterpret_cast<RewindAction *>(obj.data.data());
-          action->~RewindAction();
-        }
+      for (auto &obj: this->timeStates) {
+        auto action = reinterpret_cast<RewindAction *>(obj.data.data());
+        action->~RewindAction();
+      }
     }
 
     uint32_t createCreationAction(uint32_t time_ms, EntityId invalid_storage, EntityId valid_storage) {
       G_STATIC_ASSERT(sizeof(EntityCreatedAction) <= MAX_ACTION_SIZE);
       auto &base = this->emplaceNew(time_ms);
-      new(base.data.data()) EntityCreatedAction(time_ms, invalid_storage, valid_storage);
+      new (base.data.data()) EntityCreatedAction(time_ms, invalid_storage, valid_storage);
       return this->timeStates.size() - 1;
     }
 
     uint32_t createDestroyAction(uint32_t time_ms, EntityId invalid_storage, EntityId valid_storage) {
       G_STATIC_ASSERT(sizeof(EntityDestroyedAction) <= MAX_ACTION_SIZE);
       auto &base = this->emplaceNew(time_ms);
-      new(base.data.data()) EntityDestroyedAction(time_ms, invalid_storage, valid_storage);
+      new (base.data.data()) EntityDestroyedAction(time_ms, invalid_storage, valid_storage);
       return this->timeStates.size() - 1;
     }
 
     uint32_t createComponentUpdateAction(uint32_t time_ms, void *ptr, EntityId eid, ecs::component_index_t cidx) {
       auto &base = this->emplaceNew(time_ms);
       G_STATIC_ASSERT(sizeof(ComponentUpdateAction) <= MAX_ACTION_SIZE);
-      new(base.data.data()) ComponentUpdateAction(time_ms, ptr, eid, cidx);
+      new (base.data.data()) ComponentUpdateAction(time_ms, ptr, eid, cidx);
       return this->timeStates.size() - 1;
     }
   };
@@ -455,15 +458,15 @@ namespace ecs {
     std::vector<ACTION_ARRAY_CONTAINER> actions;
     int curr_index{};
 
-    inline RewindAction * getAction(uint32_t index) {
+    inline RewindAction *getAction(uint32_t index) {
       auto &base = actions[index];
-      return reinterpret_cast<RewindAction*>(base.data());
+      return reinterpret_cast<RewindAction *>(base.data());
     }
 
     inline uint32_t getTime(int index) {
       if (index < 0)
         return 0;
-      if (index >= (int)actions.size())
+      if (index >= (int) actions.size())
         return 0xFFFFFFFF;
       auto action = getAction(index);
       return action->time_ms;
@@ -471,39 +474,36 @@ namespace ecs {
 
     friend EntityManager;
     friend net::Connection;
-    RewindManager() {
-      actions.reserve(1000);
-    }
+    RewindManager() { actions.reserve(1000); }
     uint32_t createCreationAction(uint32_t time_ms, EntityId invalid_storage, EntityId valid_storage) {
-      uint32_t action_idx = (uint32_t)actions.size();
-  actions.emplace_back();
+      uint32_t action_idx = (uint32_t) actions.size();
+      actions.emplace_back();
       G_STATIC_ASSERT(sizeof(EntityCreatedAction) <= MAX_ACTION_SIZE);
       auto &base = actions.back();
       new (base.data()) EntityCreatedAction(time_ms, invalid_storage, valid_storage);
-      curr_index = (uint32_t)actions.size();
+      curr_index = (uint32_t) actions.size();
       return action_idx;
     }
 
     uint32_t createDestroyAction(uint32_t time_ms, EntityId invalid_storage, EntityId valid_storage) {
-      uint32_t action_idx = (uint32_t)actions.size();
-  actions.emplace_back();
+      uint32_t action_idx = (uint32_t) actions.size();
+      actions.emplace_back();
       auto &base = actions.back();
       G_STATIC_ASSERT(sizeof(EntityDestroyedAction) <= MAX_ACTION_SIZE);
       new (base.data()) EntityDestroyedAction(time_ms, invalid_storage, valid_storage);
-      curr_index = (uint32_t)actions.size();
+      curr_index = (uint32_t) actions.size();
       return action_idx;
     }
 
     uint32_t createComponentUpdateAction(uint32_t time_ms, void *ptr, EntityId eid, ecs::component_index_t cidx) {
-      uint32_t action_idx = (uint32_t)actions.size();
+      uint32_t action_idx = (uint32_t) actions.size();
       actions.emplace_back();
       auto &base = actions.back();
       G_STATIC_ASSERT(sizeof(ComponentUpdateAction) <= MAX_ACTION_SIZE);
       new (base.data()) ComponentUpdateAction(time_ms, ptr, eid, cidx);
-      curr_index = (uint32_t)actions.size();
+      curr_index = (uint32_t) actions.size();
       return action_idx;
     }
-
 
 
     void rewindTo(uint32_t, EntityManager &mgr);
@@ -518,23 +518,24 @@ namespace ecs {
     // our deque of freed indices
     // if we are client, we do not push freed indices that are in RESERVED_EID_RANGE
     std::deque<ecs::entity_id_t> freeIndices, freeIndicesReserved;
-    ecs::entity_id_t nextReservedIndex=0;
+    ecs::entity_id_t nextReservedIndex = 0;
 
     std::unordered_map<EntityId, uint32_t> eidToEventCreationMap;
 
     void swap_desc(EntityId e1, EntityId e2);
     friend net::Connection;
+
   public:
     EntityManager &operator=(EntityManager &&) = delete;
 
     EntityManager &operator=(EntityManager &) = delete;
 
-    ParserState * owned_by=nullptr;
-    uint32_t * curr_time_ms;
-    uint32_t * curr_rewind_time_ms;
+    ParserState *owned_by = nullptr;
+    uint32_t *curr_time_ms;
+    uint32_t *curr_rewind_time_ms;
     // for ease of access
 
-    explicit EntityManager(ParserState*owned_by);
+    explicit EntityManager(ParserState *owned_by);
 
     ~EntityManager();
 
@@ -559,19 +560,19 @@ namespace ecs {
       auto cidx = this->data_state->dataComponents.getIndex(component.hash);
       if (cidx == INVALID_COMPONENT_INDEX)
         return nullptr;
-      //auto comp = this->data_state->dataComponents.getDataComponent(cidx);
+      // auto comp = this->data_state->dataComponents.getDataComponent(cidx);
       archetype_t arch = INVALID_ARCHETYPE;
       return this->getNullableUnsafe(eid, cidx, arch);
     }
 
     template<class T>
     inline T *getNullable(EntityId eid, HashedConstString component) {
-      return (T*)this->getNullable(eid, component);
+      return (T *) this->getNullable(eid, component);
     }
 
     // only to be used if your using the mgr for other projects. replay parsing must be set to false (default)
     inline void setEidsReservationMode(bool on) {
-      G_ASSERTF(nextReservedIndex==0, "{} must be called before entity creation", __FUNCTION__);
+      G_ASSERTF(nextReservedIndex == 0, "{} must be called before entity creation", __FUNCTION__);
       eidsReservationMode = on;
     }
 
@@ -584,16 +585,16 @@ namespace ecs {
 
     EntityId createEntity(EntityId eid, template_t templId, ComponentsInitializer &&initializer);
 
-    bool destroyEntity(EntityId eid, bool is_dtor=false, bool force_destroy=false);
+    bool destroyEntity(EntityId eid, bool is_dtor = false, bool force_destroy = false);
 
-    ComponentRef getComponentRef(EntityId eid, archetype_component_id cid) const;   // cid is 0.. till getNumComponents
+    ComponentRef getComponentRef(EntityId eid, archetype_component_id cid) const; // cid is 0.. till getNumComponents
     ComponentRef getComponentRefCidx(EntityId eid, component_index_t cidx) const;
 
     inline bool getEntityArchetype(EntityId eid, int &idx, archetype_t &archetype) const;
 
     int getNumComponents(EntityId eid) const;
 
-    void collectComponentInfo(EntityId eid, std::vector<std::pair<ComponentInfo*, DataComponent*>> &comps);
+    void collectComponentInfo(EntityId eid, std::vector<std::pair<ComponentInfo *, DataComponent *>> &comps);
 
     std::string_view getEntityTemplateName(EntityId &eid) {
       template_t t = getEntityTemplateId(eid);
@@ -606,7 +607,7 @@ namespace ecs {
 
     void debugPrintEntities();
 
-    EntityId allocateOneEid(int16_t generation=-1);
+    EntityId allocateOneEid(int16_t generation = -1);
 
     void sendEventImmediate(EntityId eid, Event &evt);
 
@@ -618,14 +619,15 @@ namespace ecs {
 
     void add_sub_template(ecs::EntityId eid, const std::string &sub_template);
 
-    inline QueryCbResult performQueryStoppable(QueryId h, const stoppable_query_cb_t &fun, void *user_data)
-    {return this->data_state->performQueryStoppable(*this, h, fun, user_data);}
-
-    inline void performQuery(QueryId h, const query_cb_t &fun, void *user_data)
-    {return this->data_state->performQuery(*this, h, fun, user_data);
+    inline QueryCbResult performQueryStoppable(QueryId h, const stoppable_query_cb_t &fun, void *user_data) {
+      return this->data_state->performQueryStoppable(*this, h, fun, user_data);
     }
 
-    void rewindTo(uint32_t time) { rewindManager.rewindTo(time, this);}
+    inline void performQuery(QueryId h, const query_cb_t &fun, void *user_data) {
+      return this->data_state->performQuery(*this, h, fun, user_data);
+    }
+
+    void rewindTo(uint32_t time) { rewindManager.rewindTo(time, this); }
 
   protected:
     friend Component;
@@ -641,8 +643,7 @@ namespace ecs {
     MgrArchetypeStorage arch_data; // EntityManager now only owns raw entity storage
 
     ECSRewindManager rewindManager; // needs to be the first thing destroyed
-
   };
-}
+} // namespace ecs
 
 void iterate_all_units(ParserState &state);

@@ -21,8 +21,7 @@
 ///@note call order for writing is <Write Placeholders> <Write Body> <writeFieldsSize()>
 ///      and reverse for reading <readFieldsSizeAndFlag()> <Read Body>
 ///
-class IdFieldSerializer32
-{
+class IdFieldSerializer32 {
   static const uint8_t MAX_FIELDS_NUM = 32;
 
 public:
@@ -52,8 +51,7 @@ private:
 ///      and reverse for reading <readFieldsSizeAndCount()> [readFieldsIndex()] <Read Body>
 ///      [] brackets mean optional
 ///
-class IdFieldSerializer255
-{
+class IdFieldSerializer255 {
   static const int BITS_PER_COUNT = 12;
   static const int BIT_MASK_COUNT = (1 << BITS_PER_COUNT) - 1;
 
@@ -61,7 +59,7 @@ public:
   typedef uint16_t Id;
   typedef Id Index;
   static const Index MAX_FIELDS_NUM = 255;
-    static_assert(MAX_FIELDS_NUM < (1 << BITS_PER_COUNT)); // 12 bits for count and 4 for size of id in bits
+  static_assert(MAX_FIELDS_NUM < (1 << BITS_PER_COUNT)); // 12 bits for count and 4 for size of id in bits
 
   IdFieldSerializer255();
   IdFieldSerializer255(const IdFieldSerializer255 &other) = delete;

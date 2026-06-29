@@ -24,7 +24,7 @@ set_target_properties(WtFileUtils PROPERTIES
 # On Windows, make sure the output file ends with `.pyd`
 if (WIN32)
     set_target_properties(WtFileUtils PROPERTIES SUFFIX ".pyd")
-endif()
+endif ()
 # target_link_options(WtFileUtils PRIVATE
 #         -static-libgcc
 #         -static-libstdc++

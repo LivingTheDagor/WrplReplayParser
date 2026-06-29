@@ -13,28 +13,30 @@ namespace ecs {
   archetype_t Archetypes::createArchetype(const component_index_t *__restrict components, uint32_t components_cnt,
                                           DataComponents &dataComponents, ComponentTypes &componentTypes,
                                           template_t parent_template) {
-    //TODO: add support for findArchetype, only plan to do it if we 1: plan to use east::tuple_vector or make our own, what it does makes that much easier
+    // TODO: add support for findArchetype, only plan to do it if we 1: plan to use east::tuple_vector or make our own,
+    // what it does makes that much easier
     uint32_t entitySize = 0;
     const uint32_t componentsAt = (uint32_t) archetypeComponents.size();
     archetypeComponents.resize(componentsAt + components_cnt);
 
     for (int i = 0; i < components_cnt; i++) {
-      //TODO: when tuple vector, update this to be like gaijn, fucking memcpy
+      // TODO: when tuple vector, update this to be like gaijn, fucking memcpy
       archetypeComponents[componentsAt + i].INDEX = components[i];
     }
-    //std::unique_ptr<uint16_t[]> initialComponentDataOffset(new uint16_t[components_cnt]);
+    // std::unique_ptr<uint16_t[]> initialComponentDataOffset(new uint16_t[components_cnt]);
 
     // populates archetypeComponents
     for (archetype_component_id i = 0; i < components_cnt; ++i) {
       auto x = components[i];
       const auto typeIndex = dataComponents.getDataComponent(x)->componentIndex;
       const auto type = componentTypes.getComponentData(typeIndex);
-      //uint32_t true_size = calculate_true_size(type->size); // this ensures larger structs are stored optimally
-      uint32_t true_size = type->size; // The builtin compiler padding does the exact same as my padding lmao (im stupid)
+      // uint32_t true_size = calculate_true_size(type->size); // this ensures larger structs are stored optimally
+      uint32_t true_size =
+        type->size; // The builtin compiler padding does the exact same as my padding lmao (im stupid)
 
-      //LOG("Calculated true size; original size: {}; new size: {}", type->size, true_size);
-      //if(type->size != true_size)
-      //  LOG("DIFFEREEEEENT");
+      // LOG("Calculated true size; original size: {}; new size: {}", type->size, true_size);
+      // if(type->size != true_size)
+      //   LOG("DIFFEREEEEENT");
       if (uint32_t offset = entitySize % 4) // if offset is > 0, then we arnt alligned to 4 bytes
       {
         // components smaller than 4 bytes we dont care about alligned storage
@@ -56,8 +58,9 @@ namespace ecs {
     ArchetypeInfo info;
     if (components_cnt > 1) // should always have an entity_id component, which is why >1 and not >0
     {
-      component_index_t firstNonEidIndex = components[1], lastIndex = components[components_cnt -
-                                                                                 1]; // this assumes components is sorted least to greatest
+      component_index_t firstNonEidIndex = components[1],
+                        lastIndex =
+                          components[components_cnt - 1]; // this assumes components is sorted least to greatest
       // also assumes that components[0] == eid
       uint32_t indicesCount = lastIndex - firstNonEidIndex + 1;
       std::unique_ptr<uint16_t[]> indicesMap(new uint16_t[indicesCount]);

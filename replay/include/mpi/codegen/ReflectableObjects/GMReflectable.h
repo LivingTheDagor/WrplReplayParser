@@ -3,10 +3,9 @@
 
 class GMReflectable : public BaseExtReflectable {
 public:
-    DECL_REFLECTION(GMReflectable, BaseExtReflectable)
+  DECL_REFLECTION(GMReflectable, BaseExtReflectable)
 
-    GMReflectable() : BaseExtReflectable() {
-    }
+  GMReflectable() : BaseExtReflectable() {}
 };
 
 ECS_DECLARE_CREATABLE_TYPE(GMReflectable);

@@ -13,23 +13,21 @@ extern "C" {
 #include "consts.h"
 #include "ecs/typesAndLimits.h"
 #include "network/Connection.h"
-//#include "network/message.h"
+// #include "network/message.h"
 #ifdef _ECS_CODEGEN
 struct ENetPeer {};
 #else
 #include "enet/enet.h"
 #endif
 DEFINE_HANDLE(handle_cnet)
-#define CNET_LOGI(format_, ...) ELOGI(handle_cnet, format_, __VA_ARGS__)
+#define CNET_LOGI(format_, ...)  ELOGI(handle_cnet, format_, __VA_ARGS__)
 #define CNET_LOGD1(format_, ...) ELOGD1(handle_cnet, format_, __VA_ARGS__)
 #define CNET_LOGD2(format_, ...) ELOGD2(handle_cnet, format_, __VA_ARGS__)
 #define CNET_LOGD3(format_, ...) ELOGD3(handle_cnet, format_, __VA_ARGS__)
-#define CNET_LOGE(format_, ...) ELOGE(handle_cnet, format_, __VA_ARGS__)
+#define CNET_LOGE(format_, ...)  ELOGE(handle_cnet, format_, __VA_ARGS__)
 
-namespace net
-{
-  enum
-  {
+namespace net {
+  enum {
     ID_ENTITY_MSG = 32,
     ID_ENTITY_MSG_COMPRESSED,
     ID_ENTITY_REPLICATION, // from server - state sync, from client - acks for state sync
@@ -39,22 +37,22 @@ namespace net
     ID_ENTITY_DESTRUCTION
   };
 
-  class CNetwork
-  {
+  class CNetwork {
   public:
     CNetwork(ParserState *state);
 
     void onPacket(ReplayPacket *pkt, int cur_time_ms);
-    void setPeer(ENetPeer * peer_) {this->peer = peer_;}
-    void clearPeer() {this->peer = nullptr;}
+    void setPeer(ENetPeer *peer_) { this->peer = peer_; }
+    void clearPeer() { this->peer = nullptr; }
+
   protected:
     Connection conn;
     ParserState *state;
-    ENetPeer * peer= nullptr; // only used for networking
+    ENetPeer *peer = nullptr; // only used for networking
   };
-} // net
+} // namespace net
 
 void force_link_cnet();
 
 
-#endif //MYEXTENSION_CNETWORK_H
+#endif // MYEXTENSION_CNETWORK_H

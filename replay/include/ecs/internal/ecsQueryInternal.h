@@ -15,9 +15,9 @@ namespace ecs {
   {
     typedef uint8_t required_components_count_t;
     // one fixed_vector + ranges. is more cache friendly
-    // struct Range { uint16_t start = 0, cnt = 0; bool isInside(uint16_t a) const{return a>=start && a - start < cnt;}};
-    struct Range
-    {
+    // struct Range { uint16_t start = 0, cnt = 0; bool isInside(uint16_t a) const{return a>=start && a - start <
+    // cnt;}};
+    struct Range {
       uint16_t start, cnt;
       [[nodiscard]] bool isInside(uint16_t a) const { return a >= start && a - start < cnt; }
     };
@@ -25,18 +25,17 @@ namespace ecs {
     typedef dag::RelocatableFixedVector<component_index_t, 7, true, MidmemAlloc, uint16_t> components_vec_t;
 
   private:
-    struct Data
-    {
+    struct Data {
       required_components_count_t requiredComponentsCnt;
       uint8_t rwCnt, roCnt, rqCnt;
     };
-    union
-    {
+    union {
       Data data;
       uint64_t ranges = 0;
     };
     OptionalMask optionalMask;
-    components_vec_t components; // descriptors of components that this ES needs. can and should be replaced with uint16_t start, count;
+    components_vec_t components; // descriptors of components that this ES needs. can and should be replaced with
+                                 // uint16_t start, count;
   public:
     required_components_count_t requiredComponentsCount() const { return data.requiredComponentsCnt; }
     void setRequiredComponentsCount(required_components_count_t s) { data.requiredComponentsCnt = s; }
@@ -57,15 +56,13 @@ namespace ecs {
     uint8_t &getRqCnt() { return data.rqCnt; }
     uint8_t &getRwCnt() { return data.rwCnt; }
     uint8_t &getRoCnt() { return data.roCnt; }
-    void reset()
-    {
+    void reset() {
       components.clear();
       optionalMask.reset();
       ranges = 0;
     }
     bool isEmpty() const { return components.empty(); }
-    bool operator==(const ResolvedQueryDesc &b)
-    {
+    bool operator==(const ResolvedQueryDesc &b) {
       if (ranges != b.ranges)
         return false;
       if (optionalMask != b.optionalMask)
@@ -76,13 +73,15 @@ namespace ecs {
     size_t memUsage() const;
   };
 
-  inline size_t ResolvedQueryDesc::memUsage() const { return sizeof(component_index_t) * components.capacity() + sizeof(optionalMask); }
+  inline size_t ResolvedQueryDesc::memUsage() const {
+    return sizeof(component_index_t) * components.capacity() + sizeof(optionalMask);
+  }
 
   // currently, an ArchetypeQuery just holds a list of archetypes that this query matches too
   struct ArchetypeQuery {
     std::vector<archetype_t> indexes;
   };
 
-}
+} // namespace ecs
 
-#endif //WTFILEUTILS_ECSQUERYINTERNAL_H
+#endif // WTFILEUTILS_ECSQUERYINTERNAL_H

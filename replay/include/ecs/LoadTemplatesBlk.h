@@ -5,4 +5,4 @@
 
 void parseTemplates();
 
-#endif //MYEXTENSION_LOADTEMPLATESBLK_H
+#endif // MYEXTENSION_LOADTEMPLATESBLK_H

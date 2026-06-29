@@ -34,7 +34,8 @@ struct ReplayHeader {
   uint32_t killLimit;
   uint32_t gameType;
   uint32_t restoreType;
-  int playerNo; // player number of player who recorded the replay. if its a server replay, its 0x80000000 / 2147483648 (lmao)
+  int playerNo; // player number of player who recorded the replay. if its a server replay, its 0x80000000 / 2147483648
+                // (lmao)
   uint32_t unk4;
   uint32_t numAttempts;
   uint32_t maxAttempts;
@@ -61,10 +62,11 @@ enum class ReplayPacketType : uint16_t {
   NextSegment = 5, // this is used to communicate the next server replay file, I dont use it. usually last packet
   ECS = 6, // net ECS message
   Snapshot = 7,
-  ReplayHeaderInfo = 8, // sometimes first packet written, holds the ECS message hashes for synchronization. I haven't seen this on client replays in a while (they were there like a year ago?) but they have been in server replays I think
+  ReplayHeaderInfo =
+    8, // sometimes first packet written, holds the ECS message hashes for synchronization. I haven't seen this on
+       // client replays in a while (they were there like a year ago?) but they have been in server replays I think
 };
 extern std::string packet_names[];
-
 
 
 struct ReplayPacket {
@@ -72,6 +74,6 @@ public:
   ReplayPacketType type{};
   uint32_t timestamp_ms{};
   // (Runtime state, not file data)
-  //uint64_t runtimePayloadSizeBytes{};
+  // uint64_t runtimePayloadSizeBytes{};
   BitStream stream;
 };

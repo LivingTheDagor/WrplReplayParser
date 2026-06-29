@@ -3,10 +3,9 @@
 
 class GM_DVMReflectable : public DVMReflectable {
 public:
-    DECL_REFLECTION(GM_DVMReflectable, DVMReflectable)
+  DECL_REFLECTION(GM_DVMReflectable, DVMReflectable)
 
-    GM_DVMReflectable() : DVMReflectable() {
-    }
+  GM_DVMReflectable() : DVMReflectable() {}
 };
 
 ECS_DECLARE_CREATABLE_TYPE(GM_DVMReflectable);

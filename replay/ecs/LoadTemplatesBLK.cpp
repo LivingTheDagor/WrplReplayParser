@@ -38,21 +38,15 @@ namespace ecs {
     }
     return index;
   }
-}
+} // namespace ecs
 
 
 // reserved name declare info about the template instead of declaring components directly
-inline bool is_reserved_name(std::string &name) {
-  return name[0] == '_';
-}
+inline bool is_reserved_name(std::string &name) { return name[0] == '_'; }
 
-inline bool is_reserved_name(std::string_view &name) {
-  return name[0] == '_';
-}
+inline bool is_reserved_name(std::string_view &name) { return name[0] == '_'; }
 
-inline bool is_reserved_name(const char *name) {
-  return name[0] == '_';
-}
+inline bool is_reserved_name(const char *name) { return name[0] == '_'; }
 
 // //%_/ is a signifier stating when name mangling ends
 #define MANGLE_BREAK "//%_/"
@@ -72,7 +66,7 @@ namespace ecs {
     std::vector<ecs::ComponentTemplInfo> *components;
     std::vector<ecs::template_t> *parents;
     TemplateDB *db;
-    //std::string templName;
+    // std::string templName;
     int valueNid;
     bool singleton = false;
     static const std::unordered_set<std::string> allowed_tags;
@@ -80,7 +74,7 @@ namespace ecs {
 
     void parse(DataBlock &blk);
   };
-}
+} // namespace ecs
 
 
 class LoadContext;
@@ -121,8 +115,7 @@ namespace ecs {
   };
 
 
-#define LIST_TYPE(name, tn)                                                               \
-  {TYPENAMEANDLEN("list<" #name ">"), &load_list<tn>, ComponentTypeInfo<List<tn>>::type},
+#define LIST_TYPE(name, tn) {TYPENAMEANDLEN("list<" #name ">"), &load_list<tn>, ComponentTypeInfo<List<tn>>::type},
 #define LIST_TYPES              \
   LIST_TYPE(eid, ecs::EntityId) \
   LIST_TYPE(i, int)             \
@@ -152,138 +145,53 @@ namespace ecs {
 #define SHARED_PREFIX_LEN uint32_t(7) // uint32_t(strlen(SHARED_PREFIX))
 
 
-  static const BlockLoaderDesc block_loaders[] =
-  {
-    LIST_TYPES {TYPENAMEANDLEN("object"), &load_object},
+  static const BlockLoaderDesc block_loaders[] = {
+    LIST_TYPES{TYPENAMEANDLEN("object"), &load_object},
     {TYPENAMEANDLEN("array"), &load_array},
-    {
-      TYPENAMEANDLEN("tag"),
-      [](TemplateParseContext &ctx, const char *comp_name,
-         DataBlock &) {
-        auto index = getComponentIndex(comp_name, getTypeIndex<ecs::Tag>());
-        ctx.components->emplace_back(index, Component(ecs::Tag()));
-      },
-      ComponentTypeInfo<Tag>::type
-    },
-    {
-      TYPENAMEANDLEN("eid"),
-      [](TemplateParseContext &ctx, const char *name,
-         DataBlock &blk) {
-        ecs::EntityId eid;
-        const int valueParamId = blk.findParam(ctx.valueNid);
-        if (valueParamId >= 0)
-          eid = ecs::EntityId((ecs::entity_id_t) blk.getInt(valueParamId));
-        auto index = getComponentIndex(name, getTypeIndex<EntityId>());
-        ctx.components->emplace_back(index, Component(eid));
-      },
-      ComponentTypeInfo<EntityId>::type
-    },
-    {
-      TYPENAMEANDLEN("t"), &load_blk_str,
-      ComponentTypeInfo<ecs::string>::type
-    },
-    {
-      TYPENAMEANDLEN("i"), &load_blk_type<int, &DataBlock::getInt>,
-      ComponentTypeInfo<int>::type
-    },
-    {
-      TYPENAMEANDLEN("r"), &load_blk_type<float, &DataBlock::getReal>,
-      ComponentTypeInfo<float>::type
-    },
-    {
-      TYPENAMEANDLEN("p2"), &load_blk_type<Point2, &DataBlock::getPoint2>,
-      ComponentTypeInfo<Point2>::type
-    },
-    {
-      TYPENAMEANDLEN("p3"), &load_blk_type<Point3, &DataBlock::getPoint3>,
-      ComponentTypeInfo<Point3>::type
-    },
-    {
-      TYPENAMEANDLEN("dp3"),
-      &load_blk_type<Point3, &DataBlock::getPoint3, DPoint3>,
-      ComponentTypeInfo<DPoint3>::type
-    },
-    {
-      TYPENAMEANDLEN("p4"), &load_blk_type<Point4, &DataBlock::getPoint4>,
-      ComponentTypeInfo<Point4>::type
-    },
-    {
-      TYPENAMEANDLEN("ip2"),
-      &load_blk_type<IPoint2, &DataBlock::getIPoint2>,
-      ComponentTypeInfo<IPoint2>::type
-    },
-    {
-      TYPENAMEANDLEN("ip3"),
-      &load_blk_type<IPoint3, &DataBlock::getIPoint3>,
-      ComponentTypeInfo<IPoint3>::type
-    },
-    {
-      TYPENAMEANDLEN("ip4"),
-      &load_blk_type<IPoint4, &DataBlock::getIPoint4>,
-      ComponentTypeInfo<IPoint4>::type
-    },
-    {
-      TYPENAMEANDLEN("b"), &load_blk_type<bool, &DataBlock::getBool>,
-      ComponentTypeInfo<bool>::type
-    },
-    {
-      TYPENAMEANDLEN("m"), &load_blk_type<TMatrix, &DataBlock::getTm>,
-      ComponentTypeInfo<TMatrix>::type
-    },
-    {
-      TYPENAMEANDLEN("c"),
-      &load_blk_type<E3DCOLOR, &DataBlock::getE3dcolor>,
-      ComponentTypeInfo<E3DCOLOR>::type
-    },
-    {
-      TYPENAMEANDLEN("i8"),
-      &load_blk_type<int, &DataBlock::getInt, int8_t>,
-      ComponentTypeInfo<int8_t>::type
-    },
-    {
-      TYPENAMEANDLEN("i16"),
-      &load_blk_type<int, &DataBlock::getInt, int16_t>,
-      ComponentTypeInfo<int16_t>::type
-    },
-    {
-      TYPENAMEANDLEN("i32"), &load_blk_type<int, &DataBlock::getInt>,
-      ComponentTypeInfo<int>::type
-    },
-    {
-      TYPENAMEANDLEN("i64"),
-      &load_blk_type<int64_t, &DataBlock::getInt64>, // SSSSH
-      ComponentTypeInfo<int64_t>::type
-    },
-    {
-      TYPENAMEANDLEN("u8"),
-      &load_blk_type<int, &DataBlock::getInt, uint8_t>,
-      ComponentTypeInfo<uint8_t>::type
-    },
-    {
-      TYPENAMEANDLEN("u16"),
-      &load_blk_type<int, &DataBlock::getInt, uint16_t>,
-      ComponentTypeInfo<uint16_t>::type
-    },
-    {
-      TYPENAMEANDLEN("u32"),
-      &load_blk_type<int, &DataBlock::getInt, uint32_t>,
-      ComponentTypeInfo<uint32_t>::type
-    },
-    {
-      TYPENAMEANDLEN("u64"),
-      &load_blk_type<int64_t, &DataBlock::getInt64, uint64_t>,
-      ComponentTypeInfo<uint64_t>::type
-    },
-    {
-      TYPENAMEANDLEN("BBox3"),
-      [](TemplateParseContext &ctx, const char *name,
-         DataBlock &) {
-        auto index = getComponentIndex(name, getTypeIndex<BBox3>());
-        ctx.components->emplace_back(index, Component(BBox3()));
-      },
-      ComponentTypeInfo<BBox3>::type
-    }
-  };
+    {TYPENAMEANDLEN("tag"),
+     [](TemplateParseContext &ctx, const char *comp_name, DataBlock &) {
+       auto index = getComponentIndex(comp_name, getTypeIndex<ecs::Tag>());
+       ctx.components->emplace_back(index, Component(ecs::Tag()));
+     },
+     ComponentTypeInfo<Tag>::type},
+    {TYPENAMEANDLEN("eid"),
+     [](TemplateParseContext &ctx, const char *name, DataBlock &blk) {
+       ecs::EntityId eid;
+       const int valueParamId = blk.findParam(ctx.valueNid);
+       if (valueParamId >= 0)
+         eid = ecs::EntityId((ecs::entity_id_t) blk.getInt(valueParamId));
+       auto index = getComponentIndex(name, getTypeIndex<EntityId>());
+       ctx.components->emplace_back(index, Component(eid));
+     },
+     ComponentTypeInfo<EntityId>::type},
+    {TYPENAMEANDLEN("t"), &load_blk_str, ComponentTypeInfo<ecs::string>::type},
+    {TYPENAMEANDLEN("i"), &load_blk_type<int, &DataBlock::getInt>, ComponentTypeInfo<int>::type},
+    {TYPENAMEANDLEN("r"), &load_blk_type<float, &DataBlock::getReal>, ComponentTypeInfo<float>::type},
+    {TYPENAMEANDLEN("p2"), &load_blk_type<Point2, &DataBlock::getPoint2>, ComponentTypeInfo<Point2>::type},
+    {TYPENAMEANDLEN("p3"), &load_blk_type<Point3, &DataBlock::getPoint3>, ComponentTypeInfo<Point3>::type},
+    {TYPENAMEANDLEN("dp3"), &load_blk_type<Point3, &DataBlock::getPoint3, DPoint3>, ComponentTypeInfo<DPoint3>::type},
+    {TYPENAMEANDLEN("p4"), &load_blk_type<Point4, &DataBlock::getPoint4>, ComponentTypeInfo<Point4>::type},
+    {TYPENAMEANDLEN("ip2"), &load_blk_type<IPoint2, &DataBlock::getIPoint2>, ComponentTypeInfo<IPoint2>::type},
+    {TYPENAMEANDLEN("ip3"), &load_blk_type<IPoint3, &DataBlock::getIPoint3>, ComponentTypeInfo<IPoint3>::type},
+    {TYPENAMEANDLEN("ip4"), &load_blk_type<IPoint4, &DataBlock::getIPoint4>, ComponentTypeInfo<IPoint4>::type},
+    {TYPENAMEANDLEN("b"), &load_blk_type<bool, &DataBlock::getBool>, ComponentTypeInfo<bool>::type},
+    {TYPENAMEANDLEN("m"), &load_blk_type<TMatrix, &DataBlock::getTm>, ComponentTypeInfo<TMatrix>::type},
+    {TYPENAMEANDLEN("c"), &load_blk_type<E3DCOLOR, &DataBlock::getE3dcolor>, ComponentTypeInfo<E3DCOLOR>::type},
+    {TYPENAMEANDLEN("i8"), &load_blk_type<int, &DataBlock::getInt, int8_t>, ComponentTypeInfo<int8_t>::type},
+    {TYPENAMEANDLEN("i16"), &load_blk_type<int, &DataBlock::getInt, int16_t>, ComponentTypeInfo<int16_t>::type},
+    {TYPENAMEANDLEN("i32"), &load_blk_type<int, &DataBlock::getInt>, ComponentTypeInfo<int>::type},
+    {TYPENAMEANDLEN("i64"), &load_blk_type<int64_t, &DataBlock::getInt64>, // SSSSH
+     ComponentTypeInfo<int64_t>::type},
+    {TYPENAMEANDLEN("u8"), &load_blk_type<int, &DataBlock::getInt, uint8_t>, ComponentTypeInfo<uint8_t>::type},
+    {TYPENAMEANDLEN("u16"), &load_blk_type<int, &DataBlock::getInt, uint16_t>, ComponentTypeInfo<uint16_t>::type},
+    {TYPENAMEANDLEN("u32"), &load_blk_type<int, &DataBlock::getInt, uint32_t>, ComponentTypeInfo<uint32_t>::type},
+    {TYPENAMEANDLEN("u64"), &load_blk_type<int64_t, &DataBlock::getInt64, uint64_t>, ComponentTypeInfo<uint64_t>::type},
+    {TYPENAMEANDLEN("BBox3"),
+     [](TemplateParseContext &ctx, const char *name, DataBlock &) {
+       auto index = getComponentIndex(name, getTypeIndex<BBox3>());
+       ctx.components->emplace_back(index, Component(BBox3()));
+     },
+     ComponentTypeInfo<BBox3>::type}};
 #undef TYPEANDLEN
 #undef LIST_TYPES
 #undef LIST_TYPE
@@ -294,12 +202,12 @@ namespace ecs {
                                               Cb cb) {
     auto prevList = ctx.components;
     std::vector<ecs::ComponentTemplInfo> olist{};
-    //olist.reserve(500); // there is an issue with the resise op, so we want to avoid it as much as possible.
+    // olist.reserve(500); // there is an issue with the resise op, so we want to avoid it as much as possible.
     ctx.components = &olist;
-    //ctx.info = nullptr;
-    //ctx.db = nullptr;
-    //auto sets = ctx.sets;
-    //ctx.sets = decltype(sets)();
+    // ctx.info = nullptr;
+    // ctx.db = nullptr;
+    // auto sets = ctx.sets;
+    // ctx.sets = decltype(sets)();
     auto old_name = std::move(ctx.mangle_type_name);
     if (!old_name.empty()) {
       ctx.mangle_type_name = old_name + "_" + type_name;
@@ -310,9 +218,9 @@ namespace ecs {
     auto len = ctx.mangle_type_name.size();
     ctx.mangle_type_name = std::move(old_name);
     ctx.components = prevList;
-    //ctx.info = prevInfo;
-    //ctx.db = prevDb;
-    //ctx.sets = sets;
+    // ctx.info = prevInfo;
+    // ctx.db = prevDb;
+    // ctx.sets = sets;
     cb(std::move(olist), len);
   }
 
@@ -332,8 +240,7 @@ namespace ecs {
                                    name_ptr += mangle_idx + strlen(MANGLE_BREAK);
                                    mangle_idx = std::string_view(name_ptr).find(MANGLE_BREAK);
                                  }
-                                 out_object.addMember(name_ptr,
-                                                      std::move(objElem.default_component));
+                                 out_object.addMember(name_ptr, std::move(objElem.default_component));
                                }
                              });
     if (out_object.size() <=
@@ -361,20 +268,19 @@ namespace ecs {
   static inline T load_array_impl(TemplateParseContext &ctx, DataBlock &blk) {
     T out_array; // ecs::list<T>
 
-    out_array.reserve((typename T::size_type) (blk.paramCount() + blk.blockCount()));
+    out_array.reserve((typename T::size_type)(blk.paramCount() + blk.blockCount()));
     std::string mangle_name = typeid(T).name();
     mangle_name += "ecs_list_";
-    load_component_list_impl(ctx, blk, mangle_name,
-                             [&ctx, &out_array, blk](std::vector<ecs::ComponentTemplInfo> &&clist, size_t) {
-                               for (auto &&arrElem: clist) {
-                                 if (arrElem.default_component.is<typename T::value_type>())
-                                   out_array.push_back(
-                                     std::move(*(typename T::value_type *) arrElem.default_component.getRawData()));
-                                 else {
-                                   EXCEPTION("debug this I dont know how to fix this format string");
-                                 }
-                               }
-                             });
+    load_component_list_impl(
+      ctx, blk, mangle_name, [&ctx, &out_array, blk](std::vector<ecs::ComponentTemplInfo> &&clist, size_t) {
+        for (auto &&arrElem: clist) {
+          if (arrElem.default_component.is<typename T::value_type>())
+            out_array.push_back(std::move(*(typename T::value_type *) arrElem.default_component.getRawData()));
+          else {
+            EXCEPTION("debug this I dont know how to fix this format string");
+          }
+        }
+      });
     if (out_array.size() <=
         ((out_array.capacity() * 3u) / 4u)) // if we are wasting at least 25% or more (TODO: tune this formula
       // according to real world usage)
@@ -415,35 +321,33 @@ namespace ecs {
 
   template<typename T>
   static void load_list(TemplateParseContext &ctx, const char *name, DataBlock &blk) {
-    ecs::List<T> list = load_array_impl<ecs::List<T> >(ctx, blk);
+    ecs::List<T> list = load_array_impl<ecs::List<T>>(ctx, blk);
     std::string actual_name = name;
     if (!ctx.mangle_type_name.empty()) {
       actual_name = mangle_name(name, ctx.mangle_type_name, "");
     }
-    auto index = getComponentIndex(actual_name.c_str(), getTypeIndex<ecs::List<T> >());
+    auto index = getComponentIndex(actual_name.c_str(), getTypeIndex<ecs::List<T>>());
     ctx.components->emplace_back(index, std::move(list));
   }
 
   static inline const BlockLoaderDesc *find_type_block_loader(std::string_view tp_name) {
-    auto pred = [tp_name](const BlockLoaderDesc &d) {
-      return std::string_view{d.typeName, d.typeNameLen} == tp_name;
-    };
+    auto pred = [tp_name](const BlockLoaderDesc &d) { return std::string_view{d.typeName, d.typeNameLen} == tp_name; };
     auto it = std::find_if(std::begin(block_loaders), std::end(block_loaders), pred);
     return it == std::end(block_loaders) ? nullptr : it;
   }
 
 
   void TemplateParseContext::parse(DataBlock &blk) {
-    //std::cout << "parsing template " << blk.getBlockName() << "\n";
+    // std::cout << "parsing template " << blk.getBlockName() << "\n";
     const char *ftags = blk.getStr("_tags", nullptr);
     // load if no tags or if the returned iterator isnt end
-    //if(blk.getBlockName() == "dynamic_hair_renderer")
+    // if(blk.getBlockName() == "dynamic_hair_renderer")
     //  std::cout << "womp womp\n";
     bool do_load = !ftags || allowed_tags.find(ftags) != allowed_tags.end();
     if (!do_load)
       return;
     int singletonId = blk.getNameId("_singleton");
-    //int tagsId = blk.getNameId("_tags");
+    // int tagsId = blk.getNameId("_tags");
     int useId = blk.getNameId("_use");
     int trackedId = blk.getNameId("_tracked");
     int trackId = blk.getNameId("_track");
@@ -464,39 +368,30 @@ namespace ecs {
           std::string name = std::string(str);
           template_t tid = db->ensureTemplate(name); // sometimes we can ask for a template before it is created
           this->parents->emplace_back(tid);
-        } else if (nid == trackId || nid == trackedId || nid == replicateId || nid == replicatedId ||
-                   nid == hideId || nid == tagsId || nid == reservedReplId || nid == overrideId) {
+        } else if (nid == trackId || nid == trackedId || nid == replicateId || nid == replicatedId || nid == hideId ||
+                   nid == tagsId || nid == reservedReplId || nid == overrideId) {
         } // dont care about these right now
         else {
           EXCEPTION("Unkown reserved name type {} parsing template {}", blk.getParamName(i), blk.getBlockName());
         }
       } else {
         uint8_t type_id = (uint8_t) blk.getParamType(i);
-        //LOG("parsing %s type derived from param", blk.getParamName(i));
+        // LOG("parsing %s type derived from param", blk.getParamName(i));
         Component comp;
         switch (type_id) {
-          case DataBlock::TYPE_NONE:
-            EXCEPTION("Invalid Type");
+          case DataBlock::TYPE_NONE: EXCEPTION("Invalid Type");
           case DataBlock::TYPE_STRING: {
             comp = ecs::Component{ecs::string(blk.getStr(i))};
             break;
           }
-#define parse_type(case_, ret_name) \
-            case DataBlock::TYPE_##case_: {\
-            comp = ecs::Component{blk.get##ret_name(i)};       \
-              break;               \
-            }
-          parse_type(INT, Int)
-          parse_type(REAL, Real)
-          parse_type(POINT2, Point2)
-          parse_type(POINT3, Point3)
-          parse_type(POINT4, Point4)
-          parse_type(IPOINT2, IPoint2)
-          parse_type(IPOINT3, IPoint3)
-          parse_type(BOOL, Bool)
-          parse_type(E3DCOLOR, E3dcolor)
-          parse_type(MATRIX, Tm)
-          case DataBlock::TYPE_INT64: {
+#define parse_type(case_, ret_name)              \
+  case DataBlock::TYPE_##case_: {                \
+    comp = ecs::Component{blk.get##ret_name(i)}; \
+    break;                                       \
+  }
+          parse_type(INT, Int) parse_type(REAL, Real) parse_type(POINT2, Point2) parse_type(POINT3, Point3)
+            parse_type(POINT4, Point4) parse_type(IPOINT2, IPoint2) parse_type(IPOINT3, IPoint3) parse_type(BOOL, Bool)
+              parse_type(E3DCOLOR, E3dcolor) parse_type(MATRIX, Tm) case DataBlock::TYPE_INT64: {
             comp = ecs::Component{blk.getInt64(i)};
             break;
           }
@@ -505,20 +400,17 @@ namespace ecs {
             break;
           }
           case DataBlock::TYPE_COUNT:
-          default:
-            EXCEPTION("Invalid Type");
+          default: EXCEPTION("Invalid Type");
         }
-        auto name_ = this->mangle_type_name.empty()
-                       ? std::string(blk.getParamName(i))
-                       : mangle_name(blk.getParamName(i), this->mangle_type_name,
-                                     DataBlock::ParamTypeNames[blk.getParamType(i)]);
+        auto name_ = this->mangle_type_name.empty() ? std::string(blk.getParamName(i))
+                                                    : mangle_name(blk.getParamName(i), this->mangle_type_name,
+                                                                  DataBlock::ParamTypeNames[blk.getParamType(i)]);
         auto hash = ECS_HASH_SLOW(name_.c_str());
         ecs::component_index_t idx = g_ecs_data->getDataComponents()->getIndex(hash.hash);
         // object type doesnt do name mangling, so this checks to ensure that doesnt cause issues
-        //G_ASSERT(idx != INVALID_COMPONENT_INDEX); // I am not adding mutexes to datacomponents god dammit
-        G_ASSERT(
-          idx == INVALID_COMPONENT_INDEX || g_ecs_data->getDataComponents()->getDataComponent(hash.hash)->componentHash
-          == comp.getUserType());
+        // G_ASSERT(idx != INVALID_COMPONENT_INDEX); // I am not adding mutexes to datacomponents god dammit
+        G_ASSERT(idx == INVALID_COMPONENT_INDEX ||
+                 g_ecs_data->getDataComponents()->getDataComponent(hash.hash)->componentHash == comp.getUserType());
         if (idx == INVALID_COMPONENT_INDEX) {
           idx = g_ecs_data->createComponent(hash, comp.getTypeId(), nullptr);
         }
@@ -542,7 +434,7 @@ namespace ecs {
       auto comps = ecs::g_ecs_data->getComponentTypes();
       std::string name, type;
       parseNameType(std::string(subBlock->getBlockName()), name, type);
-      //component_index_t comp_index = INVALID_COMPONENT_INDEX;
+      // component_index_t comp_index = INVALID_COMPONENT_INDEX;
       if (!type.empty()) {
         if (type.starts_with(SHARED_PREFIX)) // cant handle those
           continue;
@@ -554,14 +446,9 @@ namespace ecs {
         component_index_t index = dataComps->getIndex(hash);
         if (index == INVALID_COMPONENT_INDEX)
           EXCEPTION("Failed to find datacomponent {}", name);
-        components->emplace_back(index,
-                                 Component{
-                                   nullptr,
-                                   hash,
-                                   dataComps->getDataComponent(index)->componentIndex,
-                                   comps->getComponentData(
-                                     dataComps->getDataComponent(index)->componentIndex)->size
-                                 });
+        components->emplace_back(
+          index, Component{nullptr, hash, dataComps->getDataComponent(index)->componentIndex,
+                           comps->getComponentData(dataComps->getDataComponent(index)->componentIndex)->size});
         continue;
       } else if (auto typeLoader = find_type_block_loader(type)) {
         // list loaders can add datatypes, so need name mangling (glungarrrrr)
@@ -577,25 +464,17 @@ namespace ecs {
         G_ASSERT(this->mangle_type_name.empty()); // this should never encounter name mangling
 
         component_index_t idx = dataComps->createComponent(ECS_HASH_SLOW(name.c_str()), index, nullptr, *comps);
-        components->emplace_back(idx, Component{
-                                   nullptr, hash.hash, index, comps->getComponentData(index)->size
-                                 });
+        components->emplace_back(idx, Component{nullptr, hash.hash, index, comps->getComponentData(index)->size});
       }
     }
   }
 
 
   const std::unordered_set<std::string> TemplateParseContext::allowed_tags = {
-    "gameClient",
-    "ecsDebug",
-    "render",
-    "sound",
-    "hangar",
-    "anyScene",
-    "soundNet",
+    "gameClient", "ecsDebug", "render", "sound", "hangar", "anyScene", "soundNet",
     // "server" // need for Event system
   }; // only care about these
-}
+} // namespace ecs
 
 #if 0
 #define PATH_DELIM      '\\'
@@ -637,16 +516,17 @@ public:
       DataBlock *tmpl_blk = blk->getBlock(i);
       auto db_ = db;
       if (is_reserved_name(tmpl_blk->getBlockName())) {
-        //LOGE("Reserved names are not supported");
+        // LOGE("Reserved names are not supported");
         continue;
       }
       if (tmpl_blk->getBool("_override", false))
         db_ = overrides;
       std::vector<ecs::ComponentTemplInfo> components{};
-      //components.reserve(500); // there is an issue with the resise op, so we want to avoid it as much as possible. TODO
+      // components.reserve(500); // there is an issue with the resise op, so we want to avoid it as much as possible.
+      // TODO
       std::vector<ecs::template_t> parents;
       ecs::TemplateParseContext ctx{&components, &parents, db_, blk->getNameId("_value")};
-      //ctx.templName = tmpl_blk->getBlockName();
+      // ctx.templName = tmpl_blk->getBlockName();
       ctx.parse(*tmpl_blk);
       ecs::Template templ{std::string(tmpl_blk->getBlockName()), std::move(components), std::move(parents)};
       db_->AddTemplate(std::move(templ));
@@ -682,10 +562,8 @@ public:
 
       std::string str{};
       char buffer[512];
-      snprintf(buffer, sizeof(buffer), "%s/%.*s",
-               (abs_path || mnt_path) ? "" : src_folder.string().c_str(),
-               static_cast<int>(fn_with_ext - path) - 1,
-               path);
+      snprintf(buffer, sizeof(buffer), "%s/%.*s", (abs_path || mnt_path) ? "" : src_folder.string().c_str(),
+               static_cast<int>(fn_with_ext - path) - 1, path);
       std::string buff_str{buffer};
       file_mgr.find_files_in_folder(files, buff_str);
       bool anyFileLoaded = false;
@@ -702,8 +580,8 @@ public:
         }
       }
       if (!anyFileLoaded && !is_optional)
-      EXCEPTION("No such files on directory <{}>. Please make import_optional or add files to directory", path);
-      //EXCEPTION("WILD CARD INPUTS NOT SUPPORTED %s %s\n", src_folder.string().c_str(), path);
+        EXCEPTION("No such files on directory <{}>. Please make import_optional or add files to directory", path);
+      // EXCEPTION("WILD CARD INPUTS NOT SUPPORTED %s %s\n", src_folder.string().c_str(), path);
     } else {
       DataBlock imp_blk;
       // if it is a absolute or mounted path, then keep as it
@@ -735,13 +613,13 @@ public:
         const int paramNid = blk->getParamNameId(i);
         if (paramNid == importNid || paramNid == importOptionalNid) {
           const bool isOptional = paramNid == importOptionalNid;
-          //std::cout << "resolving import: " << blk->getStr(i) << "\n";
+          // std::cout << "resolving import: " << blk->getStr(i) << "\n";
           resolve_one_import(blk->getStr(i), path, isOptional, overrides);
         }
       }
     }
 
-    //std::cout << "parsing file: " <<  src_fn << "\n";
+    // std::cout << "parsing file: " <<  src_fn << "\n";
     parse_templates_from_blk(blk, overrides);
   }
 
@@ -758,7 +636,7 @@ public:
 
 void parseTemplates() {
   ZoneScoped;
-  //auto file = file_mgr.getFile("templates/entities.blk");
+  // auto file = file_mgr.getFile("templates/entities.blk");
   LoadContext ctx{};
   ctx.parse_blk("templates/entities.blk");
 }

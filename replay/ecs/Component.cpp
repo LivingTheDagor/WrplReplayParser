@@ -5,13 +5,9 @@
 
 namespace ecs {
 
-  bool Component::operator==(const Component &a) const {
-    return getComponentRef() == a.getComponentRef();
-  }
+  bool Component::operator==(const Component &a) const { return getComponentRef() == a.getComponentRef(); }
 
-  bool Component::operator==(const ComponentRef &a) const {
-    return getComponentRef() == a;
-  }
+  bool Component::operator==(const ComponentRef &a) const { return getComponentRef() == a; }
 
   Component::Component(void *data, component_type_t type, type_index_t compIndex, uint32_t size) {
     componentTypeSize = size;
@@ -74,11 +70,9 @@ namespace ecs {
     return ComponentRef(const_cast<void *>(getRawData()), getUserType(), getTypeId(), this->componentTypeSize);
   }
 
-  //void Component::createCopy(void *data, ComponentTypes *types) {
-  //  this->getComponentRef().createCopy(data, types);
-  //}
-
-
+  // void Component::createCopy(void *data, ComponentTypes *types) {
+  //   this->getComponentRef().createCopy(data, types);
+  // }
 
 
   ComponentRef::ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint32_t size) {
@@ -133,7 +127,6 @@ namespace ecs {
         ctm->create(data, *mgr, eid, cidx);
       }
     }
-
   }
 
   void ComponentRef::destructCopy(void *data) const {
@@ -144,8 +137,8 @@ namespace ecs {
     {
       ComponentTypeManager *ctm = types->getCTM(componentTypeIndex);
       G_ASSERT(ctm);
-      //LOG("Destructing a %s\n", typeInfo->name.data());
-      //std::cout << std::flush;
+      // LOG("Destructing a %s\n", typeInfo->name.data());
+      // std::cout << std::flush;
       ctm->destroy(data);
     }
   }
@@ -158,9 +151,7 @@ namespace ecs {
     LOG("{}", ctm->toString(ext_data, 0));
   }
 
-  void ComponentRef::print() const {
-    print(this->value);
-  }
+  void ComponentRef::print() const { print(this->value); }
 
   bool ComponentRef::is_equal(void *ext_data) const {
     if (!ext_data)
@@ -188,9 +179,7 @@ namespace ecs {
     return ctm->toString(ext_data, indent);
   }
 
-  std::string ComponentRef::toString(int indent) const {
-    return this->toString(this->value, indent);
-  }
+  std::string ComponentRef::toString(int indent) const { return this->toString(this->value, indent); }
 
   void ComponentRef::move(void *to, void *from) const {
     ComponentTypes *types = g_ecs_data->getComponentTypes();
@@ -199,8 +188,8 @@ namespace ecs {
     {
       ComponentTypeManager *ctm = types->getCTM(componentTypeIndex);
       G_ASSERT(ctm);
-      //LOG("Destructing a %s\n", typeInfo->name.data());
-      //std::cout << std::flush;
+      // LOG("Destructing a %s\n", typeInfo->name.data());
+      // std::cout << std::flush;
       ctm->move(to, from);
     } else {
       memcpy(to, from, this->componentTypeSize);
@@ -220,4 +209,4 @@ namespace ecs {
       memset(this->value, 0, this->componentTypeSize);
     }
   }
-}
+} // namespace ecs

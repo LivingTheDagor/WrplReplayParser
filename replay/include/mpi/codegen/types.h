@@ -4,24 +4,24 @@ namespace danet {
   struct RoundScore {
     uint32_t combined{};
     std::vector<uint32_t> scores{};
-    bool operator==(const RoundScore& other) const = default;
+    bool operator==(const RoundScore &other) const = default;
   };
   struct dummyForFootballStat {
     uint16_t v1{};
     uint16_t v2{};
     uint16_t v3{};
-    bool operator==(const dummyForFootballStat& other) const = default;
+    bool operator==(const dummyForFootballStat &other) const = default;
   };
   struct Crew {
     ecs::EntityId e1{};
     ecs::EntityId e2{};
     uint8_t v1{};
     uint8_t v2{};
-    bool operator==(const Crew& other) const = default;
+    bool operator==(const Crew &other) const = default;
   };
   struct CrewUnitsList {
     std::vector<danet::Crew> crew{};
-    bool operator==(const CrewUnitsList& other) const = default;
+    bool operator==(const CrewUnitsList &other) const = default;
   };
   struct dummyForPlayerStat {
     uint16_t v1{};
@@ -48,65 +48,65 @@ namespace danet {
     uint16_t v22{};
     uint16_t v23{};
     uint16_t v24{};
-    bool operator==(const dummyForPlayerStat& other) const = default;
+    bool operator==(const dummyForPlayerStat &other) const = default;
   };
   struct streak {
     uint8_t v1{};
     bool v2{};
     bool v3{};
-    bool operator==(const streak& other) const = default;
+    bool operator==(const streak &other) const = default;
   };
   struct dummyForKillStreaksProgress {
     std::vector<danet::streak> vals{};
-    bool operator==(const dummyForKillStreaksProgress& other) const = default;
+    bool operator==(const dummyForKillStreaksProgress &other) const = default;
   };
   struct teamAvgEloRatings {
-    std::array<float,3> data{};
-    bool operator==(const teamAvgEloRatings& other) const = default;
+    std::array<float, 3> data{};
+    bool operator==(const teamAvgEloRatings &other) const = default;
   };
   struct zigZagPair {
     int v1{};
     int v2{};
-    bool operator==(const zigZagPair& other) const = default;
+    bool operator==(const zigZagPair &other) const = default;
   };
   struct dummyForExitZonesSettings {
     std::vector<danet::zigZagPair> vals{};
-    bool operator==(const dummyForExitZonesSettings& other) const = default;
+    bool operator==(const dummyForExitZonesSettings &other) const = default;
   };
   struct WeatherEffect {
     std::string name{};
     char effect_data[48]{};
-    bool operator==(const WeatherEffect& other) const = default;
+    bool operator==(const WeatherEffect &other) const = default;
   };
   struct WeatherEffects {
     std::vector<danet::WeatherEffect> effects{};
-    bool operator==(const WeatherEffects& other) const = default;
+    bool operator==(const WeatherEffects &other) const = default;
   };
   struct UnitIdStruct {
     danet::UnitId uid{};
     uint8_t thang{};
-    bool operator==(const UnitIdStruct& other) const = default;
+    bool operator==(const UnitIdStruct &other) const = default;
   };
   struct dummyForDeathInfo {
-      uint8_t v1{};
-      uint8_t v2{};
-      uint16_t v3{};
-      bool v4{};
-      bool v5{};
+    uint8_t v1{};
+    uint8_t v2{};
+    uint16_t v3{};
+    bool v4{};
+    bool v5{};
 
-      bool operator==(const dummyForDeathInfo &other) const = default;
+    bool operator==(const dummyForDeathInfo &other) const = default;
   };
   struct KillerStruct {
-      uint64_t player_id{};
-      uint16_t uid{};
-      std::string vehicle{};
+    uint64_t player_id{};
+    uint16_t uid{};
+    std::string vehicle{};
 
-      bool operator==(const KillerStruct &other) const = default;
+    bool operator==(const KillerStruct &other) const = default;
   };
   struct DamagedState {
-      uint16_t v1{};
-      uint8_t v2{};
+    uint16_t v1{};
+    uint8_t v2{};
 
-      bool operator==(const DamagedState &other) const = default;
+    bool operator==(const DamagedState &other) const = default;
   };
-}
+} // namespace danet

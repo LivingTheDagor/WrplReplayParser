@@ -18,12 +18,12 @@
 struct net_delta_t {
   net::DeltaComp netDelta{5, 0xd};
   std::vector<net::DeltaComp::History> histories{};
-  net::DeltaComp::History& getHistory(uint16_t uid) {
-    if(uid >= histories.size()) {
-      histories.resize(uid+1);
+  net::DeltaComp::History &getHistory(uint16_t uid) {
+    if (uid >= histories.size()) {
+      histories.resize(uid + 1);
     }
     auto &hist = histories[uid];
-    if(!hist.isInited()) {
+    if (!hist.isInited()) {
       // use_cache only ever matters in a network context
       netDelta.initHistory(hist, true, false);
     }
@@ -31,7 +31,7 @@ struct net_delta_t {
   }
 };
 
-enum ChatType: uint8_t {
+enum ChatType : uint8_t {
   Team = 0,
   All = 1,
   Squad = 2,
@@ -51,8 +51,9 @@ struct ChatMessage {
 
 struct ParserState {
 
-  explicit ParserState(int player_count=32) : players(player_count) {}
-  explicit ParserState(IReplay *replay): players(replay->getHeader()->player_count) {}
+  explicit ParserState(int player_count = 32) : players(player_count) {}
+  explicit ParserState(IReplay *replay) : players(replay->getHeader()->player_count) {}
+
 protected:
   mpi::MpiQueueObject mpi_queue{};
   friend mpi::MpiQueueObject;
@@ -64,9 +65,7 @@ protected:
   std::vector<ecs::EntityId> uid_lookup{};
   std::vector<unit::Unit *> uid_unit_lookup{};
 
-  void onPacket(ReplayPacket *pkt) {
-      conn.onPacket(pkt, pkt->timestamp_ms);
-  }
+  void onPacket(ReplayPacket *pkt) { conn.onPacket(pkt, pkt->timestamp_ms); }
 
 public:
   std::vector<mpi::MpiQueueObject::QueueData> *get_queued_data(ecs::EntityId eid) {
@@ -84,14 +83,14 @@ public:
   net_delta_t NetDelta;
   std::vector<MPlayer> players;
   ecs::EntityManager g_entity_mgr{this}; // this order is required as g_entity_mgr needs to be destroyed before players
-  std::vector<MissionZone*> Zones{};
+  std::vector<MissionZone *> Zones{};
   std::array<TeamData, 3> teams{}; // team[0] is global data, teams[1] is first team, teams[2] is second team
   std::vector<ChatMessage> chatMessages{};
   GlobalElo glob_elo{};
   GeneralState gen_state{};
-  std::vector<const mpi::IBattleMessage*> BattleMessages{};
-  std::vector<MissionArea*> missionAreas1{};
-  std::vector<MissionArea*> missionAreas2{};
+  std::vector<const mpi::IBattleMessage *> BattleMessages{};
+  std::vector<MissionArea *> missionAreas1{};
+  std::vector<MissionArea *> missionAreas2{};
 
   int current_packet_index = -1;
 
@@ -102,9 +101,7 @@ public:
 
   void setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid);
 
-  void setPlayerCount(int player_count) {
-    players.resize(player_count);
-  }
+  void setPlayerCount(int player_count) { players.resize(player_count); }
 
   ~ParserState();
 
@@ -116,4 +113,4 @@ public:
 };
 
 
-#endif //MYEXTENSION_PARSERSTATE_H
+#endif // MYEXTENSION_PARSERSTATE_H

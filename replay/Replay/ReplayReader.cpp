@@ -5,7 +5,7 @@
 
 
 uint32_t getPacketSize(IGenLoad &cb) {
-    uint8_t first_byte;
+  uint8_t first_byte;
   if (!cb.readInto(first_byte))
     return 0;
   if (first_byte & 0x80) {
@@ -26,7 +26,7 @@ uint32_t getPacketSize(IGenLoad &cb) {
       uint32_t raw = 0;
     };
     if (!cb.readExact(&payload, byte_count)) {
-        return 0;
+      return 0;
     }
 
     if ((first_byte & 0x40) == 0) {
@@ -47,7 +47,7 @@ uint32_t getPacketSize(IGenLoad &cb) {
 }
 
 void writePacketSize(IGenSave &cb, uint32_t size) {
-    uint8_t buff[5];
+  uint8_t buff[5];
   uint8_t sz = 0;
 
   if (size < 0x80) {
@@ -80,17 +80,13 @@ void writePacketSize(IGenSave &cb, uint32_t size) {
   cb.write(buff, sz);
 }
 
-IReplayReader::IReplayReader(Replay &owner) {
-  this->owner = &owner;
-}
+IReplayReader::IReplayReader(Replay &owner) { this->owner = &owner; }
 
-IReplayReader::IReplayReader(ServerReplay &owner) {
-  this->owner = &owner;
-}
+IReplayReader::IReplayReader(ServerReplay &owner) { this->owner = &owner; }
 
 FullDecompressReplayReader::~FullDecompressReplayReader() {
-    free((void *) crd.data());
-    ((Replay *) this->owner)->Data.afterParse();
+  free((void *) crd.data());
+  ((Replay *) this->owner)->Data.afterParse();
 }
 
 bool FullDecompressReplayReader::getNextPacket(ReplayPacket &packet) {
@@ -114,17 +110,18 @@ bool FullDecompressReplayReader::getNextPacket(ReplayPacket &packet) {
   return true;
 }
 
-FullDecompressReplayReader::FullDecompressReplayReader(Replay &replay, double expected_multiply_size) : IReplayReader(
-  replay) {
+FullDecompressReplayReader::FullDecompressReplayReader(Replay &replay, double expected_multiply_size) :
+  IReplayReader(replay) {
   auto zlib_data = replay.getData();
   auto decomp_size = (size_t) (((double) zlib_data.size()) * expected_multiply_size);
   auto ptr = (uint8_t *) malloc(decomp_size);
   size_t dest_len;
   auto ctx = libdeflate_alloc_decompressor();
-  libdeflate_result ret; {
-    ZoneScopedN("Replay uncompress")
-    ret = libdeflate_zlib_decompress(ctx, zlib_data.data(), zlib_data.size(), ptr, decomp_size, &dest_len);
-    //ret = uncompress(ptr, reinterpret_cast<unsigned long *>(&dest_len), zlib_data.data(), zlib_data.size());
+  libdeflate_result ret;
+  {
+    ZoneScopedN("Replay uncompress") ret =
+      libdeflate_zlib_decompress(ctx, zlib_data.data(), zlib_data.size(), ptr, decomp_size, &dest_len);
+    // ret = uncompress(ptr, reinterpret_cast<unsigned long *>(&dest_len), zlib_data.data(), zlib_data.size());
   }
   if (ret == LIBDEFLATE_INSUFFICIENT_SPACE) {
     // double it
@@ -142,22 +139,20 @@ FullDecompressReplayReader::FullDecompressReplayReader(Replay &replay, double ex
   auto new_ptr = (uint8_t *) malloc(dest_len);
   memcpy(new_ptr, ptr, dest_len);
   free(ptr);
-  new(&crd) InPlaceMemLoadCB(reinterpret_cast<char *>(new_ptr), (int) dest_len);
+  new (&crd) InPlaceMemLoadCB(reinterpret_cast<char *>(new_ptr), (int) dest_len);
 }
 
 
 CompressedReplayReader::CompressedReplayReader(Replay &replay, IGenLoad *base_reader, size_t in_size,
-                                               bool acquired_lock) : IReplayReader(replay),
-                                                                     reader(*base_reader, std::abs((int) in_size),
-                                                                            false, false),
-                                                                     base_reader(base_reader),
-                                                                     acquired_lock(acquired_lock) {
-}
+                                               bool acquired_lock) :
+  IReplayReader(replay),
+  reader(*base_reader, std::abs((int) in_size), false, false),
+  base_reader(base_reader),
+  acquired_lock(acquired_lock) {}
 
 
 bool CompressedReplayReader::getNextPacket(ReplayPacket &packet) {
-  ZoneScoped
-  uint32_t pkt_sz = getPacketSize(reader);
+  ZoneScoped uint32_t pkt_sz = getPacketSize(reader);
   if (pkt_sz == 0)
     return false;
   packet.stream = BitStream();

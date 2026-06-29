@@ -3,11 +3,9 @@
 
 class CUDReflectable : public danet::ReflectableObject {
 public:
-    DECL_REFLECTION(CUDReflectable, danet::ReflectableObject)
+  DECL_REFLECTION(CUDReflectable, danet::ReflectableObject)
 
-    CUDReflectable() : ReflectableObject() {
-        varList.head = &;
-    }
+  CUDReflectable() : ReflectableObject() { varList.head = &; }
 };
 
 ECS_DECLARE_CREATABLE_TYPE(CUDReflectable);

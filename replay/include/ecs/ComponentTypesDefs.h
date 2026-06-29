@@ -27,20 +27,20 @@
 
 
 // declares a type and its list, the type is a pod
-#define POD_DEFS(nm, list_name, class_type) \
-ECS_DECLARE_POD_TYPE(class_type)        \
-namespace nm {                         \
-using list_name = ecs::List<class_type>;\
-}                                       \
-ECS_DECLARE_CREATABLE_TYPE(nm::list_name)
+#define POD_DEFS(nm, list_name, class_type)  \
+  ECS_DECLARE_POD_TYPE(class_type)           \
+  namespace nm {                             \
+    using list_name = ecs::List<class_type>; \
+  }                                          \
+  ECS_DECLARE_CREATABLE_TYPE(nm::list_name)
 
 // declares a type and its list, the type is a created
 #define CREATEABLE_DEFS(nm, list_name, class_type) \
-ECS_DECLARE_CREATABLE_TYPE(class_type)         \
-namespace nm {                                \
-using list_name = ecs::List<class_type>;       \
-}                                              \
-ECS_DECLARE_CREATABLE_TYPE(nm::list_name)
+  ECS_DECLARE_CREATABLE_TYPE(class_type)           \
+  namespace nm {                                   \
+    using list_name = ecs::List<class_type>;       \
+  }                                                \
+  ECS_DECLARE_CREATABLE_TYPE(nm::list_name)
 
 POD_DEFS(dm, PartIdList, dm::PartId)
 POD_DEFS(props, PropsIdList, props::PropsId)
@@ -86,40 +86,31 @@ void hello();
 
 struct FieldSerializerDict {
   std::vector<uint8_t> data{};
-  //std::unordered_map<uint16_t, std::vector<unsigned char>> data;
+  // std::unordered_map<uint16_t, std::vector<unsigned char>> data;
   std::string toString(int indent) const {
-    return FormatHexToStream(std::span((char*)data.data(), data.size())).str();
+    return FormatHexToStream(std::span((char *) data.data(), data.size())).str();
   }
   bool operator==(const FieldSerializerDict &other) const = default;
 };
 
-struct BarrageBalloonStorageComponent : FieldSerializerDict {
-};
-struct LightVehicleModelStorageComponent : FieldSerializerDict {
-};
-struct FortificationModelStorageComponent : FieldSerializerDict {
-};
-struct WalkerVehicleStorageComponent : FieldSerializerDict {
-};
-struct HumanStorageComponent : FieldSerializerDict {
-};
-struct InfantryTroopStorageComponent : FieldSerializerDict {
-};
-struct WarShipModelStorageComponent : FieldSerializerDict {
-};
-struct HeavyVehicleModelStorageComponent : FieldSerializerDict {
-};
-struct FlightModelWrapStorageComponent : FieldSerializerDict {
-};
+struct BarrageBalloonStorageComponent : FieldSerializerDict {};
+struct LightVehicleModelStorageComponent : FieldSerializerDict {};
+struct FortificationModelStorageComponent : FieldSerializerDict {};
+struct WalkerVehicleStorageComponent : FieldSerializerDict {};
+struct HumanStorageComponent : FieldSerializerDict {};
+struct InfantryTroopStorageComponent : FieldSerializerDict {};
+struct WarShipModelStorageComponent : FieldSerializerDict {};
+struct HeavyVehicleModelStorageComponent : FieldSerializerDict {};
+struct FlightModelWrapStorageComponent : FieldSerializerDict {};
 
 
 struct Rocket {
-    std::vector<SpaceTime> positions;
-    uint32_t created_at_ms = 0xFFFFFFFF;
-    uint32_t destroyed_at_ms = 0xFFFFFFFF; // when a rocket 'dies / explodes'
+  std::vector<SpaceTime> positions;
+  uint32_t created_at_ms = 0xFFFFFFFF;
+  uint32_t destroyed_at_ms = 0xFFFFFFFF; // when a rocket 'dies / explodes'
 
 
-    uint32_t uleb_1;
+  uint32_t uleb_1;
   ecs::EntityId ownerEid;
   ecs::EntityId eid2;
   uint8_t u1_1;
@@ -139,7 +130,7 @@ struct Rocket {
   float u4_5;
   BitStream some_weap_type_info;
   BitStream bomb_info; // only ever encodes a single 4 byte val
-  BitStream maybe_sensor_info; //from what I can tell, this is always encoded
+  BitStream maybe_sensor_info; // from what I can tell, this is always encoded
   uint8_t u1_5;
   uint32_t u4_6;
   uint8_t u1_6;
@@ -166,47 +157,26 @@ struct Rocket {
                        " u4_6: {};"
                        " u1_6: {};"
                        " u8_1: {};",
-                       ownerEid.get_handle(),
-                       eid2.get_handle(),
-                       u1_1,
-                       u4_1,
-                       weapon_ref,
-                       starting_pos.toString(0),
-                       u16_1.toString(0),
-                       u12_2.toString(0),
-                       u12_3.toString(0),
-                       u1_2,
-                       shell_type,
-                       u4_4,
-                       u12_4.toString(0),
-                       u12_5.toString(0),
-                       u1_4,
-                       u4_5,
-                       u1_5,
-                       u4_6,
-                       u1_6,
-                       u8_1.toString(0));
+                       ownerEid.get_handle(), eid2.get_handle(), u1_1, u4_1, weapon_ref, starting_pos.toString(0),
+                       u16_1.toString(0), u12_2.toString(0), u12_3.toString(0), u1_2, shell_type, u4_4,
+                       u12_4.toString(0), u12_5.toString(0), u1_4, u4_5, u1_5, u4_6, u1_6, u8_1.toString(0));
     return oss.str();
   }
 
   bool operator==(const Rocket &other) const = default;
 };
 
-struct Payload : Rocket {
-};
-struct Bomb : Rocket {
-};
-struct Jettisoned : Rocket {
-};
-struct Torpedo : Rocket {
-};
+struct Payload : Rocket {};
+struct Bomb : Rocket {};
+struct Jettisoned : Rocket {};
+struct Torpedo : Rocket {};
 
 namespace ecs {
 
   class FieldSerializerDictIO : public ecs::ComponentSerializer {
   public:
-    void
-    serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
+    void serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint,
+                   ecs::EntityManager *mgr) override;
 
     bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint,
                      ecs::EntityManager *mgr) override;
@@ -214,22 +184,22 @@ namespace ecs {
 
   class RocketSerializer : public ecs::ComponentSerializer {
   public:
-    void
-    serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
+    void serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint,
+                   ecs::EntityManager *mgr) override;
 
     bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint,
                      ecs::EntityManager *mgr) override;
   };
 
   class RendInstDescSerializer : public ecs::ComponentSerializer {
-    void
-    serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint, ecs::EntityManager *mgr) override;
+    void serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint,
+                   ecs::EntityManager *mgr) override;
 
     bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint,
                      ecs::EntityManager *mgr) override;
   };
 
-}
+} // namespace ecs
 
 ECS_DECLARE_CREATABLE_TYPE(Rocket) // these need to be creatable as we have vectors in the struct
 ECS_DECLARE_CREATABLE_TYPE(Payload)
@@ -340,7 +310,8 @@ ECS_DECLARE_CREATABLE_TYPE(SimpleObjectModelRes)
 ECS_DECLARE_CREATABLE_TYPE(Camera)
 ECS_DECLARE_CREATABLE_TYPE(SmokeFx)
 ECS_DECLARE_CREATABLE_TYPE(shells::ShellRef)
-//ECS_DECLARE_CREATABLE_TYPE(ProjectilePhysObject) // the deserialzer for this is VERY similar to that for ecs::Uint8List
+// ECS_DECLARE_CREATABLE_TYPE(ProjectilePhysObject) // the deserialzer for this is VERY similar to that for
+// ecs::Uint8List
 ECS_DECLARE_CREATABLE_TYPE(Bullet)
 ECS_DECLARE_CREATABLE_TYPE(VehiclePhysActor)
 ECS_DECLARE_CREATABLE_TYPE(UnitByEid)
@@ -376,10 +347,10 @@ ECS_DECLARE_CREATABLE_TYPE(BufferedHudData)
 ECS_DECLARE_CREATABLE_TYPE(InvalidType)
 ECS_DECLARE_CREATABLE_TYPE(LaserDecalManager)
 ECS_DECLARE_CREATABLE_TYPE(dm::SplashWave)
-ECS_DECLARE_CREATABLE_TYPE (UniqueBufWithShaderVar)
-ECS_DECLARE_CREATABLE_TYPE (SoundOcclusionBlob)
-ECS_DECLARE_CREATABLE_TYPE (aimmem::AimingMemPoints)
+ECS_DECLARE_CREATABLE_TYPE(UniqueBufWithShaderVar)
+ECS_DECLARE_CREATABLE_TYPE(SoundOcclusionBlob)
+ECS_DECLARE_CREATABLE_TYPE(aimmem::AimingMemPoints)
 
 #include "ecs/ComponentPrintingImplementations.h"
 
-#endif //MYEXTENSION_COMPONENTTYPESDEFS_H
+#endif // MYEXTENSION_COMPONENTTYPESDEFS_H

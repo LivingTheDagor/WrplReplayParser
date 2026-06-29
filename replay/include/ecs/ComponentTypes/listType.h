@@ -14,13 +14,13 @@ namespace ecs {
   template<typename T>
   class List : public eastl::vector<T> { // std::vector overloads std::vector<bool> to bitpack, which causes issues here
   public:
-    typedef eastl::vector <T> base_type;
+    typedef eastl::vector<T> base_type;
     typedef typename base_type::iterator iterator;
     typedef typename base_type::reference reference;
     typedef typename base_type::const_iterator const_iterator;
 
     typedef typename base_type::size_type size_type;
-    typedef typename base_type::difference_type           difference_type;
+    typedef typename base_type::difference_type difference_type;
 
     using typename base_type::value_type;
     // Warn: only RO methods are allowed to be reused from vector, RW methods have to call changeGen()
@@ -190,9 +190,9 @@ namespace ecs {
       if (gen == other.gen) {
 #if DAECS_EXTENSIVE_CHECKS
         if (*this != other)
-        logerr("List differs, while it's generation is same");
-      else
-        return false;
+          logerr("List differs, while it's generation is same");
+        else
+          return false;
 #else
         return false;
 #endif
@@ -207,8 +207,8 @@ namespace ecs {
     }
 
     List(EntityManager *emgr = nullptr) {
-      if (DAGOR_UNLIKELY(
-          componentTypeIndex == INVALID_COMPONENT_TYPE_INDEX)) // To consider: make INVALID_COMPONENT_TYPE_INDEX 0 for
+      if (DAGOR_UNLIKELY(componentTypeIndex ==
+                         INVALID_COMPONENT_TYPE_INDEX)) // To consider: make INVALID_COMPONENT_TYPE_INDEX 0 for
         // faster comparisions like these
         componentTypeIndex = find_component_type_index(ComponentTypeInfo<T>::type, emgr);
     }
@@ -238,10 +238,10 @@ namespace ecs {
       os << fmt::format("({}) (List of {}) [\n", this->size(), ComponentTypeInfo<T>::type_name);
       for (const auto &val: *this) {
 
-        os << fmt::format("{}{}\n", std::string(indent, ' '), toStringImpl<T>((void *) &val, indent+2));
-        //if(i+1 < this->size())
+        os << fmt::format("{}{}\n", std::string(indent, ' '), toStringImpl<T>((void *) &val, indent + 2));
+        // if(i+1 < this->size())
         //{
-        //}
+        // }
       }
       os << fmt::format("{}]\n", std::string(indent, ' '));
       return os.str();
@@ -252,11 +252,12 @@ namespace ecs {
 
     void changeGen() { gen++; }
 
-    uint32_t gen = 0; // TODO: not all lists need to be replicatable, use different classes for non-replicatable lists (without
+    uint32_t gen =
+      0; // TODO: not all lists need to be replicatable, use different classes for non-replicatable lists (without
     // replicateCompare and gen)
   };
 
   template<typename T>
   type_index_t List<T>::componentTypeIndex = INVALID_COMPONENT_TYPE_INDEX;
-}
-#endif //WTFILEUTILS_LISTTYPE_H
+} // namespace ecs
+#endif // WTFILEUTILS_LISTTYPE_H

@@ -5,13 +5,12 @@
 #include "ecs/entityId.h"
 #include "EASTL/bitvector.h"
 
-namespace ecs
-{
+namespace ecs {
   static inline entity_id_t make_eid(uint32_t index, uint32_t gen) { return index | (gen << ENTITY_INDEX_BITS); }
   static constexpr uint32_t RESERVED_EID_RANGE = std::numeric_limits<uint16_t>::max();
-  static constexpr uint32_t globalGen = 1; // my globalGen is never going to change as an EntityManager is destroyed upon session destruction
-  struct EntityDesc
-  {
+  static constexpr uint32_t globalGen =
+    1; // my globalGen is never going to change as an EntityManager is destroyed upon session destruction
+  struct EntityDesc {
     template_t templ_id = INVALID_TEMPLATE_INDEX;
     archetype_t archetype_id = INVALID_ARCHETYPE;
     chunk_index_t chunk_id = INVALID_CHUNK_INDEX_T;
@@ -20,8 +19,7 @@ namespace ecs
     // because my ECS keeps all entities forever, does this specific entity exist as of the current time_ms?
   };
   // a class that represents
-  class EntityDescs
-  {
+  class EntityDescs {
   protected:
     friend EntityManager;
     friend GState;
@@ -32,10 +30,9 @@ namespace ecs
     // placed here as its tied directly with the entDesc capacity
     eastl::bitvector<> basic_destroyed{};
 
-    EntityDescs()
-    {
-      entDescs.resize(RESERVED_EID_RANGE+1); // reserve initial reserved space
-      basic_destroyed.resize(RESERVED_EID_RANGE+1, false);
+    EntityDescs() {
+      entDescs.resize(RESERVED_EID_RANGE + 1); // reserve initial reserved space
+      basic_destroyed.resize(RESERVED_EID_RANGE + 1, false);
       EntityDesc desc{1, 1, 1}; // reserves first slot, an invalid entity id is 0
       entDescs[0] = desc;
     }
@@ -46,23 +43,21 @@ namespace ecs
     bool getEntityChunkId(EntityId eid, chunk_index_t &chunk) const;
 
     /// ensures that eid has space to exist
-    inline void Allocate(EntityId eid)
-    {
+    inline void Allocate(EntityId eid) {
       auto idx = eid.index();
       if (idx >= entDescs.size()) {
-        basic_destroyed.resize(idx+1, false);
-        entDescs.resize(idx+1);
+        basic_destroyed.resize(idx + 1, false);
+        entDescs.resize(idx + 1);
       }
     }
 
-    [[nodiscard]] inline bool doesEntityExistInternal(unsigned idx) const
-    {
+    [[nodiscard]] inline bool doesEntityExistInternal(unsigned idx) const {
       return idx < entDescs.size() && entDescs[idx].templ_id != INVALID_TEMPLATE_INDEX;
     }
 
-    [[nodiscard]] inline bool doesEntityExist(unsigned idx, uint32_t generation) const
-    {
-      return idx < entDescs.size() && entDescs[idx].generation == generation && entDescs[idx].templ_id != INVALID_TEMPLATE_INDEX;
+    [[nodiscard]] inline bool doesEntityExist(unsigned idx, uint32_t generation) const {
+      return idx < entDescs.size() && entDescs[idx].generation == generation &&
+             entDescs[idx].templ_id != INVALID_TEMPLATE_INDEX;
     }
     [[nodiscard]] bool doesEntityExist(EntityId e) const { return doesEntityExist(e.index(), e.get_generation()); }
 
@@ -70,28 +65,25 @@ namespace ecs
     EntityDesc &operator[](uint32_t i) { return entDescs[i]; }
     const EntityDesc &operator[](uint32_t i) const { return entDescs[i]; }
 
-    EntityDesc &operator[](ecs::EntityId i) {
-      return this->entDescs[i.index()];
-    }
-    const EntityDesc &operator[](ecs::EntityId i) const {
-      return this->entDescs[i.index()];
-    }
+    EntityDesc &operator[](ecs::EntityId i) { return this->entDescs[i.index()]; }
+    const EntityDesc &operator[](ecs::EntityId i) const { return this->entDescs[i.index()]; }
 
 
-    size_t size() const {return entDescs.size();}
+    size_t size() const { return entDescs.size(); }
 
     uint32_t push_back() {
       auto idx = this->entDescs.size();
       entDescs.push_back({});
       basic_destroyed.push_back(false);
-      return (uint32_t)idx;
+      return (uint32_t) idx;
     }
 
-    EntityId makeEid(uint32_t idx) { return EntityId(make_eid(idx, idx < entDescs.size() ? entDescs[idx].generation : globalGen)); }
+    EntityId makeEid(uint32_t idx) {
+      return EntityId(make_eid(idx, idx < entDescs.size() ? entDescs[idx].generation : globalGen));
+    }
   };
 
 
+} // namespace ecs
 
-}
-
-#endif //MYEXTENSION_ENTITYDESCS_H
+#endif // MYEXTENSION_ENTITYDESCS_H

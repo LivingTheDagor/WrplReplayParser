@@ -3,11 +3,9 @@
 
 class UFXReflectable : public danet::ReflectableObject {
 public:
-    DECL_REFLECTION(UFXReflectable, danet::ReflectableObject)
+  DECL_REFLECTION(UFXReflectable, danet::ReflectableObject)
 
-    UFXReflectable() : ReflectableObject() {
-        varList.head = &;
-    }
+  UFXReflectable() : ReflectableObject() { varList.head = &; }
 };
 
 ECS_DECLARE_CREATABLE_TYPE(UFXReflectable);

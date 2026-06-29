@@ -3,10 +3,9 @@
 
 class FMWReflectable : public BaseExtReflectable {
 public:
-    DECL_REFLECTION(FMWReflectable, BaseExtReflectable)
+  DECL_REFLECTION(FMWReflectable, BaseExtReflectable)
 
-    FMWReflectable() : BaseExtReflectable() {
-    }
+  FMWReflectable() : BaseExtReflectable() {}
 };
 
 ECS_DECLARE_CREATABLE_TYPE(FMWReflectable);

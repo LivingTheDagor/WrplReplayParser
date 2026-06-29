@@ -10,7 +10,7 @@ public:
   danet::ReflectionVar<uint32_t> orderCooldownLeft{"orderCooldownLeft", &spawnScore, 5};
   danet::ReflectionVar<uint32_t> spawnScore{"spawnScore", &roundScore, 6};
   danet::ReflectionVar<float> roundScore{"roundScore", nullptr, 7};
-  TeamData() : ReflectableObject()  {
+  TeamData() : ReflectableObject() {
     varList.head = &score;
     varList.tail = &roundScore;
   }

@@ -3,10 +3,9 @@
 
 class FM_DVMReflectable : public DVMReflectable {
 public:
-    DECL_REFLECTION(FM_DVMReflectable, DVMReflectable)
+  DECL_REFLECTION(FM_DVMReflectable, DVMReflectable)
 
-    FM_DVMReflectable() : DVMReflectable() {
-    }
+  FM_DVMReflectable() : DVMReflectable() {}
 };
 
 ECS_DECLARE_CREATABLE_TYPE(FM_DVMReflectable);

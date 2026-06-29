@@ -3,16 +3,15 @@
 
 class DVMReflectable : public danet::ReflectableObject {
 public:
-    DECL_REFLECTION(DVMReflectable, danet::ReflectableObject)
+  DECL_REFLECTION(DVMReflectable, danet::ReflectableObject)
 
-    danet::ReflectionVar<std::vector<danet::DamagedState> > dummyVarForDamagedStateReflection{
-        "dummyVarForDamagedStateReflection", nullptr, 3, danet::dummyVarForDamagedStateReflectionCoder
-    };
+  danet::ReflectionVar<std::vector<danet::DamagedState>> dummyVarForDamagedStateReflection{
+    "dummyVarForDamagedStateReflection", nullptr, 3, danet::dummyVarForDamagedStateReflectionCoder};
 
-    DVMReflectable() : ReflectableObject() {
-        varList.head = &dummyVarForDamagedStateReflection;
-        varList.tail = &dummyVarForDamagedStateReflection;
-    }
+  DVMReflectable() : ReflectableObject() {
+    varList.head = &dummyVarForDamagedStateReflection;
+    varList.tail = &dummyVarForDamagedStateReflection;
+  }
 };
 
 ECS_DECLARE_CREATABLE_TYPE(DVMReflectable);

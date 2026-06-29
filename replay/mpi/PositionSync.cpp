@@ -135,12 +135,13 @@ G_STATIC_ASSERT(sizeof(TargetDesignationControlState) == 0x50);
 
 
 void DeserializeSeekerData(BitStream &bs) {
-  // this will probably never be implemented unless if I actually go through and try to understand what this complex bullshit is
+  // this will probably never be implemented unless if I actually go through and try to understand what this complex
+  // bullshit is
   uint32_t val;
   bs.Read(val);
   auto read_offs = bs.GetReadOffset();
   bs.SetReadOffset(read_offs + val);
-  //bool does_read_call_one = bs.ReadBit();
+  // bool does_read_call_one = bs.ReadBit();
 
   return;
 }
@@ -161,7 +162,7 @@ bool FMSync(ParserState &state, BitStream &bs) {
     bool has_data = bs.ReadBit();
     if (!has_data) {
       auto str = fmt::format("uid: {:#x}", uid);
-      //LOG("yes to data");
+      // LOG("yes to data");
       if (separateServerSideDetection_g == false) {
         G_ASSERT(false); // be ready for if this ever happens
       } else {
@@ -169,10 +170,12 @@ bool FMSync(ParserState &state, BitStream &bs) {
         bool cVar4NE0 = bs.ReadBit();
         // if both true, then we do nothing
         if (!(lVar30lessThan0 && cVar4NE0)) {
-            auto ref = state.getUnitObj(uid);
-            if (!ref) return false;
-            auto unit = ref->AsAircraft();
-            if (!unit) return false;
+          auto ref = state.getUnitObj(uid);
+          if (!ref)
+            return false;
+          auto unit = ref->AsAircraft();
+          if (!unit)
+            return false;
           bool fVar41LessThan0p5 = bs.ReadBit();
           uint32_t some_uint;
           bs.Read(some_uint);
@@ -194,9 +197,9 @@ bool FMSync(ParserState &state, BitStream &bs) {
           bs.ReadZigZag(zig_val);
           if (zig_val < 0) { // no negatives
             return false;
-            }
-            std::vector<int32_t> vals;
-            vals.resize(zig_val);
+          }
+          std::vector<int32_t> vals;
+          vals.resize(zig_val);
           for (int i = 0; i < zig_val; i++) { // actually is weapons
             int temp, temp1;
             bs.ReadZigZag(temp);
@@ -215,12 +218,14 @@ bool FMSync(ParserState &state, BitStream &bs) {
           unit->positions.push_back(st);
           bs.Read(some_packed_val);
           bs.Read(vals_4);
-          uint64_t val_5; // holds lots of important data, more like a char[7] instead of a uint64_t, data is read as bytes
+          uint64_t
+            val_5; // holds lots of important data, more like a char[7] instead of a uint64_t, data is read as bytes
           bs.AlignReadToByteBoundary();
           bs.ReadBits(reinterpret_cast<uint8_t *>(&val_5), 0x38);
           uint8_t number_of_engines;
           bs.Read(number_of_engines);
-          if (number_of_engines > 0xf) return false; // "FMsync: numEngines >= MAX_AIRCRAFT_MOTORS"
+          if (number_of_engines > 0xf)
+            return false; // "FMsync: numEngines >= MAX_AIRCRAFT_MOTORS"
           for (int i = 0; i < number_of_engines; i++) {
             bool is_some_data_serialized = bs.ReadBit();
             uint8_t v;
@@ -249,29 +254,29 @@ bool FMSync(ParserState &state, BitStream &bs) {
           }
           uint8_t sensorsCount;
           bs.Read(sensorsCount);
-            G_ASSERT(sensorsCount <= SENSORS_COUNT);
-            std::vector<SensorsControlStates> sensors{sensorsCount};
+          G_ASSERT(sensorsCount <= SENSORS_COUNT);
+          std::vector<SensorsControlStates> sensors{sensorsCount};
           for (auto &s: sensors) {
             G_ASSERT(s.deserialize(bs));
           }
           uint8_t v;
           if (sensorsCount != 0) {
             bs.Read(v);
-            }
+          }
 
-            uint8_t counterMeasuresCount;
-            bs.Read(counterMeasuresCount);
-            G_ASSERT(counterMeasuresCount <= COUNTER_MEASURES_COUNT);
-            std::vector<CounterMeasuresControlState> counterMeasures{counterMeasuresCount};
-            for (auto &c: counterMeasures) {
-              G_ASSERT(c.deserialize(bs));
-            }
-            uint8_t counter_measures_v;
-            if (counterMeasuresCount > 0)
-              bs.Read(counter_measures_v);
+          uint8_t counterMeasuresCount;
+          bs.Read(counterMeasuresCount);
+          G_ASSERT(counterMeasuresCount <= COUNTER_MEASURES_COUNT);
+          std::vector<CounterMeasuresControlState> counterMeasures{counterMeasuresCount};
+          for (auto &c: counterMeasures) {
+            G_ASSERT(c.deserialize(bs));
+          }
+          uint8_t counter_measures_v;
+          if (counterMeasuresCount > 0)
+            bs.Read(counter_measures_v);
           uint8_t targetsNum = 0;
-            bs.ReadBits(&targetsNum, 4);
-            G_ASSERT(targetsNum <= TARGETS_NUM);
+          bs.ReadBits(&targetsNum, 4);
+          G_ASSERT(targetsNum <= TARGETS_NUM);
           std::vector<TargetDesignationControlState> targets{targetsNum};
           for (auto &t: targets) {
             t.deserialize(bs);
@@ -293,9 +298,9 @@ bool FMSync(ParserState &state, BitStream &bs) {
         curr_aircraft_index++;
       }
     } else {
-      //LOG("no aircraft data for {}", uid);
+      // LOG("no aircraft data for {}", uid);
     }
-    //G_ASSERT(uid != 0); // WHY THE HELL CAN WE HAVE A UID THAT IS 0
+    // G_ASSERT(uid != 0); // WHY THE HELL CAN WE HAVE A UID THAT IS 0
   } while (uid != 0x7FF);
   float maybe_floats[3];
   bs.Read(maybe_floats);
@@ -356,7 +361,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
       float floats[4];
       RET_FAIL(bs.Read(floats)); // 4 float reads, then 1 later (usePositionHistoryForSlaves is true
       if (true) {
-        if(bs.ReadBit()) {
+        if (bs.ReadBit()) {
           float f1;
           float f2[6];
           float f3[4];
@@ -395,7 +400,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
         fv1 = 1.0;
       fv1 = fv1 * 36000.0f;
       unit_position.y =
-          (float) ((tv1 & 0x3ff) << 10 | tv2 >> 0x16) * 0.007629402f + -100.f; // gets added with some altitude???
+        (float) ((tv1 & 0x3ff) << 10 | tv2 >> 0x16) * 0.007629402f + -100.f; // gets added with some altitude???
       fVar31 = (float) (tv2 & 0x3fffff) * 4.7683727E-7f + -1.0f;
       auto fv3 = -1.0f;
       if (-1.0f <= fVar31)
@@ -574,10 +579,10 @@ bool GMSync(ParserState &state, BitStream &bs) {
     bool bool1;
     RET_FAIL(bs.Read(bool1));
     if (bool1) {
-        auto curr_unit = state.getUnitEid(uid_lower);
-        //G_ASSERT(curr_unit); // this can apparently fucking happen
-        ref.ref_1 = ref.ref_2 = state.getUnitObj(uid_lower);
-        //std::string_view name = *state.g_entity_mgr.getNullable<ecs::string>(curr_unit, ECS_HASH("unit__className"));
+      auto curr_unit = state.getUnitEid(uid_lower);
+      // G_ASSERT(curr_unit); // this can apparently fucking happen
+      ref.ref_1 = ref.ref_2 = state.getUnitObj(uid_lower);
+      // std::string_view name = *state.g_entity_mgr.getNullable<ecs::string>(curr_unit, ECS_HASH("unit__className"));
       bool bool2;
       uint8_t some_val_idk;
       bool bool4;
@@ -665,7 +670,7 @@ Rocket *getTorpedo(ParserState &state, ecs::EntityId eid) {
   return state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("torpedo_component"));
 }
 
-typedef Rocket * (*get_weapon_cb)(ParserState &state, ecs::EntityId eid);
+typedef Rocket *(*get_weapon_cb)(ParserState &state, ecs::EntityId eid);
 
 bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
   bool bool1, bool2;

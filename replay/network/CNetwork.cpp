@@ -6,8 +6,7 @@
 #include <cassert>
 
 CREATE_HANDLE(handle_cnet, "CNetwork")
-namespace net
-{
+namespace net {
 #define MAX_COMPRESSION_RATIO 8 // bound to avoid overcommit memory on decompression
 
 
@@ -21,8 +20,7 @@ namespace net
     outbs.ResetWritePointer();
     outbs.reserveBits(BYTES_TO_BITS(maxOutputSize));
     int readedSize = LZ4_decompress_safe((const char *) bs.GetData() + BITS_TO_BYTES(bs.GetReadOffset()),
-                                         (char *) outbs.GetData(),
-                                         (int) compressedSize, (int) maxOutputSize);
+                                         (char *) outbs.GetData(), (int) compressedSize, (int) maxOutputSize);
     if (readedSize <= 0)
       return false;
 
@@ -32,7 +30,7 @@ namespace net
   }
 
   void CNetwork::onPacket(ReplayPacket *pkt, int cur_time_ms) {
-    BitStream & bs = pkt->stream;
+    BitStream &bs = pkt->stream;
     BitStream bsTemp = BitStream();
     uint8_t ptype;
     pkt->stream.Read(ptype);
@@ -41,77 +39,69 @@ namespace net
         return &bs;
       if (bitstream_decompress(bs, bsTemp))
         return &bsTemp;
-      else
-      {
-        EXCEPTION("failed to read compressed packet {} of {} bytes from conn #{}", ctype, BITS_TO_BYTES(bs.GetNumberOfUnreadBits()), -1);
+      else {
+        EXCEPTION("failed to read compressed packet {} of {} bytes from conn #{}", ctype,
+                  BITS_TO_BYTES(bs.GetNumberOfUnreadBits()), -1);
       }
     };
 
-    switch(ptype)
-    {
+    switch (ptype) {
       case ID_ENTITY_MSG:
-      case ID_ENTITY_MSG_COMPRESSED:
-      {
+      case ID_ENTITY_MSG_COMPRESSED: {
         ecs::entity_id_t serverEid = ecs::ECS_INVALID_ENTITY_ID_VAL;
-        if(!read_server_eid(serverEid, bs))
-        {
+        if (!read_server_eid(serverEid, bs)) {
           EXCEPTION("Failed to read the server eid from a ID_ENTITY_MSG");
         }
         ecs::EntityId eid = ecs::EntityId(serverEid);
         auto name = this->state->g_entity_mgr.getEntityTemplateName(eid);
-        CNET_LOGD3("ID_ENTITY_MSG for entity {:#x} of template {}",  serverEid, name);
+        CNET_LOGD3("ID_ENTITY_MSG for entity {:#x} of template {}", serverEid, name);
         // actual code
         break;
       }
       case ID_ENTITY_REPLICATION:
-      case ID_ENTITY_REPLICATION_COMPRESSED:
-      {
+      case ID_ENTITY_REPLICATION_COMPRESSED: {
         int sentTime = 0;
-        if(!bs.Read(sentTime))
-        {
+        if (!bs.Read(sentTime)) {
           EXCEPTION("Failed to read the time from a ID_ENTITY_REPLICATION");
         }
 
         const BitStream *bsToRead = readCompressedIfPacketType(ID_ENTITY_REPLICATION_COMPRESSED);
         if (!bsToRead)
           break;
-        if (!conn.readReplicationPacket(*bsToRead))
-        {
+        if (!conn.readReplicationPacket(*bsToRead)) {
           EXCEPTION("Failed to read replication packet ({}) of {} bytes", ptype, bsToRead->GetNumberOfBytesUsed());
           break;
         }
-        if(this->peer)
-        {
+        if (this->peer) {
           BitStream acks{12};
-          acks.Write((char)ID_ENTITY_REPLICATION);
+          acks.Write((char) ID_ENTITY_REPLICATION);
           acks.Write(sentTime);
           conn.writeLastRecvdPacketAcks(acks);
-          auto pkt = enet_packet_create(acks.GetData(), BITS_TO_BYTES(acks.GetWriteOffset()), ENET_PACKET_FLAG_UNSEQUENCED);
-          enet_peer_send (peer, 0, pkt);
+          auto pkt =
+            enet_packet_create(acks.GetData(), BITS_TO_BYTES(acks.GetWriteOffset()), ENET_PACKET_FLAG_UNSEQUENCED);
+          enet_peer_send(peer, 0, pkt);
           CNET_LOGD2("sending replication ACKS");
         }
-        //std::cout << "ID_ENTITY_REPLICATION\n";
+        // std::cout << "ID_ENTITY_REPLICATION\n";
         break;
         // read replication here
       }
       case ID_ENTITY_CREATION:
-      case ID_ENTITY_CREATION_COMPRESSED:
-      {
+      case ID_ENTITY_CREATION_COMPRESSED: {
         const BitStream *bsToRead = readCompressedIfPacketType(ID_ENTITY_CREATION_COMPRESSED);
         if (!bsToRead)
           break;
 
-        //std::cout << "ID_ENTITY_CREATION\n";
+        // std::cout << "ID_ENTITY_CREATION\n";
         float cratio = 0;
         bool r = conn.readConstructionPacket(*bsToRead, cratio);
         if (!r)
           EXCEPTION("Failed to read {} construction packet of {} bytes",
-                 ptype == ID_ENTITY_CREATION_COMPRESSED ? "compresssed " : "", bsToRead->GetNumberOfBytesUsed());
+                    ptype == ID_ENTITY_CREATION_COMPRESSED ? "compresssed " : "", bsToRead->GetNumberOfBytesUsed());
         break;
       }
-      case ID_ENTITY_DESTRUCTION:
-      {
-        if(!conn.readDestructionPacket(bs))
+      case ID_ENTITY_DESTRUCTION: {
+        if (!conn.readDestructionPacket(bs))
           EXCEPTION("Failed to read destruction packet of {} bytes", bs.GetNumberOfBytesUsed());
         break;
       }
@@ -119,11 +109,7 @@ namespace net
   }
 
 
-  CNetwork::CNetwork(ParserState *state): conn(&state->g_entity_mgr) {
-    this->state = state;
-  }
-}
+  CNetwork::CNetwork(ParserState *state) : conn(&state->g_entity_mgr) { this->state = state; }
+} // namespace net
 
-void force_link_cnet() {
-  std::cout << "";
-}
+void force_link_cnet() { std::cout << ""; }

@@ -16,6 +16,6 @@ set(INCLUDES
 
 
 target_include_directories(BitStream
-    PUBLIC
+        PUBLIC
         ${INCLUDES}
 )

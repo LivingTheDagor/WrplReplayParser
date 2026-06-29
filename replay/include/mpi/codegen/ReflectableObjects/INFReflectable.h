@@ -3,11 +3,9 @@
 
 class INFReflectable : public danet::ReflectableObject {
 public:
-    DECL_REFLECTION(INFReflectable, danet::ReflectableObject)
+  DECL_REFLECTION(INFReflectable, danet::ReflectableObject)
 
-    INFReflectable() : ReflectableObject() {
-        varList.head = &;
-    }
+  INFReflectable() : ReflectableObject() { varList.head = &; }
 };
 
 ECS_DECLARE_CREATABLE_TYPE(INFReflectable);

@@ -57,8 +57,8 @@ enum DanetReflectionVarFlags {
 
   RVF_UNUSED3 = 1 << 6,
 
-  // marked this flags on deserialize, then called onBeforeVarsDeserialization(), if this method clears this flag - that var will not
-  // be deserialized
+  // marked this flags on deserialize, then called onBeforeVarsDeserialization(), if this method clears this flag - that
+  // var will not be deserialized
   RVF_NEED_DESERIALIZE = 1 << 7,
   // this flag used for float & vectors vars, for auto clamp
   RVF_MIN_MAX_SPECIFIED = 1 << 8,
@@ -66,7 +66,8 @@ enum DanetReflectionVarFlags {
   RVF_UNUSED0 = 1 << 9,
   RVF_UNUSED1 = 1 << 10,
 
-  // call ReflectableObject::onReflectionVarChanged() method when var changed (rpc vars marked with this flag automatically)
+  // call ReflectableObject::onReflectionVarChanged() method when var changed (rpc vars marked with this flag
+  // automatically)
   RVF_CALL_HANDLER = 1 << 11,
 
   RVF_UNUSED2 = 1 << 12,
@@ -80,7 +81,7 @@ enum DanetReflectionVarFlags {
 };
 
 namespace pybind11 {
-  template <typename type_, typename... options>
+  template<typename type_, typename... options>
   class class_;
 }
 
@@ -91,7 +92,8 @@ namespace danet {
 
   class ReplicatedObject;
 
-#define DANET_ENCODER_SIGNATURE int op, ReflectionVarMeta *meta, const ReflectableObject *ro, BitStream *bs, ParserState * state
+#define DANET_ENCODER_SIGNATURE \
+  int op, ReflectionVarMeta *meta, const ReflectableObject *ro, BitStream *bs, ParserState *state
 
   typedef int (*reflection_var_encoder)(DANET_ENCODER_SIGNATURE);
 
@@ -116,16 +118,12 @@ namespace danet {
 
 #define DANET_DLIST_PUSH(l, who, prevName, nextName) \
   {                                                  \
-    if (!who->prevName && (l).head != who)           \
-    {                                                \
-      if ((l).tail)                                  \
-      {                                              \
+    if (!who->prevName && (l).head != who) {         \
+      if ((l).tail) {                                \
         (l).tail->nextName = who;                    \
         who->prevName = (l).tail;                    \
         (l).tail = who;                              \
-      }                                              \
-      else                                           \
-      {                                              \
+      } else {                                       \
         G_ASSERT(!(l).head);                         \
         (l).head = (l).tail = who;                   \
       }                                              \
@@ -150,25 +148,27 @@ namespace danet {
   class ISpaceHandler {
   public:
     virtual ~ISpaceHandler() = default;
-    virtual void* addState(uint32_t time_ms) = 0; // add state for this var at this time, return pointer to value
-    virtual void* checkPreviousState() = 0; // checks if previous state is same as the one before it, deletes recent if so
-    virtual void* goToTime(uint32_t time_ms) = 0; // does rewinding operation
-    virtual void* removePreviousState() = 0; // call during a deserialize fail
+    virtual void *addState(uint32_t time_ms) = 0; // add state for this var at this time, return pointer to value
+    virtual void *
+    checkPreviousState() = 0; // checks if previous state is same as the one before it, deletes recent if so
+    virtual void *goToTime(uint32_t time_ms) = 0; // does rewinding operation
+    virtual void *removePreviousState() = 0; // call during a deserialize fail
   };
-// vars of this type are linked in one list inside of ReflectableObject
+  // vars of this type are linked in one list inside of ReflectableObject
   class ReflectionVarMeta {
-    void setValuePtr(void* ptr) {
-      char* raw = reinterpret_cast<char*>(this) + sizeof(ReflectionVarMeta);
+    void setValuePtr(void *ptr) {
+      char *raw = reinterpret_cast<char *>(this) + sizeof(ReflectionVarMeta);
       std::memcpy(raw, &ptr, sizeof(ptr));
     }
 
     void **getPtrPtr() {
       const char *raw = reinterpret_cast<const char *>(this) + sizeof(ReflectionVarMeta);
-      const void *const*storedPtr = reinterpret_cast<const void * const*>(raw);
+      const void *const *storedPtr = reinterpret_cast<const void *const *>(raw);
       return const_cast<void **>(storedPtr);
     }
 
     friend ReflectableObject;
+
   public:
     uint8_t persistentId;
     uint16_t flags;
@@ -176,34 +176,25 @@ namespace danet {
     const char *name;
     reflection_var_encoder coder;
     ReflectionVarMeta *next;
-    ISpaceHandler * handler;
+    ISpaceHandler *handler;
     friend ReflectableObject;
 
     const char *getVarName() const { return name; }
 
     template<class T>
-   T* getValue() const {
-      const char* raw = reinterpret_cast<const char*>(this) + sizeof(ReflectionVarMeta);
-      const T* const* storedPtr = reinterpret_cast<const T* const*>(raw);
-      return const_cast<T*>(*storedPtr);
+    T *getValue() const {
+      const char *raw = reinterpret_cast<const char *>(this) + sizeof(ReflectionVarMeta);
+      const T *const *storedPtr = reinterpret_cast<const T *const *>(raw);
+      return const_cast<T *>(*storedPtr);
     }
 
-    void setChanged(bool f) {
-      flags = f ? (flags | RVF_CHANGED) : (flags & ~RVF_CHANGED);
-    }
+    void setChanged(bool f) { flags = f ? (flags | RVF_CHANGED) : (flags & ~RVF_CHANGED); }
 
-    void setNewVar(uint32_t time_ms) {
-      setValuePtr(this->handler->addState(time_ms));
-    }
+    void setNewVar(uint32_t time_ms) { setValuePtr(this->handler->addState(time_ms)); }
 
-    void verifyVar() {
-      setValuePtr(this->handler->checkPreviousState());
-    }
+    void verifyVar() { setValuePtr(this->handler->checkPreviousState()); }
 
-    void resetVar() {
-      setValuePtr(this->handler->removePreviousState());
-
-    }
+    void resetVar() { setValuePtr(this->handler->removePreviousState()); }
   };
 
 
@@ -229,7 +220,6 @@ namespace danet {
   };
 
 
-
   template<typename T>
   class ReflectionVar : public ReflectionVarMeta {
     static constexpr reflection_var_encoder getCoder() {
@@ -237,40 +227,32 @@ namespace danet {
       return DefaultEncoderChooser<T>::coder;
     }
 
-    template <typename type_, typename... options>
+    template<typename type_, typename... options>
     friend class pybind11::class_;
+
   public:
     // so pybind11 can see it
     struct SpaceHandler : public RewindMgr<SpaceHandler, T, true>, public ISpaceHandler {
       typedef RewindMgr<SpaceHandler, T, true> BASE;
       friend BASE;
 
-      void forward(BASE::TimeState &) {
-      } // dummy implementation
-      void backward(BASE::TimeState &) {
-      } // dummy implementation
-      void* addState(uint32_t time_ms) override {
-        return &this->emplaceNew(time_ms).data;
-      }
+      void forward(BASE::TimeState &) {} // dummy implementation
+      void backward(BASE::TimeState &) {} // dummy implementation
+      void *addState(uint32_t time_ms) override { return &this->emplaceNew(time_ms).data; }
 
-      void *checkPreviousState() override {
-        return &this->CompareToPrevious().data;
-      }
+      void *checkPreviousState() override { return &this->CompareToPrevious().data; }
 
-      void *goToTime(uint32_t time_ms) override {
-        return &this->rewindTo(time_ms).data;
-      }
+      void *goToTime(uint32_t time_ms) override { return &this->rewindTo(time_ms).data; }
 
-      void *removePreviousState() override {
-        return &this->RemovePrevious().data;
-      }
+      void *removePreviousState() override { return &this->RemovePrevious().data; }
     };
 
     const auto &get_history() const { return spaceHandler.getStates(); }
 
-    T * data = nullptr; // MUST BE FIRST VAR
+    T *data = nullptr; // MUST BE FIRST VAR
   private:
     SpaceHandler spaceHandler;
+
   public:
     ReflectionVar() = delete; // some values NEED to be set
     void init(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder = getCoder(),
@@ -280,7 +262,7 @@ namespace danet {
       this->persistentId = pid;
       this->numBits = bits;
       this->coder = coder;
-      this->data = (T*)spaceHandler.addState(0);
+      this->data = (T *) spaceHandler.addState(0);
       this->handler = &spaceHandler;
     }
 
@@ -288,31 +270,28 @@ namespace danet {
       init(name, next, pid);
     }
 
-    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder_)
-        : ReflectionVarMeta() {
+    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder_) :
+      ReflectionVarMeta() {
       init(name, next, pid, coder_);
     }
 
-    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count)
-        : ReflectionVarMeta() {
+    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count) : ReflectionVarMeta() {
       init(name, next, pid, getCoder(), bit_count);
     }
 
     ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count,
-                  reflection_var_encoder coder_) : ReflectionVarMeta() {
+                  reflection_var_encoder coder_) :
+      ReflectionVarMeta() {
       init(name, next, pid, coder_, bit_count);
     }
 
-    T *Get() const {
-      return this->getValue<T>();
-    }
+    T *Get() const { return this->getValue<T>(); }
     //~ReflectionVar() {
     //  delete data;
     //}
   };
 
-  struct Invalid {
-  }; // if you say a ReflectionVar is 'invalid', any warnings during parsing are ignored
+  struct Invalid {}; // if you say a ReflectionVar is 'invalid', any warnings during parsing are ignored
   // in practice, the InvalidCoder returns 2, which says error silently
 
   struct ReplicatedObjectCreator {
@@ -330,23 +309,23 @@ namespace danet {
 #define DANET_WATERMARK      _MAKE4C('DNET')
 #define DANET_DEAD_WATERMARK _MAKE4C('DEAD')
 
-// class, you need inherit all your objects from
-// all this objects are linked in all_reflectables list, as well may be in changed_reflectables list
+  // class, you need inherit all your objects from
+  // all this objects are linked in all_reflectables list, as well may be in changed_reflectables list
   class ReflectableObject : public mpi::IObject {
   public:
     enum Flags {
       /* free */
       EXCLUDED = 2, // this object will not synchronized (but will deserializes)
       /* free */
-      REPLICATED = 8,        // this is instance of ReplicatedObject
-      FULL_SYNC = 16,        // for this objects forced full sync of all wars
+      REPLICATED = 8, // this is instance of ReplicatedObject
+      FULL_SYNC = 16, // for this objects forced full sync of all wars
       DEBUG_REFLECTION = 32, // like define for all vars of this object RVF_DEBUG
     };
     List<ReflectionVarMeta, false> varList;
     uint32_t debugWatermark;
 
     ReflectableObject *prevChanged, *nextChanged; // for changed_reflectables list
-    ReflectableObject *prev, *next;               // for all_reflectables list
+    ReflectableObject *prev, *next; // for all_reflectables list
 
     void setRelfectionFlag(Flags flag) { reflectionFlags |= flag; }
 
@@ -357,9 +336,9 @@ namespace danet {
   private:
     uint32_t reflectionFlags;
 
-// Note: explicit padding to defeat tail padding optimization (same layout across majority of platforms for compat with das aot
-// compiler)
-#if !_TARGET_PC_LINUX && _TARGET_64BIT          // Linux have it's own das aot compiler
+// Note: explicit padding to defeat tail padding optimization (same layout across majority of platforms for compat with
+// das aot compiler)
+#if !_TARGET_PC_LINUX && _TARGET_64BIT // Linux have it's own das aot compiler
     char _pad[sizeof(void *) - sizeof(uint32_t)]{}; //-V730_NOINIT
 #endif
 
@@ -373,13 +352,13 @@ namespace danet {
     static const int SizeReflVarQuotaNumber = 64;
 
     ReflectableObject(mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) :
-        mpi::IObject(uid),
-        debugWatermark(DANET_WATERMARK),
-        prevChanged(nullptr),
-        nextChanged(nullptr),
-        prev(nullptr),
-        next(nullptr),
-        reflectionFlags(EXCLUDED) {}
+      mpi::IObject(uid),
+      debugWatermark(DANET_WATERMARK),
+      prevChanged(nullptr),
+      nextChanged(nullptr),
+      prev(nullptr),
+      next(nullptr),
+      reflectionFlags(EXCLUDED) {}
 
     ReflectableObject(const ReflectableObject &) = default;
 
@@ -394,7 +373,7 @@ namespace danet {
   public:
     void checkWatermark() const {
       if (debugWatermark != DANET_WATERMARK)
-      EXCEPTION("Reflection: invalid object {}", fmt::ptr(this));
+        EXCEPTION("Reflection: invalid object {}", fmt::ptr(this));
     }
 
     void enableReflection() {
@@ -414,7 +393,8 @@ namespace danet {
       checkWatermark();
 
       resetChangeFlag();
-      if (full) DANET_DLIST_REMOVE(all_reflectables, this, prev, next);
+      if (full)
+        DANET_DLIST_REMOVE(all_reflectables, this, prev, next);
       reflectionFlags |= EXCLUDED;
     }
 
@@ -490,7 +470,7 @@ namespace danet {
       markAsChanged();
     }
 
-    void markAsChanged() {DANET_DLIST_PUSH(changed_reflectables, this, prevChanged, nextChanged); }
+    void markAsChanged() { DANET_DLIST_PUSH(changed_reflectables, this, prevChanged, nextChanged); }
 
     void relocate(const ReflectableObject *old_ptr) {
       G_ASSERT(old_ptr);
@@ -498,7 +478,7 @@ namespace danet {
       G_ASSERT((reflectionFlags & EXCLUDED) &&
                (!prev && !next && all_reflectables.head != this)); // only allowed in disabled reflection
 
-#define RELOC(x) (ReflectionVarMeta *)(uintptr_t(x) - uintptr_t(old_ptr) + uintptr_t(this))
+#define RELOC(x) (ReflectionVarMeta *) (uintptr_t(x) - uintptr_t(old_ptr) + uintptr_t(this))
       for (ReflectionVarMeta **m = &varList.head; *m; m = &(*m)->next)
         *m = RELOC(*m);
 #undef RELOC
@@ -523,9 +503,8 @@ namespace danet {
     // return how many vars was serialized
     // reset RVF_CHANGED flag for variables and remove object from changed_reflectables list
     // (if none changed wars was left and do_reset_changed_flag==true)
-    int
-    serialize(BitStream &bs, ParserState *state, uint16_t flags_to_have = RVF_CHANGED, bool fth_all = true,
-              uint16_t flags_to_ignore = 0, bool fti_all = false, bool do_reset_changed_flag = true);
+    int serialize(BitStream &bs, ParserState *state, uint16_t flags_to_have = RVF_CHANGED, bool fth_all = true,
+                  uint16_t flags_to_ignore = 0, bool fti_all = false, bool do_reset_changed_flag = true);
 
     virtual bool deserialize(BitStream &bs, int data_size, ParserState *state);
 
@@ -573,19 +552,18 @@ namespace danet {
     static bool onRecvReplicationEventForAll(BitStream &bs, ParserState *state);
   };
 
-// serialize changed vars, flags parameter means additional flags must exist (all of them)
-// vars with RVF_EXCLUDED do not serializes
-// accept flags that must exists in changed vars (all or any of that flags must exist ruled by bool)
-// return how many objects was serialized (could be zero)
-  int serializeChangedReflectables(BitStream &bs, ParserState *state, uint16_t flags_to_have = RVF_CHANGED, bool fth_all = true,
-                                   uint16_t flags_to_ignore = 0, bool fti_all = false,
+  // serialize changed vars, flags parameter means additional flags must exist (all of them)
+  // vars with RVF_EXCLUDED do not serializes
+  // accept flags that must exists in changed vars (all or any of that flags must exist ruled by bool)
+  // return how many objects was serialized (could be zero)
+  int serializeChangedReflectables(BitStream &bs, ParserState *state, uint16_t flags_to_have = RVF_CHANGED,
+                                   bool fth_all = true, uint16_t flags_to_ignore = 0, bool fti_all = false,
                                    bool do_reset_changed_flag = true);
 
-  int
-  serializeAllReflectables(BitStream &bs, ParserState *state, uint16_t flags_to_have = 0, bool fth_all = true,
-                           uint16_t flags_to_ignore = 0, bool fti_all = false, bool do_reset_changed_flag = true);
+  int serializeAllReflectables(BitStream &bs, ParserState *state, uint16_t flags_to_have = 0, bool fth_all = true,
+                               uint16_t flags_to_ignore = 0, bool fti_all = false, bool do_reset_changed_flag = true);
 
-// return -1 on error, or how many reflectables was deserialized
+  // return -1 on error, or how many reflectables was deserialized
   int deserializeReflectables(BitStream &bs, mpi::object_dispatcher resolver, ParserState *state);
 
   int forceFullSyncForAllReflectables(); // return num reflectables
@@ -593,15 +571,14 @@ namespace danet {
 #define DANET_COMMA ,
 
 #define DANET_DEF_GET_DEBUG_NAME(class_name)                                               \
-  const char *getClassName() const override                                                \
-  {                                                                                        \
+  const char *getClassName() const override {                                              \
     G_STATIC_ASSERT(danet::IsBase<danet::ReflectableObject DANET_COMMA ThisClass>::Value); \
     return #class_name;                                                                    \
   }
 
 
-// this method is needed to guarantee independance of executable build process from replication mechanism
-// (otherwise you need to keep build exactly the same for local and remote machines)
+  // this method is needed to guarantee independance of executable build process from replication mechanism
+  // (otherwise you need to keep build exactly the same for local and remote machines)
   void normalizeReplication();
 
   template<class _Ty>
@@ -658,12 +635,11 @@ namespace danet {
 
 #define DECL_REPLICATION_FOOTER(class_name)                                               \
   static int you_forget_to_put_IMPLEMENT_REPLICATION_4_##class_name;                      \
-  int getClassId() const override                                                         \
-  {                                                                                       \
+  int getClassId() const override {                                                       \
     G_STATIC_ASSERT(danet::IsBase<danet::ReplicatedObject DANET_COMMA ThisClass>::Value); \
     return you_forget_to_put_IMPLEMENT_REPLICATION_4_##class_name;                        \
   }                                                                                       \
-  void serializeReplicaCreationData(BitStream &bs) const override;                 \
+  void serializeReplicaCreationData(BitStream &bs) const override;                        \
   static danet::ReplicatedObject *createReplicatedObject(BitStream &bs, ParserState *state);
 
 #define DECL_REPLICATION(class_name, base_class) \
@@ -685,10 +661,8 @@ namespace danet {
 
 #define IMPLEMENT_REPLICATION_BODY(class_name, str_name, templ_name, pref)                                           \
   pref int class_name::you_forget_to_put_IMPLEMENT_REPLICATION_4_##templ_name = -1;                                  \
-  static struct ReplicationTypeRegistator4_##class_name                                                              \
-  {                                                                                                                  \
-    ReplicationTypeRegistator4_##class_name()                                                                        \
-    {                                                                                                                \
+  static struct ReplicationTypeRegistator4_##class_name {                                                            \
+    ReplicationTypeRegistator4_##class_name() {                                                                      \
       G_ASSERT(danet::num_registered_obj_creators < DANET_REPLICATION_MAX_CLASSES);                                  \
       class_name::you_forget_to_put_IMPLEMENT_REPLICATION_4_##templ_name = danet::num_registered_obj_creators;       \
       danet::ReplicatedObjectCreator &c = danet::registered_repl_obj_creators[danet::num_registered_obj_creators++]; \
@@ -698,6 +672,7 @@ namespace danet {
     }                                                                                                                \
   } replication_registrator_4_##class_name;
 
-#define IMPLEMENT_REPLICATION(class_name)                   IMPLEMENT_REPLICATION_BODY(class_name, class_name, class_name, )
-#define IMPLEMENT_REPLICATION_TEMPL(class_name, templ_name) IMPLEMENT_REPLICATION_BODY(class_name, class_name, templ_name, template <>)
+#define IMPLEMENT_REPLICATION(class_name) IMPLEMENT_REPLICATION_BODY(class_name, class_name, class_name, )
+#define IMPLEMENT_REPLICATION_TEMPL(class_name, templ_name) \
+  IMPLEMENT_REPLICATION_BODY(class_name, class_name, templ_name, template<>)
 }

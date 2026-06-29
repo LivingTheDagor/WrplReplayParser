@@ -9,8 +9,8 @@
 #include "math/dag_TMatrix.h"
 #include "mpi/types.h"
 #include "mpi/codegen/ReflIncludes.h"
-//#include "mpi/mpi.h"
-//#include "mpi/codegen/ReflIncludes.h"
+// #include "mpi/mpi.h"
+// #include "mpi/codegen/ReflIncludes.h"
 
 struct CameraTime {
   uint32_t time_ms;
@@ -21,19 +21,17 @@ struct SpaceTime {
   uint32_t time_ms = 0;
   Point3 location{};
 
-  bool operator==(const SpaceTime &other) const {
-    return time_ms == other.time_ms && location == other.location;
-  }
+  bool operator==(const SpaceTime &other) const { return time_ms == other.time_ms && location == other.location; }
 };
 
 #define COUNTER_MEASURES_COUNT 2
-#define SENSORS_COUNT 4
-#define TARGETS_NUM 8
+#define SENSORS_COUNT          4
+#define TARGETS_NUM            8
 
 
 struct SensorsControlStates {
-    // a bunch of this is probably a union actually
-    bool v1 = 0;
+  // a bunch of this is probably a union actually
+  bool v1 = 0;
   bool v2 = 0;
   bool first_bool = false; // maybe is turned on?
   float unpacked_1 = 0;
@@ -57,7 +55,7 @@ struct SensorsControlStates {
   int some_data_7;
   float field147_0xa8;
 
-    bool deserialize(BitStream &bs);
+  bool deserialize(BitStream &bs);
 };
 
 struct TargetDesignationControlState {
@@ -128,7 +126,7 @@ namespace unit {
     uint16_t count;
   };
 
-  struct Ammunition{
+  struct Ammunition {
     int count{};
     std::string name{};
   };
@@ -140,7 +138,7 @@ namespace unit {
     std::string blk_path{};
     std::string weapon_name{};
     std::vector<Ammunition> munitions{};
-    //std::string ammunition_count{};
+    // std::string ammunition_count{};
   };
 
   class Unit {
@@ -186,36 +184,36 @@ namespace unit {
   bool LoadFromStorage(Unit *unit, const FieldSerializerDict &data);
 
   class Aircraft : public Unit {
-      FMWReflectable fmv_data{};
-      FM_DVMReflectable fm_dvm_data{};
+    FMWReflectable fmv_data{};
+    FM_DVMReflectable fm_dvm_data{};
 
   public:
-      explicit Aircraft(uint16_t uid) : Unit(uid, AircraftType) {
-          base_data = &fmv_data;
-          base_dvm_data = &fm_dvm_data;
-      }
+    explicit Aircraft(uint16_t uid) : Unit(uid, AircraftType) {
+      base_data = &fmv_data;
+      base_dvm_data = &fm_dvm_data;
+    }
 
-      ~Aircraft() override = default;
+    ~Aircraft() override = default;
     void Load() override;
 
     Weapon *getWeapon(uint32_t ref);
   };
 
   class Tank : public Unit {
-      GMReflectable gm_data{};
-      GM_DVMReflectable gm_dvm_data{};
+    GMReflectable gm_data{};
+    GM_DVMReflectable gm_dvm_data{};
 
   public:
-      explicit Tank(uint16_t uid) : Unit(uid, TankType) {
-          base_data = &gm_data;
-          base_dvm_data = &gm_dvm_data;
-      }
+    explicit Tank(uint16_t uid) : Unit(uid, TankType) {
+      base_data = &gm_data;
+      base_dvm_data = &gm_dvm_data;
+    }
 
-      ~Tank() override = default;
+    ~Tank() override = default;
   };
 
   struct UnitRef {
     Unit *unit = nullptr;
-    bool operator==(const UnitRef& other) const {return unit == other.unit;}
+    bool operator==(const UnitRef &other) const { return unit == other.unit; }
   };
-}
+} // namespace unit

@@ -10,7 +10,7 @@
 #include <SDL_opengl.h>
 #endif
 #ifdef _WIN32
-#include <windows.h>        // SetProcessDPIAware()
+#include <windows.h> // SetProcessDPIAware()
 #endif
 
 
@@ -23,7 +23,8 @@ class MapImage {
     int channels;
     unsigned char *data = stbi_load_from_memory((const unsigned char *) (void *) img_data.data(), (int) img_data.size(),
                                                 &sourceWidth, &sourceHeight, &channels, 4);
-    if (!data) return false;
+    if (!data)
+      return false;
 
     glGenTextures(1, &glTexture);
     glBindTexture(GL_TEXTURE_2D, glTexture);
@@ -145,12 +146,9 @@ struct MapInfo {
 
   float current_zoom = 1.0f;
 
-  MapInfo(UnitType type) : drawn_units(type) {
-  }
+  MapInfo(UnitType type) : drawn_units(type) {}
 
-  ~MapInfo() {
-    clear();
-  }
+  ~MapInfo() { clear(); }
 
   void clear() {
     delete curr_image;
@@ -172,9 +170,9 @@ void DrawCapturePoint(ImDrawList *draw_list, ImVec2 center, float radius, int ca
   if (captureValue == 0)
     color = IM_COL32(0, 0, 0, 200);
   else if (captureValue < 0) {
-    color = IM_COL32((uint8_t)std::min(255, (int)((-captureValue)*2.55)), 0, 0, 200);
+    color = IM_COL32((uint8_t) std::min(255, (int) ((-captureValue) * 2.55)), 0, 0, 200);
   } else {
-    color = IM_COL32(0, 0, (uint8_t)std::min(255, (int)((-captureValue)*2.55)), 200);
+    color = IM_COL32(0, 0, (uint8_t) std::min(255, (int) ((-captureValue) * 2.55)), 200);
   }
   draw_list->AddCircle(center, radius, color, 0, 2.0f);
   draw_list->AddCircleFilled(center, radius, color_filled);
@@ -184,10 +182,8 @@ void DrawCapturePoint(ImDrawList *draw_list, ImVec2 center, float radius, int ca
     return;
 
   // 20% alpha = about 51/255
-  const ImU32 fillColor =
-      (captureValue < 0)
-        ? IM_COL32(255, 0, 0, 100) // red team
-        : IM_COL32(0, 128, 255, 100); // blue team
+  const ImU32 fillColor = (captureValue < 0) ? IM_COL32(255, 0, 0, 100) // red team
+                                             : IM_COL32(0, 128, 255, 100); // blue team
 
   const float start_angle = -IM_PI * 0.5f; // start from top
   const float end_angle = start_angle + (IM_PI * 2.0f * progress);
@@ -201,10 +197,7 @@ void DrawCapturePoint(ImDrawList *draw_list, ImVec2 center, float radius, int ca
     const float t = (float) i / (float) segments;
     const float a = start_angle + (end_angle - start_angle) * t;
 
-    draw_list->PathLineTo(ImVec2(
-      center.x + cosf(a) * radius,
-      center.y + sinf(a) * radius
-    ));
+    draw_list->PathLineTo(ImVec2(center.x + cosf(a) * radius, center.y + sinf(a) * radius));
   }
 
   draw_list->PathFillConvex(fillColor);
@@ -227,10 +220,8 @@ ImVec2 UVToScreen(MapInfo &map, const Point3 &location, const ImVec2 &canvas_ori
   float ImageCenterZ = map.mapTopLeftResized.y + map.differenceResized.y * 0.5f;
   float new_z = 2.0f * ImageCenterZ - location.z;
 
-  Point2 uv{
-    (location.x - map.mapTopLeftZoomed.x) / map.differenceZoomed.x,
-    ((new_z) - map.mapTopLeftZoomed.y) / map.differenceZoomed.y
-  };
+  Point2 uv{(location.x - map.mapTopLeftZoomed.x) / map.differenceZoomed.x,
+            ((new_z) -map.mapTopLeftZoomed.y) / map.differenceZoomed.y};
 
   if (!force_draw)
     if (uv.x < -0.1f || uv.x > 1.1f || uv.y < -0.1f || uv.y > 1.1f) {
@@ -238,8 +229,7 @@ ImVec2 UVToScreen(MapInfo &map, const Point3 &location, const ImVec2 &canvas_ori
       return {};
     }
 
-  return ImVec2(canvas_origin.x + (uv.x * canvas_size.x),
-                canvas_origin.y + (uv.y * canvas_size.y));
+  return ImVec2(canvas_origin.x + (uv.x * canvas_size.x), canvas_origin.y + (uv.y * canvas_size.y));
 }
 
 class ReplayHandler {
@@ -247,8 +237,8 @@ protected:
   static Point3 TMToCenter(const TMatrix &tm) {
     Point3 ret = tm.col[3];
     auto len = tm.col[0].length();
-    //ret.x += cos(DegToRad(current_look_direction)) * len;
-    //ret.z += sin(DegToRad(current_look_direction)) * len;
+    // ret.x += cos(DegToRad(current_look_direction)) * len;
+    // ret.z += sin(DegToRad(current_look_direction)) * len;
     ret.z += len; // cos(pi/2) == 0, sin(pi/2) == 1, so this is just that but simplified
     return ret;
   }
@@ -267,30 +257,21 @@ protected:
     ImVec2 uv0(center_u - span * 0.5f, center_v - span * 0.5f);
     ImVec2 uv1(center_u + span * 0.5f, center_v + span * 0.5f);
 
-    info.mapTopLeftZoomed = Point2(
-      info.mapTopLeftResized.x + uv0.x * info.differenceResized.x,
-      info.mapTopLeftResized.y + uv0.y * info.differenceResized.y
-    );
-    info.mapBottomRightZoomed = Point2(
-      info.mapTopLeftResized.x + uv1.x * info.differenceResized.x,
-      info.mapTopLeftResized.y + uv1.y * info.differenceResized.y
-    );
-    info.differenceZoomed = Point2(
-      info.mapBottomRightZoomed.x - info.mapTopLeftZoomed.x,
-      info.mapBottomRightZoomed.y - info.mapTopLeftZoomed.y
-    );
+    info.mapTopLeftZoomed = Point2(info.mapTopLeftResized.x + uv0.x * info.differenceResized.x,
+                                   info.mapTopLeftResized.y + uv0.y * info.differenceResized.y);
+    info.mapBottomRightZoomed = Point2(info.mapTopLeftResized.x + uv1.x * info.differenceResized.x,
+                                       info.mapTopLeftResized.y + uv1.y * info.differenceResized.y);
+    info.differenceZoomed = Point2(info.mapBottomRightZoomed.x - info.mapTopLeftZoomed.x,
+                                   info.mapBottomRightZoomed.y - info.mapTopLeftZoomed.y);
   }
 
   void DrawMap(MapInfo &info, const char *table_name) {
-    ZoneScoped
-    if (!info.curr_image)
-      return;
+    ZoneScoped if (!info.curr_image) return;
     ImGui::PushID(&info);
     ImGui::BeginGroup();
-    //ImGui::TextUnformatted(table_name);
+    // ImGui::TextUnformatted(table_name);
     ImVec2 canvas_p0 = ImGui::GetCursorScreenPos();
-    ImVec2 canvas_p1 = ImVec2(canvas_p0.x + info.mapSize.x,
-                              canvas_p0.y + info.mapSize.y);
+    ImVec2 canvas_p1 = ImVec2(canvas_p0.x + info.mapSize.x, canvas_p0.y + info.mapSize.y);
 
     // --- mouse interactivity: pan (left-drag) and zoom (wheel) ---
     ImGuiIO &io = ImGui::GetIO();
@@ -353,10 +334,7 @@ protected:
       float newSpan = 1.0f / newZoom;
 
       // mouse local position inside canvas (0..1)
-      ImVec2 localMouse{
-        (mousePos.x - canvas_p0.x) / info.mapSize.x,
-        (mousePos.y - canvas_p0.y) / info.mapSize.y
-      };
+      ImVec2 localMouse{(mousePos.x - canvas_p0.x) / info.mapSize.x, (mousePos.y - canvas_p0.y) / info.mapSize.y};
       localMouse.x = ImClamp(localMouse.x, 0.0f, 1.0f);
       localMouse.y = ImClamp(localMouse.y, 0.0f, 1.0f);
 
@@ -457,32 +435,26 @@ protected:
         }
         bool add = true;
         if (prev) {
-          auto sqrt_val = sqrt((pos.x - prev->x) * (pos.x - prev->x) +
-                               (pos.z - prev->z) * (pos.z - prev->z));
+          auto sqrt_val = sqrt((pos.x - prev->x) * (pos.x - prev->x) + (pos.z - prev->z) * (pos.z - prev->z));
           if (abs(sqrt_val) > max_distance) {
-            data.draw_list->AddPolyline(
-              screen_points.data(),
-              (int) screen_points.size(),
-              get_player_color(pid, team),
-              0, // ImDrawFlags (0 = open line)
-              3.0f // Thickness
+            data.draw_list->AddPolyline(screen_points.data(), (int) screen_points.size(), get_player_color(pid, team),
+                                        0, // ImDrawFlags (0 = open line)
+                                        3.0f // Thickness
             );
             screen_points.resize(0); // lets remove the old line and then draw a new one
             add = false;
           }
-          // we go from back to front (most recent to oldest) so we want to stop adding once we hit a significant distance
+          // we go from back to front (most recent to oldest) so we want to stop adding once we hit a significant
+          // distance
         }
         if (add) {
           screen_points.push_back(curr_point);
         }
         prev = &pos;
       }
-      data.draw_list->AddPolyline(
-        screen_points.data(),
-        (int) screen_points.size(),
-        get_player_color(pid, team),
-        0, // ImDrawFlags (0 = open line)
-        3.f // Thickness
+      data.draw_list->AddPolyline(screen_points.data(), (int) screen_points.size(), get_player_color(pid, team),
+                                  0, // ImDrawFlags (0 = open line)
+                                  3.f // Thickness
       );
       if (found_front && front_time_ms <= data.time_start_ms && front_time_ms >= data.time_end_ms) {
         bool is_dead = unit.killed_at_ms <= data.time_start_ms && unit.killed_at_ms >= data.time_end_ms;
@@ -538,32 +510,27 @@ protected:
         }
         bool add = true;
         if (prev) {
-          auto sqrt_val = sqrt((pos.x - prev->x) * (pos.x - prev->x) +
-                               (pos.z - prev->z) * (pos.z - prev->z));
+          auto sqrt_val = sqrt((pos.x - prev->x) * (pos.x - prev->x) + (pos.z - prev->z) * (pos.z - prev->z));
           if (abs(sqrt_val) > max_distance) {
-            data.draw_list->AddPolyline(
-              screen_points.data(),
-              (int) screen_points.size(),
-              get_player_color(*player__id, team),
-              0, // ImDrawFlags (0 = open line)
-              1.0f // Thickness
+            data.draw_list->AddPolyline(screen_points.data(), (int) screen_points.size(),
+                                        get_player_color(*player__id, team),
+                                        0, // ImDrawFlags (0 = open line)
+                                        1.0f // Thickness
             );
             screen_points.resize(0); // lets remove the old line and then draw a new one
             add = false;
           }
-          // we go from back to front (most recent to oldest) so we want to stop adding once we hit a significant distance
+          // we go from back to front (most recent to oldest) so we want to stop adding once we hit a significant
+          // distance
         }
         if (add) {
           screen_points.push_back(curr_point);
         }
         prev = &pos;
       }
-      data.draw_list->AddPolyline(
-        screen_points.data(),
-        (int) screen_points.size(),
-        get_player_color(*player__id, team),
-        0, // ImDrawFlags (0 = open line)
-        1.f // Thickness
+      data.draw_list->AddPolyline(screen_points.data(), (int) screen_points.size(), get_player_color(*player__id, team),
+                                  0, // ImDrawFlags (0 = open line)
+                                  1.f // Thickness
       );
     };
 
@@ -577,7 +544,7 @@ protected:
       iterate_all_rockets(state, on_rocket_cb);
 
 
-#define SQUARE(x) ((x)*(x))
+#define SQUARE(x) ((x) * (x))
 
     for (auto &objs: this->state.Zones) {
       auto area_flags = *objs->flags.data;
@@ -591,7 +558,7 @@ protected:
         auto true_center_vec = UVToScreen(info, true_center, canvas_p0, info.mapSize, do_draw, true);
         if (!do_draw)
           continue;
-        auto radius = std::sqrt((SQUARE(center_vec.x-true_center_vec.x) + SQUARE(center_vec.y-true_center_vec.y)));
+        auto radius = std::sqrt((SQUARE(center_vec.x - true_center_vec.x) + SQUARE(center_vec.y - true_center_vec.y)));
         if (auto capture = dynamic_cast<CaptureZone *>(objs)) {
           DrawCapturePoint(draw_list, true_center_vec, radius, *capture->mpTimeX100.data);
         } else {
@@ -688,10 +655,10 @@ public:
   }
 
   virtual void loadReplay() {
-    ZoneScoped
-    auto rdr = replay->getReplayReader();
+    ZoneScoped auto rdr = replay->getReplayReader();
     ReplayPacket p{};
-    while (rdr->getNextPacket(p) && this->state.ParsePacket(p));
+    while (rdr->getNextPacket(p) && this->state.ParsePacket(p))
+      ;
     this->replay_length_ms = p.timestamp_ms;
     this->replay_length_f = (float(p.timestamp_ms) / 1000.f);
     delete rdr;
@@ -699,8 +666,7 @@ public:
 
 
   ReplayHandler(std::unique_ptr<IReplay> rpl) : state(rpl.get()) {
-    ZoneScoped
-    auto header = rpl->getHeader();
+    ZoneScoped auto header = rpl->getHeader();
     session_id_hex = fmt::format("{:#X}", header->session_id);
     this->session_id = header->session_id;
     std::string blk_path = header->mission_file;
@@ -716,8 +682,7 @@ public:
   virtual ~ReplayHandler() = default;
 
   void load_map_info_from_blk(std::string_view path) {
-    ZoneScoped
-    DataBlock mission_blk{};
+    ZoneScoped DataBlock mission_blk{};
     G_ASSERTF(dblk::load(mission_blk, path), "failed to load {}", fmt::format("{}/{}", path, ".blk"));
     const char *level_path = "levels/water.bin";
     auto mission_settings = mission_blk.getBlockByNameEx("mission_settings");
@@ -728,21 +693,19 @@ public:
     G_ASSERTF(dblk::load(level_blk, map_file_blk_path), "failed to load {}", map_file_blk_path);
     air_map.mapTopLeft = air_map.mapTopLeftResized = level_blk.getPoint2("mapCoord0", Point2(0, 0));
     air_map.mapBottomRight = air_map.mapBottomRightResized = level_blk.getPoint2("mapCoord1", Point2(0, 0));
-    air_map.difference = air_map.differenceResized = {
-                           air_map.mapBottomRight.x - air_map.mapTopLeft.x,
-                           air_map.mapBottomRight.y - air_map.mapTopLeft.y
-                         };
+    air_map.difference = air_map.differenceResized = {air_map.mapBottomRight.x - air_map.mapTopLeft.x,
+                                                      air_map.mapBottomRight.y - air_map.mapTopLeft.y};
 
     tank_map.mapTopLeft = tank_map.mapTopLeftResized = level_blk.getPoint2("tankMapCoord0", Point2(0, 0));
     tank_map.mapBottomRight = tank_map.mapBottomRightResized = level_blk.getPoint2("tankMapCoord1", Point2(0, 0));
-    tank_map.difference = tank_map.differenceResized = {
-                            tank_map.mapBottomRight.x - tank_map.mapTopLeft.x,
-                            tank_map.mapBottomRight.y - tank_map.mapTopLeft.y
-                          };
+    tank_map.difference = tank_map.differenceResized = {tank_map.mapBottomRight.x - tank_map.mapTopLeft.x,
+                                                        tank_map.mapBottomRight.y - tank_map.mapTopLeft.y};
 
-    auto str = mission_settings->getBlockByNameEx("briefing")->getBlockByNameEx("part")->getBlockByNameEx("slide")->
-        getBlockByNameEx(
-          "battleArea")->getStr("target", nullptr);
+    auto str = mission_settings->getBlockByNameEx("briefing")
+                 ->getBlockByNameEx("part")
+                 ->getBlockByNameEx("slide")
+                 ->getBlockByNameEx("battleArea")
+                 ->getStr("target", nullptr);
     air_map.topLeftUV = {0, 0};
     air_map.bottomRightUV = {1, 1}; // default values, covers the whole map
 
@@ -828,25 +791,20 @@ public:
   }
 
   void load_map_info_from_bin(std::string_view bin_path) {
-    ZoneScoped
-    std::string level_base_path{bin_path};
+    ZoneScoped std::string level_base_path{bin_path};
     level_base_path.resize(level_base_path.size() - 4); // remove .bin
     auto map_file_blk_path = fmt::format("{}.blk", level_base_path);
     DataBlock level_blk{};
     G_ASSERTF(dblk::load(level_blk, map_file_blk_path), "failed to load {}", map_file_blk_path);
     air_map.mapTopLeft = air_map.mapTopLeftResized = level_blk.getPoint2("mapCoord0", Point2(0, 0));
     air_map.mapBottomRight = air_map.mapBottomRightResized = level_blk.getPoint2("mapCoord1", Point2(0, 0));
-    air_map.difference = air_map.differenceResized = {
-                           air_map.mapBottomRight.x - air_map.mapTopLeft.x,
-                           air_map.mapBottomRight.y - air_map.mapTopLeft.y
-                         };
+    air_map.difference = air_map.differenceResized = {air_map.mapBottomRight.x - air_map.mapTopLeft.x,
+                                                      air_map.mapBottomRight.y - air_map.mapTopLeft.y};
 
     tank_map.mapTopLeft = tank_map.mapTopLeftResized = level_blk.getPoint2("tankMapCoord0", Point2(0, 0));
     tank_map.mapBottomRight = tank_map.mapBottomRightResized = level_blk.getPoint2("tankMapCoord1", Point2(0, 0));
-    tank_map.difference = tank_map.differenceResized = {
-                            tank_map.mapBottomRight.x - tank_map.mapTopLeft.x,
-                            tank_map.mapBottomRight.y - tank_map.mapTopLeft.y
-                          };
+    tank_map.difference = tank_map.differenceResized = {tank_map.mapBottomRight.x - tank_map.mapTopLeft.x,
+                                                        tank_map.mapBottomRight.y - tank_map.mapTopLeft.y};
 
     air_map.topLeftUV = {0, 0};
     air_map.bottomRightUV = {1, 1}; // default values, covers the whole map
@@ -896,8 +854,7 @@ public:
 
   template<int team>
   void draw_player(int index) {
-    ZoneScoped
-    if (index == -1) {
+    ZoneScoped if (index == -1) {
       ImGui::TableNextColumn();
       ImGui::TextUnformatted("");
       ImGui::TableNextColumn();
@@ -986,7 +943,7 @@ public:
   }
 
   static constexpr ImGuiChildFlags RESIZE_CHILD_FLAGS =
-      ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AutoResizeX;
+    ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AutoResizeX;
 
   void drawTeam1() {
     ImGui::BeginChild("Team 1", ImVec2(0, 0), RESIZE_CHILD_FLAGS);
@@ -995,9 +952,9 @@ public:
     collect_sort_players(indexes_out, 1);
     indexes_out.resize(this->max_players_for_team, -1);
 
-    constexpr uint32_t flags =
-        ImGuiTableFlags_::ImGuiTableFlags_Borders | ImGuiTableFlags_::ImGuiTableFlags_SizingFixedFit |
-        ImGuiTableFlags_::ImGuiTableFlags_NoHostExtendX;
+    constexpr uint32_t flags = ImGuiTableFlags_::ImGuiTableFlags_Borders |
+                               ImGuiTableFlags_::ImGuiTableFlags_SizingFixedFit |
+                               ImGuiTableFlags_::ImGuiTableFlags_NoHostExtendX;
     if (ImGui::BeginTable("Team 1", 5, flags)) {
       ImGui::TableSetupColumn("Color");
       ImGui::TableSetupColumn("Points");
@@ -1022,9 +979,9 @@ public:
     collect_sort_players(indexes_out, 2);
     indexes_out.resize(this->max_players_for_team, -1);
 
-    constexpr uint32_t flags =
-        ImGuiTableFlags_::ImGuiTableFlags_Borders | ImGuiTableFlags_::ImGuiTableFlags_SizingFixedFit |
-        ImGuiTableFlags_::ImGuiTableFlags_NoHostExtendX;
+    constexpr uint32_t flags = ImGuiTableFlags_::ImGuiTableFlags_Borders |
+                               ImGuiTableFlags_::ImGuiTableFlags_SizingFixedFit |
+                               ImGuiTableFlags_::ImGuiTableFlags_NoHostExtendX;
     if (ImGui::BeginTable("Team 2", 5, flags)) {
       ImGui::TableSetupColumn("");
       ImGui::TableSetupColumn(this->unit_header.c_str(), ImGuiTableColumnFlags_WidthFixed,
@@ -1043,8 +1000,7 @@ public:
   }
 
   void drawImage(MapInfo &info) {
-    ZoneScoped
-    if (info.curr_image) {
+    ZoneScoped if (info.curr_image) {
       float center_u = info.centerLocalUV.x;
       float center_v = info.centerLocalUV.y;
       float span = 1.0f / info.current_zoom;
@@ -1063,22 +1019,13 @@ public:
       ImVec2 crop_uv1(info.bottomRightUV.x, info.bottomRightUV.y);
 
       // Remap local zoom UVs into the crop range on the original source texture
-      ImVec2 final_uv0(
-        crop_uv0.x + (crop_uv1.x - crop_uv0.x) * local_uv0.x,
-        crop_uv0.y + (crop_uv1.y - crop_uv0.y) * local_uv0.y
-      );
+      ImVec2 final_uv0(crop_uv0.x + (crop_uv1.x - crop_uv0.x) * local_uv0.x,
+                       crop_uv0.y + (crop_uv1.y - crop_uv0.y) * local_uv0.y);
 
-      ImVec2 final_uv1(
-        crop_uv0.x + (crop_uv1.x - crop_uv0.x) * local_uv1.x,
-        crop_uv0.y + (crop_uv1.y - crop_uv0.y) * local_uv1.y
-      );
+      ImVec2 final_uv1(crop_uv0.x + (crop_uv1.x - crop_uv0.x) * local_uv1.x,
+                       crop_uv0.y + (crop_uv1.y - crop_uv0.y) * local_uv1.y);
 
-      ImGui::Image(
-        info.curr_image->GetTexture(),
-        ImVec2(info.mapSize.x, info.mapSize.y),
-        final_uv0,
-        final_uv1
-      );
+      ImGui::Image(info.curr_image->GetTexture(), ImVec2(info.mapSize.x, info.mapSize.y), final_uv0, final_uv1);
     }
   }
 
@@ -1088,8 +1035,7 @@ public:
       loadReplay();
       calculate_data();
     }
-    ZoneScoped
-    if (ImGui::BeginChild("Top Information", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
+    ZoneScoped if (ImGui::BeginChild("Top Information", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
       drawTeam1();
       ImGui::SameLine();
       if (ImGui::BeginChild("Controls", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
@@ -1147,7 +1093,7 @@ public:
       ImGui::EndChild();
     }
     if (ImGui::BeginChild("center data", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
-      //ImGui::SliderFloat("##degree_val", &current_look_direction, 0.0f, 360.0f);
+      // ImGui::SliderFloat("##degree_val", &current_look_direction, 0.0f, 360.0f);
 
       if (ImGui::BeginChild("child_map_slider", ImVec2(0, 0), RESIZE_CHILD_FLAGS,
                             ImGuiWindowFlags_HorizontalScrollbar)) {

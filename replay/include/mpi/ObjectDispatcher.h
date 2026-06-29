@@ -7,15 +7,14 @@
 #include "types.h"
 
 DEFINE_HANDLE(handle_object_dispatcher)
-#define DISPATCHER_LOGI(format_, ...) ELOGI(handle_object_dispatcher, format_, __VA_ARGS__)
+#define DISPATCHER_LOGI(format_, ...)  ELOGI(handle_object_dispatcher, format_, __VA_ARGS__)
 #define DISPATCHER_LOGD1(format_, ...) ELOGD1(handle_object_dispatcher, format_, __VA_ARGS__)
 #define DISPATCHER_LOGD2(format_, ...) ELOGD2(handle_object_dispatcher, format_, __VA_ARGS__)
 #define DISPATCHER_LOGD3(format_, ...) ELOGD3(handle_object_dispatcher, format_, __VA_ARGS__)
-#define DISPATCHER_LOGE(format_, ...) ELOGE(handle_object_dispatcher, format_, __VA_ARGS__)
+#define DISPATCHER_LOGE(format_, ...)  ELOGE(handle_object_dispatcher, format_, __VA_ARGS__)
 
 struct ParserState;
-namespace mpi
-{
+namespace mpi {
   enum QueuePacketTypes {
     MPI = 0x10000000,
     REFL = 0x20000000,
@@ -28,7 +27,7 @@ namespace mpi
       BitStream bs;
     };
 
-    std::unordered_map<ecs::EntityId, std::vector<QueueData> > dispatched_objects;
+    std::unordered_map<ecs::EntityId, std::vector<QueueData>> dispatched_objects;
 
     Message *dispatchMpiMessage(MessageID mid) override;
 
@@ -53,10 +52,9 @@ namespace mpi
   };
 
 
-  IObject * ObjectDispatcher(ObjectID oid, ObjectExtUID extUid,  ParserState*state);
+  IObject *ObjectDispatcher(ObjectID oid, ObjectExtUID extUid, ParserState *state);
 
-}
+} // namespace mpi
 
 
-
-#endif //MYEXTENSION_OBJECTDISPATCHER_H
+#endif // MYEXTENSION_OBJECTDISPATCHER_H

@@ -6,11 +6,11 @@
 
 
 DEFINE_HANDLE(handle_replication)
-#define REPLICATION_LOGI(format_, ...) ELOGI(handle_replication, format_, __VA_ARGS__)
+#define REPLICATION_LOGI(format_, ...)  ELOGI(handle_replication, format_, __VA_ARGS__)
 #define REPLICATION_LOGD1(format_, ...) ELOGD1(handle_replication, format_, __VA_ARGS__)
 #define REPLICATION_LOGD2(format_, ...) ELOGD2(handle_replication, format_, __VA_ARGS__)
 #define REPLICATION_LOGD3(format_, ...) ELOGD3(handle_replication, format_, __VA_ARGS__)
-#define REPLICATION_LOGE(format_, ...) ELOGE(handle_replication, format_, __VA_ARGS__)
+#define REPLICATION_LOGE(format_, ...)  ELOGE(handle_replication, format_, __VA_ARGS__)
 
 void force_link_replication();
 
@@ -118,6 +118,4 @@ public:
 };
 
 
-
-
-#endif //WTFILEUTILS_REPLICATED_DEFINE_H
+#endif // WTFILEUTILS_REPLICATED_DEFINE_H

@@ -24,7 +24,7 @@ namespace ecs {
 
   class GState;
 
-// currently, I dont actually care about the Generation as I still have no idea what it 'means'
+  // currently, I dont actually care about the Generation as I still have no idea what it 'means'
   class EntityId {
   public:
     EntityId() = default;
@@ -49,16 +49,16 @@ namespace ecs {
 
     unsigned index() const { return handle & ENTITY_INDEX_MASK; }
 
-    inline uint32_t get_generation() { return (uint32_t)generation(); }
+    inline uint32_t get_generation() { return (uint32_t) generation(); }
 
     inline uint32_t get_handle() const { return handle; }
 
-    [[nodiscard]] inline std::string toString(int indent=0) const { return fmt::format("{:#08x}", this->handle); }
+    [[nodiscard]] inline std::string toString(int indent = 0) const { return fmt::format("{:#08x}", this->handle); }
 
   private:
     friend class ecs::EntityManager;
 
-    //friend unsigned get_generation(const EntityId);
+    // friend unsigned get_generation(const EntityId);
     entity_id_t handle = ECS_INVALID_ENTITY_ID_VAL;
 
     uint8_t generation() const { return (handle >> ENTITY_INDEX_BITS) & ENTITY_GENERATION_MASK; }
@@ -76,13 +76,13 @@ namespace ecs {
 }; // namespace ecs
 
 namespace std {
-  template <>
+  template<>
   struct hash<ecs::EntityId> {
-    size_t operator()(const ecs::EntityId& v) const noexcept {
+    size_t operator()(const ecs::EntityId &v) const noexcept {
       return static_cast<size_t>(static_cast<ecs::entity_id_t>(v));
     }
   };
-}
+} // namespace std
 
 template<typename T>
 struct DebugConverter;

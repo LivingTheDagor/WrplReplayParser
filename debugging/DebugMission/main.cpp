@@ -12,7 +12,8 @@
 int max_player_count_per_team = 8;
 
 
-std::unordered_set<std::string> parsed = {"gameData/missions/templates/tank_templates/starshell_template.blk", "gameData/missions/templates/tank_arcade_streaks_template.blk"};
+std::unordered_set<std::string> parsed = {"gameData/missions/templates/tank_templates/starshell_template.blk",
+                                          "gameData/missions/templates/tank_arcade_streaks_template.blk"};
 int rank;
 IPoint2 defaultRankRange{0, 51};
 
@@ -43,16 +44,12 @@ struct import_data {
   }
 };
 
-void unpackTriggers(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from)
-{
+void unpackTriggers(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from) {
   for (int i = 0; i < from->blockCount(); i++) {
     auto subBlk = from->getBlock(i);
-    if(subBlk->getBool("isCategory", false))
-    {
+    if (subBlk->getBool("isCategory", false)) {
       unpackTriggers(to, subBlk);
-    }
-    else
-    {
+    } else {
       to->addBlock(subBlk);
     }
   }
@@ -81,17 +78,16 @@ void parse(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from, import_data pre
   for (int i = 0; i < blk->blockCount(); i++) {
     auto subBlk = blk->getBlock(i);
     auto subBlk_nid = subBlk->getBlockNameId();
-    //std::cout << subBlk->getBlockName() << "\n";
-    if (subBlk_nid == mission_settingsNid)
-    {
+    // std::cout << subBlk->getBlockName() << "\n";
+    if (subBlk_nid == mission_settingsNid) {
       auto misBlock = subBlk->getBlock("mission", 0);
-      //misBlock->printBlock(4, std::cout);
+      // misBlock->printBlock(4, std::cout);
       continue;
     }
     if (subBlk_nid == importNid) {
 
-      //subBlk->printBlock(4, std::cout);
-      // do nothing this iter
+      // subBlk->printBlock(4, std::cout);
+      //  do nothing this iter
     } else if (subBlk_nid == importAreasNid) {
       if (imp_data.importAreas) {
         auto temp_blk = to->getAddBlock(subBlk->getBlockNameId());
@@ -100,32 +96,28 @@ void parse(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from, import_data pre
     } else if (subBlk_nid == importUnitsNid) {
       if (imp_data.importUnits) {
         auto temp_blk = to->getAddBlock(subBlk->getBlockNameId());
-        for(int b = 0; b < subBlk->blockCount(); b++)
-        {
+        for (int b = 0; b < subBlk->blockCount(); b++) {
           auto obj_blk = subBlk->getBlock(b);
-          if(obj_blk->getBlockName() == "armada")
-          {
+          if (obj_blk->getBlockName() == "armada") {
             auto name = obj_blk->getStr("name", nullptr);
-            if(name && *name=='t')
-            {
+            if (name && *name == 't') {
               name += 9;
               auto nid = std::stoi(std::string(name));
 
-              //std::cout << name << " : " << nid << "\n";
-              if(nid > max_player_count_per_team)
+              // std::cout << name << " : " << nid << "\n";
+              if (nid > max_player_count_per_team)
                 continue;
             }
           }
           temp_blk->addBlock(obj_blk);
-
         }
-        //temp_blk->addBlockInplace(subBlk, false, false); // we dont care about the 'from' blk
+        // temp_blk->addBlockInplace(subBlk, false, false); // we dont care about the 'from' blk
       }
     } else if (subBlk_nid == importTriggersNid) {
       if (imp_data.importTriggers) {
         auto temp_blk = to->getAddBlock(subBlk->getBlockNameId());
         unpackTriggers(temp_blk, subBlk);
-        //temp_blk->addBlockInplace(subBlk, false, false); // we dont care about the 'from' blk
+        // temp_blk->addBlockInplace(subBlk, false, false); // we dont care about the 'from' blk
       }
     } else if (subBlk_nid == importMissionObjectivesNid) {
       if (imp_data.importMissionObjectives) {
@@ -158,8 +150,8 @@ void parse(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from, import_data pre
 
         auto ImportRecordBlk = subBlk->getBlock(z);
         IPoint2 range = ImportRecordBlk->getIPoint2("rankRange", defaultRankRange);
-        //std::cout << range.toString() << "\n";
-        if(rank < range.x || rank > range.y)
+        // std::cout << range.toString() << "\n";
+        if (rank < range.x || rank > range.y)
           continue;
         G_ASSERT(ImportRecordBlk->getBlockNameId() == importRecordNid);
         parse(to, ImportRecordBlk, imp_data);
@@ -179,7 +171,7 @@ void FlattenMissionBlk(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from) {
         auto ImportRecordBlk = block->getBlock(z);
         G_ASSERT(ImportRecordBlk->getBlockNameId() == importRecordNid);
 
-        //ImportRecordBlk->printBlock(4, std::cout);
+        // ImportRecordBlk->printBlock(4, std::cout);
         parse(to, ImportRecordBlk, {});
       }
     } else { // anything that isnt an import gets added to final blk
@@ -195,7 +187,8 @@ void FlattenMissionBlk(SharedPtr<DataBlock> &to, SharedPtr<DataBlock> &from) {
 
 int main() {
   std::string vromfs_mission_path = "gamedata\\missions\\cta\\tanks\\normandy\\normandy_dom.blk";
-  auto mis2Path = "gamedata/missions/cta/tanks/port_novorossiysk/airfields/template_port_novorossiysk_airfields_low_ranks.blk";
+  auto mis2Path =
+    "gamedata/missions/cta/tanks/port_novorossiysk/airfields/template_port_novorossiysk_airfields_low_ranks.blk";
 #ifdef _TARGET_PC_LINUX
   std::string dump_path = R"(/mnt/d/GoogleDriveWtMission/dumpTest2.blk)";
   std::string p1 = R"(/mnt/d/SteamLibrary/steamapps/common/War Thunder/cache/binary.2.49.0/mis.vromfs.bin)";
@@ -207,22 +200,22 @@ int main() {
   EXCEPTION_IF_FALSE(file_mgr.mountVromfs(p1), "Ah shit");
 
   SharedPtr<DataBlock> blk = SharedPtr<DataBlock>::make();
-  //SharedPtr<DataBlock> tblk = SharedPtr<DataBlock>::make();
+  // SharedPtr<DataBlock> tblk = SharedPtr<DataBlock>::make();
   EXCEPTION_IF_FALSE(load(*blk.get(), vromfs_mission_path.c_str()), "failed to load mission blk");
-  //EXCEPTION_IF_FALSE(load(*tblk.get(), mis2Path), "failed to load mission blk");
-  //tblk->printBlock(0, std::cout);
+  // EXCEPTION_IF_FALSE(load(*tblk.get(), mis2Path), "failed to load mission blk");
+  // tblk->printBlock(0, std::cout);
   SharedPtr<DataBlock> outBlk = SharedPtr<DataBlock>::make(blk->getNameMap());
   FlattenMissionBlk(outBlk, blk);
   std::ofstream out{dump_path};
-  //auto triggers = outBlk->getBlock("triggers", 0);
-  //for(int b = 0; b < triggers->blockCount(); b++) {
-  //  auto trigger = triggers->getBlock(b);
-  //  auto actions = trigger->getBlock("actions", 0);
-  //  std::cout << "TRIGGER NAME: " << trigger->getBlockName() << "\n";
-  //  for(int b1 = 0; b1 < actions->blockCount(); b1++) {
-  //    auto action = actions->getBlock(b1);
-  //    actions->printBlock(0, std::cout);
-  //  }
-  //}
+  // auto triggers = outBlk->getBlock("triggers", 0);
+  // for(int b = 0; b < triggers->blockCount(); b++) {
+  //   auto trigger = triggers->getBlock(b);
+  //   auto actions = trigger->getBlock("actions", 0);
+  //   std::cout << "TRIGGER NAME: " << trigger->getBlockName() << "\n";
+  //   for(int b1 = 0; b1 < actions->blockCount(); b1++) {
+  //     auto action = actions->getBlock(b1);
+  //     actions->printBlock(0, std::cout);
+  //   }
+  // }
   outBlk->printBlock(0, out);
 }

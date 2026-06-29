@@ -11,10 +11,7 @@ int main() {
   std::ifstream file{path};
   EXCEPTION_IF_FALSE(file.is_open(), "failed to open file");
   SharedPtr<DataBlock> blk = SharedPtr<DataBlock>::make();
-  std::vector<char> characters(
-      (std::istreambuf_iterator<char>(file)),
-      std::istreambuf_iterator<char>()
-  );
+  std::vector<char> characters((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
   G_ASSERT(blk->loadText(characters));
   blk->printBlock(0, std::cout);

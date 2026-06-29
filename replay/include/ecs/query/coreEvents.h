@@ -15,12 +15,13 @@ namespace ecs {
   // basic destruction, only does minimal, like remove uid lookup entry, also only called
   // first arg is the eid the entity was moved to
   // second arg is if this is true destruction or not
-  // this is used during rewinding to mark if this was the 'destruction' caused by undoing creation or if its the actual destruction
+  // this is used during rewinding to mark if this was the 'destruction' caused by undoing creation or if its the actual
+  // destruction
   ECS_UNICAST_EVENT_TYPE(EventEntityDestroyedBasic, ecs::EntityId, bool)
 
-  //event called during a rewind event, arg is time_ms changing to
+  // event called during a rewind event, arg is time_ms changing to
   ECS_BROADCAST_EVENT_TYPE(EventRewind, uint32_t)
-}
+} // namespace ecs
 
 
-#endif //WTFILEUTILS_COREEVENTS_H
+#endif // WTFILEUTILS_COREEVENTS_H

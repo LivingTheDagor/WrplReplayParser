@@ -5,4 +5,4 @@
 #include "DataComponents.h"
 #include "ComponentTypesDefs.h"
 
-#endif //MYEXTENSION_DATACOMPONENTSDEFS_H
+#endif // MYEXTENSION_DATACOMPONENTSDEFS_H

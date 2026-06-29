@@ -11,7 +11,7 @@ InternedStrings::InternedStrings() {
 }
 
 namespace ecs {
-  //extern int MAX_STRING_LENGTH;
+  // extern int MAX_STRING_LENGTH;
 
   void write_string(ecs::SerializerCb &cb, const char *pStr, uint32_t max_string_len) {
     for (const char *str = pStr; *str && str - pStr < max_string_len; str++)
@@ -29,7 +29,7 @@ namespace ecs {
       if (str == buf + buf_size)
         *str = 0;
     } while (*(str++));
-    return (int)(str - buf);
+    return (int) (str - buf);
   }
 
   static int read_string(const BitStream &cb, std::string &to) {
@@ -48,7 +48,7 @@ namespace ecs {
         str++;
     };
     to += buf;
-    return (int)to.length();
+    return (int) to.length();
   }
 
   inline bool read_string_no(const BitStream &cb, uint32_t &str, const uint32_t short_bits) {
@@ -86,48 +86,41 @@ namespace ecs {
     return it.c_str();
   }
 
-  inline void write_string_no(BitStream &cb, uint32_t str, const uint32_t short_bits)
-  {
+  inline void write_string_no(BitStream &cb, uint32_t str, const uint32_t short_bits) {
     // assume Little endian
     G_ASSERT(str < uint32_t(1 << short_bits));
-    cb.WriteBits((const uint8_t *)&str, short_bits);
+    cb.WriteBits((const uint8_t *) &str, short_bits);
   }
-  static void write_raw_string(BitStream &cb, const std::string &pStr)
-  {
+  static void write_raw_string(BitStream &cb, const std::string &pStr) {
     cb.Write(true);
-    cb.Write(pStr.c_str(), (uint32_t)pStr.length() + 1);
+    cb.Write(pStr.c_str(), (uint32_t) pStr.length() + 1);
   }
 
-  static void write_string(BitStream &cb, const std::string &pStr, InternedStrings &all, uint32_t short_bits)
-  {
+  static void write_string(BitStream &cb, const std::string &pStr, InternedStrings &all, uint32_t short_bits) {
     auto it = all.index.find(pStr);
-    if (it == all.index.end())
-    {
-      if (all.strings.size() >= uint32_t(1 << short_bits))
-      {
+    if (it == all.index.end()) {
+      if (all.strings.size() >= uint32_t(1 << short_bits)) {
         write_raw_string(cb, pStr);
         return;
       }
       cb.Write(false);
-      write_string_no(cb, (uint32_t)all.strings.size(), short_bits);
+      write_string_no(cb, (uint32_t) all.strings.size(), short_bits);
       all.strings.emplace_back(pStr);
-      cb.Write(all.strings.back().c_str(), (uint32_t)all.strings.back().length() + 1);
-      all.index.emplace(all.strings.back(),(uint32_t)(all.strings.size() - 1));
-    }
-    else
-    {
+      cb.Write(all.strings.back().c_str(), (uint32_t) all.strings.back().length() + 1);
+      all.index.emplace(all.strings.back(), (uint32_t) (all.strings.size() - 1));
+    } else {
       cb.Write(false);
       write_string_no(cb, it->second, short_bits);
     }
-}
-} // ecs
+  }
+} // namespace ecs
 static constexpr int OBJECT_KEY_BITS = 10;
 
 bool BitstreamDeserializer::read(void *to, size_t sz_in_bits, ecs::component_type_t user_type) const {
   if (user_type == 0)
-    return bs.ReadBits((uint8_t *) to, (uint32_t)sz_in_bits);
+    return bs.ReadBits((uint8_t *) to, (uint32_t) sz_in_bits);
   else if (user_type == ecs::ComponentTypeInfo<ecs::EntityId>::type) {
-    //DAECS_EXT_ASSERT(sz_in_bits == sizeof(ecs::EntityId) * CHAR_BIT);
+    // DAECS_EXT_ASSERT(sz_in_bits == sizeof(ecs::EntityId) * CHAR_BIT);
     return net::read_eid(bs, *(ecs::EntityId *) to);
   } else if (user_type == ecs::ComponentTypeInfo<bool>::type) // bool optimization. Bool is actually one bit
   {
@@ -160,8 +153,7 @@ bool BitstreamDeserializer::read(void *to, size_t sz_in_bits, ecs::component_typ
     *((ecs::string *) to) = tmp.data();
     return true;
   } else
-    return bs.ReadBits((uint8_t *) to, (uint32_t)sz_in_bits);
-
+    return bs.ReadBits((uint8_t *) to, (uint32_t) sz_in_bits);
 }
 
 bool BitstreamDeserializer::skip(ecs::component_index_t cidx, const ecs::DataComponent &compInfo) {
@@ -177,8 +169,7 @@ bool BitstreamDeserializer::skip(ecs::component_index_t cidx, const ecs::DataCom
     typeIO = componentTypeInfo->serializer;
   void *tempData = alloca(componentTypeInfo->size);
   ecs::ComponentTypeManager *ctm = NULL;
-  if (need_constructor(componentTypeInfo->flags))
-  {
+  if (need_constructor(componentTypeInfo->flags)) {
     ctm = componentTypes->getCTM(compInfo.componentIndex);
     G_ASSERTF(ctm, "type manager for type {:#x} ({}) missing", compInfo.hash, compInfo.componentIndex);
   }
@@ -186,51 +177,40 @@ bool BitstreamDeserializer::skip(ecs::component_index_t cidx, const ecs::DataCom
     ctm->create(tempData, *mgr, ecs::INVALID_ENTITY_ID, compInfo.componentIndex);
   else if (!isPod)
     memset(tempData, 0, componentTypeInfo->size);
-  bool ret =
-      typeIO ? typeIO->deserialize(*this, tempData, componentTypeInfo->size, compInfo.componentHash, mgr)
-             : read(tempData, componentTypeInfo->size * CHAR_BIT, compInfo.componentHash);
+  bool ret = typeIO ? typeIO->deserialize(*this, tempData, componentTypeInfo->size, compInfo.componentHash, mgr)
+                    : read(tempData, componentTypeInfo->size * CHAR_BIT, compInfo.componentHash);
   if (ctm)
     ctm->destroy(tempData);
   return ret;
 }
 
-void BitstreamSerializer::write(const void *from, size_t sz_in_bits, ecs::component_type_t user_type)
-{
+void BitstreamSerializer::write(const void *from, size_t sz_in_bits, ecs::component_type_t user_type) {
   if (user_type == 0)
-    bs.WriteBits((const uint8_t *)from, (uint32_t)sz_in_bits);
-  else if (user_type == ecs::ComponentTypeInfo<ecs::EntityId>::type)
-  {
+    bs.WriteBits((const uint8_t *) from, (uint32_t) sz_in_bits);
+  else if (user_type == ecs::ComponentTypeInfo<ecs::EntityId>::type) {
     G_ASSERT(sz_in_bits == sizeof(ecs::entity_id_t) * CHAR_BIT);
-    net::write_server_eid(*(const ecs::entity_id_t *)from, bs);
-  }
-  else if (user_type == ecs::ComponentTypeInfo<bool>::type) // bool optimization
+    net::write_server_eid(*(const ecs::entity_id_t *) from, bs);
+  } else if (user_type == ecs::ComponentTypeInfo<bool>::type) // bool optimization
   {
     G_ASSERT(sz_in_bits == CHAR_BIT);
-    bs.Write(*(bool *)from); // optimization
-  }
-  else if (user_type == ecs::ComponentTypeInfo<ecs::Object>::type) // intern strings for Objects
+    bs.Write(*(bool *) from); // optimization
+  } else if (user_type == ecs::ComponentTypeInfo<ecs::Object>::type) // intern strings for Objects
   {
-    const ecs::Object &obj = *((const ecs::Object *)from);
+    const ecs::Object &obj = *((const ecs::Object *) from);
     ecs::write_compressed(*this, obj.size());
-    if (objectKeys)
-    {
-      for (auto &it : obj)
-      {
+    if (objectKeys) {
+      for (auto &it: obj) {
         ecs::write_string(bs, ecs::get_key_string(it.first), *objectKeys, OBJECT_KEY_BITS);
         ecs::serialize_child_component(it.second, *this, mgr);
       }
-    }
-    else
-    {
-      for (auto &it : obj)
-      {
+    } else {
+      for (auto &it: obj) {
         ecs::write_raw_string(bs, ecs::get_key_string(it.first));
         ecs::serialize_child_component(it.second, *this, mgr);
       }
     }
-  }
-  else if (user_type == ecs::ComponentTypeInfo<ecs::string>::type)
-    ecs::write_string(*this, ((const ecs::string *)from)->c_str(), ecs::MAX_STRING_LENGTH);
+  } else if (user_type == ecs::ComponentTypeInfo<ecs::string>::type)
+    ecs::write_string(*this, ((const ecs::string *) from)->c_str(), ecs::MAX_STRING_LENGTH);
   else
-    bs.WriteBits((const uint8_t *)from, (uint32_t)sz_in_bits);
+    bs.WriteBits((const uint8_t *) from, (uint32_t) sz_in_bits);
 }

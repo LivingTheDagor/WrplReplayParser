@@ -7,54 +7,50 @@
 
 class LargeStringTableAllocator : public StringTableAllocator {
 public:
-  LargeStringTableAllocator() : StringTableAllocator(12, 16) {
-  }
+  LargeStringTableAllocator() : StringTableAllocator(12, 16) {}
 };
 
 typedef uint32_t translate_index_t;
 static constexpr translate_index_t INVALID_TRANSLATE_INDEX = std::numeric_limits<translate_index_t>::max();
 typedef uint64_t hash_t;
 
-hash_t hash_method(std::string_view value) {
-  return mem_hash_fnv1<64>(value.data(), value.size());
-}
+hash_t hash_method(std::string_view value) { return mem_hash_fnv1<64>(value.data(), value.size()); }
 
 template<typename... Ts>
 class expanded_tuple_vec : public eastl::tuple_vector<Ts...> {
 public:
 };
 
-class language_tuple_vec : public expanded_tuple_vec<
-      uint32_t, // English
-      uint32_t, // French
-      uint32_t, // Italian
-      uint32_t, // German
-      uint32_t, // Spanish
-      uint32_t, // Russian
-      uint32_t, // Polish
-      uint32_t, // Czech
-      uint32_t, // Turkish
-      uint32_t, // Chinese
-      uint32_t, // Japan
-      uint32_t, // Portuguese
-      uint32_t, // Ukrainian
-      uint32_t, // Serbian
-      uint32_t, // Hungarian
-      uint32_t, // Korean
-      uint32_t, // Belarusian
-      uint32_t, // Romanian
-      uint32_t, // TChinese
-      uint32_t, // HChinese
-      uint32_t, // Vietnamese
-      uint32_t, // Comments
-      uint32_t // max_chars>
-    > {
+class language_tuple_vec : public expanded_tuple_vec<uint32_t, // English
+                                                     uint32_t, // French
+                                                     uint32_t, // Italian
+                                                     uint32_t, // German
+                                                     uint32_t, // Spanish
+                                                     uint32_t, // Russian
+                                                     uint32_t, // Polish
+                                                     uint32_t, // Czech
+                                                     uint32_t, // Turkish
+                                                     uint32_t, // Chinese
+                                                     uint32_t, // Japan
+                                                     uint32_t, // Portuguese
+                                                     uint32_t, // Ukrainian
+                                                     uint32_t, // Serbian
+                                                     uint32_t, // Hungarian
+                                                     uint32_t, // Korean
+                                                     uint32_t, // Belarusian
+                                                     uint32_t, // Romanian
+                                                     uint32_t, // TChinese
+                                                     uint32_t, // HChinese
+                                                     uint32_t, // Vietnamese
+                                                     uint32_t, // Comments
+                                                     uint32_t // max_chars>
+                                                     > {
 public:
   static constexpr size_t kLangCount = static_cast<size_t>(Languages::LENGTH) - 1;
 
   // Unsafe fast path: assumes EASTL stores per-column pointers contiguously.
-  uint32_t *const*raw_column_ptrs_unsafe() const {
-    auto table = reinterpret_cast<uint32_t * const*>(this);
+  uint32_t *const *raw_column_ptrs_unsafe() const {
+    auto table = reinterpret_cast<uint32_t *const *>(this);
 
     // Optional sanity checks in debug:
 #if !defined(NDEBUG)
@@ -69,7 +65,7 @@ public:
       EXCEPTION("invalid language {}", static_cast<int>(lang));
 
     const size_t li = static_cast<size_t>(lang) - 1;
-    const uint32_t *const*cols = raw_column_ptrs_unsafe();
+    const uint32_t *const *cols = raw_column_ptrs_unsafe();
     return cols[li][index];
   }
 
@@ -78,7 +74,7 @@ public:
       EXCEPTION("invalid language {}", static_cast<int>(lang));
 
     const size_t li = static_cast<size_t>(lang) - 1;
-    uint32_t *const*cols = raw_column_ptrs_unsafe();
+    uint32_t *const *cols = raw_column_ptrs_unsafe();
     cols[li][index] = offset;
   }
 };
@@ -157,9 +153,7 @@ void translate::set_default_language(Languages lang) {
 std::string lastFileNameForDebug = "";
 
 
-void translate::load_csv(std::string_view path) {
-  auto buffer = TranslatorTable.loadCsvFull(path);
-}
+void translate::load_csv(std::string_view path) { ZoneScoped auto buffer = TranslatorTable.loadCsvFull(path); }
 
 static inline int parseCsvString(const char *&p, char *out, bool key) {
   int len = 0;
@@ -247,7 +241,7 @@ static inline int parseCsvString(const char *&p, char *out, bool key) {
   return len;
 }
 
-#define MAX_KEY_LEN                 256
+#define MAX_KEY_LEN 256
 
 
 translate_index_t translate_table_t::addKey(std::string_view key) {
@@ -258,13 +252,10 @@ translate_index_t translate_table_t::addKey(std::string_view key) {
   idx = indexToOffs.size();
   hashToIndex.emplace(hash, idx);
   // not all indexes may be populated, so 0xFFFFFFFF represents 'default' value. if its seen then assume ""
-  indexToOffs.emplace_back(
-    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+  indexToOffs.emplace_back(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                           0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                           0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                           0xFFFFFFFF, 0xFFFFFFFF);
   indexToOffs.resize(indexToOffs.size() + 1);
   return idx;
 }
@@ -288,8 +279,8 @@ bool translate_table_t::parseCsvV2Full(char *buffer, int len, dag::ConstSpan<int
       bmap_col[lang_col[i]] = i;
 
   // Ignore first 3 bytes of UTF8 format
-  if (len >= 3 && (unsigned char) buffer[0] == 0xEF && (unsigned char) buffer[1] == 0xBB && (unsigned char) buffer[2] ==
-      0xBF) {
+  if (len >= 3 && (unsigned char) buffer[0] == 0xEF && (unsigned char) buffer[1] == 0xBB &&
+      (unsigned char) buffer[2] == 0xBF) {
     buffer += 3;
     len -= 3;
   }
@@ -357,7 +348,7 @@ bool translate_table_t::parseCsvV2Full(char *buffer, int len, dag::ConstSpan<int
 
 
     auto idx = get_key(key_buffer);
-    //int idx = cb->getKey(key_buffer);
+    // int idx = cb->getKey(key_buffer);
 
     if (idx != INVALID_TRANSLATE_INDEX) {
       skip_key = true;

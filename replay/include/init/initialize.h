@@ -14,4 +14,4 @@ void initialize(const std::string &game_path, const std::string &logfile_path, b
                 bool mis = true);
 
 
-#endif //MYEXTENSION_INITIALIZE_H
+#endif // MYEXTENSION_INITIALIZE_H

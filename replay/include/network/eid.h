@@ -12,5 +12,5 @@ namespace net {
   bool read_server_eid(ecs::entity_id_t &eidVal, const BitStream &bs);
   void write_eid(BitStream &bs, ecs::EntityId eid);
   bool read_eid(const BitStream &bs, ecs::EntityId &eid);
-}
-#endif //MYEXTENSION_EID_H
+} // namespace net
+#endif // MYEXTENSION_EID_H

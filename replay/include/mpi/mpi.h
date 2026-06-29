@@ -16,7 +16,7 @@ struct ParserState;
 
 namespace mpi // message passing interface
 {
-  //extern std::unordered_map<int, std::unordered_map<int, int>> mpi_data;
+  // extern std::unordered_map<int, std::unordered_map<int, int>> mpi_data;
   class IObject;
 
   class Message;
@@ -59,7 +59,7 @@ namespace mpi // message passing interface
     [[nodiscard]] ObjectID getUID() const { return mpiObjectUID; }
 
     virtual Message *dispatchMpiMessage(MessageID mid) = 0; // construct message instance by message id
-    virtual void applyMpiMessage(const Message *m) = 0;     // execute message
+    virtual void applyMpiMessage(const Message *m) = 0; // execute message
   };
 
 #define MPI_HEADER_SIZE (sizeof(mpi::ObjectID) + sizeof(mpi::MessageID) + sizeof(mpi::SystemID))
@@ -100,11 +100,12 @@ namespace mpi // message passing interface
     return write_object_ext_uid(bs, obj->getUID(), obj->mpiObjectExtUID);
   }
 
-#define SWITCH_MESSAGE_INDEXES(fields) \
-while(fields != 0) {                \
-  uin8_t curr_index = 0;               \
-  while ((fields >> curr_index) & 1 == 0) curr_index = 0\
-}
+#define SWITCH_MESSAGE_INDEXES(fields)      \
+  while (fields != 0) {                     \
+    uin8_t curr_index = 0;                  \
+    while ((fields >> curr_index) & 1 == 0) \
+      curr_index = 0                        \
+  }
 
 
   class Message // base class for all messages
@@ -112,8 +113,9 @@ while(fields != 0) {                \
   public:
     mpi::IObject *obj; // recipient of this message, can't be NULL
     uint32_t extUID = ~0u;
-    MessageID id;             // identification of this message
-    mutable bool delete_message = true; // do we delete message after dispatch + sendto? only to be used if the message now has another object managing its lifetime
+    MessageID id; // identification of this message
+    mutable bool delete_message = true; // do we delete message after dispatch + sendto? only to be used if the message
+                                        // now has another object managing its lifetime
     BitStream payload; // serialized parameters for this message
 
     void setFieldSize(BitSize_t sz) { idFieldSerializer.setFieldSize(sz); }
@@ -125,22 +127,18 @@ while(fields != 0) {                \
 
     uint32_t readFieldsSizeAndFlag() { return idFieldSerializer.readFieldsSizeAndFlag(payload); }
 
-    void checkFieldSize(uint8_t index, BitSize_t size) {idFieldSerializer.checkFieldSize(index, size);}
+    void checkFieldSize(uint8_t index, BitSize_t size) { idFieldSerializer.checkFieldSize(index, size); }
 
   private:
     IdFieldSerializer32 idFieldSerializer;
 
   public:
-    Message(IObject *o, MessageID mid) :
-        obj(o), id(mid), payload(), idFieldSerializer() {}
+    Message(IObject *o, MessageID mid) : obj(o), id(mid), payload(), idFieldSerializer() {}
 
     virtual ~Message() = default;
 
     Message(const Message &rhs) :
-        obj(rhs.obj),
-        id(rhs.id),
-        payload(rhs.payload),
-        idFieldSerializer(rhs.idFieldSerializer) {}
+      obj(rhs.obj), id(rhs.id), payload(rhs.payload), idFieldSerializer(rhs.idFieldSerializer) {}
 
     Message &operator=(const Message &rhs) {
       if (this == &rhs)
@@ -148,14 +146,12 @@ while(fields != 0) {                \
       obj = rhs.obj;
       id = rhs.id;
       payload.~BitStream();
-      new(&payload) BitStream(rhs.payload.GetData(), rhs.payload.GetNumberOfBytesUsed(), true);
+      new (&payload) BitStream(rhs.payload.GetData(), rhs.payload.GetNumberOfBytesUsed(), true);
       idFieldSerializer = rhs.idFieldSerializer;
       return *this;
     }
 
-    void destroy() {
-      this->~Message();
-    }
+    void destroy() { this->~Message(); }
 
     void serialize(BitStream &bs) const // full serialize of this message
     {
@@ -168,10 +164,11 @@ while(fields != 0) {                \
 
     virtual const char *getDebugMpiName() const { return ""; }
 
-    virtual bool isApplicable(const IMessageListener *) const { return true; }; // is this message relevant for this listener?
-    virtual bool isNeedReception() const { return true; };                      // do we need receive this messags?
-    virtual bool
-    isNeedTransmission() const { return true; }                    // do we need send this message to remote system(s)?
+    virtual bool isApplicable(const IMessageListener *) const {
+      return true;
+    }; // is this message relevant for this listener?
+    virtual bool isNeedReception() const { return true; }; // do we need receive this messags?
+    virtual bool isNeedTransmission() const { return true; } // do we need send this message to remote system(s)?
 
 
     virtual int getChannelId() const { return 0; }
@@ -184,16 +181,15 @@ while(fields != 0) {                \
     virtual bool readPayload(ParserState *state) { return true; }
   };
 
-  Message *
-  dispatch(const BitStream &bs, ParserState *state, bool copy_payload = false); // assemble message by BitStream. Note : message should be
+  Message *dispatch(const BitStream &bs, ParserState *state,
+                    bool copy_payload = false); // assemble message by BitStream. Note : message should be
   // destroyed after use (i.e. msg->destroy())
-  void sendto(Message *m, SystemID receiver);                               // send message, also apply if need to
+  void sendto(Message *m, SystemID receiver); // send message, also apply if need to
   inline void send(Message *m) { sendto(m, INVALID_SYSTEM_ID); }
-  void register_listener(IMessageListener *l);           // register listener for message handling
-  void unregister_listener(IMessageListener *l);         // invert operation
+  void register_listener(IMessageListener *l); // register listener for message handling
+  void unregister_listener(IMessageListener *l); // invert operation
 
   void register_object_dispatcher(object_dispatcher od); // register function for dispatch objects
   IObject *dispatch_object(mpi::ObjectID oid, ObjectExtUID ext_uid, ParserState *state);
 
 }; // namespace mpi
-

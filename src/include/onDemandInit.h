@@ -3,7 +3,7 @@
 #ifndef MYEXTENSION_ONDEMANDINIT_H
 #define MYEXTENSION_ONDEMANDINIT_H
 
-template <typename T>
+template<typename T>
 struct OnDemandInit {
 public:
   OnDemandInit() = default;
@@ -12,23 +12,23 @@ public:
   T *operator->() const { return getPtr(); }
   T *get() const { return getPtr(); }
 
-  ~OnDemandInit()
-  {
+  ~OnDemandInit() {
     ZoneScoped;
     if (initialized)
       getPtr()->~T();
   }
+
 private:
-  T * getPtr() const {
+  T *getPtr() const {
     if (!initialized) {
       initialized = true;
-      return new(obj) T;
+      return new (obj) T;
     }
-    return (T*)&obj;
+    return (T *) &obj;
   }
   alignas(T) mutable uint8_t obj[sizeof(T)];
   mutable bool initialized = false;
-  //T * obj = nullptr;
+  // T * obj = nullptr;
 };
 
-#endif //MYEXTENSION_ONDEMANDINIT_H
+#endif // MYEXTENSION_ONDEMANDINIT_H

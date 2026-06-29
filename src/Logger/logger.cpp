@@ -4,17 +4,17 @@
 #include "ioSys/dag_dataBlock.h"
 #include <chrono>
 OnDemandInit<log_handler> g_log_handler;
-LoggerSinkRegister* LoggerSinkRegister::tail = nullptr;
+LoggerSinkRegister *LoggerSinkRegister::tail = nullptr;
 
 file_sink::~file_sink() {
   out.close();
-  if(!g_log_handler->destructing)
+  if (!g_log_handler->destructing)
     g_log_handler->remove_file_sink(this->file_sink_path);
 }
 
 
 uint64_t get_time_ms() {
-    auto now = std::chrono::system_clock::now();
+  auto now = std::chrono::system_clock::now();
   auto duration = now.time_since_epoch();
   return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
 }
@@ -22,9 +22,9 @@ uint64_t get_time_ms() {
 uint64_t start_time_ms = get_time_ms();
 
 uint64_t get_current_time_ms() {
-    auto now = std::chrono::system_clock::now();
-    auto duration = now.time_since_epoch();
-    return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() - start_time_ms;
+  auto now = std::chrono::system_clock::now();
+  auto duration = now.time_since_epoch();
+  return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() - start_time_ms;
 }
 
 void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL level, std::string &&message) {
@@ -32,15 +32,15 @@ void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL lev
 }
 
 void log_handler::loadSinkFromDataBlock(const DataBlock &blk) {
-    for(int i = 0; i < blk.paramCount(); i++) {
-        auto p_type = blk.getParamType(i);
-        if (p_type == DataBlock::TYPE_INT) {
-            auto v = blk.getInt(i);
-            auto n = blk.getParamName(i);
-            this->add_sink(n, true, true, (DEBUG_LEVEL)v);
-        }
+  for (int i = 0; i < blk.paramCount(); i++) {
+    auto p_type = blk.getParamType(i);
+    if (p_type == DataBlock::TYPE_INT) {
+      auto v = blk.getInt(i);
+      auto n = blk.getParamName(i);
+      this->add_sink(n, true, true, (DEBUG_LEVEL) v);
+    }
   }
-  for(auto next = LoggerSinkRegister::tail; next != nullptr; next = next->next) {
+  for (auto next = LoggerSinkRegister::tail; next != nullptr; next = next->next) {
     std::string n(next->name);
     *next->ptr = this->get_sink(n);
   }
@@ -51,8 +51,8 @@ void log_handler::loadSinkFromDataBlock(const DataBlock &blk) {
 #include <windows.h>
 #ifdef _MSC_VER
 #include <io.h>
-#define write _write
-#define STDIN_FILENO 0
+#define write         _write
+#define STDIN_FILENO  0
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 #else
@@ -61,25 +61,22 @@ void log_handler::loadSinkFromDataBlock(const DataBlock &blk) {
 #include <signal.h>
 #include <string.h>
 // Your custom handler
-LONG WINAPI my_handler(EXCEPTION_POINTERS* ExceptionInfo) {
-// You can filter by exception type:
+LONG WINAPI my_handler(EXCEPTION_POINTERS *ExceptionInfo) {
+  // You can filter by exception type:
   if (ExceptionInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
     const char msg[] = "SIGSEGV detected what did you do\n";
-    write(STDERR_FILENO, msg, sizeof(msg)-1);
+    write(STDERR_FILENO, msg, sizeof(msg) - 1);
     auto stk = cpptrace::generate_trace().to_string();
     write(STDERR_FILENO, stk.c_str(), strlen(stk.c_str()));
     _exit(129);
-
   }
-// Print your stacktrace here...
-// Optionally: exit, abort, etc.
+  // Print your stacktrace here...
+  // Optionally: exit, abort, etc.
   return EXCEPTION_EXECUTE_HANDLER;
 }
 
 // Call this function during initialization
-void register_default_sigsev_handler() {
-  SetUnhandledExceptionFilter(my_handler);
-}
+void register_default_sigsev_handler() { SetUnhandledExceptionFilter(my_handler); }
 #else
 #include <unistd.h>
 #include <signal.h>
@@ -103,28 +100,28 @@ struct pipe_t {
   };
 };
 
-void do_signal_safe_trace_local(cpptrace::frame_ptr* buffer, std::size_t count) {
+void do_signal_safe_trace_local(cpptrace::frame_ptr *buffer, std::size_t count) {
   // Setup pipe and spawn child
   pipe_t input_pipe;
   pipe(input_pipe.data);
   const pid_t pid = fork();
-  if(pid == -1) {
-    const char* fork_failure_message = "fork() failed\n";
+  if (pid == -1) {
+    const char *fork_failure_message = "fork() failed\n";
     write(STDERR_FILENO, fork_failure_message, strlen(fork_failure_message));
     return;
   }
-  if(pid == 0) { // child
+  if (pid == 0) { // child
     dup2(input_pipe.read_end, STDIN_FILENO);
     close(input_pipe.read_end);
     close(input_pipe.write_end);
     execl("signal_tracer", "signal_tracer", nullptr);
-    const char* exec_failure_message = "exec(signal_tracer) failed: Make sure the signal_tracer executable is in "
+    const char *exec_failure_message = "exec(signal_tracer) failed: Make sure the signal_tracer executable is in "
                                        "the current working directory and the binary's permissions are correct.\n";
     write(STDERR_FILENO, exec_failure_message, strlen(exec_failure_message));
     _exit(1);
   }
   // Resolve to safe_object_frames and write those to the pipe
-  for(std::size_t i = 0; i < count; i++) {
+  for (std::size_t i = 0; i < count; i++) {
     cpptrace::safe_object_frame frame;
     cpptrace::get_safe_object_frame(buffer[i], &frame);
     write(input_pipe.write_end, &frame, sizeof(frame));
@@ -135,9 +132,9 @@ void do_signal_safe_trace_local(cpptrace::frame_ptr* buffer, std::size_t count) 
   waitpid(pid, nullptr, 0);
 }
 
-void handler(int signo, siginfo_t* info, void* context) {
+void handler(int signo, siginfo_t *info, void *context) {
   // Print basic message
-  const char* message = "SIGSEGV occurred:\n";
+  const char *message = "SIGSEGV occurred:\n";
   write(STDERR_FILENO, message, strlen(message));
   // Generate trace
   constexpr std::size_t N = 100;
@@ -158,7 +155,7 @@ void warmup_cpptrace() {
 void register_default_sigsev_handler() {
   warmup_cpptrace();
   // Setup signal handler
-  struct sigaction action = { 0 };
+  struct sigaction action = {0};
   action.sa_flags = 0;
   action.sa_sigaction = &handler;
   if (sigaction(SIGSEGV, &action, NULL) == -1) {
@@ -172,6 +169,3 @@ void register_default_sigsev_handler() {
 }
 
 #endif
-
-
-

@@ -3,11 +3,9 @@
 
 class FM_FXReflectable : public danet::ReflectableObject {
 public:
-    DECL_REFLECTION(FM_FXReflectable, danet::ReflectableObject)
+  DECL_REFLECTION(FM_FXReflectable, danet::ReflectableObject)
 
-    FM_FXReflectable() : ReflectableObject() {
-        varList.head = &;
-    }
+  FM_FXReflectable() : ReflectableObject() { varList.head = &; }
 };
 
 ECS_DECLARE_CREATABLE_TYPE(FM_FXReflectable);

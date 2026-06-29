@@ -24,7 +24,7 @@ target_include_directories(TemplateViewer
 )
 
 # if(WIN32)
-    # Copy SDL2.dll to the output directory after build
+# Copy SDL2.dll to the output directory after build
 #     add_custom_command(TARGET TemplateViewer POST_BUILD
 #             COMMAND ${CMAKE_COMMAND} -E copy_if_different
 #             $<TARGET_FILE:SDL2>

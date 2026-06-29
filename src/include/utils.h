@@ -10,7 +10,7 @@
 #include "fmt/format.h"
 #include <iostream>
 #include <cstdlib>
-#include <cstdarg>  // for va_list, va_start, va_end
+#include <cstdarg> // for va_list, va_start, va_end
 #include <cstdint>
 #include <sstream>
 #include <span>
@@ -20,18 +20,14 @@
 extern bool DO_VERBOSE;
 
 #define MAKE4C(a, b, c, d) ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
-#define _MAKE4C(x) MAKE4C((int(x) >> 24) & 0xFF, (int(x) >> 16) & 0xFF, (int(x) >> 8) & 0xFF, int(x) & 0xFF)
+#define _MAKE4C(x)         MAKE4C((int(x) >> 24) & 0xFF, (int(x) >> 16) & 0xFF, (int(x) >> 8) & 0xFF, int(x) & 0xFF)
 
 
 class ExceptionException : public std::runtime_error {
 public:
-  explicit ExceptionException(std::string msg)
-    : std::runtime_error(std::move(msg)) {
-  }
+  explicit ExceptionException(std::string msg) : std::runtime_error(std::move(msg)) {}
 
-  const char *what() const noexcept override {
-    return std::runtime_error::what();
-  }
+  const char *what() const noexcept override { return std::runtime_error::what(); }
 };
 
 [[noreturn]] inline void fatal(const char *file, int line, const char *function, std::string message) {
@@ -43,28 +39,28 @@ public:
   LOGE("{}", trace);
   g_log_handler->wait_until_empty();
   g_log_handler->flush_all();
-  throw ExceptionException(fmt::format("Fatal error at {}:{}\nFunction: {} \nMessage: {}\n{}", file, line, function,
-                                       message, trace));
+  throw ExceptionException(
+    fmt::format("Fatal error at {}:{}\nFunction: {} \nMessage: {}\n{}", file, line, function, message, trace));
   std::exit(EXIT_FAILURE);
 }
 
 
-//#define LOG(...) log(__VA_ARGS__)
+// #define LOG(...) log(__VA_ARGS__)
 
 
-#define VERBOSE_LOG(...)  \
-{                         \
-  if(DO_VERBOSE)          \
-    log(__VA_ARGS__);     \
-}
+#define VERBOSE_LOG(...) \
+  {                      \
+    if (DO_VERBOSE)      \
+      log(__VA_ARGS__);  \
+  }
 
 #define EXCEPTION(format_, ...) fatal(__FILE__, __LINE__, __FUNCTION__, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__))
 
 #define EXCEPTION_IF_FALSE(cond, ...) \
-    do { \
-        if (!(cond)) \
-            EXCEPTION(__VA_ARGS__); \
-    } while(0)
+  do {                                \
+    if (!(cond))                      \
+      EXCEPTION(__VA_ARGS__);         \
+  } while (0)
 
 inline int popcount(uint32_t val) {
 #ifdef _MSC_VER
@@ -74,7 +70,7 @@ inline int popcount(uint32_t val) {
 #endif
 }
 
-#define G_UNUSED(x)    ((void)(x))
+#define G_UNUSED(x)    ((void) (x))
 #define G_UNREFERENCED G_UNUSED
 
 
@@ -83,10 +79,10 @@ inline int popcount(uint32_t val) {
 /// \param buff
 inline void FormatBytesToStream(std::basic_ostream<char> &oss, std::span<char> buff) {
   for (auto c: buff) {
-      unsigned char v = (unsigned char) c;
-      if (std::isprint(v)) {
-          oss.write((const char *) &v, 1);
-      } else {
+    unsigned char v = (unsigned char) c;
+    if (std::isprint(v)) {
+      oss.write((const char *) &v, 1);
+    } else {
       oss << fmt::format("\\x{:02X}", c);
     }
   }
@@ -101,8 +97,8 @@ inline void FormatOnlyTextToStream(std::basic_ostream<char> &oss, std::span<char
 }
 
 inline void FormatHexToStream(std::basic_ostream<char> &oss, std::span<char> buff) {
-  for (char c : buff) {
-    oss << fmt::format("{:02x}", (unsigned char)c);
+  for (char c: buff) {
+    oss << fmt::format("{:02x}", (unsigned char) c);
   }
 }
 
@@ -112,4 +108,4 @@ inline std::ostringstream FormatHexToStream(std::span<char> buff) {
   return oss;
 }
 
-#endif //MYEXTENSION_UTILS_H
+#endif // MYEXTENSION_UTILS_H

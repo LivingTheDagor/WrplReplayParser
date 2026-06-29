@@ -30,31 +30,19 @@ class SmartFSHandle {
 public:
   SmartFSHandle() = default;
 
-  explicit SmartFSHandle(std::shared_ptr<FSObject> ptr)
-    : ptr(std::move(ptr)) {
-  }
+  explicit SmartFSHandle(std::shared_ptr<FSObject> ptr) : ptr(std::move(ptr)) {}
 
-  SmartFSHandle(std::nullptr_t)
-    : ptr(nullptr) {
-  }
+  SmartFSHandle(std::nullptr_t) : ptr(nullptr) {}
 
-  FSObject *operator->() const {
-    return ptr.get();
-  }
+  FSObject *operator->() const { return ptr.get(); }
 
-  FSObject &operator*() const {
-    return *ptr;
-  }
+  FSObject &operator*() const { return *ptr; }
 
-  explicit operator bool() const {
-    return static_cast<bool>(ptr);
-  }
+  explicit operator bool() const { return static_cast<bool>(ptr); }
 
   SmartFSHandle operator[](const std::string &name) const;
 
-  [[nodiscard]] std::shared_ptr<FSObject> getShared() const {
-    return ptr;
-  }
+  [[nodiscard]] std::shared_ptr<FSObject> getShared() const { return ptr; }
 
   std::shared_ptr<FileIndex> asFile();
 
@@ -73,21 +61,14 @@ enum FsObjectTypes {
 
 class FSObject {
 public:
-
   /// returns the name of this FSObject, will include extension if it exists
   /// \return
-  std::string getName() const {
-    return name.filename().string();
-  }
+  std::string getName() const { return name.filename().string(); }
 
-  const fs::path &getPath() const {
-    return name;
-  }
+  const fs::path &getPath() const { return name; }
 
 
-  FsObjectTypes getFSObjectType() const {
-    return obj_type;
-  }
+  FsObjectTypes getFSObjectType() const { return obj_type; }
 
 
   void unBind();
@@ -175,14 +156,10 @@ public:
     f_length = -1;
   }
 
-  std::string getExtension() {
-    return index->name.extension().string();
-  }
+  std::string getExtension() { return index->name.extension().string(); }
 
 
-  fs::path getFullFilePath() {
-    return index->name;
-  }
+  fs::path getFullFilePath() { return index->name; }
 
   int64_t tell() { return this->read_offs; }
 
@@ -211,9 +188,7 @@ public:
     return this->read_offs;
   }
 
-  int64_t df_read(void *ptr, size_t len) {
-    return read_impl(ptr, len);
-  }
+  int64_t df_read(void *ptr, size_t len) { return read_impl(ptr, len); }
 
 
   /// reads data as stored in the file, no processing
@@ -236,13 +211,9 @@ class HostFileIndex : public FileIndex {
 public:
   ~HostFileIndex() override = default;
 
-  HostFileIndex(const std::string &name_) : FileIndex(name_) {
-    init();
-  }
+  HostFileIndex(const std::string &name_) : FileIndex(name_) { init(); }
 
-  HostFileIndex(const fs::path &path) : FileIndex(path) {
-    init();
-  }
+  HostFileIndex(const fs::path &path) : FileIndex(path) { init(); }
 
   std::unique_ptr<File> getFile(std::shared_ptr<FileIndex> ths) override;
 
@@ -256,9 +227,7 @@ protected:
   void init_hf();
 
 public:
-  explicit HostFile(std::shared_ptr<FileIndex> index) : File(std::move(index)) {
-    init_hf();
-  }
+  explicit HostFile(std::shared_ptr<FileIndex> index) : File(std::move(index)) { init_hf(); }
 
   /// A implementation for reading a file from the OS, will cache data on first read
   /// will only reread if the file data has changed
@@ -270,9 +239,7 @@ public:
 
   bool loadBlk(DataBlock &blk) override;
 
-  const VROMFs *getUnderlyingVromfs() override {
-    return nullptr;
-  }
+  const VROMFs *getUnderlyingVromfs() override { return nullptr; }
 
 private:
   std::ifstream file_stream;
@@ -288,12 +255,11 @@ class Directory : public FSObject {
 private:
   struct ObjAdder {
   public:
-    explicit ObjAdder(const fs::path &input_path) {
-      setupPath(input_path);
-    }
+    explicit ObjAdder(const fs::path &input_path) { setupPath(input_path); }
 
     void setupPath(const fs::path &input_path) {
-      // if the path has an extension, then the last part of the path is def a file, if it isnt, then we assume its a directory
+      // if the path has an extension, then the last part of the path is def a file, if it isnt, then we assume its a
+      // directory
       if (input_path.has_extension()) {
         path = input_path.relative_path().parent_path();
       } else {
@@ -304,9 +270,7 @@ private:
       iter_end = path.end();
     }
 
-    [[nodiscard]] std::string getCurrent() const {
-      return iter_pointer->string();
-    }
+    [[nodiscard]] std::string getCurrent() const { return iter_pointer->string(); }
 
     [[nodiscard]] std::string GetCurrentAndAdvance() {
       auto x = iter_pointer->string();
@@ -402,9 +366,7 @@ public:
     return nullptr;
   }
 
-  bool RemoveFsObject(const std::string &name) {
-    return objects.erase(name) == 1;
-  }
+  bool RemoveFsObject(const std::string &name) { return objects.erase(name) == 1; }
 
   bool addFSObject(const std::shared_ptr<FSObject> &obj) {
     std::string name = obj->getName();
@@ -419,18 +381,14 @@ public:
     return false;
   }
 
-  bool addFile(const std::shared_ptr<FileIndex> &file) {
-    return addFSObject(file);
-  }
+  bool addFile(const std::shared_ptr<FileIndex> &file) { return addFSObject(file); }
 
   bool addFile(const std::shared_ptr<FileIndex> &file, const fs::path &path) {
     auto objAdder = ObjAdder(path);
     return addFSObject(file, objAdder);
   }
 
-  bool addDirectory(const std::shared_ptr<Directory> &directory) {
-    return addFSObject(directory);
-  }
+  bool addDirectory(const std::shared_ptr<Directory> &directory) { return addFSObject(directory); }
 
   bool addDirectory(const std::shared_ptr<Directory> &directory, const fs::path &path) {
     auto objAdder = ObjAdder(path);
@@ -485,7 +443,8 @@ public:
   SmartFSHandle operator[](const std::string &lookup_name) const override {
     auto x = getFSObject(lookup_name);
     if (x == nullptr) {
-      //LOGD2("indexing of directory '{}' for FSObject '{}' returned null", this->name.string().c_str(), lookup_name.c_str());
+      // LOGD2("indexing of directory '{}' for FSObject '{}' returned null", this->name.string().c_str(),
+      // lookup_name.c_str());
       return nullptr;
     }
     return SmartFSHandle(x);
@@ -504,7 +463,7 @@ protected:
     return nextDir->addFSObject(f, path);
   }
 
-  std::unordered_map<std::string, std::shared_ptr<FSObject> > objects;
+  std::unordered_map<std::string, std::shared_ptr<FSObject>> objects;
 };
 
 class VROMFs;
@@ -528,12 +487,10 @@ struct FileManager {
   void find_vromfs_files_in_folder(std::vector<fs::path> &ut_list, const std::string &dir_path);
 
   int find_files_in_folder(std::vector<std::string> &out_list, std::string &dir_path,
-                           const char *file_suffix_to_match = "",
-                           bool vromfs = true, bool realfs = true, bool subdirs = false);
+                           const char *file_suffix_to_match = "", bool vromfs = true, bool realfs = true,
+                           bool subdirs = false);
 
-  inline void add_mount(const fs::path &path) {
-    this->real_fs_mounts.push_back(path);
-  }
+  inline void add_mount(const fs::path &path) { this->real_fs_mounts.push_back(path); }
 
 
   ~FileManager();
@@ -549,4 +506,4 @@ private:
 extern FileManager file_mgr;
 
 
-#endif //MYEXTENSION_FILESYSTEM_H
+#endif // MYEXTENSION_FILESYSTEM_H

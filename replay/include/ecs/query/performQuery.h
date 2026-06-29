@@ -12,18 +12,15 @@ Search for examples with "_ecs_query" keyword.
 
 #include <ecs/entityManager.h>
 
-namespace ecs
-{
-// use min_quant of more than 0 for parallel for execution (each job will take ata least min_quant of data)
-  inline QueryCbResult perform_query(EntityManager *__restrict em, QueryId query, const stoppable_query_cb_t &__restrict fun,
-                                     void *__restrict user_data = nullptr)
-  {
+namespace ecs {
+  // use min_quant of more than 0 for parallel for execution (each job will take ata least min_quant of data)
+  inline QueryCbResult perform_query(EntityManager *__restrict em, QueryId query,
+                                     const stoppable_query_cb_t &__restrict fun, void *__restrict user_data = nullptr) {
     return em->performQueryStoppable(query, fun, user_data);
   }
 
   inline void perform_query(EntityManager *__restrict em, QueryId query, const query_cb_t &__restrict fun,
-                            void *__restrict user_data = nullptr)
-  {
+                            void *__restrict user_data = nullptr) {
     return em->performQuery(query, fun, user_data);
   }
 

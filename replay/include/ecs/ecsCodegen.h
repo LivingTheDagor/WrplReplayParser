@@ -38,10 +38,10 @@
 #define ECS_TRACK(...)    ECS_FOR_EACH(ECS_TRACK_ONE, __VA_ARGS__)
 #define ECS_NO_ORDER      __attribute__((annotate("@before:*")))
 
-#define ECS_UNUSED(a)                      a
-#define ECS_REQUIRE_ONE(a)                 __attribute__((annotate("@require:" #a)))
-#define ECS_REQUIRE(...)                   ECS_FOR_EACH(ECS_REQUIRE_ONE, __VA_ARGS__)
-#define ECS_REQUIRE_NOT_ONE(a)             __attribute__((annotate("@require_not:" #a)))
+#define ECS_UNUSED(a)          a
+#define ECS_REQUIRE_ONE(a)     __attribute__((annotate("@require:" #a)))
+#define ECS_REQUIRE(...)       ECS_FOR_EACH(ECS_REQUIRE_ONE, __VA_ARGS__)
+#define ECS_REQUIRE_NOT_ONE(a) __attribute__((annotate("@require_not:" #a)))
 #define ECS_REQUIRE_NOT(...)               ECS_FOR_EACH(ECS_REQUIRE_NOT_ONE, __VA_ARGS__
 #else
 #define ECS_BEFORE_ONE(a)
@@ -54,7 +54,7 @@
 #define ECS_TRACK(...)
 #define ECS_NO_ORDER
 
-#define ECS_UNUSED(a)                      a
+#define ECS_UNUSED(a) a
 #define ECS_REQUIRE_ONE(a)
 #define ECS_REQUIRE(...)
 #define ECS_REQUIRE_NOT_ONE(a)

@@ -19,4 +19,4 @@ struct ModuleComponentRegister {
   ModuleComponentRegister *next = nullptr; // slist
   static ModuleComponentRegister *tail;
 };
-#endif //WTFILEUTILS_MODULE_DEF_H
+#endif // WTFILEUTILS_MODULE_DEF_H

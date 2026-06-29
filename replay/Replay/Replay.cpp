@@ -26,7 +26,7 @@ IReplayReader *Replay::getCompressedReplayReader() {
 
 std::span<uint8_t> Replay::FileReplayData::getData(Replay *rpl) {
   this->ref_count++;
-  if(!this->zlib_data.empty()) {
+  if (!this->zlib_data.empty()) {
     return this->zlib_data;
   }
   this->reader.seekto(rpl->zlib_offs);
@@ -38,7 +38,7 @@ std::span<uint8_t> Replay::FileReplayData::getData(Replay *rpl) {
 void Replay::FileReplayData::afterParse() {
   G_ASSERT(ref_count > 0);
   ref_count--;
-  if(ref_count == 0) // we don't want to hold onto data for any longer than needed, lots of memory, esp for big replays
+  if (ref_count == 0) // we don't want to hold onto data for any longer than needed, lots of memory, esp for big replays
   {
     zlib_data.clear();
     zlib_data.shrink_to_fit();
@@ -46,14 +46,15 @@ void Replay::FileReplayData::afterParse() {
 }
 
 bool Replay::FileReplayData::ReadInto(uint8_t *data, size_t count, size_t offs) {
-  this->reader.seekto((int)offs);
+  this->reader.seekto((int) offs);
   return this->reader.tryRead(data, (int) count) == count;
 }
 
 int Replay::FileReplayData::getRemainingSize(size_t from_offs) {
   auto sz = this->reader.getTargetDataSize();
-  if(from_offs >= sz) return -1;
-  return (int)(sz - from_offs);
+  if (from_offs >= sz)
+    return -1;
+  return (int) (sz - from_offs);
 }
 
 const char *Replay::FileReplayData::file_name() {
@@ -63,21 +64,22 @@ const char *Replay::FileReplayData::file_name() {
 }
 
 bool Replay::InMemoryReplayData::ReadInto(uint8_t *ptr, size_t count, size_t offs) {
-  if(this->data.size() < count+offs)
+  if (this->data.size() < count + offs)
     return false;
   memcpy(ptr, this->data.data() + offs, count);
   return true;
 }
 
 std::span<uint8_t> Replay::InMemoryReplayData::getData(Replay *rpl) {
-  if(this->data.size() < rpl->zlib_offs + rpl->zlib_size)
+  if (this->data.size() < rpl->zlib_offs + rpl->zlib_size)
     return {};
-  return {this->data.data()+rpl->zlib_offs, rpl->zlib_size};
+  return {this->data.data() + rpl->zlib_offs, rpl->zlib_size};
 }
 
 int Replay::InMemoryReplayData::getRemainingSize(size_t from_offs) {
-  if(from_offs >= this->data.size()) return -1;
-  return (int)(this->data.size() - from_offs);
+  if (from_offs >= this->data.size())
+    return -1;
+  return (int) (this->data.size() - from_offs);
 }
 
 
@@ -109,7 +111,13 @@ DataBlock *Replay::getFooterBlk() {
   return nullptr;
 }
 
-#define BAD_REPLAY(conditional) {if(!(conditional)) {is_valid=false; return;}}
+#define BAD_REPLAY(conditional) \
+  {                             \
+    if (!(conditional)) {       \
+      is_valid = false;         \
+      return;                   \
+    }                           \
+  }
 
 void Replay::load() {
   auto file_size = this->Data.getRemainingSize(0);
@@ -119,7 +127,7 @@ void Replay::load() {
   BAD_REPLAY(this->header.magic == CURR_MAGIC);
   zlib_offs = sizeof(ReplayHeader) + this->header.settings_blk_size;
 
-  if(this->header.settings_blk_size) {
+  if (this->header.settings_blk_size) {
     std::vector<uint8_t> header_bytes{};
     header_bytes.resize(this->header.settings_blk_size);
     BAD_REPLAY(this->Data.ReadInto(header_bytes.data(), header_bytes.size(), sizeof(ReplayHeader)));
@@ -127,12 +135,12 @@ void Replay::load() {
     BAD_REPLAY(this->header_blk.loadFromStream(rdr, nullptr));
   }
 
-  if(this->header.footer_blk_offset) {
+  if (this->header.footer_blk_offset) {
     std::vector<uint8_t> footer_bytes{};
     auto remainingSize = this->Data.getRemainingSize(this->header.footer_blk_offset);
 
     zlib_size = header.footer_blk_offset - zlib_offs;
-    BAD_REPLAY(remainingSize!=-1);
+    BAD_REPLAY(remainingSize != -1);
     footer_bytes.resize(remainingSize);
 
     BAD_REPLAY(this->Data.ReadInto(footer_bytes.data(), footer_bytes.size(), this->header.footer_blk_offset));
@@ -143,11 +151,11 @@ void Replay::load() {
   }
 }
 
-//IReplayReader *Replay::getStreamingReplayReader(uint32_t time_wait) {
-//  if (!this->isValid())
-//    EXCEPTION("Invalid Replay: {}", this->Data.getFileName());
-//  G_ASSERT(Data.type() == File);
-//  auto d = Data.asType<FileReplayData>();
+// IReplayReader *Replay::getStreamingReplayReader(uint32_t time_wait) {
+//   if (!this->isValid())
+//     EXCEPTION("Invalid Replay: {}", this->Data.getFileName());
+//   G_ASSERT(Data.type() == File);
+//   auto d = Data.asType<FileReplayData>();
 
 //  auto *rdr = new FileStreamReader(d->reader.getFName(), time_wait);
 //  rdr->seekto(this->zlib_offs);
@@ -155,33 +163,33 @@ void Replay::load() {
 //}
 
 ServerReplay::ServerReplay(std::vector<std::span<uint8_t>> &data, bool owns) {
-  for(auto & d : data) {
+  for (auto &d: data) {
     this->replay_files.emplace_back(new Replay(d, owns));
   }
 }
 
 DataBlock *ServerReplay::getFooterBlk() {
-  for(size_t i = this->replay_files.size(); i > 0; --i) {
-    auto &blk = this->replay_files[i-1]->footer_blk;
+  for (size_t i = this->replay_files.size(); i > 0; --i) {
+    auto &blk = this->replay_files[i - 1]->footer_blk;
     if (!blk.isEmpty())
       return &blk;
   }
   return nullptr;
 }
 
-void readFilesFromDirectory(const fs::path& dirPath, std::vector<fs::path>& fileSet) {
+void readFilesFromDirectory(const fs::path &dirPath, std::vector<fs::path> &fileSet) {
   if (!fs::exists(dirPath) || !fs::is_directory(dirPath)) {
     return;
   }
 
-  for (const auto& entry : fs::directory_iterator(dirPath)) {
+  for (const auto &entry: fs::directory_iterator(dirPath)) {
     if (fs::is_regular_file(entry.status())) {
       fileSet.emplace_back(fs::absolute(entry.path()));
     }
   }
 }
 
-std::string file_exists(const std::string& path, const std::vector<fs::path> &paths) {
+std::string file_exists(const std::string &path, const std::vector<fs::path> &paths) {
   for (auto &path_: paths) {
     if (path_.filename().string() == path)
       return path_.string();
@@ -189,7 +197,7 @@ std::string file_exists(const std::string& path, const std::vector<fs::path> &pa
   return {};
 }
 
-fs::path file_exists_fs(const std::string& path, const std::vector<fs::path> &paths) {
+fs::path file_exists_fs(const std::string &path, const std::vector<fs::path> &paths) {
   for (auto &path_: paths) {
     if (path_.filename().string() == path)
       return path_;
@@ -223,16 +231,12 @@ ServerReplay::ServerReplay(const std::string &b_path) {
 }
 
 
-IReplayReader *ServerReplay::getReplayReader() {
-  return new ServerReplayReader<false>(*this);
-}
+IReplayReader *ServerReplay::getReplayReader() { return new ServerReplayReader<false>(*this); }
 
-IReplayReader *ServerReplay::getCompressedReplayReader() {
-  return new ServerReplayReader<true>(*this);
-}
+IReplayReader *ServerReplay::getCompressedReplayReader() { return new ServerReplayReader<true>(*this); }
 
 bool ServerReplay::isValid() {
-  for (auto & rpl : replay_files) {
+  for (auto &rpl: replay_files) {
     if (!rpl->is_valid)
       return false;
   }

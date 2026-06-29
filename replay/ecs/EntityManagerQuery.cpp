@@ -25,9 +25,8 @@ inline bool tokenize_const_string(std::string_view str, const char *delim, Cb cb
 }
 
 template<class MarkContainer, class ListContainer, class EdgeContainer, typename LoopDetected>
-static bool
-visit_top_sort(int node, const EdgeContainer &edges, MarkContainer &temp, MarkContainer &perm, ListContainer &result,
-               LoopDetected cb) {
+static bool visit_top_sort(int node, const EdgeContainer &edges, MarkContainer &temp, MarkContainer &perm,
+                           ListContainer &result, LoopDetected cb) {
   if (perm[node])
     return true;
   if (temp[node]) {
@@ -101,22 +100,23 @@ namespace ecs {
 
     if (rwCnt != d.componentsRW.size() || roCnt != d.componentsRO.size() || rqCnt != d.componentsRQ.size() ||
         noCnt != d.componentsNO.size())
-    EXCEPTION("query <{}> has too many components (rw={},ro={},rq={},no={}) max is {}", name_, rwCnt, roCnt, rqCnt,
-              noCnt, max_cnt);
+      EXCEPTION("query <{}> has too many components (rw={},ro={},rq={},no={}) max is {}", name_, rwCnt, roCnt, rqCnt,
+                noCnt, max_cnt);
     auto getNameStr = [&](const ComponentDesc &cd) { return cd.nameStr; };
 
     typedef dag::RelocatableFixedVector<component_t, 64, true> fixed_vector_components_t;
-    eastl::vector_set<component_t, eastl::less<component_t>, EASTLAllocatorType, fixed_vector_components_t> requiredComponentsSet;
+    eastl::vector_set<component_t, eastl::less<component_t>, EASTLAllocatorType, fixed_vector_components_t>
+      requiredComponentsSet;
     for (const auto &cd: d.componentsRQ) {
       if (cd.flags & CDF_OPTIONAL)
-      EXCEPTION("query <{}> doesn't make sense as component {}({:#x}) is both required and optional", name_,
-                getNameStr(cd), cd.name);
+        EXCEPTION("query <{}> doesn't make sense as component {}({:#x}) is both required and optional", name_,
+                  getNameStr(cd), cd.name);
       requiredComponentsSet.emplace(cd.name);
     }
     for (const auto &cd: d.componentsRQ) {
       if (cd.flags & CDF_OPTIONAL)
-      EXCEPTION("query <{}> doesn't make sense as component {}({:#x}) is both required and optional", name_,
-                getNameStr(cd), cd.name);
+        EXCEPTION("query <{}> doesn't make sense as component {}({:#x}) is both required and optional", name_,
+                  getNameStr(cd), cd.name);
       requiredComponentsSet.emplace(cd.name);
     }
     for (const auto &cd: d.componentsRO)
@@ -127,22 +127,18 @@ namespace ecs {
         requiredComponentsSet.emplace(cd.name);
     for (const auto &cd: d.componentsNO) {
       if (cd.flags & CDF_OPTIONAL)
-      EXCEPTION("query <{}> doesn't make sense as component {}({:#x}) is both required_not and optional", name_,
-                getNameStr(cd), cd.name);
+        EXCEPTION("query <{}> doesn't make sense as component {}({:#x}) is both required_not and optional", name_,
+                  getNameStr(cd), cd.name);
       if (requiredComponentsSet.find(cd.name) != requiredComponentsSet.end())
-      EXCEPTION("query <{}> doesn't make sense as component {}({:#x}) is both in required and required_not lists",
-                name_,
-                getNameStr(cd),
-                cd.name);
+        EXCEPTION("query <{}> doesn't make sense as component {}({:#x}) is both in required and required_not lists",
+                  name_, getNameStr(cd), cd.name);
     }
-    requiredSetCount = static_cast<uint8_t>(eastl::min<uint32_t>(MAX_OPTIONAL_PARAMETERS,
-                                                                 eastl::min<uint32_t>(
-                                                                     (uint32_t) requiredComponentsSet.size(),
-                                                                     max_cnt)));
+    requiredSetCount = static_cast<uint8_t>(eastl::min<uint32_t>(
+      MAX_OPTIONAL_PARAMETERS, eastl::min<uint32_t>((uint32_t) requiredComponentsSet.size(), max_cnt)));
     if (requiredComponentsSet.size() >= MAX_OPTIONAL_PARAMETERS)
-    EXCEPTION(
-        "too many optional data components in query <{}>. To fix, increase bitset size or add first-optional-component-no",
-        name_);
+      EXCEPTION("too many optional data components in query <{}>. To fix, increase bitset size or add "
+                "first-optional-component-no",
+                name_);
     G_ASSERT(components.size() <= USHRT_MAX);
     name = name_;
   }
@@ -166,7 +162,7 @@ namespace ecs {
     queryDescs[index].init(desc.name, desc);
 
     // ima trust in the process :)
-    //for (auto &c : queryDescs[index].components)
+    // for (auto &c : queryDescs[index].components)
     //  c.nameStr = queriesComponentsNames.getName(queriesComponentsNames.addNameId(c.nameStr));
 
     QueryId ret = QueryId::make(index, queriesGenerations[index]);
@@ -200,8 +196,8 @@ namespace ecs {
 
   uint32_t GState::addOneQuery() {
     // todo: may be keep free list instead?
-    auto qi = freeQueriesCount ? eastl::find(queriesReferences.begin(), queriesReferences.end(), 0)
-                               : queriesReferences.end();
+    auto qi =
+      freeQueriesCount ? eastl::find(queriesReferences.begin(), queriesReferences.end(), 0) : queriesReferences.end();
     if (qi != queriesReferences.end()) {
       freeQueriesCount--;
       *qi = 1;
@@ -216,15 +212,15 @@ namespace ecs {
     archetypeEidQueries.emplace_back();
     archetypeQueries.emplace_back();
     queryDescs.emplace_back();
-    //DAECS_EXT_ASSERT(archetypeQueries.size() == queryDescs.size());
+    // DAECS_EXT_ASSERT(archetypeQueries.size() == queryDescs.size());
     resolvedQueries.emplace_back();
-    //DAECS_EXT_ASSERT(archetypeQueries.size() == resolvedQueries.size());
+    // DAECS_EXT_ASSERT(archetypeQueries.size() == resolvedQueries.size());
     addOneResolvedQueryStatus();
 
     queriesReferences.push_back(1);
-    //DAECS_EXT_ASSERT(archetypeQueries.size() == queriesReferences.size());
+    // DAECS_EXT_ASSERT(archetypeQueries.size() == queriesReferences.size());
     queriesGenerations.push_back(currentQueryGen);
-    //DAECS_EXT_ASSERT(archetypeQueries.size() == queriesGenerations.size());
+    // DAECS_EXT_ASSERT(archetypeQueries.size() == queriesGenerations.size());
     return (uint32_t) resolvedQueries.size() - 1;
   }
 
@@ -239,7 +235,7 @@ namespace ecs {
     T *next = (T *) realloc(ft, nextSize * sizeof(T));
     if (DAGOR_UNLIKELY(next == nullptr)) {
       next = (T *) malloc(nextSize * sizeof(T)); // so no mem setting
-      memcpy(next, ft, cnt * sizeof(T));                  //-V575
+      memcpy(next, ft, cnt * sizeof(T)); //-V575
       free(ft);
     }
     eastl::swap(ft, next);
@@ -251,18 +247,19 @@ namespace ecs {
   bool GState::makeArchetypesQuery(archetype_t first_archetype, uint32_t index, bool wasFullyResolved) {
     const ResolvedQueryDesc &resDesc = resolvedQueries[index];
     if (resDesc.isEmpty()) {
-      //LOGD3("skipping empty query {}", index);
+      // LOGD3("skipping empty query {}", index);
       return false;
     }
     ArchetypesQuery &query = archetypeQueries[index];
     ArchetypesEidQuery &queryEid = archetypeEidQueries[index];
     if (DAGOR_UNLIKELY(!wasFullyResolved)) {
       const uint32_t totalDataComponentsCount = resDesc.getRwCnt() + resDesc.getRoCnt();
-      //LOGD2("copying types and sizes to archetype query {} rw = {} ro ={}", index, resDesc.rw.cnt, resDesc.ro.cnt);
+      // LOGD2("copying types and sizes to archetype query {} rw = {} ro ={}", index, resDesc.rw.cnt, resDesc.ro.cnt);
 
       const bool validCsz = totalDataComponentsCount == query.getComponentsCount();
       const bool reResolve = !validCsz || lastQueriesResolvedComponents != dataComponents.size();
-      if (!validCsz) // todo : only needed for eid queries. Can be deferred explicitly marked, if eid query is needed at all
+      if (!validCsz) // todo : only needed for eid queries. Can be deferred explicitly marked, if eid query is needed at
+                     // all
       {
         if (totalDataComponentsCount) {
           queryEid.componentsSizesAt = (uint32_t) archComponentsSizeContainers.size();
@@ -273,9 +270,8 @@ namespace ecs {
         query.data.rwCount = (uint8_t) resDesc.getRW().cnt;
         query.data.roCount = (uint8_t) resDesc.getRO().cnt;
         G_ASSERT(totalDataComponentsCount <= resDesc.getComponents().size());
-        G_ASSERT(
-            totalDataComponentsCount == 0 ||
-            queryEid.componentsSizesAt + totalDataComponentsCount <= archComponentsSizeContainers.size());
+        G_ASSERT(totalDataComponentsCount == 0 ||
+                 queryEid.componentsSizesAt + totalDataComponentsCount <= archComponentsSizeContainers.size());
         // todo: this is only needed for eid queries
         auto componentCsz = archComponentsSizeContainers.data() + queryEid.componentsSizesAt;
         for (uint32_t compI = 0; compI < totalDataComponentsCount; ++compI, ++componentCsz) {
@@ -300,7 +296,7 @@ namespace ecs {
       }
     }
     // TIME_PROFILE_DEV(makeArchetypesQuery);
-    //FramememScopedRegion scope_framemem_lib16;
+    // FramememScopedRegion scope_framemem_lib16;
     // G_ASSERT_RETURN(resDesc.components.size() == 0, false);//not sure if it is needed
     G_ASSERTF_RETURN(resDesc.getRO().start == resDesc.getRW().start + resDesc.getRW().cnt, false, "{} {} {}",
                      resDesc.getRO().start, resDesc.getRW().start, resDesc.getRW().cnt);
@@ -310,29 +306,31 @@ namespace ecs {
 
     // this is potentially slow, as it depends on amount of archetypes
     // for persistent queries doesn't matter (won't be re-calculated until new archetype added)
-    // but we can speed that up, if we will have list/range of archetype for each components, and iterate over smallest list/range from
-    // all archetype components there are much less components, than archetypes, todo: make this optimization if ever slow
+    // but we can speed that up, if we will have list/range of archetype for each components, and iterate over smallest
+    // list/range from all archetype components there are much less components, than archetypes, todo: make this
+    // optimization if ever slow
 
     // dagECS generation() returns size()
-    //G_ASSERT(archetypes.generation() == archetypes.size()); // todo: otherwise we can't incrementally update queries
+    // G_ASSERT(archetypes.generation() == archetypes.size()); // todo: otherwise we can't incrementally update queries
 
     std::vector<archetype_t> queries;
     std::vector<ArchetypesQuery::offset_type_t> allComponentsArchOffsets;
-    //dag::RelocatableFixedVector<archetype_t, 4, true, framemem_allocator> queries;
-    //dag::RelocatableFixedVector<ArchetypesQuery::offset_type_t, 16, true, framemem_allocator, uint32_t, false> allComponentsArchOffsets;
+    // dag::RelocatableFixedVector<archetype_t, 4, true, framemem_allocator> queries;
+    // dag::RelocatableFixedVector<ArchetypesQuery::offset_type_t, 16, true, framemem_allocator, uint32_t, false>
+    // allComponentsArchOffsets;
 
-    //LOGD2("adding {} archetypes to query {}", archetypesCount - first_archetype,
-    //      &query >= archetypeQueries.begin().base() && &query < archetypeQueries.end().base() ? &query -
-    //                                                                                             archetypeQueries.begin().base()
-    //                                                                                          : -1);
+    // LOGD2("adding {} archetypes to query {}", archetypesCount - first_archetype,
+    //       &query >= archetypeQueries.begin().base() && &query < archetypeQueries.end().base() ? &query -
+    //                                                                                              archetypeQueries.begin().base()
+    //                                                                                           : -1);
 
     // we don't want to add same archetypes to query list
     // chose max between next after last already found (query.queriesEnd()[-1] + 1) and first_archetype to add
-    archetype_t firstArchetypeToAdd =
-        !updateOneArchetype && query.queriesCount > 0 ? std::max(archetype_t(query.queriesEnd()[-1] + 1),
-                                                                 first_archetype) : first_archetype;
+    archetype_t firstArchetypeToAdd = !updateOneArchetype && query.queriesCount > 0
+                                        ? std::max(archetype_t(query.queriesEnd()[-1] + 1), first_archetype)
+                                        : first_archetype;
     for (archetype_t ai = firstArchetypeToAdd, ae = archetypesCount; ai < ae; ++ai) {
-      //const auto &archetype = archetypes.getArchetype(ai);
+      // const auto &archetype = archetypes.getArchetype(ai);
       const auto componentCount = archetypes.getArchetypeComponentCount(ai);
       if (componentCount < minRequired) // not enough components to even match
         continue;
@@ -353,22 +351,22 @@ namespace ecs {
         archetype_component_id id = archInfo.getComponentId(resDesc.getComponents()[i]);
         if (id == INVALID_ARCHETYPE_COMPONENT_ID) {
           if (!resDesc.getOptionalMask()[i]) // required data is not optional
-            goto loop_continue;              // legal continue outer loop
+            goto loop_continue; // legal continue outer loop
         }
         tempIds[i] = id;
       }
       goto loop_normal;
-      loop_continue:
+    loop_continue:
       continue;
-      loop_normal:;
+    loop_normal:;
       // we have found acceptable archetype
       const uint32_t oldOffsets = (uint32_t) allComponentsArchOffsets.size();
 
       allComponentsArchOffsets.resize(oldOffsets + totalDataComponentsCount);
       const archetype_component_id *__restrict id = tempIds;
       auto archOffsetsOfs = archetypes.getArchetypeComponentOfsUnsafe(ai);
-      for (auto oi = allComponentsArchOffsets.data() + oldOffsets, oe = oi + totalDataComponentsCount;
-           oi != oe; ++oi, ++id)
+      for (auto oi = allComponentsArchOffsets.data() + oldOffsets, oe = oi + totalDataComponentsCount; oi != oe;
+           ++oi, ++id)
         *oi = *id == INVALID_ARCHETYPE_COMPONENT_ID ? ArchetypesQuery::INVALID_OFFSET
                                                     : archetypes.getComponentOfsFromOfs(*id, archOffsetsOfs);
       queries.push_back(ai);
@@ -383,12 +381,12 @@ namespace ecs {
                      totalDataComponentsCount);
 
     const size_t oldQueriesCount = query.getQueriesCount(),
-        newQueriesCount =
-        std::min<size_t>(eastl::numeric_limits<decltype(ArchetypesQuery::queriesCount)>::max(),
-                         oldQueriesCount + queries.size());
+                 newQueriesCount =
+                   std::min<size_t>(eastl::numeric_limits<decltype(ArchetypesQuery::queriesCount)>::max(),
+                                    oldQueriesCount + queries.size());
     G_ASSERT(oldQueriesCount + queries.size() < eastl::numeric_limits<archetype_t>::max());
-    size_t oldOfsCount = oldQueriesCount * totalDataComponentsCount, newOfsCount =
-        newQueriesCount * totalDataComponentsCount;
+    size_t oldOfsCount = oldQueriesCount * totalDataComponentsCount,
+           newOfsCount = newQueriesCount * totalDataComponentsCount;
     std::ostringstream t{};
     for (auto arch: queries) {
       t << fmt::format(" {}", this->templates.getTemplate(this->archetypes.getParentTemplate(arch))->getName());
@@ -403,14 +401,12 @@ namespace ecs {
       if (query.isInplaceOffsets(oldOfsCount)) {
         // convert offsets into allocated array, we are not fitting anymore inside inplace array
         int cnt = 0;
-        query.allComponentsArchOffsets =
-            add_to_fixed_container((ArchetypesQuery::offset_type_t *) nullptr, cnt,
-                                   query.getArchetypeOffsetsPtrInplace(), oldOfsCount);
+        query.allComponentsArchOffsets = add_to_fixed_container((ArchetypesQuery::offset_type_t *) nullptr, cnt,
+                                                                query.getArchetypeOffsetsPtrInplace(), oldOfsCount);
       }
 
-      query.allComponentsArchOffsets = add_to_fixed_container(query.allComponentsArchOffsets, oldOfsCount,
-                                                              allComponentsArchOffsets.data(),
-                                                              allComponentsArchOffsets.size());
+      query.allComponentsArchOffsets = add_to_fixed_container(
+        query.allComponentsArchOffsets, oldOfsCount, allComponentsArchOffsets.data(), allComponentsArchOffsets.size());
     }
 
     // first check if new arch size can fit inplace
@@ -436,22 +432,18 @@ namespace ecs {
     return query.getQueriesCount() != 0;
   }
 
-  GState::ResolvedStatus
-  GState::resolveQuery(uint32_t index, ResolvedStatus currentStatus, ResolvedQueryDesc &resDesc) {
+  GState::ResolvedStatus GState::resolveQuery(uint32_t index, ResolvedStatus currentStatus,
+                                              ResolvedQueryDesc &resDesc) {
     const CopyQueryDesc &copyDesc = queryDescs[index];
     const char *name = copyDesc.getName();
     const BaseQueryDesc desc = copyDesc.getDesc();
     G_UNUSED(name);
-    G_ASSERT(
-        desc.componentsRQ.size() + desc.componentsNO.size() + desc.componentsRW.size() + desc.componentsRO.size() > 0);
+    G_ASSERT(desc.componentsRQ.size() + desc.componentsNO.size() + desc.componentsRW.size() + desc.componentsRO.size() >
+             0);
     uint8_t ret = RESOLVED_MASK;
     int componentsIterated = 0;
 
-    enum ReqType {
-      DATA,
-      REQUIRED,
-      REQUIRED_NOT
-    };
+    enum ReqType { DATA, REQUIRED, REQUIRED_NOT };
     auto makeRange = [&](dag::ConstSpan<ComponentDesc> components, ReqType req) -> bool {
       auto &dest = resDesc.getComponents();
       for (auto cdI = components.begin(), cdE = components.end(); cdI != cdE; ++cdI, ++componentsIterated) {
@@ -480,13 +472,12 @@ namespace ecs {
           DataComponent *comp = this->dataComponents.getDataComponent(id);
           if (comp->componentHash !=
               cd.type) // cd.type == auto_type is special case, basically it is 'auto' (generic). It is legit
-            // at least in require/require_not
+          // at least in require/require_not
           {
             auto dat = this;
             EXCEPTION("component<{}> type mismatch in query <{}>, type is {}({:#x}), required in query <{}>({:#x})",
                       dat->dataComponents.getName(id), name, dat->componentTypes.getName(comp->componentIndex),
-                      comp->componentHash,
-                      dat->componentTypes.getName(cd.type), cd.type);
+                      comp->componentHash, dat->componentTypes.getName(cd.type), cd.type);
             resDesc.reset();
             // wrong query can not become correct one ever. no need to check it, just assume it is empty query
             ret = RESOLVED_MASK;
@@ -501,7 +492,7 @@ namespace ecs {
     if (!wasResolved) {
       const uint32_t dataComponentsCount = (uint32_t) desc.componentsRW.size() + (uint32_t) desc.componentsRO.size();
       const uint32_t totalComponents =
-          (uint32_t) desc.componentsRQ.size() + (uint32_t) desc.componentsNO.size() + dataComponentsCount;
+        (uint32_t) desc.componentsRQ.size() + (uint32_t) desc.componentsNO.size() + dataComponentsCount;
       G_ASSERT(resDesc.getComponents().size() == 0 || resDesc.getComponents().size() == totalComponents);
       resDesc.getComponents().reserve(totalComponents);
       resDesc.getComponents().assign((uint16_t) totalComponents, INVALID_COMPONENT_INDEX);
@@ -595,17 +586,17 @@ namespace ecs {
     return makeArchetypesQuery(last_arch_count, index, isFullyResolved(status));
   }
 
-  inline bool
-  GState::updatePersistentQueryInternal(archetype_t last_arch_count, uint32_t index, bool should_re_resolve) {
-    //LOGD3("updatePersistent = {}, index = {}", queryDescs[index].name, index);
-    //LOGD2("update = {}, current resolved= {}", queryDescs[index].name, (uint8_t) getQueryStatus(index));
+  inline bool GState::updatePersistentQueryInternal(archetype_t last_arch_count, uint32_t index,
+                                                    bool should_re_resolve) {
+    // LOGD3("updatePersistent = {}, index = {}", queryDescs[index].name, index);
+    // LOGD2("update = {}, current resolved= {}", queryDescs[index].name, (uint8_t) getQueryStatus(index));
     const bool ret = makeArchetypesQueryInternal(last_arch_count, index, should_re_resolve);
 
     return ret;
   }
 
-  inline bool
-  GState::updatePersistentQuery(archetype_t last_arch_count, QueryId h, uint32_t &index, bool should_re_resolve) {
+  inline bool GState::updatePersistentQuery(archetype_t last_arch_count, QueryId h, uint32_t &index,
+                                            bool should_re_resolve) {
     G_ASSERT(isQueryValid(h));
     index = h.index();
     return updatePersistentQueryInternal(last_arch_count, index, should_re_resolve);
@@ -616,7 +607,7 @@ namespace ecs {
     if (!es->ops.onEvent) // Should never happen, but yea
       return;
     for (auto evt: es->evSet) {
-      //const auto evtId = eventsDb.findEvent(evt);
+      // const auto evtId = eventsDb.findEvent(evt);
       esEvents[evt].push_back(j);
       std::sort(esEvents[evt].begin(), esEvents[evt].end());
     }
@@ -639,15 +630,16 @@ namespace ecs {
     }
     lastQueriesResolvedComponents = (uint32_t) dataComponents.size();
     uint32_t currentArchetypeCount = archetypes.size();
-    //for (int ai = allQueriesUpdatedToArch, e = currentArchetypeCount; ai < e; ++ai) // only used for optimzied Create, recreate, destroy, which I dont do
-    //  updateArchetypeESLists(ai);
+    // for (int ai = allQueriesUpdatedToArch, e = currentArchetypeCount; ai < e; ++ai) // only used for optimzied
+    // Create, recreate, destroy, which I dont do
+    //   updateArchetypeESLists(ai);
     allQueriesUpdatedToArch = (archetype_t) currentArchetypeCount;
   }
 
   void GState::registerEsEvents() {
     G_ASSERT(ECS_HASH("name").hash == ecs_hash("name") && ECS_HASH("name").hash == ECS_HASH_SLOW("name").hash);
-    //esEvents.clear();
-    //esOnChangeEvents.clear();
+    // esEvents.clear();
+    // esOnChangeEvents.clear();
     for (es_index_type j = 0, ej = (es_index_type) esList.size(); j < ej; ++j) {
       QueryId h = esListQueries[j];
       if (!h || archetypeQueries[h.index()].getQueriesCount())
@@ -670,14 +662,14 @@ namespace ecs {
 
       // randomize list to avoid depending on native ES registration order
       // which might be different on different platforms, depend on hot-reload, etc...
-      // this is what gaijin says, but from what its visible here its actually done to make ES order the same on all platforms
+      // this is what gaijin says, but from what its visible here its actually done to make ES order the same on all
+      // platforms
       std::sort(esFullList.begin(), esFullList.end(),
                 [](auto a, auto b) { return ECS_HASH_SLOW(a->name).hash < ECS_HASH_SLOW(b->name).hash; });
 
       // this es system sorting algo (calling it sorting is underselling it) is all gaijin
       // start gaijin
-      eastl::hash_map<std::string_view, int, std::hash<std::string_view>, std::equal_to<std::string_view>>
-          nameESMap;
+      eastl::hash_map<std::string_view, int, std::hash<std::string_view>, std::equal_to<std::string_view>> nameESMap;
       nameESMap.reserve(esFullList.size() * 17 / 16); // Heuristic
 
       std::vector<int> esToGraphNodeMap; // ES to graph vertex map
@@ -687,11 +679,11 @@ namespace ecs {
       int graphNodesCount = 0;
       std::vector<edge_container_t> edgesFrom;
       auto insertEdge = [&edgesFrom](int from, int to) {
-          if (edgesFrom.size() <= std::max(from, to))
-              edgesFrom.resize(std::max(from, to) + 1);
-          edgesFrom[from].push_back(to);
+        if (edgesFrom.size() <= std::max(from, to))
+          edgesFrom.resize(std::max(from, to) + 1);
+        edgesFrom[from].push_back(to);
       };
-// build graph from esOrder (list of sync points)
+      // build graph from esOrder (list of sync points)
       if (esOrder.size()) {
         // restore linear esOrder
         std::vector<std::string_view> esOrderList;
@@ -721,8 +713,10 @@ namespace ecs {
             G_UNUSED(eventHandler);
             // this has to be logerr. All ES has to be fixed first, than it can become logerr
             // todo: if you see this line afer 01.02.2025 - replace with logerr!
-            //LOGE("ES <{}> is supposed to be {} ES/sync <{.*}>, which is undeclared.{}", name, before ? "before" : "after",
-            //       (int)es.length(), es.data(), eventHandler ? "Just remove _event_handler in the end, as it is not part of ES name" : "");
+            // LOGE("ES <{}> is supposed to be {} ES/sync <{.*}>, which is undeclared.{}", name, before ? "before" :
+            // "after",
+            //       (int)es.length(), es.data(), eventHandler ? "Just remove _event_handler in the end, as it is not
+            //       part of ES name" : "");
           }
           ++graphNodesCount;
         }
@@ -788,8 +782,8 @@ namespace ecs {
         if (it != nameESMap.end())
           node = it->first;
         LOGE(
-            "syncPoint {} resulted in graph to become cyclic and was removed from sorting. ES order is non-determinstic",
-            node.c_str());
+          "syncPoint {} resulted in graph to become cyclic and was removed from sorting. ES order is non-determinstic",
+          node.c_str());
       };
       topo_sort(graphNodesCount, edgesFrom, sortedList, loopDetected);
       const int lowestPrio = eastl::numeric_limits<int>::max();
@@ -832,23 +826,23 @@ namespace ecs {
 
       queryToEsMap.clear();
       clear_and_shrink(esList);
-      //esForAllEntities.clear();
+      // esForAllEntities.clear();
       stlsort::sort_branchless(prio.begin(), prio.end());
       clear_and_resize(esList, prio.size());
-      //esForAllEntities.resize(prio.size());
-      //esUpdates.clear();
+      // esForAllEntities.resize(prio.size());
+      // esUpdates.clear();
 
 
-      //uint32_t mask = 0;
+      // uint32_t mask = 0;
       for (int i = 0; i < prio.size(); ++i) {
         esList[i] = esFullList[prio[i].id];
         // es will perform on all entities
         const EntitySystemDesc *es = esList[i];
-        //mask |= es->stageMask;
-        //if ((es->componentsRW.size() + es->componentsRO.size()) != 0 && allCompsAreOptional(es))
+        // mask |= es->stageMask;
+        // if ((es->componentsRW.size() + es->componentsRO.size()) != 0 && allCompsAreOptional(es))
         //{
-        //  esForAllEntities.set(i, true);
-        //}
+        //   esForAllEntities.set(i, true);
+        // }
       }
 
       // check if they are correct event handlers
@@ -864,9 +858,9 @@ namespace ecs {
             sd->evSet.clear();
         }
       }
-      //for (auto &eq: esListQueries)
-      //if (eq != QueryId() && isQueryValid(eq))
-      //  destroyQuery(eq);
+      // for (auto &eq: esListQueries)
+      // if (eq != QueryId() && isQueryValid(eq))
+      //   destroyQuery(eq);
       esListQueries.resize(esList.size());
       for (int j = 0, ej = (int) esList.size(); j < ej; ++j)
         esListQueries[j] = esList[j]->emptyES ? QueryId() : createUnresolvedQuery(*esList[j]);
@@ -874,7 +868,7 @@ namespace ecs {
     }
     updateAllQueries();
     // end gaijin (basically)
-    //lastEsGen = EntitySystemDesc::generation;
+    // lastEsGen = EntitySystemDesc::generation;
   }
 
   void GState::sendEventImmediate(EntityId eid, Event &evt, EntityManager &mgr) {
@@ -898,8 +892,8 @@ namespace ecs {
 
   static constexpr int MAX_ONE_EID_QUERY_COMPONENTS = 96;
 
-  inline void
-  GState::performQueryES(QueryId h, const EventFuncType &fun, const Event &__restrict evt, EntityManager &mgr) {
+  inline void GState::performQueryES(QueryId h, const EventFuncType &fun, const Event &__restrict evt,
+                                     EntityManager &mgr) {
     uint32_t index = h.index();
     auto &__restrict archDesc = archetypeQueries[index];
     if (!archDesc.getQueriesCount())
@@ -913,7 +907,7 @@ namespace ecs {
     for (int i = 0; archBegin != archEnd; i++, archBegin++) {
       archetype_t arch_id = *archBegin;
 
-      if(!doesArchetypeExist(arch_id, mgr.arch_data))
+      if (!doesArchetypeExist(arch_id, mgr.arch_data))
         continue;
 
       auto curr_arch = mgr.arch_data.getArch(*archBegin);
@@ -936,8 +930,8 @@ namespace ecs {
           auto totalComponentsCount = archDesc.getComponentsCount();
           auto *__restrict componentData = const_cast<QueryView::ComponentsData *>(qv.componentData);
           auto *__restrict archetypeOffsets = archDesc.getArchetypeOffsetsPtr() + totalComponentsCount * i;
-          for (uint32_t compIndex = 0;
-               compIndex != totalComponentsCount; compIndex++, componentData++, archetypeOffsets++) {
+          for (uint32_t compIndex = 0; compIndex != totalComponentsCount;
+               compIndex++, componentData++, archetypeOffsets++) {
             auto archOfs = *archetypeOffsets;
             if (DAGOR_LIKELY(archOfs != ArchetypesQuery::INVALID_OFFSET)) {
               *componentData = chunk.getCompArrayUnsafe(archOfs, EntityCount);
@@ -951,8 +945,8 @@ namespace ecs {
     }
   }
 
-  inline void
-  GState::performQueryEmptyAllowed(QueryId h, const EventFuncType &fun, const Event &evt, EntityManager &mgr) {
+  inline void GState::performQueryEmptyAllowed(QueryId h, const EventFuncType &fun, const Event &evt,
+                                               EntityManager &mgr) {
     if (h)
       performQueryES(h, fun, evt, mgr);
     else
@@ -967,7 +961,7 @@ namespace ecs {
   void GState::notifyESEventHandlers(EntityId eid, const Event &evt, EntityManager &mgr) {
     auto eventType = evt.getType();
     auto esListIt = esEvents.find(
-        eventType); // this is extremely slow, and should not be needed. We can register all events with flat
+      eventType); // this is extremely slow, and should not be needed. We can register all events with flat
     // arrays, not search.
     if (esListIt == esEvents.end())
       return;
@@ -991,7 +985,7 @@ namespace ecs {
 
   bool GState::fillEidQueryView(ecs::EntityId eid, EntityDesc entDesc, QueryId h, QueryView &__restrict qv,
                                 MgrArchetypeStorage &storage) {
-    //DAECS_EXT_ASSERT(isQueryValid(h));
+    // DAECS_EXT_ASSERT(isQueryValid(h));
     const uint32_t qIndex = h.index();
     auto &__restrict archDesc = archetypeQueries[qIndex];
     const auto lastArch = archDesc.lastArch;
@@ -1009,7 +1003,8 @@ namespace ecs {
     if (DAGOR_UNLIKELY(itId > 0 && lastArch + 1 != queriesCount + firstArch)) // non sequential
     {
       if (DAGOR_LIKELY(archDesc.isInplaceQueries(queriesCount))) {
-        // linear search inside inplace queries. that is likely be to quiet often case, and this data is already inside cache line
+        // linear search inside inplace queries. that is likely be to quiet often case, and this data is already inside
+        // cache line
         itId = std::find(archDesc.queriesInplace(), archDesc.queriesInplace() + queriesCount, archetype) -
                archDesc.queriesInplace();
       } else {
@@ -1018,13 +1013,14 @@ namespace ecs {
           itId = queriesCount - 1;
         else
           itId =
-              eastl::binary_search_i(archDesc.queries, archDesc.queries + queriesCount, archetype) - archDesc.queries;
+            eastl::binary_search_i(archDesc.queries, archDesc.queries + queriesCount, archetype) - archDesc.queries;
       }
     }
     // likely that the archetype of our entity isnt applied to by this query
     if (DAGOR_LIKELY(uint32_t(itId) >= queriesCount))
       return false;
-    qv.index_start = 0; // we are going to point to specific entity data, so only iterate over this specific entities data
+    qv.index_start =
+      0; // we are going to point to specific entity data, so only iterate over this specific entities data
     qv.index_end = 1;
     qv.roRW = archDesc.roRW;
     qv.id = h;
@@ -1042,7 +1038,7 @@ namespace ecs {
       auto archOfs = *archetypeOffsets;
       if (DAGOR_LIKELY(archOfs != ArchetypesQuery::INVALID_OFFSET)) {
         *componentData =
-            chunk->getCompArrayUnsafe(archOfs, EntityCount) + idInChunk * uint32_t(componentsSize[compIndex]);
+          chunk->getCompArrayUnsafe(archOfs, EntityCount) + idInChunk * uint32_t(componentsSize[compIndex]);
       } else {
         *componentData = nullptr;
       }
@@ -1051,7 +1047,8 @@ namespace ecs {
     return true;
   }
 
-  QueryCbResult GState::performQueryStoppable(EntityManager &mgr, QueryId h, const stoppable_query_cb_t &fun, void *user_data) {
+  QueryCbResult GState::performQueryStoppable(EntityManager &mgr, QueryId h, const stoppable_query_cb_t &fun,
+                                              void *user_data) {
     uint32_t index = h.index();
     auto &__restrict archDesc = archetypeQueries[index];
     if (!archDesc.getQueriesCount())
@@ -1065,7 +1062,7 @@ namespace ecs {
     for (int i = 0; archBegin != archEnd; i++, archBegin++) {
       archetype_t arch_id = *archBegin;
 
-      if(!doesArchetypeExist(arch_id, mgr.arch_data))
+      if (!doesArchetypeExist(arch_id, mgr.arch_data))
         continue;
 
       auto curr_arch = mgr.arch_data.getArch(*archBegin);
@@ -1078,7 +1075,7 @@ namespace ecs {
           qv.eid_refs = (ecs::EntityId *) (chunk.getCompArrayUnsafe(0,
                                                                     EntityCount)); // first array at 0th is always eid
           qv.num_of_entities = chunk.used;
-          if(DAGOR_UNLIKELY(fun(qv, mgr) == QueryCbResult::Stop))
+          if (DAGOR_UNLIKELY(fun(qv, mgr) == QueryCbResult::Stop))
             return QueryCbResult::Stop;
         }
       } else {
@@ -1089,8 +1086,8 @@ namespace ecs {
           auto totalComponentsCount = archDesc.getComponentsCount();
           auto *__restrict componentData = const_cast<QueryView::ComponentsData *>(qv.componentData);
           auto *__restrict archetypeOffsets = archDesc.getArchetypeOffsetsPtr() + totalComponentsCount * i;
-          for (uint32_t compIndex = 0;
-               compIndex != totalComponentsCount; compIndex++, componentData++, archetypeOffsets++) {
+          for (uint32_t compIndex = 0; compIndex != totalComponentsCount;
+               compIndex++, componentData++, archetypeOffsets++) {
             auto archOfs = *archetypeOffsets;
             if (DAGOR_LIKELY(archOfs != ArchetypesQuery::INVALID_OFFSET)) {
               *componentData = chunk.getCompArrayUnsafe(archOfs, EntityCount);
@@ -1098,7 +1095,7 @@ namespace ecs {
               *componentData = nullptr;
             }
           }
-          if(DAGOR_UNLIKELY(fun(qv, mgr) == QueryCbResult::Stop))
+          if (DAGOR_UNLIKELY(fun(qv, mgr) == QueryCbResult::Stop))
             return QueryCbResult::Stop;
         }
       }
@@ -1120,7 +1117,7 @@ namespace ecs {
     for (int i = 0; archBegin != archEnd; i++, archBegin++) {
       archetype_t arch_id = *archBegin;
 
-      if(!doesArchetypeExist(arch_id, mgr.arch_data))
+      if (!doesArchetypeExist(arch_id, mgr.arch_data))
         continue;
 
       auto curr_arch = mgr.arch_data.getArch(arch_id);
@@ -1143,8 +1140,8 @@ namespace ecs {
           auto totalComponentsCount = archDesc.getComponentsCount();
           auto *__restrict componentData = const_cast<QueryView::ComponentsData *>(qv.componentData);
           auto *__restrict archetypeOffsets = archDesc.getArchetypeOffsetsPtr() + totalComponentsCount * i;
-          for (uint32_t compIndex = 0;
-               compIndex != totalComponentsCount; compIndex++, componentData++, archetypeOffsets++) {
+          for (uint32_t compIndex = 0; compIndex != totalComponentsCount;
+               compIndex++, componentData++, archetypeOffsets++) {
             auto archOfs = *archetypeOffsets;
             if (DAGOR_LIKELY(archOfs != ArchetypesQuery::INVALID_OFFSET)) {
               *componentData = chunk.getCompArrayUnsafe(archOfs, EntityCount);
@@ -1157,4 +1154,4 @@ namespace ecs {
       }
     }
   }
-}
+} // namespace ecs

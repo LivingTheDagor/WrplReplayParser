@@ -24,7 +24,7 @@ namespace mpi {
   }
 
   Message *GeneralObject::dispatchMpiMessage(MessageID mid) {
-    //LOG("incoming mid: 0x%x\n", mid);
+    // LOG("incoming mid: 0x%x\n", mid);
     switch (mid) {
       case Replication:
       case Reflection1:
@@ -63,14 +63,14 @@ namespace mpi {
         return new BSMessage(this, mid);
       }
     }
-    //LOG("no mid found\n");
+    // LOG("no mid found\n");
     return nullptr;
   }
 
   void GeneralObject::applyMpiMessage(const Message *m) {
     auto mid = m->id;
     auto bs = (BitStream *) &m->payload;
-    //LOG("Deserialzing for Reflection type: %0x\n", mid);
+    // LOG("Deserialzing for Reflection type: %0x\n", mid);
     switch (mid) {
       case Kill: {
         const KillMessage *kill_m = dynamic_cast<const KillMessage *>(m);
@@ -133,19 +133,17 @@ namespace mpi {
       case Rocket1:
       case Rocket2: {
         auto bsM = (BSMessage *) m;
-        //bool ret = WeaponSync(*state, bsM->data);
+        // bool ret = WeaponSync(*state, bsM->data);
         bool ret = true;
         if (!ret) {
-            LOGE("Failed to read We payload");
+          LOGE("Failed to read We payload");
         }
         return;
       }
     }
   }
 
-  ecs::EntityId eid_from_ext_uid(uint32_t ext_uid) {
-    return ecs::EntityId((ext_uid & 0xFF) << 0x16 | ext_uid >> 0x8);
-  }
+  ecs::EntityId eid_from_ext_uid(uint32_t ext_uid) { return ecs::EntityId((ext_uid & 0xFF) << 0x16 | ext_uid >> 0x8); }
 
   enum ExtMpiTypes {
     FMW = 0,
@@ -178,7 +176,7 @@ namespace mpi {
 
   IObject *MpiQueueObject::UnitRef_Dispatch(ObjectID oid, ObjectExtUID extUid, ParserState *state, bool do_queue) {
     if (!extUid) {
-      EXCEPTION("dispatch: extended mpi uid is not set for object of type {}", oid>>0xb);
+      EXCEPTION("dispatch: extended mpi uid is not set for object of type {}", oid >> 0xb);
     }
     auto eid = eid_from_ext_uid(extUid);
     auto ref = state->g_entity_mgr.getNullable<unit::UnitRef>(eid, ECS_HASH("unit__ref"));
@@ -197,11 +195,11 @@ namespace mpi {
     auto unit = ref->unit;
     auto obj_type = oid >> 0xb;
     if (obj_type == FMW && unit->unitType == UnitType::AircraftType) {
-        return unit->base_data;
+      return unit->base_data;
     }
     // should also later include fortifications?
     if (obj_type == GM && unit->unitType == UnitType::TankType) {
-        return unit->base_data;
+      return unit->base_data;
     }
     if (obj_type == WEAP) {
       return &unit->weapons_mask;
@@ -267,10 +265,9 @@ namespace mpi {
       case 0x19:
         G_ASSERT(extUid != INVALID_OBJECT_EXT_UID);
         return MpiQueueObject::UnitRef_Dispatch(oid, extUid, state, true);
-      case 3:
-        break;
+      case 3: break;
       case 5: {
-        //LOGE("Getting Zone with id {}", count);
+        // LOGE("Getting Zone with id {}", count);
         if (count < state->Zones.size()) {
           return state->Zones[count];
         } else {
@@ -300,7 +297,7 @@ namespace mpi {
         break;
       }
       case 0xe: {
-        //LOG("Getting Player id %i\n", count);
+        // LOG("Getting Player id %i\n", count);
         if (count < state->players.size())
           return &state->players[count];
         break;
@@ -319,23 +316,19 @@ namespace mpi {
             LOGE("Invalid MissionArea index");
           return var;
         } else {
-          //LOGE("Invalid MissionArea index"); // this can actually be expected behavior apparently.
+          // LOGE("Invalid MissionArea index"); // this can actually be expected behavior apparently.
         }
         return nullptr;
       }
     }
-    //LOG("unable to dispatch to oid: {:#x}; type: {}; index: {}", oid, obj, count);
+    // LOG("unable to dispatch to oid: {:#x}; type: {}; index: {}", oid, obj, count);
     return nullptr;
   }
 
-  bool TankMessage::readPayload(ParserState *state) {
-    return this->payload.Read(this->data);
-  }
+  bool TankMessage::readPayload(ParserState *state) { return this->payload.Read(this->data); }
 
-  void TankMessage::writePayload() {
-    this->payload.Write(this->data);
-  }
-}
+  void TankMessage::writePayload() { this->payload.Write(this->data); }
+} // namespace mpi
 
 ECS_REGISTER_CTM_TYPE(MPlayer, nullptr);
 ECS_AUTO_REGISTER_COMPONENT_BASE(MPlayer, "m_player", nullptr)

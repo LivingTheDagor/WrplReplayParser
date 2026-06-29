@@ -16,17 +16,15 @@ const int max_exponent_size = 8;
 float half_float_ex_decode(uint16_t v, bool positive, int exponent_size, int bias);
 uint16_t half_float_ex_encode(float v, bool positive, int exponent_size, int bias);
 
-template <int EXPONENT_SIZE, int EXPONENT_BIAS>
-struct HalfFloatSimpleEx
-{
+template<int EXPONENT_SIZE, int EXPONENT_BIAS>
+struct HalfFloatSimpleEx {
   uint16_t val;
 
   HalfFloatSimpleEx() = default;
 
   HalfFloatSimpleEx(const HalfFloatSimpleEx &other) : val(other.val) {}
 
-  HalfFloatSimpleEx(float v)
-  {
+  HalfFloatSimpleEx(float v) {
     G_STATIC_ASSERT(EXPONENT_SIZE >= min_exponent_size && EXPONENT_SIZE <= max_exponent_size);
     G_STATIC_ASSERT(EXPONENT_BIAS >= 1 && EXPONENT_BIAS < (1 << EXPONENT_SIZE));
     val = half_float_ex_encode(v, false, EXPONENT_SIZE, EXPONENT_BIAS);
@@ -34,8 +32,7 @@ struct HalfFloatSimpleEx
 
   HalfFloatSimpleEx &operator=(const HalfFloatSimpleEx &other) = default;
 
-  HalfFloatSimpleEx &operator=(float v)
-  {
+  HalfFloatSimpleEx &operator=(float v) {
     val = half_float_ex_encode(v, false, EXPONENT_SIZE, EXPONENT_BIAS);
     return *this;
   }
@@ -45,17 +42,15 @@ struct HalfFloatSimpleEx
   bool operator==(const HalfFloatSimpleEx &other) const { return val == other.val; }
 };
 
-template <int EXPONENT_SIZE, int EXPONENT_BIAS>
-struct HalfFloatSimplePositiveEx
-{
+template<int EXPONENT_SIZE, int EXPONENT_BIAS>
+struct HalfFloatSimplePositiveEx {
   uint16_t val;
 
   HalfFloatSimplePositiveEx() = default;
 
   HalfFloatSimplePositiveEx(const HalfFloatSimplePositiveEx &other) : val(other.val) {}
 
-  HalfFloatSimplePositiveEx(float v)
-  {
+  HalfFloatSimplePositiveEx(float v) {
     G_STATIC_ASSERT(EXPONENT_SIZE >= min_exponent_size && EXPONENT_SIZE <= max_exponent_size);
     G_STATIC_ASSERT(EXPONENT_BIAS >= 0 && EXPONENT_BIAS < (1 << EXPONENT_SIZE));
     val = half_float_ex_encode(v, true, EXPONENT_SIZE, EXPONENT_BIAS);
@@ -63,8 +58,7 @@ struct HalfFloatSimplePositiveEx
 
   HalfFloatSimplePositiveEx &operator=(const HalfFloatSimplePositiveEx &other) = default;
 
-  HalfFloatSimplePositiveEx &operator=(float v)
-  {
+  HalfFloatSimplePositiveEx &operator=(float v) {
     val = half_float_ex_encode(v, true, EXPONENT_SIZE, EXPONENT_BIAS);
     return *this;
   }
@@ -87,19 +81,18 @@ inline uint16_t calc_fraction_size(bool positive, int exponent_size) { return 16
 
 inline int calc_max_exp(int exponent_size) { return (1 << exponent_size) - 1; }
 
-float half_float_ex_decode(uint16_t v, bool positive, int exponent_size, int bias)
-{
+float half_float_ex_decode(uint16_t v, bool positive, int exponent_size, int bias) {
   int fractionSize = calc_fraction_size(positive, exponent_size);
   int maxExp = calc_max_exp(exponent_size);
 
   int exponent = int((positive ? v : (v & 0x7FFFU)) >> fractionSize);
   bool isNan = exponent >= maxExp;
-  uint32_t exponentPart = exponent <= 0 ? 0U : (isNan ? exponentMask : ((exponent - bias + float_bias) << float_fraction_size));
+  uint32_t exponentPart =
+    exponent <= 0 ? 0U : (isNan ? exponentMask : ((exponent - bias + float_bias) << float_fraction_size));
   uint32_t signPart = !positive && (v & 0x8000U) ? signMask : 0;
   uint32_t fractionPart = isNan ? fractionMask : (uint32_t(v) << (float_fraction_size - fractionSize)) & fractionMask;
 
-  union
-  {
+  union {
     float f;
     uint32_t i;
   } flt;
@@ -108,15 +101,13 @@ float half_float_ex_decode(uint16_t v, bool positive, int exponent_size, int bia
   return flt.f;
 }
 
-uint16_t half_float_ex_encode(float v, bool positive, int exponent_size, int bias)
-{
+uint16_t half_float_ex_encode(float v, bool positive, int exponent_size, int bias) {
   G_ASSERT_AND_DO(!positive || v >= 0.f, v = 0.f);
 
   int fractionSize = calc_fraction_size(positive, exponent_size);
   int maxExp = calc_max_exp(exponent_size);
 
-  union
-  {
+  union {
     float f;
     uint32_t i;
   } flt;

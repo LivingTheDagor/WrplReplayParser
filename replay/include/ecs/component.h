@@ -25,17 +25,14 @@ namespace ecs {
     const ComponentRef getComponentRef() const; // this is const reference! you should write to it!
     // creates a copy of the internal data in the provided ptr
 
-    template <typename T>
-    Component(const T &t)
-    {
+    template<typename T>
+    Component(const T &t) {
       (*this) = t;
     }
-    template <typename T, typename = std::enable_if_t<std::is_rvalue_reference<T &&>::value, void>>
-    Component(T &&t) noexcept
-    {
+    template<typename T, typename = std::enable_if_t<std::is_rvalue_reference<T &&>::value, void>>
+    Component(T &&t) noexcept {
       (*this) = std::move(t);
     }
-
 
 
     bool operator==(const Component &a) const;
@@ -54,13 +51,13 @@ namespace ecs {
     template<typename T>
     T *getTypedData() const {
       G_ASSERT(this->componentType == ComponentTypeInfo<T>::type);
-      return (T*)value;
+      return (T *) value;
     }
 
     template<typename T>
     T *getTypedData() {
       G_ASSERT(this->componentType == ComponentTypeInfo<T>::type);
-      return (T*)value;
+      return (T *) value;
     }
 
     template<typename T>
@@ -82,39 +79,36 @@ namespace ecs {
 
     const char *getOr(const char *def) const;
 
-    //Component &operator=(const char *v);
+    // Component &operator=(const char *v);
 
-    template <typename T>
-    T &getRW()
-    {
+    template<typename T>
+    T &getRW() {
       G_ASSERTF(is<T>() && !isNull(), "{:#x} != {:#x}", +ComponentTypeInfo<T>::type, componentType);
-      return *(T *)getTypedData<T>();
+      return *(T *) getTypedData<T>();
     }
 
-    template <typename T>
-    Component &operator=(const T &v)
-    {
+    template<typename T>
+    Component &operator=(const T &v) {
       G_ASSERT_RETURN(is<T>() || isNull(), *this);
-      if (isNull())
-      {
+      if (isNull()) {
         initTypeIndex(ComponentTypeInfo<T>::type);
         componentTypeSize = ComponentTypeInfo<T>::size;
 
         // value.data = (void*)(new typename std::remove_reference<T>::type(v));
-        // do it same way, as free in BoxedCreator, as data can be MOVED to it. may be make allocator part of type to remove it?
+        // do it same way, as free in BoxedCreator, as data can be MOVED to it. may be make allocator part of type to
+        // remove it?
         value = malloc(sizeof(T));
-        //if (!std::is_scalar<T>::value)
-        //  memset(value, 0, sizeof(T));
+        // if (!std::is_scalar<T>::value)
+        //   memset(value, 0, sizeof(T));
         new (value) typename std::remove_reference<T>::type(v);
 
 
-      }
-      else
+      } else
         getRW<typename std::remove_reference<T>::type>() = v;
       return *this;
     }
 
-    //inline void createCopy(void *data, ComponentTypes *types);
+    // inline void createCopy(void *data, ComponentTypes *types);
 
 
     // dunno what this is doing this is something gaijin made and I copied
@@ -137,14 +131,11 @@ namespace ecs {
 
     inline void *getRawData() { return value; }
 
-    inline uint32_t getSize() const { return componentTypeSize;}
+    inline uint32_t getSize() const { return componentTypeSize; }
 
-    ~Component() {
-      free();
-    }
+    ~Component() { free(); }
 
-    void reset()
-    {
+    void reset() {
       value = nullptr;
       componentType = 0;
       componentTypeSize = 0;
@@ -165,26 +156,26 @@ namespace ecs {
     uint32_t componentTypeSize = 0;
   };
 
-//bool Component::operator==(const EntityComponentRef &a) const { return getEntityComponentRef() == a; }
+  // bool Component::operator==(const EntityComponentRef &a) const { return getEntityComponentRef() == a; }
   inline Component &Component::operator=(Component &&a) noexcept {
     if (DAGOR_UNLIKELY(this == &a))
       return *this;
     free();
     G_STATIC_ASSERT(offsetof(Component, value) == 0);
-    //G_STATIC_ASSERT(
-    //    sizeof(Value) >= sizeof(uintptr_t)); // boxed components should return rawData to something boxed, i.e. buffer
+    // G_STATIC_ASSERT(
+    //     sizeof(Value) >= sizeof(uintptr_t)); // boxed components should return rawData to something boxed, i.e.
+    //     buffer
     memcpy(this, &a, sizeof(Component));
     a.reset();
     return *this;
   }
 
-  inline Component::Component(Component &&a) noexcept
-  {
+  inline Component::Component(Component &&a) noexcept {
     memcpy(this, &a, sizeof(*this));
     a.reset();
   }
 
 
   typedef std::optional<Component> MaybeComponent;
-} // ecs
-#endif //MYEXTENSION_COMPONENT_H
+} // namespace ecs
+#endif // MYEXTENSION_COMPONENT_H

@@ -23,8 +23,7 @@ void BitStream::Write(const DataBlock &blk) {
   }
 }
 
-bool BitStream::Read(DataBlock &blk) const
-{
+bool BitStream::Read(DataBlock &blk) const {
   blk.reset();
   uint32_t bytesToRead = 0;
   if (!ReadCompressed(bytesToRead))
@@ -36,8 +35,8 @@ bool BitStream::Read(DataBlock &blk) const
     return false;
   InPlaceMemLoadCB crd(GetData() + bits2bytes(readOffset), bytesToRead);
   bool ret = false;
-  if (dblk::load_from_stream(
-    blk, crd, dblk::ReadFlag::ROBUST | dblk::ReadFlag::BINARY_ONLY | dblk::ReadFlag::RESTORE_FLAGS)) {
+  if (dblk::load_from_stream(blk, crd,
+                             dblk::ReadFlag::ROBUST | dblk::ReadFlag::BINARY_ONLY | dblk::ReadFlag::RESTORE_FLAGS)) {
     readOffset += bytes2bits(bytesToRead);
     ret = true;
   }
@@ -45,8 +44,7 @@ bool BitStream::Read(DataBlock &blk) const
 }
 
 // gaijins idea not mine
-void BitStream::swap(BitStream &bs)
-{
+void BitStream::swap(BitStream &bs) {
 #define _SWAP(type, l, r) \
   {                       \
     type t = l;           \

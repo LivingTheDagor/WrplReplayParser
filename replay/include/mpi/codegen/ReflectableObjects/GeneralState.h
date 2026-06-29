@@ -5,24 +5,28 @@ class GeneralState : public danet::ReflectableObject {
 public:
   DECL_REFLECTION(GeneralState, danet::ReflectableObject)
   danet::ReflectionVar<float> lastSuperArtilleryTime{"lastSuperArtilleryTime", &dummyForExitZonesSettings, 2};
-  danet::ReflectionVar<danet::dummyForExitZonesSettings> dummyForExitZonesSettings{"dummyForExitZonesSettings", &battleAreaChangeTime, 14};
+  danet::ReflectionVar<danet::dummyForExitZonesSettings> dummyForExitZonesSettings{"dummyForExitZonesSettings",
+                                                                                   &battleAreaChangeTime, 14};
   danet::ReflectionVar<float> battleAreaChangeTime{"battleAreaChangeTime", &battleAreaChangeToId, 3};
   danet::ReflectionVar<int> battleAreaChangeToId{"battleAreaChangeToId", &forcedMapCellsAir, 4};
   danet::ReflectionVar<uint8_t> forcedMapCellsAir{"forcedMapCellsAir", &forcedMapCellsGround, 9};
   danet::ReflectionVar<uint8_t> forcedMapCellsGround{"forcedMapCellsGround", &useCustomSuperArtillery, 10};
   danet::ReflectionVar<bool> useCustomSuperArtillery{"useCustomSuperArtillery", &waterWindStrengthClamp, 5};
-  danet::ReflectionVar<Point2> waterWindStrengthClamp{"waterWindStrengthClamp", &weatherEffectsDummyVar, 12, danet::WeirdFloatSerializer};
+  danet::ReflectionVar<Point2> waterWindStrengthClamp{"waterWindStrengthClamp", &weatherEffectsDummyVar, 12,
+                                                      danet::WeirdFloatSerializer};
   danet::ReflectionVar<danet::WeatherEffects> weatherEffectsDummyVar{"weatherEffectsDummyVar", &timeLeft, 13};
   danet::ReflectionVar<uint16_t> timeLeft{"timeLeft", &dummyForBombingEvent, 6};
-  danet::ReflectionVar<bool> dummyForBombingEvent{"dummyForBombingEvent", &dummyForUnlimitedControlEvent, 7, danet::InvalidSerializer};
-  danet::ReflectionVar<bool> dummyForUnlimitedControlEvent{"dummyForUnlimitedControlEvent", &customState, 11, danet::InvalidSerializer};
+  danet::ReflectionVar<bool> dummyForBombingEvent{"dummyForBombingEvent", &dummyForUnlimitedControlEvent, 7,
+                                                  danet::InvalidSerializer};
+  danet::ReflectionVar<bool> dummyForUnlimitedControlEvent{"dummyForUnlimitedControlEvent", &customState, 11,
+                                                           danet::InvalidSerializer};
   danet::ReflectionVar<DataBlock> customState{"customState", &dummyForMapTimers, 8};
   danet::ReflectionVar<Point2> dummyForMapTimers{"dummyForMapTimers", &totalDomTeam, 15};
   danet::ReflectionVar<uint8_t> totalDomTeam{"totalDomTeam", &totalDomTime, 16};
   danet::ReflectionVar<uint16_t> totalDomTime{"totalDomTime", &totalDomMult, 17};
   danet::ReflectionVar<uint8_t> totalDomMult{"totalDomMult", nullptr, 18};
 
-  GeneralState() : ReflectableObject()  {
+  GeneralState() : ReflectableObject() {
     varList.head = &lastSuperArtilleryTime;
     varList.tail = &totalDomMult;
   }

@@ -7,9 +7,9 @@
 #include <ecs/componentTypes.h>
 #include <ecs/EntityManager.h>
 
-#define REG_SYS               \
-  RS(BaseEntity)              \
-  RS(UpdateMPlayer)           \
+#define REG_SYS     \
+  RS(BaseEntity)    \
+  RS(UpdateMPlayer) \
   RS(Rocketry)
 
 
@@ -17,10 +17,11 @@
 REG_SYS
 #undef RS
 
-// this var is required to actually pull static ctors from EntitySystem's objects that otherwise have no other publicly visible symbols
+// this var is required to actually pull static ctors from EntitySystem's objects that otherwise have no other publicly
+// visible symbols
 volatile size_t framework_primary_pulls = 0
-                                 #define RS(x) +ECS_PULL_VAR(x)
-                                 REG_SYS
-                                 #undef RS
+#define RS(x) +ECS_PULL_VAR(x)
+  REG_SYS
+#undef RS
 
-;
+  ;
