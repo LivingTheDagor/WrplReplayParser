@@ -11,9 +11,12 @@
 
 namespace mpi {
   class BaseListener : public IMessageListener {
+  public:
+    virtual ~BaseListener() = default;
     void receiveMpiMessage(const Message *msg, SystemID receiver) override { msg->obj->applyMpiMessage(msg); }
   };
   class DummyObject : public IObject {
+  public:
     Message *dispatchMpiMessage(MessageID mid) override { return nullptr; }
     void applyMpiMessage(const Message *m) override {}
   };
@@ -73,9 +76,9 @@ void initialize(const std::string &game_path, const std::string &logfile_path, b
   hello();
   force_link_replication();
   force_link_cnet();
+  G_UNUSED(ecs::g_ecs_data.get()); // forces initializtion
   G_ASSERT(dblk::load(ecs::g_ecs_data->wp_cost, "config/wpcost.blk"));
   // mpi::players.hello();
-  ecs::g_ecs_data.get();
   size_t pull_val = framework_primary_pulls;
   G_UNUSED(pull_val);
 }

@@ -135,11 +135,11 @@ namespace mpi {
   }
 
 
-  if (offended_unit) {
+  if (offended_unit && !offended_unit->positions.empty()) {
     offended_unit->killed_position = offended_unit->positions.back().location;
     offended_unit_position = offended_unit->killed_position;
   }
-  if (offender_unit) {
+  if (offender_unit && !offender_unit->positions.empty()) {
     offender_unit_position = offender_unit->positions.back().location;
   }
   return true;
