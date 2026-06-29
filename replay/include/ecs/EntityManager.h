@@ -81,8 +81,9 @@ namespace ecs {
     Archetypes archetypes{};
 
   public:
-    DataBlock
-      wp_cost{}; // I don't feel like implementing blk caching, and this is the most central object. loaded in init.cpp
+    // I don't feel like implementing blk caching, and this is the most central object. loaded in init.cpp
+    DataBlock wp_cost{};
+    DataBlock unit_tags{};
     GState() { Init(); }
 
     void printCurrentMemoryUsage(int indent = 0) {

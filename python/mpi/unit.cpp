@@ -57,7 +57,8 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("destroyed_at_ms", &unit::Unit::destroyed_at_ms)
     .def("AsAircraft", &unit::Unit::AsAircraft)
     .def("AsTank", &unit::Unit::AsTank)
-    .def_readonly("unit_name", &unit::Unit::unit_name)
+    .def_readonly("unit_name", &unit::Unit::raw_unit_name) // mr luxman decided to be lazy
+    .def_readonly("unit_name_clean", &unit::Unit::unit_name)
     .def_readonly("player_internal_name", &unit::Unit::player_internal_name)
     .def_readonly("owner_pid", &unit::Unit::owner_pid)
     .def_readonly("spawn_position", &unit::Unit::spawn_position)
@@ -69,7 +70,10 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("weapon_mods", &unit::Unit::weapon_mods)
     .def_readonly("actual_weapons", &unit::Unit::weapons)
     .def_readonly("fm_mods", &unit::Unit::fm_mods)
-    .def_readonly("positions", &unit::Unit::positions);
+    .def_readonly("positions", &unit::Unit::positions)
+    .def_readonly("unit_wpcost", &unit::Unit::unit_wpcost)
+    .def_readonly("unit_tags", &unit::Unit::unit_tags)
+    .def("getTags", &unit::Unit::getTags);
 
   py::class_<unit::UnitRef>(unit, "UnitRef").def_readonly("unit", &unit::UnitRef::unit);
 

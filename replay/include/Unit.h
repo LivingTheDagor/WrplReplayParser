@@ -142,9 +142,25 @@ namespace unit {
   };
 
   class Unit {
+  protected:
   public:
+    bool LoadFromStorage(const FieldSerializerDict &dict);
+
     virtual ~Unit() = default;
-    virtual void Load() {};
+    virtual void Load();
+
+    std::vector<std::string> getTags() const {
+      std::vector<std::string> tags{};
+      if (this->unit_tags->isEmpty())
+        return tags;
+      auto tags_blk = this->unit_tags->getBlockByNameEx("tags");
+      for (uint32_t i = 0; i < tags_blk->paramCount(); i++) {
+        auto name = tags_blk->getParamName(i);
+        if (name)
+          tags.push_back(name);
+      }
+      return tags;
+    }
 
     Unit(uint16_t uid, UnitType unit_type) : uid(uid), unitType(unit_type) {}
 
@@ -158,7 +174,8 @@ namespace unit {
     uint16_t uid;
     ecs::EntityId curr_eid;
     UnitType unitType; // make into an enum, maybe match with gaijin enum? I know they have one iirc
-    std::string unit_name{};
+    std::string raw_unit_name{}; // as seen in data
+    std::string unit_name{}; // unit name with tankModel/ prefix removed
     std::string player_internal_name{};
     int owner_pid{};
     TMatrix spawn_position{};
@@ -174,6 +191,9 @@ namespace unit {
     std::vector<SpaceTime> positions{};
 
     UnitWeaponsMask weapons_mask{};
+
+    const DataBlock *unit_wpcost{};
+    const DataBlock *unit_tags{};
 
     Tank *AsTank();
 
@@ -204,6 +224,8 @@ namespace unit {
     GM_DVMReflectable gm_dvm_data{};
 
   public:
+    void Load() override;
+
     explicit Tank(uint16_t uid) : Unit(uid, TankType) {
       base_data = &gm_data;
       base_dvm_data = &gm_dvm_data;

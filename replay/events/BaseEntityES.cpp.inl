@@ -10,7 +10,7 @@ static void on_tank_appear_es(const ecs::EventEntityCreated &evt,
                               unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
   G_ASSERT(unit__ref.unit == nullptr);
   unit__ref.unit = new unit::Tank(static_cast<uint16_t>(uid));
-  unit::LoadFromStorage(unit__ref.unit, unit_storage__tank);
+  unit__ref.unit->LoadFromStorage(unit_storage__tank);
 }
 
 static void on_aircraft_appear_es(const ecs::EventEntityCreated &evt,
@@ -18,7 +18,7 @@ static void on_aircraft_appear_es(const ecs::EventEntityCreated &evt,
                                   unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
   G_ASSERT(unit__ref.unit == nullptr);
   unit__ref.unit = new unit::Aircraft(static_cast<uint16_t>(uid));
-  unit::LoadFromStorage(unit__ref.unit, unit_storage__aircraft);
+  unit__ref.unit->LoadFromStorage(unit_storage__aircraft);
 }
 
 static void on_unit_disappear_es(const ecs::EventEntityDestroyed &evt, unit::UnitRef &unit__ref) {

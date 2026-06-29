@@ -78,6 +78,7 @@ void initialize(const std::string &game_path, const std::string &logfile_path, b
   force_link_cnet();
   G_UNUSED(ecs::g_ecs_data.get()); // forces initializtion
   G_ASSERT(dblk::load(ecs::g_ecs_data->wp_cost, "config/wpcost.blk"));
+  G_ASSERT(dblk::load(ecs::g_ecs_data->unit_tags, "config/unittags.blk"));
   // mpi::players.hello();
   size_t pull_val = framework_primary_pulls;
   G_UNUSED(pull_val);

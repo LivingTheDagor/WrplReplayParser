@@ -10,9 +10,6 @@
 #include "danet/daNetTypes.h"
 
 
-#define EASTL_LIMITS_MAX_U(T) ((T) ~(T) 0)
-
-
 template<typename T, size_t N>
 void mem_copy_from(std::array<T, N> &dst, const T *src) {
   std::memcpy(dst.data(), src, sizeof(T) * N);

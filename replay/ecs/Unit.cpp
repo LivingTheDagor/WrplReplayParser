@@ -22,7 +22,7 @@ namespace unit {
   if (!(opt))         \
   return false
 
-  bool LoadFromStorage(Unit *unit, const FieldSerializerDict &data) {
+  bool unit::Unit::LoadFromStorage(const FieldSerializerDict &data) {
     BitStream bs{data.data.data(), data.data.size(), false};
     IdFieldSerializer255 IdFieldSerializer{};
     uint32_t end;
@@ -38,27 +38,27 @@ namespace unit {
 
       switch (fieldId) {
         case 0x5: {
-          RET_FAIL(bs.Read(unit->spawn_position));
+          RET_FAIL(bs.Read(spawn_position));
           break;
         }
         case 0x6: {
-          RET_FAIL(bs.Read(unit->unit_name));
+          RET_FAIL(bs.Read(raw_unit_name));
           break;
         }
         case 0x7: {
-          RET_FAIL(bs.Read(unit->player_internal_name));
+          RET_FAIL(bs.Read(player_internal_name));
           break;
         }
         case 0x8: {
-          RET_FAIL(bs.Read(unit->loadout_name));
+          RET_FAIL(bs.Read(loadout_name));
           break;
         }
         case 0x9: {
-          RET_FAIL(bs.Read(unit->skin_name));
+          RET_FAIL(bs.Read(skin_name));
           break;
         }
         case 0xd: {
-          RET_FAIL(bs.Read(unit->owner_pid));
+          RET_FAIL(bs.Read(owner_pid));
           break;
         }
         case 0x33: {
@@ -67,28 +67,28 @@ namespace unit {
           uint8_t sz;
           RET_FAIL(t_bs.Read(sz));
           RET_FAIL(sz <= 6); // it should always be 6 currently, so if anything weird has happened best to know
-          unit->storage_weapons.resize(sz);
-          for (auto &weapon: unit->storage_weapons) {
+          storage_weapons.resize(sz);
+          for (auto &weapon: storage_weapons) {
             RET_FAIL(t_bs.Read(weapon.launcher));
             RET_FAIL(t_bs.Read(weapon.bullet));
             RET_FAIL(t_bs.Read(weapon.count));
           }
           RET_FAIL(t_bs.Read(sz));
-          unit->weapon_mods.resize(sz);
-          for (auto &mod: unit->weapon_mods)
+          weapon_mods.resize(sz);
+          for (auto &mod: weapon_mods)
             RET_FAIL(t_bs.Read(mod));
           RET_FAIL(t_bs.Read(sz));
-          unit->fm_mods.resize(sz);
-          for (auto &mod: unit->fm_mods)
+          fm_mods.resize(sz);
+          for (auto &mod: fm_mods)
             RET_FAIL(t_bs.Read(mod));
           break;
         }
         case 0x34: {
-          RET_FAIL(bs.Read(unit->camo_info));
+          RET_FAIL(bs.Read(camo_info));
           break;
         }
         case 0x40: {
-          RET_FAIL(bs.Read(unit->custom_weapons_blk));
+          RET_FAIL(bs.Read(custom_weapons_blk));
           break;
         }
       }
@@ -97,7 +97,7 @@ namespace unit {
       }
       bs.SetReadOffset(start_offs + f_size_bits);
     }
-    unit->Load();
+    Load();
     return true;
   }
 
@@ -197,9 +197,10 @@ namespace unit {
   };
 
   void Aircraft::Load() {
+    unit_name = raw_unit_name;
+    unit::Unit::Load();
     // blkPrint(this->custom_weapons_blk);
     DataBlock empty_blk{};
-    auto wp_cost_blk = ecs::g_ecs_data->wp_cost.getBlockByNameEx(this->unit_name);
     if (this->unit_name == "dummy_plane") // fuck the bitch
       return;
     auto vehicle_blk = fmt::format("gamedata/flightmodels/{}.blk", this->unit_name);
@@ -279,8 +280,9 @@ namespace unit {
     }
     std::vector<uint16_t> weapons_count{};
     weapons_count.resize(0xFF, 0);
-    if (wp_cost_blk->getBool("hasWeaponSlots", false)) { // hasWeaponSlots:b=true denotes that this unit has custom
-                                                         // weapon creation which changes how weapons work
+    if (this->unit_wpcost->getBool("hasWeaponSlots", false)) {
+      // hasWeaponSlots:b=true denotes that this unit has custom
+      // weapon creation which changes how weapons work
       int WeaponSlotNid = blk.getNameId("WeaponSlot"), WeaponPresetNid = blk.getNameId("WeaponPreset");
       int WeaponNid = blk.getNameId("Weapon"), weaponNid = blk.getNameId("weapon");
       auto weapon_blk = blk.getBlockByNameEx("WeaponSlots");
@@ -372,6 +374,17 @@ namespace unit {
       }
     }
     return nullptr;
+  }
+  void Tank::Load() {
+
+    unit_name = raw_unit_name.c_str() + 11;
+    Unit::Load();
+  }
+
+
+  void unit::Unit::Load() {
+    this->unit_wpcost = ecs::g_ecs_data->wp_cost.getBlockByNameEx(this->unit_name);
+    this->unit_tags = ecs::g_ecs_data->unit_tags.getBlockByNameEx(this->unit_name);
   }
 
 } // namespace unit
