@@ -109,5 +109,5 @@ void PyCodegenTypes::include(py::module_ &m) {
 
   bind_readonly_vector<std::vector<danet::DamagedState>>(gen, "std_vector_danet_DamagedState_");
 
-  include_types_0(gen);
+include_types_0(gen);
 }

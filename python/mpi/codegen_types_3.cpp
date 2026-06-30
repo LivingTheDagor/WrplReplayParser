@@ -16,11 +16,9 @@ void include_types_3(py::module &gen) {
   bind_readonly_vector<dag::Vector<danet::ReflectionVar<std::array<ecs::EntityId, 20>>::SpaceHandler::TimeState>>(
     gen, "std_array_ecs_EntityId_20__ts_vector");
 
-  py::class_<danet::ReflectionVar<std::array<ecs::EntityId, 20>>>(gen, "std_array_ecs_EntityId_20__var")
-    .def_readonly("data", &danet::ReflectionVar<std::array<ecs::EntityId, 20>>::data)
-    .def_property_readonly(
-      "history", [](danet::ReflectionVar<std::array<ecs::EntityId, 20>> &self) { return &self.get_history(); },
-      py::return_value_policy::reference_internal);
+  py::class_<danet::ReflectionVar<std::array<ecs::EntityId,20>>>(gen, "std_array_ecs_EntityId_20__var")
+  .def_readonly("data", &danet::ReflectionVar<std::array<ecs::EntityId,20>>::data)
+  .def_property_readonly("history", [](danet::ReflectionVar<std::array<ecs::EntityId,20>> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
 
 
   // danet::ReflectionVar<danet::CrewUnitsList> bindings
@@ -72,7 +70,7 @@ void include_types_3(py::module &gen) {
 
   py::class_<danet::ReflectionVar<danet::dummyForKillStreaksProgress>>(gen, "danet_dummyForKillStreaksProgress_var")
     .def_readonly("data", &danet::ReflectionVar<danet::dummyForKillStreaksProgress>::data)
-  .def_property_readonly("history", [](danet::ReflectionVar<danet::dummyForKillStreaksProgress> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
+    .def_property_readonly("history", [](danet::ReflectionVar<danet::dummyForKillStreaksProgress> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
 
 
   // danet::ReflectionVar<danet::RoundScore> bindings
@@ -85,7 +83,7 @@ void include_types_3(py::module &gen) {
 
   py::class_<danet::ReflectionVar<danet::RoundScore>>(gen, "danet_RoundScore_var")
     .def_readonly("data", &danet::ReflectionVar<danet::RoundScore>::data)
-  .def_property_readonly("history", [](danet::ReflectionVar<danet::RoundScore> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
+    .def_property_readonly("history", [](danet::ReflectionVar<danet::RoundScore> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
 
 
   // danet::ReflectionVar<danet::dummyForPlayerStat> bindings
@@ -98,7 +96,7 @@ void include_types_3(py::module &gen) {
 
   py::class_<danet::ReflectionVar<danet::dummyForPlayerStat>>(gen, "danet_dummyForPlayerStat_var")
     .def_readonly("data", &danet::ReflectionVar<danet::dummyForPlayerStat>::data)
-  .def_property_readonly("history", [](danet::ReflectionVar<danet::dummyForPlayerStat> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
+    .def_property_readonly("history", [](danet::ReflectionVar<danet::dummyForPlayerStat> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
 
 
   // danet::ReflectionVar<danet::dummyForFootballStat> bindings

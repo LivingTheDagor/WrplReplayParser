@@ -2,6 +2,7 @@
 
 #include "vector"
 #include "cstdint"
+#include "translate.h"
 #include "danet/BitStream.h"
 #include "math/dag_Point3.h"
 #include <ioSys/dag_dataBlock.h>
@@ -176,6 +177,10 @@ namespace unit {
     UnitType unitType; // make into an enum, maybe match with gaijin enum? I know they have one iirc
     std::string raw_unit_name{}; // as seen in data
     std::string unit_name{}; // unit name with tankModel/ prefix removed
+    translate::translate_index_t name_index_shop{}; // name used in shop
+    translate::translate_index_t name_index_0{}; // type 0
+    translate::translate_index_t name_index_1{}; // short type 1,
+    translate::translate_index_t name_index_2{}; // short version 2, for tanks this is their unit type
     std::string player_internal_name{};
     int owner_pid{};
     TMatrix spawn_position{};

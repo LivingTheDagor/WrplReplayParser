@@ -4,7 +4,7 @@
 #include <cctype>
 
 
-bool FileManager::mountVromfs(std::string &vromfsPath) {
+bool FileManager::mountVromfs(const std::string &vromfsPath) {
   ZoneScoped;
   auto file = this->getFile(vromfsPath);
   if (!file)
@@ -77,6 +77,7 @@ SmartFSHandle FileManager::getObject(const fs::path &path) {
 }
 
 bool FileManager::unmountVromfs(const std::string &vromfs_name) {
+  ZoneScoped;
   for (auto it = this->loaded_vromfs.begin(); it != this->loaded_vromfs.end(); ++it) {
     if ((*it)->getName() == vromfs_name) {
       this->loaded_vromfs.erase(it);

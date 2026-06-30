@@ -17,10 +17,8 @@ void include_types_5(py::module &gen) {
     gen, "std_vector_danet_UnitIdStruct__ts_vector");
 
   py::class_<danet::ReflectionVar<std::vector<danet::UnitIdStruct>>>(gen, "std_vector_danet_UnitIdStruct__var")
-    .def_readonly("data", &danet::ReflectionVar<std::vector<danet::UnitIdStruct>>::data)
-    .def_property_readonly(
-      "history", [](danet::ReflectionVar<std::vector<danet::UnitIdStruct>> &self) { return &self.get_history(); },
-      py::return_value_policy::reference_internal);
+  .def_readonly("data", &danet::ReflectionVar<std::vector<danet::UnitIdStruct>>::data)
+  .def_property_readonly("history", [](danet::ReflectionVar<std::vector<danet::UnitIdStruct>> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
 
 
   // danet::ReflectionVar<std::array<std::string,2>> bindings
@@ -47,7 +45,7 @@ void include_types_5(py::module &gen) {
 
   py::class_<danet::ReflectionVar<danet::dummyForDeathInfo>>(gen, "danet_dummyForDeathInfo_var")
     .def_readonly("data", &danet::ReflectionVar<danet::dummyForDeathInfo>::data)
-  .def_property_readonly("history", [](danet::ReflectionVar<danet::dummyForDeathInfo> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
+    .def_property_readonly("history", [](danet::ReflectionVar<danet::dummyForDeathInfo> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
 
 
   // danet::ReflectionVar<danet::KillerStruct> bindings
@@ -73,7 +71,7 @@ void include_types_5(py::module &gen) {
 
   py::class_<danet::ReflectionVar<danet::DamagedState>>(gen, "danet_DamagedState_var")
     .def_readonly("data", &danet::ReflectionVar<danet::DamagedState>::data)
-  .def_property_readonly("history", [](danet::ReflectionVar<danet::DamagedState> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
+    .def_property_readonly("history", [](danet::ReflectionVar<danet::DamagedState> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
 
 
   // danet::ReflectionVar<std::vector<danet::DamagedState>> bindings
@@ -100,7 +98,7 @@ void include_types_5(py::module &gen) {
 
   py::class_<danet::ReflectionVar<danet::WeaponsMask>>(gen, "danet_WeaponsMask_var")
     .def_readonly("data", &danet::ReflectionVar<danet::WeaponsMask>::data)
-  .def_property_readonly("history", [](danet::ReflectionVar<danet::WeaponsMask> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
+    .def_property_readonly("history", [](danet::ReflectionVar<danet::WeaponsMask> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
 
 
   include_types_6(gen);

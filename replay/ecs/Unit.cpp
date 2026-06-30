@@ -385,6 +385,10 @@ namespace unit {
   void unit::Unit::Load() {
     this->unit_wpcost = ecs::g_ecs_data->wp_cost.getBlockByNameEx(this->unit_name);
     this->unit_tags = ecs::g_ecs_data->unit_tags.getBlockByNameEx(this->unit_name);
+    name_index_shop = translate::get_locale_index(fmt::format("{}_shop", this->unit_name));
+    name_index_0 = translate::get_locale_index(fmt::format("{}_0", this->unit_name));
+    name_index_1 = translate::get_locale_index(fmt::format("{}_1", this->unit_name));
+    name_index_2 = translate::get_locale_index(fmt::format("{}_2", this->unit_name));
   }
 
 } // namespace unit

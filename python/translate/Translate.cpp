@@ -82,4 +82,18 @@ void PyTranslate::include(py::module_ &m) {
   m.def("set_default_language", &translate::set_default_language, py::arg("lang"),
         "Sets the default language for translation lookups.\n"
         "@param lang: The language to set as default.");
+
+  m.def("get_locale_index", &translate::get_locale_index, py::arg("value"),
+        "Finds the translate_index_t for a specific locale.\n"
+        "You can store this to translate to any arbitrary language later.\n"
+        "@param value: The string to find the index for.\n"
+        "@return: Returns the translate_index_t for the string, or INVALID_TRANSLATE_INDEX if not found.");
+
+  m.def("localize_index", &translate::localize_index, py::arg("index"),
+        py::arg_v("lang", Languages::None, "Languages.None_"),
+        "Translates a translate_index_t as returned by get_locale_index to a language.\n"
+        "@param index: The translate_index_t to look up.\n"
+        "@param lang: The optional language to use. If no language is passed, then it uses the language set via "
+        "set_default_language.\n"
+        "@return: Returns your translated key or nullptr.");
 }

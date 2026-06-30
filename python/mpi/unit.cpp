@@ -73,7 +73,11 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("positions", &unit::Unit::positions)
     .def_readonly("unit_wpcost", &unit::Unit::unit_wpcost)
     .def_readonly("unit_tags", &unit::Unit::unit_tags)
-    .def("getTags", &unit::Unit::getTags);
+    .def("getTags", &unit::Unit::getTags)
+    .def_readonly("name_index_shop", &unit::Unit::name_index_shop)
+    .def_readonly("name_index_0", &unit::Unit::name_index_0)
+    .def_readonly("name_index_1", &unit::Unit::name_index_1)
+    .def_readonly("name_index_2", &unit::Unit::name_index_2);
 
   py::class_<unit::UnitRef>(unit, "UnitRef").def_readonly("unit", &unit::UnitRef::unit);
 

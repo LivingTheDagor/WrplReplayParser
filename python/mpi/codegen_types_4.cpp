@@ -16,10 +16,8 @@ void include_types_4(py::module &gen) {
     gen, "danet_teamAvgEloRatings_ts_vector");
 
   py::class_<danet::ReflectionVar<danet::teamAvgEloRatings>>(gen, "danet_teamAvgEloRatings_var")
-    .def_readonly("data", &danet::ReflectionVar<danet::teamAvgEloRatings>::data)
-    .def_property_readonly(
-      "history", [](danet::ReflectionVar<danet::teamAvgEloRatings> &self) { return &self.get_history(); },
-      py::return_value_policy::reference_internal);
+  .def_readonly("data", &danet::ReflectionVar<danet::teamAvgEloRatings>::data)
+  .def_property_readonly("history", [](danet::ReflectionVar<danet::teamAvgEloRatings> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
 
 
   // danet::ReflectionVar<danet::dummyForExitZonesSettings> bindings
@@ -46,7 +44,7 @@ void include_types_4(py::module &gen) {
 
   py::class_<danet::ReflectionVar<danet::WeatherEffects>>(gen, "danet_WeatherEffects_var")
     .def_readonly("data", &danet::ReflectionVar<danet::WeatherEffects>::data)
-  .def_property_readonly("history", [](danet::ReflectionVar<danet::WeatherEffects> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
+    .def_property_readonly("history", [](danet::ReflectionVar<danet::WeatherEffects> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
 
 
   // danet::ReflectionVar<Point2> bindings
@@ -58,7 +56,7 @@ void include_types_4(py::module &gen) {
 
   py::class_<danet::ReflectionVar<Point2>>(gen, "Point2_var")
     .def_readonly("data", &danet::ReflectionVar<Point2>::data)
-  .def_property_readonly("history", [](danet::ReflectionVar<Point2> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
+    .def_property_readonly("history", [](danet::ReflectionVar<Point2> &self){return &self.get_history();}, py::return_value_policy::reference_internal);
 
 
   // danet::ReflectionVar<danet::AreaFlagsEnum> bindings

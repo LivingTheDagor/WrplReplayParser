@@ -152,7 +152,7 @@ CompressedReplayReader::CompressedReplayReader(Replay &replay, IGenLoad *base_re
 
 
 bool CompressedReplayReader::getNextPacket(ReplayPacket &packet) {
-  ZoneScoped uint32_t pkt_sz = getPacketSize(reader);
+  uint32_t pkt_sz = getPacketSize(reader);
   if (pkt_sz == 0)
     return false;
   packet.stream = BitStream();

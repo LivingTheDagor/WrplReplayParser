@@ -68,9 +68,11 @@ void initialize(const std::string &game_path, const std::string &logfile_path, b
   if (lang)
     TranslationAllowed = file_mgr.mountVromfs(p4);
   if (TranslationAllowed) {
+    ZoneScopedN("translate");
     translate::load_csv("lang/units_modifications.csv");
     translate::load_csv("lang/units.csv");
     translate::load_csv("lang/units_weaponry.csv");
+    translate::load_csv("lang/missions_locations.csv");
     file_mgr.unmountVromfs("lang.vromfs.bin");
   }
   hello();

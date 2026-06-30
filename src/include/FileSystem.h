@@ -469,7 +469,7 @@ protected:
 class VROMFs;
 
 struct FileManager {
-  bool mountVromfs(std::string &vromfsPath);
+  bool mountVromfs(const std::string &vromfsPath);
 
   bool mountVromfs(fs::path &vromfsPath) {
     auto str = vromfsPath.string();

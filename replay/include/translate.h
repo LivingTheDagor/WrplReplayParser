@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <string_view>
 #include "array"
+#include <limits>
 
 enum Languages : uint8_t {
   None = 0,
@@ -38,6 +39,9 @@ constexpr std::array<const char *, LENGTH> fullLangList = {
 
 
 namespace translate {
+  typedef uint32_t translate_index_t;
+  static constexpr translate_index_t INVALID_TRANSLATE_INDEX = std::numeric_limits<translate_index_t>::max();
+
   /// the return policy to be used when a key is missing
   /// ReturnKey: return your key when no value is found
   /// ReturnNull: return nullptr when no value is found
@@ -67,6 +71,19 @@ namespace translate {
   inline const char *localize_rNull(std::string_view value, Languages lang = Languages::None) {
     return localize(value, lang, ReturnPolicy::ReturnNull);
   }
+
+  /// find the translate_index_t for a specific locale
+  /// you can store this to translate to any arbitrary language later
+  /// @param value the string to find the index for
+  /// @return returns the translate_index_t for the string, or INVALID_TRANSLATE_INDEX if not found
+  translate_index_t get_locale_index(std::string_view value);
+
+  /// translates a translate_index_t as returned by get_locale_index to a language
+  /// @param index the translate_index_t to look up
+  /// @param lang the optional language to use, if no language is passed, then it uses the language set via
+  /// set_default_language
+  /// @return returns your translated key or nullptr
+  const char *localize_index(translate_index_t index, Languages lang = Languages::None);
 
   /// sets the default language returned when calling localize
   /// the default langauge is english

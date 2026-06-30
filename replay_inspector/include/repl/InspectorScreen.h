@@ -888,7 +888,8 @@ public:
         draw_circle(6.0f, red);
       } else {
         auto unit = unit__ref->unit;
-        ImGui::TextUnformatted(unit->unit_name.c_str());
+        auto name = get_unit_name_1(*unit);
+        ImGui::TextUnformatted(name);
         ImGui::TableNextColumn();
         if (state.curr_time_ms >= unit->killed_at_ms) {
           draw_circle(6.0f, red);
@@ -913,7 +914,8 @@ public:
           draw_circle(6.0f, green);
         }
         ImGui::TableNextColumn();
-        ImGui::TextUnformatted(unit->unit_name.c_str());
+        auto name = get_unit_name_1(*unit);
+        ImGui::TextUnformatted(name);
       }
       ImGui::TableNextColumn();
       ImGui::TextUnformatted(player_data.uid.data->name);

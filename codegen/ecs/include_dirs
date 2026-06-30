@@ -8,3 +8,4 @@ src\include
 3rdParty\cpptrace-1.0.4\include
 3rdParty\arc\zstd-1.4.5
 3rdParty\arc\lz4
+codegen\ecs
