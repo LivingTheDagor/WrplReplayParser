@@ -73,6 +73,7 @@ void initialize(const std::string &game_path, const std::string &logfile_path, b
     translate::load_csv("lang/units.csv");
     translate::load_csv("lang/units_weaponry.csv");
     translate::load_csv("lang/missions_locations.csv");
+    translate::load_csv("lang/missions_dynamic.csv");
     file_mgr.unmountVromfs("lang.vromfs.bin");
   }
   hello();
