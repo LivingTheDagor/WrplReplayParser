@@ -11,8 +11,8 @@
 namespace ecs {
 
   typedef uint32_t chunk_index_t; // represents the chunk at which a particular entity lives
-  // probably can be u16
-  static constexpr chunk_index_t INVALID_CHUNK_INDEX_T = std::numeric_limits<chunk_index_t>::max();
+  // gaijin why
+  static constexpr chunk_index_t INVALID_CHUNK_INDEX_T = (1 << (32 - ENTITY_GENERATION_BITS)) - 1;
 
 
   typedef uint16_t archetype_component_id; // represents a index into the components for a template

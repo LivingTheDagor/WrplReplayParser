@@ -6,18 +6,18 @@
 #include "EASTL/bitvector.h"
 
 namespace ecs {
-  static inline entity_id_t make_eid(uint32_t index, uint32_t gen) { return index | (gen << ENTITY_INDEX_BITS); }
+  static inline entity_id_t make_eid(uint32_t index, uint32_t gen) { return (index << ENTITY_GENERATION_BITS) | gen; }
   static constexpr uint32_t RESERVED_EID_RANGE = std::numeric_limits<uint16_t>::max();
   static constexpr uint32_t globalGen =
     1; // my globalGen is never going to change as an EntityManager is destroyed upon session destruction
   struct EntityDesc {
-    template_t templ_id = INVALID_TEMPLATE_INDEX;
-    archetype_t archetype_id = INVALID_ARCHETYPE;
-    chunk_index_t chunk_id = INVALID_CHUNK_INDEX_T;
-    uint8_t generation = globalGen;
-    bool exists = true;
-    // because my ECS keeps all entities forever, does this specific entity exist as of the current time_ms?
+    template_t templ_id = INVALID_TEMPLATE_INDEX; // 16 bit
+    archetype_t archetype_id = INVALID_ARCHETYPE; // 16 bit
+    // this is all gaijon
+    uint32_t generation : ENTITY_GENERATION_BITS = globalGen;
+    chunk_index_t chunk_id : 32 - ENTITY_GENERATION_BITS = INVALID_CHUNK_INDEX_T;
   };
+  G_STATIC_ASSERT(sizeof(EntityDesc) == 8);
   // a class that represents
   class EntityDescs {
   protected:

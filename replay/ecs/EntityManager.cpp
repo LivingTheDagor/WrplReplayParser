@@ -288,7 +288,7 @@ namespace ecs {
     auto idx = this->rewindManager.createCreationAction(*curr_time_ms, storage_eid, eid);
     eidToEventCreationMap[eid] = idx;
     this->entDescs.Allocate(eid);
-    this->entDescs[eid.index()] = {templId, archetype_id, chunk_id, eid.generation(), true};
+    this->entDescs[eid.index()] = {templId, archetype_id, eid.generation(), chunk_id};
     this->wasInit.clear();
     if(!isRecreating) {
       this->sendEventImmediate(eid, ecs::EventEntityCreated{});
@@ -480,7 +480,7 @@ namespace ecs {
         auto comp = data_state->componentTypes.getComponentData(dataComp->componentIndex);
         ComponentRef ref{data, comp->hash, dataComp->componentIndex, comp->size};
         LOG("  ArchData: idx: {}; data_off: {}; chunk_id: {}; data_size: {}; ptr: {}", comp_info->INDEX,
-            comp_info->DATA_OFFSET, desc->chunk_id, comp_info->DATA_SIZE, fmt::ptr(data));
+            comp_info->DATA_OFFSET, (uint32_t) desc->chunk_id, comp_info->DATA_SIZE, fmt::ptr(data));
         LOG("  component {}({}) data: {}", dataComp->getName().data(), comp->name.data(), ref.toString());
       }
       LOG("");

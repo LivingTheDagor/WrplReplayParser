@@ -11,13 +11,14 @@
 
 namespace ecs {
   typedef uint32_t entity_id_t;
+  typedef uint32_t entity_id_t;
 
   const unsigned ENTITY_INDEX_BITS = 22;
-  const unsigned ENTITY_INDEX_MASK = (1 << ENTITY_INDEX_BITS) - 1;
 
-  const unsigned ENTITY_GENERATION_BITS = 8;
+  const unsigned ENTITY_GENERATION_BITS = 10;
   const unsigned ENTITY_GENERATION_MASK = (1 << ENTITY_GENERATION_BITS) - 1;
   const entity_id_t ECS_INVALID_ENTITY_ID_VAL = 0;
+#define INVALID_ENTITY_ID EntityId(ecs::ECS_INVALID_ENTITY_ID_VAL)
 #define INVALID_ENTITY_ID EntityId(ecs::ECS_INVALID_ENTITY_ID_VAL)
 
   class EntityManager;
@@ -28,26 +29,16 @@ namespace ecs {
   class EntityId {
   public:
     EntityId() = default;
-
     explicit EntityId(entity_id_t h) : handle(h) {}
-
     EntityId(const EntityId &) = default;
-
     EntityId &operator=(const EntityId &) = default;
-
     explicit operator entity_id_t() const { return handle; }
-
     explicit operator bool() const { return handle != ECS_INVALID_ENTITY_ID_VAL; }
-
     bool operator==(const EntityId &rhs) const { return handle == rhs.handle; }
-
     bool operator!=(const EntityId &rhs) const { return handle != rhs.handle; }
-
     bool operator<(const EntityId &rhs) const { return handle < rhs.handle; }
-
     void reset() { handle = ECS_INVALID_ENTITY_ID_VAL; }
-
-    unsigned index() const { return handle & ENTITY_INDEX_MASK; }
+    uint32_t index() const { return handle >> ENTITY_GENERATION_BITS; } // Note: trims generation bits
 
     inline uint32_t get_generation() { return (uint32_t) generation(); }
 

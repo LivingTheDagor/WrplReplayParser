@@ -133,8 +133,7 @@ namespace mpi {
       case Rocket1:
       case Rocket2: {
         auto bsM = (BSMessage *) m;
-        // bool ret = WeaponSync(*state, bsM->data);
-        bool ret = true;
+        bool ret = WeaponSync(*state, bsM->data);
         if (!ret) {
           LOGE("Failed to read We payload");
         }
@@ -178,7 +177,8 @@ namespace mpi {
     if (!extUid) {
       EXCEPTION("dispatch: extended mpi uid is not set for object of type {}", oid >> 0xb);
     }
-    auto eid = eid_from_ext_uid(extUid);
+
+    auto eid = ecs::EntityId(extUid);
     auto ref = state->g_entity_mgr.getNullable<unit::UnitRef>(eid, ECS_HASH("unit__ref"));
     if (!ref) {
       if (do_queue) {

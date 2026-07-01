@@ -673,6 +673,7 @@ Rocket *getTorpedo(ParserState &state, ecs::EntityId eid) {
 typedef Rocket *(*get_weapon_cb)(ParserState &state, ecs::EntityId eid);
 
 bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
+
   bool bool1, bool2;
   RET_FAIL(bs.Read(bool1));
   RET_FAIL(bs.Read(bool2));
@@ -775,7 +776,7 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
       bool do_stuff;
       RET_FAIL(bs.Read(do_stuff));
       if (do_stuff) {
-        EXCEPTION("go away Saclos");
+        RET_FAIL(false);
       }
     }
   }
