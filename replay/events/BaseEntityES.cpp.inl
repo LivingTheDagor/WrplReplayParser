@@ -101,6 +101,7 @@ std::vector<unit::Unit *> collect_all_units(ParserState &state) {
   return units;
 }
 
+
 ECS_AFTER(after_unit_appear_es)
 static void on_unit_appear_mpi_es(const ecs::EventEntityCreated &evt, const ecs::EntityId eid,
                                   const unit::UnitRef &unit__ref, ecs::EntityManager &manager) {

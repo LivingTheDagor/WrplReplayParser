@@ -208,5 +208,63 @@ static ecs::EntitySystemDesc
   on_jettisoned_disappear_es_es_desc("on_jettisoned_disappear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
                                      ecs::EntitySystemOps(on_jettisoned_disappear_es_all_events),
                                      ecs::make_span(on_jettisoned_disappear_es_comps + 0, 1) /*rw*/, ecs::empty_span(),
-                                     ecs::empty_span(), ecs::empty_span(),
-                                     ecs::EventSetBuilder<ecs::EventEntityDestroyed>::build());
+  ecs::empty_span(),
+  ecs::empty_span(),
+  ecs::EventSetBuilder<ecs::EventEntityDestroyed>::build()
+);
+static constexpr ecs::ComponentDesc iterate_all_rockets_ecs_query_comps[] =
+{
+//start of 1 rw components at [0]
+  {ECS_HASH("rocket_component"), ecs::ComponentTypeInfo<Rocket>()}
+};
+static ecs::CompileTimeQueryDesc iterate_all_rockets_ecs_query_desc
+(
+  "iterate_all_rockets_ecs_query",
+  ecs::make_span(iterate_all_rockets_ecs_query_comps+0, 1)/*rw*/,
+  ecs::empty_span(),
+  ecs::empty_span(),
+  ecs::empty_span());
+template<typename Callable>
+inline void iterate_all_rockets_ecs_query(ecs::EntityManager &manager, Callable function)
+{
+  perform_query(&manager, iterate_all_rockets_ecs_query_desc.getHandle(),
+    [&function](const ecs::QueryView& __restrict components, ecs::EntityManager &mgr)
+    {
+        auto comp = components.begin(), compE = components.end(); G_ASSERT(comp != compE); do if (components.eid_refs[comp] != ecs::INVALID_ENTITY_ID) {
+        {
+          function(
+              ECS_RW_COMP(iterate_all_rockets_ecs_query_comps, "rocket_component", Rocket)
+            );
+
+        }} while (++comp != compE);
+    }
+  );
+}
+static constexpr ecs::ComponentDesc iterate_all_bombs_ecs_query_comps[] =
+{
+//start of 1 rw components at [0]
+  {ECS_HASH("bomb_component"), ecs::ComponentTypeInfo<Bomb>()}
+};
+static ecs::CompileTimeQueryDesc iterate_all_bombs_ecs_query_desc
+(
+  "iterate_all_bombs_ecs_query",
+  ecs::make_span(iterate_all_bombs_ecs_query_comps+0, 1)/*rw*/,
+  ecs::empty_span(),
+  ecs::empty_span(),
+  ecs::empty_span());
+template<typename Callable>
+inline void iterate_all_bombs_ecs_query(ecs::EntityManager &manager, Callable function)
+{
+  perform_query(&manager, iterate_all_bombs_ecs_query_desc.getHandle(),
+    [&function](const ecs::QueryView& __restrict components, ecs::EntityManager &mgr)
+    {
+        auto comp = components.begin(), compE = components.end(); G_ASSERT(comp != compE); do if (components.eid_refs[comp] != ecs::INVALID_ENTITY_ID) {
+        {
+          function(
+              ECS_RW_COMP(iterate_all_bombs_ecs_query_comps, "bomb_component", Bomb)
+            );
+
+        }} while (++comp != compE);
+    }
+  );
+}

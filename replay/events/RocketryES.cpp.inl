@@ -52,3 +52,29 @@ static void on_jettisoned_disappear_es(const ecs::EventEntityDestroyed &evt, Jet
                                        ecs::EntityManager &manager) {
   jettisoned_component.destroyed_at_ms = *manager.curr_time_ms;
 }
+
+template<typename Callable>
+static void iterate_all_rockets_ecs_query(ecs::EntityManager &manager, Callable c);
+
+std::vector<Rocket *> collect_all_rockets(ParserState &state) {
+  std::vector<Rocket *> rockets;
+  iterate_all_rockets_ecs_query(state.g_entity_mgr, [&rockets](Rocket &rocket_component) {
+    if (!rocket_component.positions.empty()) {
+      rockets.push_back(&rocket_component);
+    }
+  });
+  return rockets;
+}
+
+template<typename Callable>
+static void iterate_all_bombs_ecs_query(ecs::EntityManager &manager, Callable c);
+
+std::vector<Bomb *> collect_all_bombs(ParserState &state) {
+  std::vector<Bomb *> bombs;
+  iterate_all_bombs_ecs_query(state.g_entity_mgr, [&bombs](Bomb &bomb_component) {
+    if (!bomb_component.positions.empty()) {
+      bombs.push_back(&bomb_component);
+    }
+  });
+  return bombs;
+}

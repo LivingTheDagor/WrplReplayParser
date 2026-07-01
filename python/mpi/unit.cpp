@@ -10,6 +10,10 @@ PyUnit py_unit;
 
 std::vector<unit::Unit *> collect_all_units(ParserState &state);
 
+std::vector<Rocket *> collect_all_rockets(ParserState &state);
+
+std::vector<Bomb *> collect_all_bombs(ParserState &state);
+
 void PyUnit::include(py::module_ &m) {
   DO_INCLUDE()
   auto unit = m.def_submodule("unit");
@@ -83,4 +87,6 @@ void PyUnit::include(py::module_ &m) {
 
   bind_readonly_vector<std::vector<unit::Unit *>>(m, "UnitList");
   m.def("collect_all_units", &collect_all_units, py::arg("state"));
+  m.def("collect_all_rockets", &collect_all_rockets, py::arg("state"));
+  m.def("collect_all_bombs", &collect_all_bombs, py::arg("state"));
 }
