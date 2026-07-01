@@ -640,7 +640,7 @@ namespace ecs {
       }
     }
     G_ASSERT(generation <= 255);
-    uint8_t gen = generation >= 0 ? (uint8_t)generation : entDescs[idx].generation;
+    auto gen = generation >= 0 ? (uint8_t) generation : entDescs[idx].generation;
     auto eid = EntityId(make_eid(idx, gen));
     this->entDescs.Allocate(eid);
     return eid;
