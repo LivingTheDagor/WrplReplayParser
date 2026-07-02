@@ -9,18 +9,20 @@ static void on_rocket_appear_es(const ecs::EventEntityCreated &evt, Rocket &rock
   rocket_component.created_at_ms = *manager.curr_time_ms;
 }
 
-static void on_rocket_disappear_es(const ecs::EventEntityDestroyed &evt, Rocket &rocket_component,
+static void on_rocket_disappear_es(const ecs::EventEntityDestroyedBasic &evt, Rocket &rocket_component,
                                    ecs::EntityManager &manager) {
-  rocket_component.destroyed_at_ms = *manager.curr_time_ms;
+  if (evt.get<1>())
+    rocket_component.destroyed_at_ms = *manager.curr_time_ms;
 }
 
 static void on_bomb_appear_es(const ecs::EventEntityCreated &evt, Bomb &bomb_component, ecs::EntityManager &manager) {
   bomb_component.created_at_ms = *manager.curr_time_ms;
 }
 
-static void on_bomb_disappear_es(const ecs::EventEntityDestroyed &evt, Bomb &bomb_component,
+static void on_bomb_disappear_es(const ecs::EventEntityDestroyedBasic &evt, Bomb &bomb_component,
                                  ecs::EntityManager &manager) {
-  bomb_component.destroyed_at_ms = *manager.curr_time_ms;
+  if (evt.get<1>())
+    bomb_component.destroyed_at_ms = *manager.curr_time_ms;
 }
 
 static void on_torpedo_appear_es(const ecs::EventEntityCreated &evt, Torpedo &torpedo_component,
@@ -28,9 +30,10 @@ static void on_torpedo_appear_es(const ecs::EventEntityCreated &evt, Torpedo &to
   torpedo_component.created_at_ms = *manager.curr_time_ms;
 }
 
-static void on_torpedo_disappear_es(const ecs::EventEntityDestroyed &evt, Torpedo &torpedo_component,
+static void on_torpedo_disappear_es(const ecs::EventEntityDestroyedBasic &evt, Torpedo &torpedo_component,
                                     ecs::EntityManager &manager) {
-  torpedo_component.destroyed_at_ms = *manager.curr_time_ms;
+  if (evt.get<1>())
+    torpedo_component.destroyed_at_ms = *manager.curr_time_ms;
 }
 
 static void on_payload_appear_es(const ecs::EventEntityCreated &evt, Payload &payload_component,
@@ -38,9 +41,10 @@ static void on_payload_appear_es(const ecs::EventEntityCreated &evt, Payload &pa
   payload_component.created_at_ms = *manager.curr_time_ms;
 }
 
-static void on_payload_disappear_es(const ecs::EventEntityDestroyed &evt, Payload &payload_component,
+static void on_payload_disappear_es(const ecs::EventEntityDestroyedBasic &evt, Payload &payload_component,
                                     ecs::EntityManager &manager) {
-  payload_component.destroyed_at_ms = *manager.curr_time_ms;
+  if (evt.get<1>())
+    payload_component.destroyed_at_ms = *manager.curr_time_ms;
 }
 
 static void on_jettisoned_appear_es(const ecs::EventEntityCreated &evt, Jettisoned &jettisoned_component,
@@ -48,9 +52,10 @@ static void on_jettisoned_appear_es(const ecs::EventEntityCreated &evt, Jettison
   jettisoned_component.created_at_ms = *manager.curr_time_ms;
 }
 
-static void on_jettisoned_disappear_es(const ecs::EventEntityDestroyed &evt, Jettisoned &jettisoned_component,
+static void on_jettisoned_disappear_es(const ecs::EventEntityDestroyedBasic &evt, Jettisoned &jettisoned_component,
                                        ecs::EntityManager &manager) {
-  jettisoned_component.destroyed_at_ms = *manager.curr_time_ms;
+  if (evt.get<1>())
+    jettisoned_component.destroyed_at_ms = *manager.curr_time_ms;
 }
 
 template<typename Callable>

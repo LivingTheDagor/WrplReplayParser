@@ -31,22 +31,22 @@ static constexpr ecs::ComponentDesc on_rocket_disappear_es_comps[] = {
   {ECS_HASH("rocket_component"), ecs::ComponentTypeInfo<Rocket>()}};
 static void on_rocket_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                               const ecs::QueryView &__restrict components) {
-  G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyed>());
+  G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyedBasic>());
   auto comp = components.begin(), compE = components.end();
   G_ASSERT(comp != compE);
   do
     if (components.eid_refs[comp] != ecs::INVALID_ENTITY_ID) {
-      on_rocket_disappear_es(static_cast<const ecs::EventEntityDestroyed &>(evt),
+      on_rocket_disappear_es(static_cast<const ecs::EventEntityDestroyedBasic &>(evt),
                              ECS_RW_COMP(on_rocket_disappear_es_comps, "rocket_component", Rocket), mgr);
     }
   while (++comp != compE);
 }
-static ecs::EntitySystemDesc on_rocket_disappear_es_es_desc("on_rocket_disappear_es",
-                                                            "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
-                                                            ecs::EntitySystemOps(on_rocket_disappear_es_all_events),
-                                                            ecs::make_span(on_rocket_disappear_es_comps + 0, 1) /*rw*/,
-                                                            ecs::empty_span(), ecs::empty_span(), ecs::empty_span(),
-                                                            ecs::EventSetBuilder<ecs::EventEntityDestroyed>::build());
+static ecs::EntitySystemDesc
+  on_rocket_disappear_es_es_desc("on_rocket_disappear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
+                                 ecs::EntitySystemOps(on_rocket_disappear_es_all_events),
+                                 ecs::make_span(on_rocket_disappear_es_comps + 0, 1) /*rw*/, ecs::empty_span(),
+                                 ecs::empty_span(), ecs::empty_span(),
+                                 ecs::EventSetBuilder<ecs::EventEntityDestroyedBasic>::build());
 static constexpr ecs::ComponentDesc on_bomb_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("bomb_component"), ecs::ComponentTypeInfo<Bomb>()}};
@@ -73,22 +73,22 @@ static constexpr ecs::ComponentDesc on_bomb_disappear_es_comps[] = {
   {ECS_HASH("bomb_component"), ecs::ComponentTypeInfo<Bomb>()}};
 static void on_bomb_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                             const ecs::QueryView &__restrict components) {
-  G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyed>());
+  G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyedBasic>());
   auto comp = components.begin(), compE = components.end();
   G_ASSERT(comp != compE);
   do
     if (components.eid_refs[comp] != ecs::INVALID_ENTITY_ID) {
-      on_bomb_disappear_es(static_cast<const ecs::EventEntityDestroyed &>(evt),
+      on_bomb_disappear_es(static_cast<const ecs::EventEntityDestroyedBasic &>(evt),
                            ECS_RW_COMP(on_bomb_disappear_es_comps, "bomb_component", Bomb), mgr);
     }
   while (++comp != compE);
 }
-static ecs::EntitySystemDesc on_bomb_disappear_es_es_desc("on_bomb_disappear_es",
-                                                          "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
-                                                          ecs::EntitySystemOps(on_bomb_disappear_es_all_events),
-                                                          ecs::make_span(on_bomb_disappear_es_comps + 0, 1) /*rw*/,
-                                                          ecs::empty_span(), ecs::empty_span(), ecs::empty_span(),
-                                                          ecs::EventSetBuilder<ecs::EventEntityDestroyed>::build());
+static ecs::EntitySystemDesc
+  on_bomb_disappear_es_es_desc("on_bomb_disappear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
+                               ecs::EntitySystemOps(on_bomb_disappear_es_all_events),
+                               ecs::make_span(on_bomb_disappear_es_comps + 0, 1) /*rw*/, ecs::empty_span(),
+                               ecs::empty_span(), ecs::empty_span(),
+                               ecs::EventSetBuilder<ecs::EventEntityDestroyedBasic>::build());
 static constexpr ecs::ComponentDesc on_torpedo_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("torpedo_component"), ecs::ComponentTypeInfo<Torpedo>()}};
@@ -115,20 +115,22 @@ static constexpr ecs::ComponentDesc on_torpedo_disappear_es_comps[] = {
   {ECS_HASH("torpedo_component"), ecs::ComponentTypeInfo<Torpedo>()}};
 static void on_torpedo_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                                const ecs::QueryView &__restrict components) {
-  G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyed>());
+  G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyedBasic>());
   auto comp = components.begin(), compE = components.end();
   G_ASSERT(comp != compE);
   do
     if (components.eid_refs[comp] != ecs::INVALID_ENTITY_ID) {
-      on_torpedo_disappear_es(static_cast<const ecs::EventEntityDestroyed &>(evt),
+      on_torpedo_disappear_es(static_cast<const ecs::EventEntityDestroyedBasic &>(evt),
                               ECS_RW_COMP(on_torpedo_disappear_es_comps, "torpedo_component", Torpedo), mgr);
     }
   while (++comp != compE);
 }
-static ecs::EntitySystemDesc on_torpedo_disappear_es_es_desc(
-  "on_torpedo_disappear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
-  ecs::EntitySystemOps(on_torpedo_disappear_es_all_events), ecs::make_span(on_torpedo_disappear_es_comps + 0, 1) /*rw*/,
-  ecs::empty_span(), ecs::empty_span(), ecs::empty_span(), ecs::EventSetBuilder<ecs::EventEntityDestroyed>::build());
+static ecs::EntitySystemDesc
+  on_torpedo_disappear_es_es_desc("on_torpedo_disappear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
+                                  ecs::EntitySystemOps(on_torpedo_disappear_es_all_events),
+                                  ecs::make_span(on_torpedo_disappear_es_comps + 0, 1) /*rw*/, ecs::empty_span(),
+                                  ecs::empty_span(), ecs::empty_span(),
+                                  ecs::EventSetBuilder<ecs::EventEntityDestroyedBasic>::build());
 static constexpr ecs::ComponentDesc on_payload_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("payload_component"), ecs::ComponentTypeInfo<Payload>()}};
@@ -155,62 +157,71 @@ static constexpr ecs::ComponentDesc on_payload_disappear_es_comps[] = {
   {ECS_HASH("payload_component"), ecs::ComponentTypeInfo<Payload>()}};
 static void on_payload_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
                                                const ecs::QueryView &__restrict components) {
-  G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyed>());
+  G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyedBasic>());
   auto comp = components.begin(), compE = components.end();
   G_ASSERT(comp != compE);
   do
     if (components.eid_refs[comp] != ecs::INVALID_ENTITY_ID) {
-      on_payload_disappear_es(static_cast<const ecs::EventEntityDestroyed &>(evt),
+      on_payload_disappear_es(static_cast<const ecs::EventEntityDestroyedBasic &>(evt),
                               ECS_RW_COMP(on_payload_disappear_es_comps, "payload_component", Payload), mgr);
     }
   while (++comp != compE);
 }
-static ecs::EntitySystemDesc on_payload_disappear_es_es_desc(
-  "on_payload_disappear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
-  ecs::EntitySystemOps(on_payload_disappear_es_all_events), ecs::make_span(on_payload_disappear_es_comps + 0, 1) /*rw*/,
-  ecs::empty_span(), ecs::empty_span(), ecs::empty_span(), ecs::EventSetBuilder<ecs::EventEntityDestroyed>::build());
+static ecs::EntitySystemDesc
+  on_payload_disappear_es_es_desc("on_payload_disappear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
+                                  ecs::EntitySystemOps(on_payload_disappear_es_all_events),
+                                  ecs::make_span(on_payload_disappear_es_comps + 0, 1) /*rw*/, ecs::empty_span(),
+                                  ecs::empty_span(), ecs::empty_span(),
+                                  ecs::EventSetBuilder<ecs::EventEntityDestroyedBasic>::build());
 static constexpr ecs::ComponentDesc on_jettisoned_appear_es_comps[] = {
   // start of 1 rw components at [0]
   {ECS_HASH("jettisoned_component"), ecs::ComponentTypeInfo<Jettisoned>()}};
-static void on_jettisoned_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
-                                               const ecs::QueryView &__restrict components) {
+static void on_jettisoned_appear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt, const ecs::QueryView &__restrict components)
+{
   G_FAST_ASSERT(evt.is<ecs::EventEntityCreated>());
-  auto comp = components.begin(), compE = components.end();
-  G_ASSERT(comp != compE);
-  do
-    if (components.eid_refs[comp] != ecs::INVALID_ENTITY_ID) {
-      on_jettisoned_appear_es(static_cast<const ecs::EventEntityCreated &>(evt),
-                              ECS_RW_COMP(on_jettisoned_appear_es_comps, "jettisoned_component", Jettisoned), mgr);
-    }
-  while (++comp != compE);
+  auto comp = components.begin(), compE = components.end(); G_ASSERT(comp!=compE); do if (components.eid_refs[comp] != ecs::INVALID_ENTITY_ID) {
+    on_jettisoned_appear_es(static_cast<const ecs::EventEntityCreated&>(evt)
+        , ECS_RW_COMP(on_jettisoned_appear_es_comps, "jettisoned_component", Jettisoned)
+    , mgr
+    );
+  } while (++comp != compE);
 }
-static ecs::EntitySystemDesc on_jettisoned_appear_es_es_desc(
-  "on_jettisoned_appear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
-  ecs::EntitySystemOps(on_jettisoned_appear_es_all_events), ecs::make_span(on_jettisoned_appear_es_comps + 0, 1) /*rw*/,
-  ecs::empty_span(), ecs::empty_span(), ecs::empty_span(), ecs::EventSetBuilder<ecs::EventEntityCreated>::build());
-static constexpr ecs::ComponentDesc on_jettisoned_disappear_es_comps[] = {
-  // start of 1 rw components at [0]
-  {ECS_HASH("jettisoned_component"), ecs::ComponentTypeInfo<Jettisoned>()}};
-static void on_jettisoned_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt,
-                                                  const ecs::QueryView &__restrict components) {
-  G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyed>());
-  auto comp = components.begin(), compE = components.end();
-  G_ASSERT(comp != compE);
-  do
-    if (components.eid_refs[comp] != ecs::INVALID_ENTITY_ID) {
-      on_jettisoned_disappear_es(static_cast<const ecs::EventEntityDestroyed &>(evt),
-                                 ECS_RW_COMP(on_jettisoned_disappear_es_comps, "jettisoned_component", Jettisoned),
-                                 mgr);
-    }
-  while (++comp != compE);
-}
-static ecs::EntitySystemDesc
-  on_jettisoned_disappear_es_es_desc("on_jettisoned_disappear_es", "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
-                                     ecs::EntitySystemOps(on_jettisoned_disappear_es_all_events),
-                                     ecs::make_span(on_jettisoned_disappear_es_comps + 0, 1) /*rw*/, ecs::empty_span(),
+static ecs::EntitySystemDesc on_jettisoned_appear_es_es_desc
+(
+  "on_jettisoned_appear_es",
+  "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
+  ecs::EntitySystemOps(on_jettisoned_appear_es_all_events),
+  ecs::make_span(on_jettisoned_appear_es_comps+0, 1)/*rw*/,
   ecs::empty_span(),
   ecs::empty_span(),
-  ecs::EventSetBuilder<ecs::EventEntityDestroyed>::build()
+  ecs::empty_span(),
+  ecs::EventSetBuilder<ecs::EventEntityCreated>::build()
+);
+static constexpr ecs::ComponentDesc on_jettisoned_disappear_es_comps[] =
+{
+//start of 1 rw components at [0]
+  {ECS_HASH("jettisoned_component"), ecs::ComponentTypeInfo<Jettisoned>()}
+};
+static void on_jettisoned_disappear_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt, const ecs::QueryView &__restrict components)
+{
+  G_FAST_ASSERT(evt.is<ecs::EventEntityDestroyedBasic>());
+  auto comp = components.begin(), compE = components.end(); G_ASSERT(comp!=compE); do if (components.eid_refs[comp] != ecs::INVALID_ENTITY_ID) {
+    on_jettisoned_disappear_es(static_cast<const ecs::EventEntityDestroyedBasic&>(evt)
+        , ECS_RW_COMP(on_jettisoned_disappear_es_comps, "jettisoned_component", Jettisoned)
+    , mgr
+    );
+  } while (++comp != compE);
+}
+static ecs::EntitySystemDesc on_jettisoned_disappear_es_es_desc
+(
+  "on_jettisoned_disappear_es",
+  "D:/ReplayParser/replay/events/RocketryES.cpp.inl",
+  ecs::EntitySystemOps(on_jettisoned_disappear_es_all_events),
+  ecs::make_span(on_jettisoned_disappear_es_comps+0, 1)/*rw*/,
+  ecs::empty_span(),
+  ecs::empty_span(),
+  ecs::empty_span(),
+  ecs::EventSetBuilder<ecs::EventEntityDestroyedBasic>::build()
 );
 static constexpr ecs::ComponentDesc iterate_all_rockets_ecs_query_comps[] =
 {
