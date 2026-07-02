@@ -100,6 +100,11 @@ void PyECSTypes::include(py::module_ &m) {
   REGISTER_TYPE(HeavyVehicleModelStorageComponent);
   REGISTER_TYPE(FlightModelWrapStorageComponent);
   REGISTER_TYPE(unit::UnitRef);
+  REGISTER_TYPE(Rocket);
+  REGISTER_TYPE(Bomb);
+  REGISTER_TYPE(Torpedo);
+  REGISTER_TYPE(Jettisoned);
+  REGISTER_TYPE(Payload);
   REGISTER_TYPE(ecs::Object);
   REGISTER_TYPE(ecs::EntityId);
   REGISTER_TYPE(ecs::string);

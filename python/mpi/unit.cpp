@@ -85,6 +85,18 @@ void PyUnit::include(py::module_ &m) {
 
   py::class_<unit::UnitRef>(unit, "UnitRef").def_readonly("unit", &unit::UnitRef::unit);
 
+  py::class_<Rocket>(unit, "Rocket")
+    .def_readonly("positions", &Rocket::positions)
+    .def_readonly("created_at_ms", &Rocket::created_at_ms)
+    .def_readonly("destroyed_at_ms", &Rocket::destroyed_at_ms)
+    .def_readonly("ownerEid", &Rocket::ownerEid)
+    .def_readonly("eid2", &Rocket::eid2);
+
+  py::class_<Bomb, Rocket>(unit, "Bomb");
+  py::class_<Torpedo, Rocket>(unit, "Torpedo");
+  py::class_<Jettisoned, Rocket>(unit, "Jettisoned");
+  py::class_<Payload, Rocket>(unit, "Payload");
+
   bind_readonly_vector<std::vector<unit::Unit *>>(m, "UnitList");
   m.def("collect_all_units", &collect_all_units, py::arg("state"));
   m.def("collect_all_rockets", &collect_all_rockets, py::arg("state"));
