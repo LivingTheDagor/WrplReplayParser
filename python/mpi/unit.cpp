@@ -85,17 +85,17 @@ void PyUnit::include(py::module_ &m) {
 
   py::class_<unit::UnitRef>(unit, "UnitRef").def_readonly("unit", &unit::UnitRef::unit);
 
-  py::class_<Rocket>(unit, "Rocket")
+  py::class_<Rocket, std::unique_ptr<Rocket, py::nodelete>>(unit, "Rocket")
     .def_readonly("positions", &Rocket::positions)
     .def_readonly("created_at_ms", &Rocket::created_at_ms)
     .def_readonly("destroyed_at_ms", &Rocket::destroyed_at_ms)
     .def_readonly("ownerEid", &Rocket::ownerEid)
     .def_readonly("eid2", &Rocket::eid2);
 
-  py::class_<Bomb, Rocket>(unit, "Bomb");
-  py::class_<Torpedo, Rocket>(unit, "Torpedo");
-  py::class_<Jettisoned, Rocket>(unit, "Jettisoned");
-  py::class_<Payload, Rocket>(unit, "Payload");
+  py::class_<Bomb, Rocket, std::unique_ptr<Bomb, py::nodelete>>(unit, "Bomb");
+  py::class_<Torpedo, Rocket, std::unique_ptr<Torpedo, py::nodelete>>(unit, "Torpedo");
+  py::class_<Jettisoned, Rocket, std::unique_ptr<Jettisoned, py::nodelete>>(unit, "Jettisoned");
+  py::class_<Payload, Rocket, std::unique_ptr<Payload, py::nodelete>>(unit, "Payload");
 
   bind_readonly_vector<std::vector<unit::Unit *>>(m, "UnitList");
   m.def("collect_all_units", &collect_all_units, py::arg("state"));
