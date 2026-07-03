@@ -232,6 +232,24 @@ ImVec2 UVToScreen(MapInfo &map, const Point3 &location, const ImVec2 &canvas_ori
   return ImVec2(canvas_origin.x + (uv.x * canvas_size.x), canvas_origin.y + (uv.y * canvas_size.y));
 }
 
+void DrawYawLine(float yaw_rad, ImVec2 center, float len, ImU32 col, float thickness = 2.0f) {
+  // Screen coords: +x right, +y down
+  // If yaw=0 should point "up", subtract PI/2 or swap sin/cos as needed.
+  ImVec2 dir = ImVec2(cosf(yaw_rad), sinf(yaw_rad));
+
+  ImVec2 tip = ImVec2(center.x + dir.x * len, center.y + dir.y * len);
+
+  ImDrawList *dl = ImGui::GetWindowDrawList();
+  dl->AddLine(center, tip, col, thickness);
+
+  // optional arrow head
+  float ah = 8.0f;
+  float a = yaw_rad;
+  ImVec2 l = ImVec2(tip.x - cosf(a - 0.35f) * ah, tip.y - sinf(a - 0.35f) * ah);
+  ImVec2 r = ImVec2(tip.x - cosf(a + 0.35f) * ah, tip.y - sinf(a + 0.35f) * ah);
+  dl->AddTriangleFilled(tip, l, r, col);
+}
+
 class ReplayHandler {
 protected:
   static Point3 TMToCenter(const TMatrix &tm) {
@@ -415,6 +433,7 @@ protected:
       bool found_front = false;
       uint32_t front_time_ms = 0.0f;
       ImVec2 front = ImVec2(0.0f, 0.0f);
+      Point3 frontEuler{};
       // we iterate from front to back, so new points first
       for (int idx_ = (int) unit.positions.size() - 6; idx_ >= 0; idx_--) {
         // lets skip over points until we get to our start time
@@ -431,6 +450,7 @@ protected:
         if (!found_front) {
           front_time_ms = unit.positions[idx_].time_ms;
           front = curr_point;
+          frontEuler = unit.positions[idx_].euler;
           found_front = true;
         }
         bool add = true;
@@ -464,6 +484,7 @@ protected:
           data.draw_list->AddCircle(front, 5.0f, get_player_color(pid, team), 0, 2.0f);
         }
       }
+      DrawYawLine(frontEuler.y, front, 10, IM_COL32(255, 200, 0, 255), 2.0f);
     };
 
     on_rocket_cb_t on_rocket_cb = [&data, this](const Rocket &rocket) {
@@ -877,7 +898,7 @@ public:
       ImGui::Text("%i", player_data.dummyForRoundScore.data->combined);
       ImGui::TableNextColumn();
 
-      ImGui::TextUnformatted(player_data.uid.data->name);
+      ImGui::Text("%i:%s", index, player_data.uid.data->name);
       ImGui::TableNextColumn();
 
       auto owned_eid = *player_data.ownedUnitRef.data;
@@ -918,7 +939,7 @@ public:
         ImGui::TextUnformatted(name);
       }
       ImGui::TableNextColumn();
-      ImGui::TextUnformatted(player_data.uid.data->name);
+      ImGui::Text("%i:%s", index, player_data.uid.data->name);
 
       ImGui::TableNextColumn();
       ImGui::Text("%i", player_data.dummyForRoundScore.data->combined);

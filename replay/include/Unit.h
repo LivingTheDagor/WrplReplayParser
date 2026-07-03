@@ -25,6 +25,16 @@ struct SpaceTime {
   bool operator==(const SpaceTime &other) const { return time_ms == other.time_ms && location == other.location; }
 };
 
+struct AngularSpaceTime {
+  uint32_t time_ms = 0;
+  Point3 location{};
+  Point3 euler{};
+
+  bool operator==(const AngularSpaceTime &other) const {
+    return time_ms == other.time_ms && location == other.location && euler == other.euler;
+  }
+};
+
 #define COUNTER_MEASURES_COUNT 2
 #define SENSORS_COUNT          4
 #define TARGETS_NUM            8
@@ -193,8 +203,7 @@ namespace unit {
     std::vector<std::string> fm_mods{};
     std::vector<CameraTime> camera_pos;
     std::vector<Weapon> weapons{};
-    std::vector<SpaceTime> positions{};
-    std::vector<Quat> lookat{};
+    std::vector<AngularSpaceTime> positions{};
 
     UnitWeaponsMask weapons_mask{};
 

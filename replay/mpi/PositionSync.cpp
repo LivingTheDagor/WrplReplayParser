@@ -213,7 +213,7 @@ bool FMSync(ParserState &state, BitStream &bs) {
           }
           uint32_t some_packed_val;
           uint32_t vals_4;
-          SpaceTime st{state.curr_time_ms, {}};
+          AngularSpaceTime st{state.curr_time_ms, {}, {}};
           bs.Read(st.location);
           unit->positions.push_back(st);
           bs.Read(some_packed_val);
@@ -345,8 +345,8 @@ struct SubVehicleDynData {
     int8_t pi_vals[3];
     ok &= bs.Read(pi_vals);
     f4 = netutils::UNPACKS(pi_vals[0], PI);
-    f5 = netutils::UNPACKS(pi_vals[0], PI);
-    f6 = netutils::UNPACKS(pi_vals[0], PI);
+    f5 = netutils::UNPACKS(pi_vals[1], PI);
+    f6 = netutils::UNPACKS(pi_vals[2], PI);
     ok &= bs.Read(some_position_maybe);
     return ok;
   }
@@ -388,6 +388,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
       std::array<int16_t, 3> vals;
       RET_FAIL(bs.Read(vals));
       netutils::unpack_euler_16(vals, direction);
+      // LOGI("{} {} {}", direction.x, direction.y, direction.z);
     }
     bool bool2, bool3;
     bs.Read(bool2);
@@ -420,7 +421,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
     }
     if (ref->ref_1 && ref->ref_1 && ref->ref_1->AsTank()) {
       auto tank = ref->ref_1->AsTank();
-      tank->positions.push_back({state.curr_time_ms, unit_position});
+      tank->positions.push_back({state.curr_time_ms, unit_position, direction});
     }
     Point3 out_2;
     if (ref->val1) {
