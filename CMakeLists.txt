@@ -45,6 +45,18 @@ if (EXISTS "${CMAKE_SOURCE_DIR}/cmake/overrides.cmake")
     include("${CMAKE_SOURCE_DIR}/cmake/overrides.cmake")
 endif ()
 
+# default debug level is 1 for debug builds, 0 for release builds
+# it is set to these defaults unless if you set it before
+# I named mine to be LDAG instead of DAGOR to add some difference
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    set(LDAG_DBGLEVEL_TO_SET 1)
+else ()
+    set(LDAG_DBGLEVEL_TO_SET 0)
+endif ()
+option(LDAG_DBGLEVEL_TO_SET "Set the LDAG_DBGLEVEL to a specific value" LDAG_DBGLEVEL_TO_SET)
+message("LDAG_DBGLEVEL=${LDAG_DBGLEVEL_TO_SET}")
+add_compile_definitions(LDAG_DBGLEVEL=${LDAG_DBGLEVEL_TO_SET})
+
 set_default_flags()
 
 if (PARSER_MY_FLAGS)

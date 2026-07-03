@@ -316,14 +316,17 @@ struct TankRef {
   bool val3 = false;
   uint8_t turret_count = 0;
 };
-// #define RET_FAIL(op) G_ASSERT((op));
+
+#if LDAG_DBGLEVEL > 0
+#define RET_FAIL(op) G_ASSERT((op));
+#else
 #define RET_FAIL(op) \
   do {               \
     if (!(op)) {     \
       return false;  \
     }                \
   } while (0)
-
+#endif
 struct SubVehicleDynData {
   Quat quat;
   float f4;
@@ -742,9 +745,9 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
 
     bool some_b;
     uint16_t some_val = 0;
-    bs.Read(some_b);
+    RET_FAIL(bs.Read(some_b));
     if (some_b) {
-      RET_FAIL(bs.Read(some_val));
+      RET_FAIL(bs.ReadCompressed(some_val));
     }
     uint8_t flags{};
     RET_FAIL(bs.Read(flags));
@@ -791,14 +794,14 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
           RET_FAIL(bs.Read(pack_ff1));
           RET_FAIL(bs.Read(pack_ff2));
           RET_FAIL(bs.Read(pack_ff3));
-          bool some_bool2;
-          RET_FAIL(bs.Read(some_bool2));
-          if (some_bool2) {
-            uint8_t pack_ff4, pack_ff5, pack_ff6;
-            RET_FAIL(bs.Read(pack_ff4));
-            RET_FAIL(bs.Read(pack_ff5));
-            RET_FAIL(bs.Read(pack_ff6));
-          }
+        }
+        bool some_bool2;
+        RET_FAIL(bs.Read(some_bool2));
+        if (some_bool2) {
+          uint8_t pack_ff4, pack_ff5, pack_ff6;
+          RET_FAIL(bs.Read(pack_ff4));
+          RET_FAIL(bs.Read(pack_ff5));
+          RET_FAIL(bs.Read(pack_ff6));
         }
       }
     }
