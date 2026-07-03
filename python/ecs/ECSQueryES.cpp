@@ -10,7 +10,8 @@
 
 PyECSQueryES py_ecs_query_es;
 
-struct PythonEsSystem {
+class PythonEsSystem {
+public:
   py::function cb;
   std::string es_name{};
   // no rw components, rw is impossible in python

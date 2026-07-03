@@ -194,6 +194,7 @@ namespace unit {
     std::vector<CameraTime> camera_pos;
     std::vector<Weapon> weapons{};
     std::vector<SpaceTime> positions{};
+    std::vector<Quat> lookat{};
 
     UnitWeaponsMask weapons_mask{};
 

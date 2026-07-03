@@ -38,11 +38,11 @@ namespace ecs {
     bool operator!=(const EntityId &rhs) const { return handle != rhs.handle; }
     bool operator<(const EntityId &rhs) const { return handle < rhs.handle; }
     void reset() { handle = ECS_INVALID_ENTITY_ID_VAL; }
-    uint32_t index() const { return handle >> ENTITY_GENERATION_BITS; } // Note: trims generation bits
+    [[nodiscard]] uint32_t index() const { return handle >> ENTITY_GENERATION_BITS; } // Note: trims generation bits
 
-    inline uint32_t get_generation() { return (uint32_t) generation(); }
+    [[nodiscard]] inline uint32_t get_generation() const { return generation(); }
 
-    inline uint32_t get_handle() const { return handle; }
+    [[nodiscard]] inline uint32_t get_handle() const { return handle; }
 
     [[nodiscard]] inline std::string toString(int indent = 0) const { return fmt::format("{:#08x}", this->handle); }
 
@@ -52,7 +52,7 @@ namespace ecs {
     // friend unsigned get_generation(const EntityId);
     entity_id_t handle = ECS_INVALID_ENTITY_ID_VAL;
 
-    uint8_t generation() const { return (handle >> ENTITY_INDEX_BITS) & ENTITY_GENERATION_MASK; }
+    [[nodiscard]] uint32_t generation() const { return (handle >> ENTITY_INDEX_BITS) & ENTITY_GENERATION_MASK; }
   };
 
   struct EidHash {

@@ -119,7 +119,8 @@ namespace mpi {
     DISPATCHER_LOGD2("destroyed_weapon: {}", this->destroyed_weapon);
     DISPATCHER_LOGD2("newStr1: {}; newStr2: {}; newVal3: {}; newStr4: {}", this->weird_str_1, this->weird_str_2,
                      this->weird_val_3, this->weird_str_4);
-    ecs::string *killer_className, *killer_missionName, *victim_className, *victim_missionName;
+    // ecs::string *killer_className, *killer_missionName, *victim_className, *victim_missionName;
+
     /*if(this->offender_entity) {
       killer_className = state->g_entity_mgr.getNullable<ecs::string>(this->offender_entity,
     ECS_HASH("unit__className")); killer_missionName =

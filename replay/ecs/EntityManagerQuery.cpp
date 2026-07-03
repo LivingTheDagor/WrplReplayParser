@@ -693,7 +693,7 @@ namespace ecs {
 
         edgesFrom.reserve(esOrderList.size());
         int prevGraphNode = -1;
-        for (int i = 0, e = esOrderList.size(); i < e; ++i) // explicit order from esOrder
+        for (size_t i = 0, e = esOrderList.size(); i < e; ++i) // explicit order from esOrder
         {
           auto insResult = nameESMap.emplace(esOrderList[i], graphNodesCount);
           if (insResult.second)
@@ -735,7 +735,7 @@ namespace ecs {
       };
       const char *first_sync_point_name = "__first_sync_point";
       nameESMap.emplace(first_sync_point_name, graphNodesCount++);
-      for (int i = 0, e = esFullList.size(); i < e; ++i) {
+      for (size_t i = 0, e = esFullList.size(); i < e; ++i) {
         std::string_view name(esFullList[i]->name);
         auto insResult = nameESMap.emplace(name, graphNodesCount);
         const int graphNode = insResult.first->second;
@@ -791,7 +791,7 @@ namespace ecs {
       sortedPrio.resize(sortedList.size(), lowestPrio);
       for (size_t i = 0, e = sortedList.size(); i < e; ++i) {
         if (uint32_t(sortedList[i]) < sortedList.size())
-          sortedPrio[sortedList[i]] = sortedList.size() - i;
+          sortedPrio[sortedList[i]] = (int) (sortedList.size() - i);
       }
 
       // use graph for ES prio list
@@ -828,7 +828,7 @@ namespace ecs {
       clear_and_shrink(esList);
       // esForAllEntities.clear();
       stlsort::sort_branchless(prio.begin(), prio.end());
-      clear_and_resize(esList, prio.size());
+      clear_and_resize(esList, (uint32_t) prio.size());
       // esForAllEntities.resize(prio.size());
       // esUpdates.clear();
 

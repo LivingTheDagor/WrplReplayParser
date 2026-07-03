@@ -7,9 +7,10 @@ template<typename Vec, typename CName = Vec>
 void bind_readonly_vector(py::module_ &m, const char *name) {
   py::class_<Vec>(m, name)
       .def("__len__", [](const Vec &v) { return v.size(); })
-      .def("__getitem__", [](const Vec &v, size_t i) {
-        if (i >= v.size()) throw py::index_error();
-        return v[(typename Vec::size_type) i];
+    .def("__getitem__",
+         [](const Vec &v, typename Vec::size_type i) {
+           if (i >= v.size()) throw py::index_error();
+           return v[i];
       })
       .def(
           "__iter__", [](const Vec &v) -> py::iterator { return py::make_iterator(v.begin(), v.end());
@@ -21,7 +22,7 @@ void bind_readonly_vector(py::module_ &m, const char *name) {
         std::ostringstream oss;
         oss << name << "(";
         oss << "[";
-        for (size_t i = 0; i < v.size(); ++i) {
+        for (typename Vec::size_type i = 0; i < v.size(); ++i) {
           if (i) oss << ", ";
           oss << py::repr(py::cast(v[i]));
         }
@@ -34,7 +35,8 @@ template<typename Vec, typename CName = Vec>
 void bind_readonly_vector_no_contain(py::module_ &m, const char *name) {
   py::class_<Vec>(m, name)
       .def("__len__", [](const Vec &v) { return v.size(); })
-      .def("__getitem__", [](const Vec &v, size_t i) {
+    .def("__getitem__",
+         [](const Vec &v, typename Vec::size_type i) {
         if (i >= v.size()) throw py::index_error();
         return v[i];
       })
@@ -45,7 +47,7 @@ void bind_readonly_vector_no_contain(py::module_ &m, const char *name) {
         std::ostringstream oss;
         oss << name << "(";
         oss << "[";
-        for (size_t i = 0; i < v.size(); ++i) {
+        for (typename Vec::size_type i = 0; i < v.size(); ++i) {
           if (i) oss << ", ";
           oss << py::repr(py::cast(v[i]));
         }

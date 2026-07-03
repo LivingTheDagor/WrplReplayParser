@@ -15,15 +15,15 @@ bool write_server_eid(ecs::entity_id_t eidVal, BitStream &bs) {
     if (isShortIdx && generation < 2) // 2 bytes
     {
       uint16_t compressedData = 1; // one bit
-      compressedData |= (generation << 1); // one bit
-      compressedData |= index << 2; // 14 bit
+      compressedData |= (uint16_t) (generation << 1); // one bit
+      compressedData |= (uint16_t) (index << 2); // 14 bit
       bs.Write(compressedData); // 16 bits
     } else if (isShortIdx && generation <= (UCHAR_MAX + 2)) // 3 bytes
     {
       G_FAST_ASSERT(generation >= 2);
       uint16_t compressedIndex =
         2; // less significant is zero meaning uncompressed, next one means that it's 3 byte version
-      compressedIndex |= index << 2;
+      compressedIndex |= (uint16_t) (index << 2);
       bs.Write(compressedIndex);
       bs.Write((uint8_t) (generation - 2));
     } else // 4 bytes
