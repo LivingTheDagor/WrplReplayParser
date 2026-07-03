@@ -7,7 +7,6 @@
 
 #include <ctime>
 #include "Replay/Replay.h"
-#include "Replay/find_rpl_files.h"
 #include "mpi/ObjectDispatcher.h"
 #include "Logger.h"
 
@@ -46,13 +45,14 @@ int main() {
   //std::signal(SIGSEGV, signal_handler);
   fs::path conf_dir = CONFIG_DIR;
   fs::path config_file = conf_dir / "dagor_replay_test.blk";
-  DataBlock conf_blk;
-  G_ASSERT(load(conf_blk, config_file.string().c_str()));
+  DataBlock conf_blk{};
+  G_ASSERT(dblk::load(conf_blk, config_file.string().c_str()));
   bool is_server_replay = conf_blk.getBool("is_server_replay", false);
   bool source_is_linux_path = conf_blk.getBool("source_is_linux_path", false);
   auto replay_path = conf_blk.getStr("source", nullptr);
   bool bin_is_linux_path = conf_blk.getBool("bin_is_linux_path", false);
   auto bin_path = conf_blk.getStr("bin_path", nullptr);
+  g_log_handler->loadSinkFromDataBlock(*conf_blk.getBlockByNameEx("logging"));
   std::string rpl_path_str = replay_path;
   std::string bin_path_str = bin_path;
   G_UNUSED(source_is_linux_path);
@@ -67,39 +67,29 @@ int main() {
 #endif
   std::string logfile_str = (conf_dir / "logfile.txt").string();
   initialize(bin_path_str, logfile_str);
-  g_log_handler.start_thread();
-  //auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
-  ServerReplay *srv_rpl = nullptr;
-  Replay *rpl = nullptr;
-  if (is_server_replay) {
-    fs::path t{rpl_path_str};
-    srv_rpl = new ServerReplay(t);
-  } else {
-    rpl = new Replay(rpl_path_str);
-  }
-  constexpr int num_threads = 20;
-  //checkMemory();
-  ecs::g_ecs_data->printCurrentMemoryUsage();
-  g_log_handler.wait_until_empty();
-  g_log_handler.flush_all();
+  // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
+  constexpr int num_threads = 10;
+  // checkMemory();
 
   auto worker = [&](int id) {
     ZoneScopedN("Worker Run");
     ParserState *state_ptr = nullptr;
+    IReplay *rpl = nullptr;
     IReplayReader *rdr = nullptr;
     //sync_point.arrive_and_wait(); // block until all threads are ready
     std::cout << fmt::format("Thread {} started!\n", id);
     auto start = std::chrono::high_resolution_clock::now();
     {
+
+      if (is_server_replay) {
+        fs::path t{rpl_path_str};
+        rpl = new ServerReplay(t.string());
+      } else {
+        rpl = new Replay(rpl_path_str);
+      }
       ZoneScopedN("Create Reader and State");
-      if(is_server_replay) {
-        rdr = srv_rpl->getRplReader();
-        state_ptr = new ParserState{srv_rpl};
-      }
-      else {
-        rdr = rpl->getFullDecompressReplayReader();
-        state_ptr = new ParserState{rpl};
-      }
+      state_ptr = new ParserState(rpl);
+      rdr = rpl->getReplayReader();
     }
 
 
@@ -109,61 +99,19 @@ int main() {
     //std::exit(0);
     bool end = false;
     int AircraftCount = 0;
-    uint32_t packet_count = 0;
     {
       ZoneScopedN("Parsing");
-      while (!end && rdr->getNextPacket(&pkt)) {
-        state.curr_time_ms = pkt.timestamp_ms;
-        packet_count++;
-        if (packet_count == 1500) {
-          state.g_entity_mgr.broadcastEventImmediate(ecs::EventEntitySomething{});
-        }
-        switch (pkt.type) {
-          case ReplayPacketType::EndMarker: {
-            LOG("Replay Ending at time {}", ((float) pkt.timestamp_ms) / 1000);
-            end = true;
-            break;
-          }
-          case ReplayPacketType::StartMarker: {
-            LOGD("Replay StartMarker");
-            break;
-          }
-          case ReplayPacketType::AircraftSmall: {
-            AircraftCount++;
-            break;
-          }
-          case ReplayPacketType::Chat:
-            break;
-          case ReplayPacketType::MPI: {
-            auto m = mpi::dispatch(pkt.stream, &state, false);
-            if (m != nullptr) {
-              mpi::send(m);
-              delete m;
-            }
-            break;
-          }
-          case ReplayPacketType::NextSegment: {
-            //LOG("NextSegment");
-            break;
-          }
-          case ReplayPacketType::ECS: {
-            state.onPacket(&pkt);
-            break;
-          }
-          case ReplayPacketType::Snapshot: // useless
-            break;
-          case ReplayPacketType::ReplayHeaderInfo:
-            break;
-        }
-      }
+      while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
     }
 
-    delete state_ptr;
     delete rdr;
+    delete rpl;
     auto ended = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double, std::milli> duration = ended - start;
-    std::cout << fmt::format("thread {} profile time: {}; packet count: {}\n", id, duration.count(), packet_count);
+    std::cout << fmt::format("thread {} profile time: {}; packet count: {}\n", id, duration.count(),
+                             state_ptr->current_packet_index);
+    delete state_ptr;
   };
   for(int i = 0; i < 1; i++) {
     {
@@ -171,12 +119,6 @@ int main() {
       for (int i = 0; i < num_threads; ++i)
         threads.emplace_back(worker, i);
     }
-    g_log_handler.wait_until_empty();
-    g_log_handler.flush_all();
   }
-
-
-  delete srv_rpl;
-  delete rpl;
   return 0;
 }

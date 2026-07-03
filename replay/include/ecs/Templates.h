@@ -137,6 +137,7 @@ namespace ecs {
     std::vector<ComponentTemplInfo> components;
     std::vector<template_t> parents;
     component_type_t max_component_index = 0;
+    std::unique_ptr<std::once_flag> once_flag = std::make_unique<std::once_flag>();
   };
 
 

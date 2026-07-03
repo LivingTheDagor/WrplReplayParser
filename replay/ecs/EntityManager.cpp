@@ -207,7 +207,7 @@ namespace ecs {
       std::shared_lock arch_lock(this->data_state->archetypes.archetypes_mtx);
       std::shared_lock templ_lock(this->data_state->templates.template_mtx);
       G_ASSERTF(instTempl, "Template {} not initialized", data_state->getTemplateName(templId));
-      ENTITY_LOGD2("Creating new entity {:#x} of template '{}' at {}", eid.handle,
+      ENTITY_LOGD2("Creating new entity {} of template '{}' at {}", eid,
                    data_state->templates.getTemplate(templId)->getName(), ((double) *this->curr_time_ms) / 1000);
       auto arches = &this->data_state->archetypes;
 
@@ -337,7 +337,8 @@ namespace ecs {
       eidToEventCreationMap.erase(eid);
       sendEventImmediate(eid, EventEntityDestroyedBasic{new_eid, true});
       *this->getNullable<ecs::EntityId>(eid, ECS_HASH("eid")) = new_eid;
-      ENTITY_LOGD2("Moving eid: {:#x} of template {} to {:#x}", eid.get_handle(), this->data_state->getTemplateName(desc->templ_id), new_eid.get_handle());
+      ENTITY_LOGD2("Moving eid: {} of template {} to {}", eid, this->data_state->getTemplateName(desc->templ_id),
+                   new_eid);
       swap_desc(eid, new_eid);
       //add_sub_template(new_eid, "dagor_destroyed_t");
       this->entDescs.basic_destroyed.set(new_eid.index(), true);
@@ -349,11 +350,11 @@ namespace ecs {
       sendEventImmediate(eid, EventEntityDestroyedBasic{ecs::INVALID_ENTITY_ID, true});
 
     sendEventImmediate(eid, EventEntityDestroyed{});
-    if(is_dtor) {
-      ENTITY_LOGD3("Destroying entity {:#x} of template {}", eid.handle,
+    if (is_dtor) {
+      ENTITY_LOGD3("Destroying entity {} of template {}", eid,
             data_state->templates.getTemplate(desc->templ_id)->getName());
     } else {
-      ENTITY_LOGD2("Destroying entity {:#x} of template {}", eid.handle,
+      ENTITY_LOGD2("Destroying entity {} of template {}", eid,
                    data_state->templates.getTemplate(desc->templ_id)->getName());
     }
 
@@ -468,8 +469,8 @@ namespace ecs {
       auto ARCHETYPE = this->arch_data.getArch(archetype_id);
       auto info = &data_state->archetypes.archetypes[archetype_id];
       auto ComponentInfo = &data_state->archetypes.archetypeComponents[info->COMPONENT_OFS];
-      //auto archInfo = &info->INFO;
-      LOG("DebugPrint of Entity {:#x} of template '{}' of archetype_id {}", eid.handle,
+      // auto archInfo = &info->INFO;
+      LOG("DebugPrint of Entity {} of template '{}' of archetype_id {}", eid,
           this->data_state->templates.getTemplate(desc->templ_id)->getName(), archetype_id);
       for (auto comp_info = ComponentInfo; comp_info != ComponentInfo + info->COMPONENT_COUNT; comp_info++) {
         //     ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint16_t size);
@@ -502,7 +503,7 @@ namespace ecs {
     G_ASSERT(this->entDescs.doesEntityExist(eid)); // sanity check in dev only
     auto desc = this->entDescs[eid.index()];
     archetype = desc.archetype_id; // should always be valid
-    G_ASSERTF(archetype != INVALID_ARCHETYPE, "Entity {:#x} is invalid", eid.get_handle());
+    G_ASSERTF(archetype != INVALID_ARCHETYPE, "Entity {} is invalid", eid);
     //G_ASSERT(data_state->archetypes.archetypes[archetype].INFO.getComponentId(index) != INVALID_COMPONENT_INDEX);
     std::shared_lock lk(this->data_state->archetypes.archetypes_mtx);
     if (data_state->archetypes.archetypes[archetype].INFO.getComponentId(index) == INVALID_COMPONENT_INDEX)

@@ -136,13 +136,11 @@ namespace ecs {
         return; // already instantated
       }
     }
-    {
-      std::unique_lock lk(this->template_mtx);
-      if (this->inst_templates[t]) {;
-        return;
-      }
-      this->inst_templates[t] = new InstantiatedTemplate(t);
-    }
+    std::call_once(*this->templates[t].once_flag, [&] {
+      auto *inst = new InstantiatedTemplate(t);
+      // std::unique_lock lk(template_mtx);
+      inst_templates[t] = inst;
+    });
   }
 
   template_t TemplateDB::getTemplateIdByName(std::string_view name) {

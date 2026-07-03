@@ -52,7 +52,7 @@ namespace ecs {
     // friend unsigned get_generation(const EntityId);
     entity_id_t handle = ECS_INVALID_ENTITY_ID_VAL;
 
-    [[nodiscard]] uint32_t generation() const { return (handle >> ENTITY_INDEX_BITS) & ENTITY_GENERATION_MASK; }
+    [[nodiscard]] uint32_t generation() const { return handle & ENTITY_GENERATION_MASK; }
   };
 
   struct EidHash {
@@ -81,4 +81,14 @@ struct DebugConverter;
 template<>
 struct DebugConverter<ecs::EntityId> {
   static ecs::entity_id_t getDebugType(const ecs::EntityId &v) { return ecs::entity_id_t(v); }
+};
+
+template<>
+class fmt::formatter<ecs::EntityId> {
+public:
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+  template<typename Context>
+  constexpr auto format(ecs::EntityId const &foo, Context &ctx) const {
+    return format_to(ctx.out(), "({}:{})", foo.get_generation(), foo.index());
+  }
 };
