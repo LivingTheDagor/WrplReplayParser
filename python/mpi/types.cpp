@@ -5,6 +5,7 @@
 #include "mpi/types.h"
 #include "modules/bind_readonly_vector.h"
 #include "Unit.h"
+#include "modules/utf8_err_ignore_string.h"
 
 PyMpiTypes py_mpi_types;
 
@@ -16,7 +17,7 @@ void PyMpiTypes::include(py::module_ &m) {
   auto mpi = m.def_submodule("mpi");
   py::class_<danet::Uid>(mpi, "Uid")
     .def_readonly("player_id", &danet::Uid::player_id)
-    .def_property_readonly("player_name", &danet::Uid::get_player_name)
+    .def_property_readonly("player_name", [](const danet::Uid &self) { return str_to_py_str(self.get_player_name()); })
     .def("as_bytes", [](danet::Uid &self) {
       std::string payload{};
       payload.resize(sizeof(danet::Uid));

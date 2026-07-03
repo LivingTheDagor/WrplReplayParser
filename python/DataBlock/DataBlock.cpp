@@ -10,6 +10,7 @@
 #include "math/integer/dag_IPoint4.h"
 #include "math/dag_TMatrix.h"
 #include "math/dag_e3dColor.h"
+#include "modules/utf8_err_ignore_string.h"
 
 using namespace pybind11::literals;
 
@@ -40,6 +41,8 @@ void addObject(py::dict &dict, T &&t, const std::string &name) {
   addObjectImpl(dict, obj, name);
 }
 
+void addObject(py::dict &dict, py::str &&t, const std::string &name) { addObjectImpl(dict, std::move(t), name); }
+
 template <>
 void addObject(py::dict &dict, py::dict &t, const std::string &name) {
   py::object obj = t;
@@ -50,7 +53,8 @@ void BuildDict(py::dict &dict, DataBlock &blk) {
   for(int i = 0; i < blk.paramCount(); i++) {
     switch (blk.getParamType(i)) {
       case DataBlock::TYPE_STRING: {
-        addObject(dict, blk.getStr(i), blk.getParamName(i));
+        auto py_str = str_to_py_str(blk.getStr(i));
+        addObject(dict, std::move(py_str), blk.getParamName(i));
         break;
       }
       case DataBlock::TYPE_INT: {
@@ -132,9 +136,9 @@ void PyDataBlock::include(py::module_ &m) {
         // this->length * 8 is just some value
         DynamicMemGeneralSaveCB cwr(0, 4 << 20); // TOOD for this and vromf printer, maybe add std::ostringstream cb?
         self.saveToTextStream(cwr);
-        std::string payload{(char *) cwr.data(), (size_t) cwr.size()};
-        return payload;
-      })
+           auto py_str = str_to_py_str({(char *) cwr.data(), (size_t) cwr.size()});
+           return py_str;
+         })
       .def("toDict", [](DataBlock &self){
         py::dict to_dict;
         BuildDict(to_dict, self);
