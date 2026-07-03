@@ -130,7 +130,26 @@ bool CounterMeasuresControlState::deserialize(BitStream &bs) {
   ret &= bs.Read(v2);
   return ret;
 }
-
+std::vector<std::string> unit::getUnitTagsBlk(const DataBlock *blk) {
+  if (!blk)
+    return {};
+  std::vector<std::string> tags{};
+  if (blk->isEmpty())
+    return tags;
+  auto tags_blk = blk->getBlockByNameEx("tags");
+  for (uint32_t i = 0; i < tags_blk->paramCount(); i++) {
+    auto name = tags_blk->getParamName(i);
+    if (name)
+      tags.push_back(name);
+  }
+  return tags;
+}
+std::vector<std::string> unit::getUnitTagsName(std::string_view &name) {
+  auto blk = ecs::g_ecs_data->unit_tags.getBlockByNameEx(name);
+  if (!blk)
+    return {};
+  return getUnitTagsBlk(blk);
+}
 G_STATIC_ASSERT(sizeof(TargetDesignationControlState) == 0x50);
 
 

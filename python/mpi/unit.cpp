@@ -18,6 +18,15 @@ void PyUnit::include(py::module_ &m) {
       return fmt::format("SpaceTime({}, [{}, {}, {}])", st.time_ms, st.location.x, st.location.y, st.location.z);
     });
 
+  py::class_<AngularSpaceTime>(m, "AngularSpaceTime")
+    .def_readonly("time_ms", &AngularSpaceTime::time_ms)
+    .def_readonly("location", &AngularSpaceTime::location)
+    .def_readonly("euler", &AngularSpaceTime::euler)
+    .def("__str__", [](AngularSpaceTime &st) {
+      return fmt::format("AngularSpaceTime({}, [{}, {}, {}], [{}, {}, {}])", st.time_ms, st.location.x, st.location.y,
+                         st.location.z, st.euler.x, st.euler.y, st.euler.z);
+    });
+
   bind_readonly_vector<std::vector<SpaceTime>>(m, "SpaceTimeList");
 
   py::enum_<UnitType>(unit, "UnitType")
@@ -76,6 +85,9 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("name_index_0", &unit::Unit::name_index_0)
     .def_readonly("name_index_1", &unit::Unit::name_index_1)
     .def_readonly("name_index_2", &unit::Unit::name_index_2);
+
+  unit.def("getUnitTagsName", &unit::getUnitTagsName, py::arg("name"));
+  unit.def("getUnitTagsBlk", &unit::getUnitTagsBlk, py::arg("blk"));
 
   py::class_<unit::UnitRef>(unit, "UnitRef").def_readonly("unit", &unit::UnitRef::unit);
 

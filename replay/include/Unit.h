@@ -106,6 +106,11 @@ enum UnitType : uint8_t {
 struct FieldSerializerDict;
 
 namespace unit {
+
+  std::vector<std::string> getUnitTagsBlk(const DataBlock *blk);
+
+  std::vector<std::string> getUnitTagsName(std::string_view &name);
+
   enum MessageEnum {
     TankPosition = 0xf0a3,
     CameraAngles = 0xf0cc,
@@ -160,18 +165,7 @@ namespace unit {
     virtual ~Unit() = default;
     virtual void Load();
 
-    std::vector<std::string> getTags() const {
-      std::vector<std::string> tags{};
-      if (this->unit_tags->isEmpty())
-        return tags;
-      auto tags_blk = this->unit_tags->getBlockByNameEx("tags");
-      for (uint32_t i = 0; i < tags_blk->paramCount(); i++) {
-        auto name = tags_blk->getParamName(i);
-        if (name)
-          tags.push_back(name);
-      }
-      return tags;
-    }
+    std::vector<std::string> getTags() const { return getUnitTagsBlk(unit_tags); }
 
     Unit(uint16_t uid, UnitType unit_type) : uid(uid), unitType(unit_type) {}
 
