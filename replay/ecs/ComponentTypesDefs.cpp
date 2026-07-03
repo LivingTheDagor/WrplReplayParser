@@ -3,6 +3,7 @@
 #include "ecs/BitStreamDeserializer.h"
 #include "idFieldSerializer.h"
 #include "ecs/EntityManager.h"
+#include "ecs/baseIo.h"
 #include "network/eid.h"
 #include <math/dag_mathUtils.h>
 #include "gameMath/quantization.h"

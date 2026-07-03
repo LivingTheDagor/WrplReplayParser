@@ -5,6 +5,7 @@
 #include "state/ParserState.h"
 #include "mpi/GeneralObject.h"
 #include "Unit.h"
+#include "mpi/PositionSync.h"
 
 CREATE_HANDLE(handle_object_dispatcher, "ObjectDispatcher")
 
@@ -161,7 +162,7 @@ namespace mpi {
     UFX = 13,
     T_14 = 14,
     T_15 = 15,
-    FM_DVN = 16, // fm and gm have it in the same place,
+    FM_DVM = 16, // fm and gm have it in the same place,
     GM_DVM = 17,
     CUD = 18,
     T_19 = 19,
@@ -254,15 +255,15 @@ namespace mpi {
     uint16_t count = oid & 0x7ff;
     uint8_t obj = (uint8_t) (oid >> 0xb);
     switch (obj) {
-      case 0:
-      case 1:
-      case 2:
-      case 0xc:
-      case 0xd:
-      case 0x10:
-      case 0x11:
-      case 0x12:
-      case 0x19:
+      case FMW:
+      case GM:
+      case INF:
+      case FM_FX:
+      case UFX:
+      case FM_DVM:
+      case GM_DVM:
+      case CUD:
+      case WEAP:
         G_ASSERT(extUid != INVALID_OBJECT_EXT_UID);
         return MpiQueueObject::UnitRef_Dispatch(oid, extUid, state, true);
       case 3: break;

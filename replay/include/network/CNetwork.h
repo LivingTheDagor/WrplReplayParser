@@ -6,14 +6,9 @@
 extern "C" {
 #include "lz4.h"
 }
-#include "ecs/EntityManager.h"
-#include "danet/BitStream.h"
 #include "Replay/ReplayStructs.h"
 #include "utils.h"
-#include "consts.h"
-#include "ecs/typesAndLimits.h"
 #include "network/Connection.h"
-// #include "network/message.h"
 #ifdef _ECS_CODEGEN
 struct ENetPeer {};
 #else

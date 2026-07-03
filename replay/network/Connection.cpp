@@ -2,13 +2,10 @@
 #include "network/eid.h"
 #include "ecs/BitStreamDeserializer.h"
 #include "ecs/EntityManager.h"
+#include "ecs/baseIo.h"
 #include "network/Object.h"
 
 CREATE_HANDLE(handle_conn, "Connection")
-
-#define REPL_VER(x) \
-  if (!(x))         \
-  return failRet
 
 namespace net {
 

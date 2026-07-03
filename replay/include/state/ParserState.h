@@ -1,6 +1,5 @@
 #ifndef MYEXTENSION_PARSERSTATE_H
 #define MYEXTENSION_PARSERSTATE_H
-#include "math/dag_TMatrix.h"
 #include "ecs/EntityManager.h"
 #include "mpi/mpi.h"
 #include "mpi/codegen/ReflIncludes.h"
@@ -8,12 +7,14 @@
 #include "mpi/ObjectDispatcher.h"
 #include "mpi/GeneralObject.h"
 #include "Replay/Replay.h"
-#include "mpi/PositionSync.h"
 #include "danet/delta/deltaCompression.h"
-#include "Unit.h"
 #ifndef _ECS_CODEGEN
 #include "tracy/Tracy.hpp"
 #endif
+
+namespace unit {
+  class Unit;
+}
 
 struct net_delta_t {
   net::DeltaComp netDelta{5, 0xd};

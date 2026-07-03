@@ -1,5 +1,6 @@
 #include "state/ParserState.h"
 #include "ecs/entityId.h"
+#include "mpi/PositionSync.h"
 
 bool ChatMessage::FromBS(BitStream &bs) {
   bool ok = true;

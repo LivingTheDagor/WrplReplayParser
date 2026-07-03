@@ -1,5 +1,4 @@
 #pragma once
-#include "math/dag_Point3.h"
 
 struct ParserState;
 
