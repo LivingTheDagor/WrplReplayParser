@@ -10,6 +10,7 @@ add_library(DELTA::DELTA ALIAS delta)
 
 target_link_libraries(delta
         LOGGER::LOGGER
+        BS::BS
 )
 
 set(INCLUDES

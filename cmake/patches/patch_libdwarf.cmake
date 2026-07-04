@@ -1,13 +1,19 @@
 file(READ "src/lib/libdwarf/CMakeLists.txt" content)
 message("PATCHING LIBDWARF")
 
-if (content MATCHES "TARGETS[ \t]+dwarf[ \t]+zlibstatic")
-    message(STATUS "zlibstatic already present on TARGETS dwarf line; skipping patch.")
+if(BUILD_SHARED_LIBS)
+    set(ZLIB_NAME "zlib")
+else()
+    set(ZLIB_NAME "zlibstatic")
+endif()
+
+if (content MATCHES "TARGETS[ \t]+dwarf[ \t]+${ZLIB_NAME}")
+    message(STATUS "${ZLIB_NAME} already present on TARGETS dwarf line; skipping patch.")
 else ()
     if (content MATCHES "TARGETS[ \t]+dwarf")
         string(REPLACE
                 "  TARGETS dwarf"
-                "  TARGETS dwarf zlibstatic"
+                "  TARGETS dwarf ${ZLIB_NAME}"
                 patched_content
                 "${content}"
         )

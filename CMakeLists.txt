@@ -16,7 +16,6 @@ set(BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_compile_definitions(_TARGET_64BIT)
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_compile_definitions(_TARGET_PC)
@@ -28,6 +27,13 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     add_compile_definitions(Mac)
 endif ()
 
+
+# my custom ovverides
+if (EXISTS "${CMAKE_SOURCE_DIR}/cmake/overrides.cmake")
+    include("${CMAKE_SOURCE_DIR}/cmake/overrides.cmake")
+endif ()
+
+
 set(PYTHON_VERSION "" CACHE STRING "Python version to use (e.g. 3.11 or 3.8 etc.)")
 
 option(PARSER_ENABLE_TESTS "include tests in library" OFF)
@@ -38,13 +44,6 @@ option(PARSER_ENABLE_INSPECTOR_CURL "include curl in replay inspector" OFF)
 option(PARSER_INCLUDE_EXPERIMENTING_DIRS "include /debugging and /experiment which is where I do testing bullshit" OFF)
 option(PARSER_MY_FLAGS "include my custom flags" OFF)
 option(TRACY_ENABLE "Tracy Enabled" OFF)
-
-
-# my custom ovverides
-if (EXISTS "${CMAKE_SOURCE_DIR}/cmake/overrides.cmake")
-    include("${CMAKE_SOURCE_DIR}/cmake/overrides.cmake")
-endif ()
-
 # default debug level is 1 for debug builds, 0 for release builds
 # it is set to these defaults unless if you set it before
 # I named mine to be LDAG instead of DAGOR to add some difference
@@ -60,7 +59,10 @@ add_compile_definitions(LDAG_DBGLEVEL=${LDAG_DBGLEVEL_TO_SET})
 set_default_flags()
 
 if (PARSER_MY_FLAGS)
-    set(BUILD_SHARED_LIBS OFF)
+    if(LDAG_DBGLEVEL_TO_SET EQUAL 0)
+        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+        set(BUILD_SHARED_LIBS OFF)
+    endif ()
     set_compiler_flags() # sets the flags I want, idk how to do flags laugh at me
 
     if(MINGW) # TODO: make this a flag for my IDE instead?
@@ -84,13 +86,13 @@ if (PARSER_INCLUDE_EXPERIMENTING_DIRS)
             FALSE)
     print_stats() # print CMAKE stats about compiler and such
 
+    if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/hidden")
+        add_subdirectory(hidden)
+    endif ()
     set_data_folders_loc()
     add_subdirectory(debugging)
     add_subdirectory(ClogDecryptor)
     add_subdirectory(experiment)
-    if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/hidden")
-        add_subdirectory(hidden)
-    endif ()
 endif()
 add_subdirectory(src)
 add_subdirectory(replay)

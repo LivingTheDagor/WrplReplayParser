@@ -1,4 +1,5 @@
 add_library(dagBlk
+        STATIC
         blk_errors.cpp
         blk_core.cpp
         blk_parser.cpp

@@ -1,4 +1,5 @@
 add_library(dag_math
+        STATIC
         math3d.cpp
         perlin.cpp
         mathAng.cpp
