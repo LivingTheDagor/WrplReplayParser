@@ -12,7 +12,6 @@ add_library(dagBlk
 add_library(dagBlk::dagBlk ALIAS dagBlk)
 
 target_link_libraries(dagBlk
-        #mimalloc
         EASTL::EASTL
         LOGGER::LOGGER
         XXH3::XXH3

@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <string>
+#include "memory/dag_genMemAlloc.h"
 
 class DataBlock;
 
@@ -18,18 +19,19 @@ class DataBlock;
 #endif
 class BitStream {
 public:
-  BitStream() {
+  BitStream(IMemAlloc *a = defaultmem) : allocator(a) {
     this->bitsUsed = 0;
     this->dataOwner = 0;
     this->bitsAllocated = 0;
     this->readOffset = 0;
     this->data = nullptr;
+    this->allocator = a;
   }
 
-  BitStream(const uint8_t *_data, size_t lenInBytes, bool copy) :
-      bitsUsed((uint32_t) bytes2bits(lenInBytes)), dataOwner((uint32_t) copy ? 1 : 0), readOffset(0) {
+  BitStream(const uint8_t *_data, size_t lenInBytes, bool copy, IMemAlloc *a = defaultmem) :
+      bitsUsed((uint32_t) bytes2bits(lenInBytes)), dataOwner((uint32_t) copy ? 1 : 0), readOffset(0), allocator(a) {
     if (copy) {
-      data = (uint8_t *) malloc(lenInBytes);
+      data = (uint8_t *) allocator->alloc(lenInBytes);
       memcpy(data, _data, lenInBytes);
       bitsAllocated = (uint32_t) bytes2bits(lenInBytes);
     } else {
@@ -38,18 +40,18 @@ public:
     }
   }
 
-  BitStream(const char *_data, size_t lenInBytes, bool copy) : BitStream((uint8_t *) _data, lenInBytes, copy) {
+  BitStream(const char *_data, size_t lenInBytes, bool copy, IMemAlloc *a = defaultmem) : BitStream((uint8_t *) _data, lenInBytes, copy, a) {
   }
 
-  explicit BitStream(uint32_t reserveBytes) : bitsUsed(0), dataOwner(1), readOffset(0) {
-    this->data = (uint8_t *)malloc(reserveBytes);
+  explicit BitStream(uint32_t reserveBytes, IMemAlloc *a = defaultmem) : bitsUsed(0), dataOwner(1), readOffset(0), allocator(a) {
+    this->data = (uint8_t *) allocator->alloc(reserveBytes);
     bitsAllocated = (uint32_t)bytes2bits(reserveBytes);
     memset(data, 0, reserveBytes);
   }
 
   ~BitStream() {
     if (dataOwner) {
-      free(GetData());
+      allocator->free(GetData());
       this->data = nullptr; // move is needed for python bindings to work, but previous code that wasnt moved is now being moved and that broke stuff and this fixes that
       this->dataOwner = false;
     }
@@ -352,9 +354,9 @@ public:
       size_t newBytesAllocated = std::max(bitsAllocated ? (bitsAllocated >> 3) * 2u : 16u,
                                           bits2bytes(newBitsAllocated));
       if (!data)
-        data = (uint8_t *) malloc(newBytesAllocated);
+        data = (uint8_t *) allocator->alloc(newBytesAllocated);
       else
-        data = (uint8_t *) realloc(data, newBytesAllocated);
+        data = (uint8_t *) allocator->realloc(data, newBytesAllocated);
 
       if (size_t tailBytes = newBytesAllocated - (bitsAllocated >> 3))
         memset(data + (bitsAllocated >> 3), 0, tailBytes);
@@ -369,10 +371,11 @@ public:
       : bitsUsed(other.bitsUsed),
         dataOwner(other.dataOwner),
         bitsAllocated(other.bitsAllocated),
-        readOffset(other.readOffset)
+        readOffset(other.readOffset),
+        allocator(other.allocator)
   {
     if (other.data && other.dataOwner) {
-      data = (uint8_t*) malloc(bits2bytes(bitsAllocated));
+      data = (uint8_t*) allocator->alloc(bits2bytes(bitsAllocated));
       memcpy(data, other.data, bits2bytes(bitsAllocated));
       dataOwner = 1; // We own our copy
     } else {
@@ -383,12 +386,12 @@ public:
 
   BitStream& operator=(const BitStream& other) {
     if (this != &other) {
-      if (dataOwner && data) free(data);
+      if (dataOwner && data) allocator->free(data);
       bitsUsed = other.bitsUsed;
       bitsAllocated = other.bitsAllocated;
       readOffset = other.readOffset;
       if (other.data && other.dataOwner) {
-        data = (uint8_t*) malloc(bits2bytes(bitsAllocated));
+        data = (uint8_t*) allocator->alloc(bits2bytes(bitsAllocated));
         memcpy(data, other.data, bits2bytes(bitsAllocated));
         dataOwner = 1;
       } else {
@@ -404,28 +407,32 @@ public:
         dataOwner(other.dataOwner),
         bitsAllocated(other.bitsAllocated),
         readOffset(other.readOffset),
-        data(other.data)
+        data(other.data),
+        allocator(other.allocator)
   {
     other.bitsUsed = 0;
     other.bitsAllocated = 0;
     other.readOffset = 0;
     other.data = nullptr;
     other.dataOwner = 0;
+    other.allocator = nullptr;
   }
 
   BitStream& operator=(BitStream&& other) noexcept {
     if (this != &other) {
-      if (dataOwner && data) free(data);
+      if (dataOwner && data) allocator->free(data);
       bitsUsed = other.bitsUsed;
       bitsAllocated = other.bitsAllocated;
       readOffset = other.readOffset;
       dataOwner = other.dataOwner;
       data = other.data;
+      allocator = other.allocator;
       other.bitsUsed = 0;
       other.bitsAllocated = 0;
       other.readOffset = 0;
       other.data = nullptr;
       other.dataOwner = 0;
+      other.allocator = nullptr;
     }
     return *this;
   }
@@ -473,7 +480,7 @@ protected:
     bitsUsed = bs.bitsUsed;
     dataOwner = 1;
     readOffset = bs.readOffset;
-    data = bs.bitsAllocated ? (uint8_t *) malloc(bits2bytes(bs.bitsAllocated)) : nullptr;
+    data = bs.bitsAllocated ? (uint8_t *) allocator->alloc(bits2bytes(bs.bitsAllocated)) : nullptr;
     memcpy(data, bs.data, bits2bytes(bs.bitsAllocated));
     bitsAllocated = (uint32_t) bytes2bits(bits2bytes(bs.bitsAllocated));
   }
@@ -491,6 +498,7 @@ protected:
   uint32_t bitsAllocated;
   mutable uint32_t readOffset;
   uint8_t *data;
+  IMemAlloc *allocator; // TODO: rework to (stateless by default) allocator class
 
 };
 #ifdef __GNUC__

@@ -80,8 +80,8 @@ bool FileManager::unmountVromfs(const std::string &vromfs_name) {
   ZoneScoped;
   for (auto it = this->loaded_vromfs.begin(); it != this->loaded_vromfs.end(); ++it) {
     if ((*it)->getName() == vromfs_name) {
-      this->loaded_vromfs.erase(it);
       delete *it;
+      this->loaded_vromfs.erase(it);
       return true;
     }
   }

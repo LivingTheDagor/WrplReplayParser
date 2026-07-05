@@ -302,6 +302,8 @@ public:
     for (auto sink: sinks) {
       delete sink;
     }
+    sinks.clear();
+    sinks.shrink_to_fit();
   }
 
   ~log_handler() {

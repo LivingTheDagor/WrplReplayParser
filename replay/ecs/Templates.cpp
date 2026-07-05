@@ -121,8 +121,8 @@ namespace ecs {
       template_t id = this->getTemplateIdByNameNoLock(templ_name);
       if(DAGOR_UNLIKELY(id != INVALID_TEMPLATE_INDEX)) {
         return id;
-
       }
+      ZoneScoped;
       return this->AddTemplate(Template{templ_name, {}, std::move(parents)});
     }
   }
@@ -136,11 +136,14 @@ namespace ecs {
         return; // already instantated
       }
     }
-    std::call_once(*this->templates[t].once_flag, [&] {
-      auto *inst = new InstantiatedTemplate(t);
-      // std::unique_lock lk(template_mtx);
-      inst_templates[t] = inst;
-    });
+    {
+      std::unique_lock lk(template_mtx);
+      if (this->inst_templates[t]) {
+        return; // already instantated
+      }
+      ZoneScoped;
+      inst_templates[t] = new InstantiatedTemplate(t);
+    }
   }
 
   template_t TemplateDB::getTemplateIdByName(std::string_view name) {
@@ -159,7 +162,7 @@ namespace ecs {
     return INVALID_TEMPLATE_INDEX;
   }
 
-  std::vector<Template> &TemplateDB::getTemplates() {
+  auto &TemplateDB::getTemplates() {
     return this->templates;
   }
 
@@ -191,40 +194,6 @@ namespace ecs {
       }
     }
   }
-
-  /*InstantiatedTemplate::InstantiatedTemplate(EntityId eid, template_t templ, ComponentsInitializer &&initializer) {
-    Template * t = g_entity_mgr->getTemplateDB()->getTemplate(templ);
-    components.resize(t->max_component_index);
-    flags.resize(t->max_component_index);
-    instantiated.resize(t->max_component_index);
-    for (auto &comp: initializer) {
-      instantiated.set(comp.cIndex);
-      components[comp.cIndex] = std::move(comp.second);
-      flags[comp.cIndex] = WAS_INITIALIZED;
-    }
-    for (auto &comp : t->components)
-    {
-      if(!instantiated.get(comp.comp_type_index)) // wasnt set by initializer
-      {
-        if(comp.default_component)
-          components[comp.comp_type_index] = *comp.default_component; // copies
-        else // no default component, must construct a new one
-        {
-          auto index = g_entity_mgr->getDataComponents()->getDataComponent(comp.comp_type_index)->componentIndex; // gets comptype index
-          auto component_data = g_entity_mgr->getComponentTypes()->getComponentData(index);
-          void * data = malloc(component_data->size); // mallocs needed initial data
-          memset(data,0, component_data->size); // we dont care if its pod if we just always memset it
-          if(need_constructor(component_data->flags)) // some types need to be constructed
-            g_entity_mgr->getComponentTypes()->getCTM(index)->create(data, *g_entity_mgr, eid, index);
-          components[comp.comp_type_index] = std::move(Component(data, component_data->hash, index, component_data->size)); // uses move ctor
-        }
-
-        instantiated.set(comp.comp_type_index, );
-      }
-    }
-  }*/
-
-
 
   InstantiatedTemplate::InstantiatedTemplate(template_t p) {
     static ComponentRef eidComponent;

@@ -166,7 +166,6 @@ void DeserializeSeekerData(BitStream &bs) {
 }
 
 bool FMSync(ParserState &state, BitStream &bs) {
-  static int curr_aircraft_index = 0;
   uint16_t uid = 0;
   do {
     bool uid_serialized = bs.ReadBit();
@@ -206,7 +205,7 @@ bool FMSync(ParserState &state, BitStream &bs) {
             bool unk2 = bs.ReadBit();
             uint8_t count = 0;
             bs.ReadBits(&count, 4);
-            std::vector<bool> temp_bits{};
+            thread_local std::vector<bool> temp_bits{};
             temp_bits.reserve(count);
             for (int i = 0; i < count; i++) {
               temp_bits.push_back(bs.ReadBit());
@@ -217,7 +216,7 @@ bool FMSync(ParserState &state, BitStream &bs) {
           if (zig_val < 0) { // no negatives
             return false;
           }
-          std::vector<int32_t> vals;
+          thread_local std::vector<int32_t> vals;
           vals.resize(zig_val);
           for (int i = 0; i < zig_val; i++) { // actually is weapons
             int temp, temp1;
@@ -314,7 +313,6 @@ bool FMSync(ParserState &state, BitStream &bs) {
             DeserializeSeekerData(bs);
           }
         }
-        curr_aircraft_index++;
       }
     } else {
       // LOG("no aircraft data for {}", uid);
@@ -373,6 +371,7 @@ struct SubVehicleDynData {
 
 
 bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_from_compress) {
+  ZoneScoped;
   if (!ref->ref_1) {
     G_ASSERT(is_from_compress);
     return true;
@@ -562,7 +561,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
   uint8_t sensorsCount{};
   RET_FAIL(bs.Read(sensorsCount));
   RET_FAIL(sensorsCount <= SENSORS_COUNT);
-  std::vector<SensorsControlStates> states{};
+  thread_local std::vector<SensorsControlStates> states{};
   states.resize(sensorsCount);
   for (auto &sensor: states) {
     RET_FAIL(sensor.deserialize(bs));
@@ -574,14 +573,14 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
   uint8_t counterMeasuresCount;
   bs.Read(counterMeasuresCount);
   RET_FAIL(counterMeasuresCount <= COUNTER_MEASURES_COUNT);
-  std::vector<CounterMeasuresControlState> counterMeasures{counterMeasuresCount};
+  thread_local std::vector<CounterMeasuresControlState> counterMeasures{counterMeasuresCount};
   for (auto &c: counterMeasures) {
     RET_FAIL(c.deserialize(bs));
   }
   uint8_t targetsNum = 0;
   bs.ReadBits(&targetsNum, 4);
   G_ASSERT(targetsNum <= 8);
-  std::vector<TargetDesignationControlState> targets{targetsNum};
+  thread_local std::vector<TargetDesignationControlState> targets{targetsNum};
   for (auto &t: targets) {
     RET_FAIL(t.deserialize(bs));
   }
@@ -590,6 +589,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
 
 
 bool GMSync(ParserState &state, BitStream &bs) {
+  ZoneScoped;
   uint16_t uid_lower;
   uint16_t uid_upper;
   float time_at;

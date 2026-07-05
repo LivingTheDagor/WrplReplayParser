@@ -205,7 +205,6 @@ namespace ecs {
     InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(templId);
     {
       std::shared_lock arch_lock(this->data_state->archetypes.archetypes_mtx);
-      std::shared_lock templ_lock(this->data_state->templates.template_mtx);
       G_ASSERTF(instTempl, "Template {} not initialized", data_state->getTemplateName(templId));
       ENTITY_LOGD2("Creating new entity {} of template '{}' at {}", eid,
                    data_state->templates.getTemplate(templId)->getName(), ((double) *this->curr_time_ms) / 1000);
@@ -489,6 +488,7 @@ namespace ecs {
   }
 
   void *EntityManager::getNullable(EntityId eid, component_index_t index, archetype_t &archetype) const {
+    ZoneScoped;
     if (!this->entDescs.doesEntityExist(eid))
       return nullptr;
     auto desc = this->entDescs[eid.index()];
@@ -500,14 +500,16 @@ namespace ecs {
   }
 
   void *EntityManager::getNullableUnsafe(EntityId eid, component_index_t index, archetype_t &archetype) const {
+    ZoneScoped;
     G_ASSERT(this->entDescs.doesEntityExist(eid)); // sanity check in dev only
     auto desc = this->entDescs[eid.index()];
     archetype = desc.archetype_id; // should always be valid
     G_ASSERTF(archetype != INVALID_ARCHETYPE, "Entity {} is invalid", eid);
     //G_ASSERT(data_state->archetypes.archetypes[archetype].INFO.getComponentId(index) != INVALID_COMPONENT_INDEX);
-    std::shared_lock lk(this->data_state->archetypes.archetypes_mtx);
+    {ZoneScopedN("getNullableUnsafe_lock"); std::shared_lock lk(this->data_state->archetypes.archetypes_mtx);}
     if (data_state->archetypes.archetypes[archetype].INFO.getComponentId(index) == INVALID_COMPONENT_INDEX)
       return nullptr;
+
     return data_state->archetypes.getComponentDataUnsafe(this->arch_data, archetype, index, desc.chunk_id);
   }
 
@@ -612,7 +614,7 @@ namespace ecs {
     template_t t = this->getEntityTemplateId(eid);
     G_ASSERT(t!=INVALID_TEMPLATE_INDEX);
     std::shared_lock arch_lock(this->data_state->templates.template_mtx);
-    auto inst = this->data_state->templates.inst_templates[t];
+    auto inst = this->data_state->templates.getInstTemplate(t);
     for(auto &comp : inst->components) {
       auto d = this->data_state->dataComponents.getDataComponent(comp.comp_type_index); // datacomponent
       auto c = this->data_state->componentTypes.getComponentData(d->componentIndex); // component

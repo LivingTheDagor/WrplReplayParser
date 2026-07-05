@@ -15,7 +15,7 @@ public:
   ~OnDemandInit() {
     ZoneScoped;
     if (initialized)
-      getPtr()->~T();
+      reinterpret_cast<T*>(obj)->~T();
   }
 
 private:

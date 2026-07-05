@@ -16,6 +16,7 @@ namespace net
   {
     uint32_t historyBits;
     uint32_t indexBits;
+    IMemAlloc * allocator;
 
     struct History
     {
@@ -79,7 +80,7 @@ namespace net
       uint32_t confirmPacketNo = 0;
     };
 
-    DeltaComp(uint32_t history_bits, uint32_t index_bits);
+    DeltaComp(uint32_t history_bits, uint32_t index_bits, IMemAlloc * allocator);
 
     void initHistory(History &history, bool is_enabled, bool use_cache);
 

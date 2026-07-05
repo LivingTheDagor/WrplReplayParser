@@ -186,6 +186,7 @@ namespace ecs {
 
   class TemplateDB {
     std::shared_mutex template_mtx{};
+    //std::mutex on_write_mtx{};
 
   public:
     size_t printMemoryUsage(int indent = 0) {
@@ -224,10 +225,11 @@ namespace ecs {
       }
       LOGE("{}inst_templates size: {}; actual data size: {} in {} instantiated templates", indent_str,
            inst_templates_arr_size, inst_templates_size, actual_count);
-      size_t template_lookup_size = estimateMemoryUsage(this->template_lookup);
-      for (auto &o: this->template_lookup) {
-        template_lookup_size += o.first.size();
-      }
+      //size_t template_lookup_size = estimateMemoryUsage(this->template_lookup);
+      size_t template_lookup_size = 0;
+      //for (auto &o: this->template_lookup) {
+      //  template_lookup_size += o.first.size();
+      //}
       LOGE("{}template_lookup size: {}", indent_str, template_lookup_size);
       return templates_size + inst_templates_arr_size + inst_templates_size + template_lookup_size;
     }
@@ -252,13 +254,13 @@ namespace ecs {
       auto idx = templates.size();
       templates.push_back(std::move(templ));
       inst_templates.resize(templates.size());
-      template_lookup.emplace(std::string(templates[idx].name), (template_t) idx);
+      add_template_lookup(templates[idx].name, (template_t) idx);
 
       return (template_t) idx;
     }
 
 
-    template_t ensureTemplate(std::string &p) {
+    template_t ensureTemplate(std::string_view p) {
       auto found = template_lookup.find(p);
       if (found != template_lookup.end())
         return found->second;
@@ -266,15 +268,20 @@ namespace ecs {
       auto idx = templates.size();
       templates.push_back(std::move(temp));
       inst_templates.resize(templates.size(), nullptr);
-      template_lookup.emplace(p, (template_t) idx);
+      add_template_lookup(p, (template_t) idx);
       return (template_t) idx;
+    }
+
+    void add_template_lookup(std::string_view name, template_t idx) {
+      auto addr = allocator.addDataRaw(name.data(), name.size());
+      template_lookup.emplace(std::string_view{allocator.getDataRawUnsafe(addr)}, (template_t) idx);
+
     }
 
     // ensures a template of name p will exist in lookup.
     // if the template doesnt exist, it creates a new, invalid one
     template_t ensureTemplate(const char *p) {
-      auto sp = std::string(p);
-      return ensureTemplate(sp);
+      return ensureTemplate(std::string_view(p));
     }
 
     // bool AddTemplate()
@@ -284,7 +291,7 @@ namespace ecs {
     void instantiateTemplate(template_t t);
     template_t getTemplateIdByName(std::string_view name);
     template_t getTemplateIdByNameNoLock(std::string_view name);
-    std::vector<Template> &getTemplates();
+    auto &getTemplates();
 
     void applyFrom(TemplateDB &&db);
 
@@ -304,8 +311,9 @@ namespace ecs {
     std::vector<InstantiatedTemplate *> inst_templates;
     // std::string is to ensure name always exists
     // the TransparentHash and TransparentEqual are done to allow for indexing with a std::string
-    std::unordered_map<std::string, template_t, TransparentHash, TransparentEqual>
+    std::unordered_map<std::string_view, template_t>
       template_lookup; // maps template names to template_t. template_t is index into templates
+    ThreadedStringTableAllocator allocator{}; // holds strings for unordered_map
   };
 } // namespace ecs
 

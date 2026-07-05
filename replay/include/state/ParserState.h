@@ -11,13 +11,17 @@
 #ifndef _ECS_CODEGEN
 #include "tracy/Tracy.hpp"
 #endif
+#include "StateAllocator.h"
+#include "memory/dag_memBase.h"
 
 namespace unit {
   class Unit;
 }
 
 struct net_delta_t {
-  net::DeltaComp netDelta{5, 0xd};
+  net_delta_t(IMemAlloc *alloc) : allocator(alloc), netDelta(5, 0xd, alloc) {}
+  IMemAlloc *allocator;
+  net::DeltaComp netDelta{5, 0xd, allocator};
   std::vector<net::DeltaComp::History> histories{};
   net::DeltaComp::History &getHistory(uint16_t uid) {
     if (uid >= histories.size()) {
@@ -54,8 +58,8 @@ struct ParserState {
 
   explicit ParserState(int player_count = 32) : players(player_count) {}
   explicit ParserState(IReplay *replay) : players(replay->getHeader()->player_count) {}
-
 protected:
+  StateAllocator allocator{};
   mpi::MpiQueueObject mpi_queue{};
   friend mpi::MpiQueueObject;
 
@@ -69,6 +73,8 @@ protected:
   void onPacket(ReplayPacket *pkt) { conn.onPacket(pkt, pkt->timestamp_ms); }
 
 public:
+  std::pmr::memory_resource * get_allocator() { return &allocator; }
+  IMemAlloc * getMem() { return &G_ALLOC; }
   std::vector<mpi::MpiQueueObject::QueueData> *get_queued_data(ecs::EntityId eid) {
     auto it = mpi_queue.dispatched_objects.find(eid);
     if (it == mpi_queue.dispatched_objects.end())
@@ -81,17 +87,17 @@ public:
   uint32_t curr_time_ms = 0; // the current time in the ECS / state. this wont always math current_rewind_time_ms
   net::CNetwork conn{this};
   mpi::GeneralObject main_dispatch{this};
-  net_delta_t NetDelta;
-  std::vector<MPlayer> players;
+  net_delta_t NetDelta{allocator.getMem()};
+  std::pmr::vector<MPlayer> players{get_allocator()};
   ecs::EntityManager g_entity_mgr{this}; // this order is required as g_entity_mgr needs to be destroyed before players
-  std::vector<MissionZone *> Zones{};
+  std::pmr::vector<MissionZone *> Zones{get_allocator()};
   std::array<TeamData, 3> teams{}; // team[0] is global data, teams[1] is first team, teams[2] is second team
-  std::vector<ChatMessage> chatMessages{};
+  std::pmr::vector<ChatMessage> chatMessages{get_allocator()};
   GlobalElo glob_elo{};
   GeneralState gen_state{};
-  std::vector<const mpi::IBattleMessage *> BattleMessages{};
-  std::vector<MissionArea *> missionAreas1{};
-  std::vector<MissionArea *> missionAreas2{};
+  std::pmr::vector<const mpi::IBattleMessage *> BattleMessages{get_allocator()};
+  std::pmr::vector<MissionArea *> missionAreas1{get_allocator()};
+  std::pmr::vector<MissionArea *> missionAreas2{get_allocator()};
 
   int current_packet_index = -1;
 

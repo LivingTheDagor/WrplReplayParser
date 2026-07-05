@@ -8,6 +8,8 @@
 #include "vector"
 #include "dag_assert.h"
 
+#include <shared_mutex>
+
 #pragma pack(push, 4)
 struct StringTableAllocator
 {
@@ -95,6 +97,7 @@ struct StringTableAllocator
   uint8_t page_shift = DEFAULT_PAGE_SIZE_SHIFT;
   uint8_t max_page_shift = MAX_PAGE_SIZE_SHIFT;
   uint8_t padding = 0;
+
   inline void addDataRaw_(const char *name, size_t len)
   {
     if (DAGOR_UNLIKELY(head.left < len))
@@ -158,5 +161,28 @@ struct StringTableAllocator
       start_page_shift(start_page_shift_), page_shift(start_page_shift_), max_page_shift(max_page_shift_)
   {}
 };
+
+class ThreadedStringTableAllocator {
+  StringTableAllocator allocator;
+  std::shared_mutex mutex;
+public:
+  [[nodiscard]] const char *getDataRawUnsafe(uint32_t ofs) {
+    std::shared_lock lock{mutex};
+    return allocator.getDataRawUnsafe(ofs);
+  }
+
+  uint32_t addDataRaw(const char *name, size_t len) {
+    ZoneScoped;
+    std::unique_lock lock{mutex};
+    return allocator.addDataRaw(name, len+1);
+  }
+
+  explicit ThreadedStringTableAllocator(
+    uint8_t start_page_shift_ = StringTableAllocator::DEFAULT_PAGE_SIZE_SHIFT,
+    uint8_t max_page_shift_ = StringTableAllocator::MAX_PAGE_SIZE_SHIFT) :
+    allocator(start_page_shift_, max_page_shift_)
+  {}
+};
+
 #pragma pack(pop)
 #endif //MYEXTENSION_STRINGTABLEALLOCATOR_H

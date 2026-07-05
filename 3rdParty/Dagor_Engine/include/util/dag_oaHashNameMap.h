@@ -226,6 +226,7 @@ extern template struct OAHashNameMap<false, FNV1OAHasher<false> >;
 #endif
 
 #include <supp/dag_iterateStatus.h>
+#include <algorithm>
 
 template<class T, bool CI>
 static void gather_ids_in_lexical_order(T &out_sorted_stor, const OAHashNameMap<CI, DefaultOAHasher<CI> > &nm) {

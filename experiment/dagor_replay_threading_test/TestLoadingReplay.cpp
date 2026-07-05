@@ -41,6 +41,52 @@ std::string convert_os_path_to_wsl2(const char *str) {
 //  __asan_print_accumulated_stats();
 //}
 
+void thread_replay(std::string & path, int thread_count, bool is_server_replay) {
+
+  auto worker = [&](int id) {
+    ZoneScopedN("Worker Run");
+    ParserState *state_ptr = nullptr;
+    IReplay *rpl = nullptr;
+    IReplayReader *rdr = nullptr;
+    //sync_point.arrive_and_wait(); // block until all threads are ready
+    std::cout << fmt::format("Thread {} started!\n", id);
+    auto start = std::chrono::high_resolution_clock::now();
+    {
+
+      if (is_server_replay) {
+        fs::path t{path};
+        rpl = new ServerReplay(t.string());
+      } else {
+        rpl = new Replay(path);
+      }
+      ZoneScopedN("Create Reader and State");
+      state_ptr = new ParserState(rpl);
+      rdr = rpl->getReplayReader();
+    }
+
+
+    ParserState &state = *state_ptr;
+
+    auto pkt = ReplayPacket();
+    {
+      ZoneScopedN("Parsing");
+      while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
+    }
+
+    delete rdr;
+    delete rpl;
+    auto ended = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double, std::milli> duration = ended - start;
+    std::cout << fmt::format("thread {} profile time: {}; packet count: {}\n", id, duration.count(),
+                             state_ptr->current_packet_index);
+    delete state_ptr;
+  };
+  std::vector<std::jthread> threads;
+  for (int i = 0; i < thread_count; i++)
+    threads.emplace_back(worker, i);
+}
+
 int main() {
   //std::signal(SIGSEGV, signal_handler);
   fs::path conf_dir = CONFIG_DIR;
@@ -70,55 +116,6 @@ int main() {
   // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
   constexpr int num_threads = 10;
   // checkMemory();
-
-  auto worker = [&](int id) {
-    ZoneScopedN("Worker Run");
-    ParserState *state_ptr = nullptr;
-    IReplay *rpl = nullptr;
-    IReplayReader *rdr = nullptr;
-    //sync_point.arrive_and_wait(); // block until all threads are ready
-    std::cout << fmt::format("Thread {} started!\n", id);
-    auto start = std::chrono::high_resolution_clock::now();
-    {
-
-      if (is_server_replay) {
-        fs::path t{rpl_path_str};
-        rpl = new ServerReplay(t.string());
-      } else {
-        rpl = new Replay(rpl_path_str);
-      }
-      ZoneScopedN("Create Reader and State");
-      state_ptr = new ParserState(rpl);
-      rdr = rpl->getReplayReader();
-    }
-
-
-    ParserState &state = *state_ptr;
-
-    auto pkt = ReplayPacket();
-    //std::exit(0);
-    bool end = false;
-    int AircraftCount = 0;
-    {
-      ZoneScopedN("Parsing");
-      while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
-    }
-
-    delete rdr;
-    delete rpl;
-    auto ended = std::chrono::high_resolution_clock::now();
-
-    std::chrono::duration<double, std::milli> duration = ended - start;
-    std::cout << fmt::format("thread {} profile time: {}; packet count: {}\n", id, duration.count(),
-                             state_ptr->current_packet_index);
-    delete state_ptr;
-  };
-  for(int i = 0; i < 1; i++) {
-    {
-      std::vector<std::jthread> threads;
-      for (int i = 0; i < num_threads; ++i)
-        threads.emplace_back(worker, i);
-    }
-  }
+  thread_replay(rpl_path_str, num_threads, is_server_replay);
   return 0;
 }

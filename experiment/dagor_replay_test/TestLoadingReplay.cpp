@@ -87,7 +87,7 @@ int main() {
         vehicle = state.g_entity_mgr.getNullable<ecs::string>(owned_eid, ECS_HASH("unit__className"));
       }
       if(vehicle)
-        LOGE("Name: {}; team: {}; vehicle: {}", plr.uid.data->name, *plr.team.data, *vehicle);
+        LOGE("player_id: {}; playerName: {}; team: {}; vehicle: {}", plr.uid.data->player_id, plr.uid.data->name, *plr.team.data, *vehicle);
       else
         LOGE("Name: {}; team: {}; no_vehicle", plr.uid.data->name, *plr.team.data);
     }

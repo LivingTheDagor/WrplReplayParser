@@ -14,7 +14,7 @@ namespace net
     const uint8_t versionIncrement = 0x01;
     const uint8_t fullVersionMask = 0x80;
 
-    Buffer::Buffer() : version(0), confirmedVersion(0) { reset(); }
+    Buffer::Buffer(IMemAlloc * allocator) : allocator(allocator), version(0), confirmedVersion(0) { reset(); }
 
     void Buffer::reset()
     {
@@ -40,11 +40,11 @@ namespace net
       incrementVersion();
     }
 
-    BitStream Buffer::getDiff(const BitStream &new_ver) const { return diff_impl(base, new_ver); }
+    BitStream Buffer::getDiff(const BitStream &new_ver) const { return diff_impl(base, new_ver, allocator); }
 
     BitStream Buffer::applyPatch(const BitStream &delta)
     {
-      BitStream result = diff_impl(base, delta);
+      BitStream result = diff_impl(base, delta, allocator);
       setBase(result);
       return result;
     }

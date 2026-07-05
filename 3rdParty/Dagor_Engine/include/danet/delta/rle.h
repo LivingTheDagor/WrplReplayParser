@@ -22,9 +22,9 @@ namespace net
     }
 
     void decompress(const BitStream &in, BitStream &out);
-    inline BitStream decompress(const BitStream &in)
+    inline BitStream decompress(const BitStream &in, IMemAlloc * allocator)
     {
-      BitStream out;
+      BitStream out(allocator);
       decompress(in, out);
       return out;
     }

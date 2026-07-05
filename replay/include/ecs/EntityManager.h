@@ -145,9 +145,6 @@ namespace ecs {
     // will create archetype in GState and in storage if not exists
     archetype_t EnsureArchetype(template_t tid, MgrArchetypeStorage &storage) {
       InstantiatedTemplate *inst = this->templates.getInstTemplate(tid);
-      ;
-
-
       // Step 2: Check if archetype needs to be created
       archetype_t arch_index = inst->archetype_index;
 

@@ -13,11 +13,12 @@
 namespace net
 {
 
-  DeltaComp::DeltaComp(uint32_t history_bits, uint32_t index_bits) : historyBits(history_bits), indexBits(index_bits) {}
+  DeltaComp::DeltaComp(uint32_t history_bits, uint32_t index_bits, IMemAlloc * allocator)
+  : historyBits(history_bits), indexBits(index_bits), allocator(allocator) {}
 
   void DeltaComp::initHistory(History &history, bool is_enabled, bool use_cache)
   {
-    history = History();
+    history = History{};
     history.isEnabled = is_enabled;
     history.baseHist.resize(is_enabled ? 1u << historyBits : 1u);
     if (use_cache && is_enabled)
@@ -112,7 +113,7 @@ namespace net
     // try to compress
     bool fullDiff = !isValidBase;
     const BitStream &baseVersion = history.baseHist[basePacketIdx];
-    const BitStream delta = !fullDiff ? net::delta::get_compressed_delta(baseVersion, uncompressedData) : BitStream();
+    const BitStream delta = !fullDiff ? net::delta::get_compressed_delta(baseVersion, uncompressedData, allocator) : BitStream();
     if (delta.GetNumberOfBytesUsed() > uncompressedData.GetNumberOfBytesUsed())
       fullDiff = true; // it is cheaper to send full diff
     const BitStream &dataToWrite = fullDiff ? uncompressedData : delta;
@@ -152,6 +153,7 @@ namespace net
 
   DeltaComp::ReadResult DeltaComp::readDelta(const BitStream &data, History *history)
   {
+    ZoneScoped;
     bool ok = true;
     uint32_t packetNoDelta = 0;
     uint32_t nextPacketNo = 0;
@@ -189,7 +191,7 @@ namespace net
     history->pushDbgPacketHistory(nextPacketNo);
 
     BitStream decompressedData =
-        !fullDiff ? net::delta::apply_compressed_patch(baseVersion, compressedDelta) : BitStream();
+        !fullDiff ? net::delta::apply_compressed_patch(baseVersion, compressedDelta, allocator) : BitStream();
     BitStream &resultData = fullDiff ? compressedDelta : decompressedData;
 
     bool isInOrder = is_idx_less_then(history->curPacketNo, nextPacketNo, indexBits); // if nextPacketNo is greater than curPacketNo

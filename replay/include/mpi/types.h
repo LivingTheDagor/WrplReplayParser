@@ -55,7 +55,7 @@ namespace danet {
 
 #pragma pack(push, 1) // FUCK OFF COMPILER THIS IS 90 BYTES not 96 CAUSE GAIJIN SAID SO
   struct Uid {
-    uint64_t player_id{};
+    int64_t player_id{}; // bots are negative
     char name[81]{};
     AccountType account_type{};
 

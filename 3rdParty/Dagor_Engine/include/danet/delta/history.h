@@ -44,12 +44,16 @@ namespace net
       void savePackToStream(BitStream &bs) const;
       bool readPackFromStream(BitStream &bs);
 
+      History(IMemAlloc * allocator) : allocator(allocator) {}
+
     private:
       std::array<BitStream, HIST_MAX> pack;
+      IMemAlloc * allocator = nullptr;
     };
 
-    BitStream get_compressed_delta(const BitStream &base_version, const BitStream &new_ver);
-    BitStream apply_compressed_patch(const BitStream &base_version, const BitStream &compressed_delta);
+    BitStream get_compressed_delta(const BitStream &base_version, const BitStream &new_ver, IMemAlloc *allocator);
+    BitStream apply_compressed_patch(const BitStream &base_version, const BitStream &compressed_delta,
+                                     IMemAlloc *allocator);
 
   } // namespace delta
 

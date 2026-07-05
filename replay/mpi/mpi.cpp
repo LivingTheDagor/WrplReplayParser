@@ -191,6 +191,7 @@ namespace mpi {
   }
 
   Message *dispatch(const BitStream &bs, ParserState *state, bool copy_payload) {
+    ZoneScoped;
     ObjectID oid;
     ObjectExtUID extUid;
     MessageID mid;
@@ -226,6 +227,7 @@ namespace mpi {
   }
 
   void sendto(Message *m, SystemID receiver) {
+    ZoneScoped;
     if (++curr_call_depth >= MAX_CALL_DEPTH) {
       G_ASSERTF(0, "{} call depth is {}! Infinite recursion?!", __FUNCTION__, (int) curr_call_depth);
       // LOG("{} call depth is {}! Infinite recursion?!", __FUNCTION__, (int) curr_call_depth);

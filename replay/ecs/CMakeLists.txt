@@ -29,7 +29,6 @@ target_link_libraries(dagECS
         EASTL::EASTL
         LOGGER::LOGGER
         DELTA::DELTA
-
 )
 add_library(dagECS::dagECS ALIAS dagECS)
 

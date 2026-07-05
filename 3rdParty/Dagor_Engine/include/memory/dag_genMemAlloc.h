@@ -6,6 +6,8 @@
 
 
 #include "cstdint"
+#include "dag_memBase.h"
+#include "mimalloc.h"
 
 /// @addtogroup memory
 /// @{
@@ -14,33 +16,41 @@
 /// @file
 /// Allocator classes for SmallTab.
 
-struct IMemAlloc {
-  void *alloc(int sz) {
-    return malloc(sz);
+struct GLOBAL_ALLOC: public IMemAlloc {
+  void destroy() override {}
+  bool isEmpty() override {return true;}
+  void *alloc(size_t sz) override {
+    return mi_malloc(sz);
   }
 
-  void *allocAligned(size_t n, size_t al) {
-#ifdef _TARGET_PC_LINUX
-    return aligned_alloc(n, al);
-#else
-    return _aligned_malloc(n, al);
-#endif
+  void *tryAlloc(size_t sz) override {
+    return mi_malloc(sz);
+  }
+  size_t getSize(void *p) override {
+    return 0;
+  }
+  void freeAligned(void *p) override {
+    return mi_free(p);
   }
 
-  void free(void *p) {
-    return ::free(p);
+  void *allocAligned(size_t n, size_t al) override {
+    return mi_aligned_alloc(n, al);
   }
 
-  bool resizeInplace(void *p, size_t sz) {
-    return false;
+  void free(void *p) override {
+    return mi_free(p);
   }
 
-  void *realloc(void *p, size_t sz) {
-    return ::realloc(p, sz);
+  bool resizeInplace(void *p, size_t sz) override {
+    return mi_expand(p, sz) != nullptr;
+  }
+
+  void *realloc(void *p, size_t sz) override {
+    return mi_realloc(p, sz);
   }
 };
 
-extern IMemAlloc G_ALLOC;
+extern GLOBAL_ALLOC G_ALLOC;
 
 
 #define DECLARE_MEMALLOC(NAME, MEM)                                                      \
@@ -86,7 +96,6 @@ extern IMemAlloc G_ALLOC;
     {}                                                                                   \
   }
 
-
 // all the various allocs gaijin defines are supposed to allow for different allocators for specific uses, each controlling their own memory
 // in practice im pretty sure it doesnt do that, and regardless I dont need that
 DECLARE_MEMALLOC(MidmemAlloc, G_ALLOC);
@@ -98,6 +107,8 @@ DECLARE_MEMALLOC(TmpmemAlloc, G_ALLOC);
 DECLARE_MEMALLOC(StrmemAlloc, G_ALLOC);
 
 DECLARE_MEMALLOC(UimemAlloc, G_ALLOC);
+
+
 
 #undef DECLARE_MEMALLOC
 

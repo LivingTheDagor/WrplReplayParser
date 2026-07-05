@@ -357,6 +357,7 @@ namespace danet {
     return ret;
   }
   int deserializeReflectables(BitStream &bs, mpi::object_dispatcher resolver, ParserState *state) {
+    ZoneScoped;
     G_ASSERT(resolver);
 
     uint16_t numReflectables = 65535;

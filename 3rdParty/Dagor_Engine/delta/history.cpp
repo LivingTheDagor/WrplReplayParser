@@ -23,29 +23,30 @@ namespace net
 
     BitStream History::getDiff(int packet_num, const BitStream &new_ver) const
     {
-      return diff_impl(pack[basePacketNo(packet_num)], new_ver);
+      return diff_impl(pack[basePacketNo(packet_num)], new_ver, allocator);
     }
 
     BitStream History::applyPatch(int packet_num, const BitStream &delta) const
     {
-      return diff_impl(pack[basePacketNo(packet_num)], delta);
+      return diff_impl(pack[basePacketNo(packet_num)], delta, allocator);
     }
 
-    BitStream get_compressed_delta(const BitStream &base_version, const BitStream &new_ver)
+    BitStream get_compressed_delta(const BitStream &base_version, const BitStream &new_ver, IMemAlloc *allocator)
     {
-      BitStream diff = diff_impl(base_version, new_ver);
+      BitStream diff = diff_impl(base_version, new_ver, allocator);
       diff.SetWriteOffset(new_ver.GetWriteOffset());
       diff.AlignWriteToByteBoundary();
-      BitStream compressed{};
+      BitStream compressed{allocator};
       net::delta::compress(diff, compressed);
       return compressed;
     }
 
-    BitStream apply_compressed_patch(const BitStream &base_version, const BitStream &compressed_delta)
+    BitStream apply_compressed_patch(const BitStream &base_version, const BitStream &compressed_delta,
+                                     IMemAlloc *allocator)
     {
-      BitStream delta{};
+      BitStream delta{allocator};
       net::delta::decompress(compressed_delta, delta);
-      BitStream result = diff_impl(base_version, delta);
+      BitStream result = diff_impl(base_version, delta, allocator);
       result.SetWriteOffset(delta.GetWriteOffset());
       result.AlignWriteToByteBoundary();
       return result;

@@ -56,5 +56,6 @@ void BitStream::swap(BitStream &bs) {
   _SWAP(uint32_t, this->bitsAllocated, bs.bitsAllocated)
   _SWAP(uint32_t, this->readOffset, bs.readOffset)
   _SWAP(uint8_t *, this->data, bs.data)
+  _SWAP(IMemAlloc*, this->allocator, bs.allocator)
 #undef _SWAP
 }

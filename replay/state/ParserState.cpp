@@ -79,6 +79,7 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       break;
     }
     case ReplayPacketType::MPI: {
+      ZoneScopedN("MPI Dispatch");
       auto m = mpi::dispatch(pkt.stream, this, false);
       if (m != nullptr) {
         mpi::send(m);

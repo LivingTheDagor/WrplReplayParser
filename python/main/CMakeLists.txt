@@ -40,12 +40,14 @@ target_include_directories(PyReplayParser PRIVATE
         "${BASE_DIR}/python/include"
 )
 attach_signal_tracer(PyReplayParser)
-target_compile_options(PyReplayParser PRIVATE -fPIC)
-target_link_options(PyReplayParser PRIVATE
-        -static-libgcc
-        -static-libstdc++
-        # -static
-)
+if (LDAG_DBGLEVEL_TO_SET EQUAL 0)
+    target_compile_options(PyReplayParser PRIVATE -fPIC)
+    target_link_options(PyReplayParser PRIVATE
+            -static-libgcc
+            -static-libstdc++
+            # -static
+    )
+endif ()
 
 install(TARGETS PyReplayParser
         LIBRARY

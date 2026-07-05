@@ -94,6 +94,7 @@ namespace ecs {
     }
 
     [[nodiscard]] inline void *getCompDataUnsafe(uint32_t comp_ofs, chunk_index_t chunk_id, uint32_t data_size) const {
+      ZoneScoped;
       // Calculate which physical chunk contains this entity
       uint32_t chunk_list_index = chunk_id / EntityCount;
       G_ASSERT(chunk_list_index < this->chunks.size());
@@ -184,6 +185,68 @@ namespace ecs {
     }
   };
 
+  class SharedMutexWrapper {
+  public:
+    SharedMutexWrapper() = default;
+    SharedMutexWrapper(const SharedMutexWrapper&) = delete;
+    SharedMutexWrapper& operator=(const SharedMutexWrapper&) = delete;
+
+    // Basic mutex interface
+    void lock() { ZoneScoped; mtx_.lock(); }
+    void unlock() { ZoneScoped; mtx_.unlock(); }
+
+    void lock_shared() { ZoneScoped; mtx_.lock_shared(); }
+    void unlock_shared() { ZoneScoped; mtx_.unlock_shared(); }
+
+    bool try_lock() { ZoneScoped; return mtx_.try_lock(); }
+    bool try_lock_shared() { ZoneScoped; return mtx_.try_lock_shared(); }
+
+    // Barebones RAII unique guard
+    class UniqueGuard {
+    public:
+      explicit UniqueGuard(SharedMutexWrapper& m) : m_(&m), owns_(true) { m_->lock(); }
+      ~UniqueGuard() { if (owns_) m_->unlock(); }
+
+      UniqueGuard(const UniqueGuard&) = delete;
+      UniqueGuard& operator=(const UniqueGuard&) = delete;
+
+      UniqueGuard(UniqueGuard&& other) noexcept : m_(other.m_), owns_(other.owns_) {
+        other.m_ = nullptr;
+        other.owns_ = false;
+      }
+
+    private:
+      SharedMutexWrapper* m_;
+      bool owns_;
+    };
+
+    // Barebones RAII shared guard
+    class SharedGuard {
+    public:
+      explicit SharedGuard(SharedMutexWrapper& m) : m_(&m), owns_(true) { m_->lock_shared(); }
+      ~SharedGuard() { if (owns_) m_->unlock_shared(); }
+
+      SharedGuard(const SharedGuard&) = delete;
+      SharedGuard& operator=(const SharedGuard&) = delete;
+
+      SharedGuard(SharedGuard&& other) noexcept : m_(other.m_), owns_(other.owns_) {
+        other.m_ = nullptr;
+        other.owns_ = false;
+      }
+
+    private:
+      SharedMutexWrapper* m_;
+      bool owns_;
+    };
+
+    // Convenience factories
+    [[nodiscard]] UniqueGuard unique_guard() { return UniqueGuard(*this); }
+    [[nodiscard]] SharedGuard shared_guard() { return SharedGuard(*this); }
+
+  private:
+    std::shared_mutex mtx_;
+  };
+
   class Archetypes {
   public:
     archetype_t size() const { return (archetype_t) archetypes.size(); }
@@ -198,6 +261,7 @@ namespace ecs {
 
     inline void *getComponentDataUnsafe(const MgrArchetypeStorage &inst_storage, archetype_t archetype,
                                         component_index_t cidx, chunk_index_t chunkId) const {
+      ZoneScoped;
       auto arch_data = &archetypes[archetype];
       archetype_component_id cid = arch_data->INFO.getComponentId(cidx);
       if (cid == INVALID_ARCHETYPE_COMPONENT_ID)
@@ -229,7 +293,7 @@ namespace ecs {
     }
 
   protected:
-    std::shared_mutex archetypes_mtx{};
+    SharedMutexWrapper archetypes_mtx{};
     friend GState;
     friend EntityManager; // mgr directly access components for performance, maybe //TODO?
     struct ArchetypeInfo {
@@ -265,6 +329,7 @@ namespace ecs {
     std::vector<ArchetypeComponentStorage> archetypeComponents;
   };
   inline archetype_component_id Archetypes::ArchetypeInfo::getComponentId(component_index_t cidx) const {
+    ZoneScoped;
     if (cidx == 0) // eid
       return 0;
     uint32_t at = (uint32_t) ((int) cidx - (int) firstNonEidIndex);

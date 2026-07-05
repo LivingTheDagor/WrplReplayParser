@@ -18,7 +18,7 @@ namespace net
       void setFullVersion();
 
     public:
-      Buffer();
+      Buffer(IMemAlloc * allocator);
 
       void reset();
 
@@ -37,6 +37,7 @@ namespace net
 
     private:
       BitStream base;
+      IMemAlloc * allocator;
       uint8_t version;
       uint8_t confirmedVersion;
     };

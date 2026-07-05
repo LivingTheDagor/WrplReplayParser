@@ -11,6 +11,7 @@ CREATE_HANDLE(handle_object_dispatcher, "ObjectDispatcher")
 
 namespace mpi {
   void zstd_decompress(BitStream &in, BitStream &out) {
+    ZoneScoped;
     uint32_t comp_size;
     uint32_t decomp_size;
     in.ReadCompressed(comp_size);
@@ -25,6 +26,7 @@ namespace mpi {
   }
 
   Message *GeneralObject::dispatchMpiMessage(MessageID mid) {
+    ZoneScoped;
     // LOG("incoming mid: 0x%x\n", mid);
     switch (mid) {
       case Replication:
@@ -69,6 +71,7 @@ namespace mpi {
   }
 
   void GeneralObject::applyMpiMessage(const Message *m) {
+    ZoneScoped;
     auto mid = m->id;
     auto bs = (BitStream *) &m->payload;
     // LOG("Deserialzing for Reflection type: %0x\n", mid);
@@ -175,12 +178,17 @@ namespace mpi {
   };
 
   IObject *MpiQueueObject::UnitRef_Dispatch(ObjectID oid, ObjectExtUID extUid, ParserState *state, bool do_queue) {
+    ZoneScoped;
     if (!extUid) {
       EXCEPTION("dispatch: extended mpi uid is not set for object of type {}", oid >> 0xb);
     }
 
     auto eid = ecs::EntityId(extUid);
-    auto ref = state->g_entity_mgr.getNullable<unit::UnitRef>(eid, ECS_HASH("unit__ref"));
+    unit::UnitRef* ref=nullptr;
+    {
+      ZoneScopedN("unit::UnitRef_getNullable");
+      ref = state->g_entity_mgr.getNullable<unit::UnitRef>(eid, ECS_HASH("unit__ref"));
+    }
     if (!ref) {
       if (do_queue) {
         // when the ref is null, gaijin assumes it has net yet been created, so push it to the queue
@@ -213,6 +221,7 @@ namespace mpi {
   }
 
   void MpiQueueObject::applyMpiMessage(const Message *m) {
+    ZoneScopedN("MpiQueueObject::applyMpiMessage");
     if (m) {
       auto eid = eid_from_ext_uid(this->mpiObjectExtUID);
       auto &queue_data = this->dispatched_objects[eid].emplace_back();
@@ -236,6 +245,7 @@ namespace mpi {
   }
 
   bool MpiQueueObject::deserialize(BitStream &other_bs, int data_size, ParserState *state) {
+    ZoneScopedN("MpiQueueObject::deserialize");
     auto eid = eid_from_ext_uid(this->mpiObjectExtUID);
     auto &queue_data = this->dispatched_objects[eid].emplace_back();
     auto &bs = queue_data.bs;
@@ -252,6 +262,7 @@ namespace mpi {
   }
 
   IObject *ObjectDispatcher(ObjectID oid, ObjectExtUID extUid, ParserState *state) {
+    ZoneScoped;
     uint16_t count = oid & 0x7ff;
     uint8_t obj = (uint8_t) (oid >> 0xb);
     switch (obj) {
