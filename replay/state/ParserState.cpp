@@ -57,6 +57,7 @@ ParserState::~ParserState() {
 }
 
 bool ParserState::ParsePacket(ReplayPacket &pkt) {
+  ZoneScoped;
   curr_time_ms = pkt.timestamp_ms;
   current_rewind_ms = curr_time_ms;
   current_packet_index++;

@@ -36,6 +36,7 @@ int64_t VromfsFile::read_impl(void *ptr, size_t length) {
 }
 
 VROMFs::VROMFs(const std::string &fName) : fileName(fName), dir(fileName) {
+  ZoneScoped;
   FullFileLoadCB f{fName.c_str()};
   if (!load_raw_vromfs_data(f))
     return;
@@ -45,6 +46,7 @@ VROMFs::VROMFs(const std::string &fName) : fileName(fName), dir(fileName) {
 }
 
 bool VROMFs::load_raw_vromfs_data(IGenLoad &reader) {
+  ZoneScoped;
   // char embedded_md5[16];
   // unsigned char signature[SIGNATURE_MAX_SIZE];
   // int signature_size = 0;
@@ -119,6 +121,7 @@ load_fail:
 }
 
 bool VROMFs::parse_raw_vromfs_data(IGenLoad &reader) {
+  ZoneScoped;
   int names_header = reader.readInt();
   int names_count = reader.readInt();
   reader.seekrel(8); // skip u64
@@ -146,10 +149,12 @@ bool VROMFs::parse_raw_vromfs_data(IGenLoad &reader) {
   bool foundNM = false;
 
   for (uint32_t i = 0, z = 0; i < max; i += 4, z++) {
+    ZoneScopedN("VROMFs::loop");
     int fileOffset = int_data_ptr[i];
     int fileSize = int_data_ptr[i + 1];
     std::string_view file_name = file_names[z];
     if (!foundNM && file_name == "\xFF\x3Fnm") {
+      ZoneScopedN("VROMFs::NMParse");
       foundNM = true;
       auto data = std::span<char>(raw_data_ptr + fileOffset + 40, (size_t) fileSize - 40);
       ZstdLoadFromMemCB zReader(data);
@@ -158,15 +163,19 @@ bool VROMFs::parse_raw_vromfs_data(IGenLoad &reader) {
       continue; // prevents adding of NM to output directory
     }
     if (!foundDict && file_name.ends_with(".dict")) {
+      ZoneScopedN("VROMFs::ZSTD_Dict");
       foundDict = true;
       auto data = std::span<char>(raw_data_ptr + fileOffset, (size_t) fileSize);
       dict = ZSTD_createDDict(data.data(), data.size());
       continue;
     }
-    fs::path p((std::string(file_name)));
-    auto file_ = std::make_shared<VromfsFileIndex>(
-      p, this, std::span{raw_data.get()->data() + (size_t) fileOffset, (size_t) fileSize});
-    dir.addFile(file_, p);
+    {
+      ZoneScopedN("VROMFs::AddFile");
+      fs::path p((std::string(file_name)));
+      auto file_ = std::make_shared<VromfsFileIndex>(
+        p, this, std::span{raw_data.get()->data() + (size_t) fileOffset, (size_t) fileSize});
+      dir.addFile(file_, p);
+    }
   }
   return true;
 }

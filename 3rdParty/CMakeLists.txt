@@ -1,4 +1,8 @@
 include(FetchContent)
+
+mimalloc_enable_sanitizer_options()
+add_subdirectory(mimalloc-3.3.2)
+
 add_subdirectory(arc)
 add_subdirectory(eastl)
 # add_subdirectory(openssl-3.x)
@@ -29,4 +33,3 @@ add_subdirectory(compile-time-regular-expressions-3.10.0)
 add_subdirectory(tracy)
 add_subdirectory(libdeflate)
 add_subdirectory(tinyfiledialogs)
-add_subdirectory(mimalloc-3.3.2)
