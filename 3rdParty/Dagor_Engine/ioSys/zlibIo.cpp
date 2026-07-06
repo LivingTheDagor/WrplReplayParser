@@ -96,16 +96,17 @@ inline int ZlibLoadCB::tryReadImpl(void *ptr, int size) {
 }
 
 int ZlibLoadCB::tryRead(void *ptr, int size) {
-    int rd_sz = ZlibLoadCB::tryReadImpl(ptr, size);
-    int total_read_sz = rd_sz;
-    while (rd_sz > 0 && rd_sz < size) {
-        ptr = (char *) ptr + rd_sz;
-        size -= rd_sz;
-        rd_sz = ZlibLoadCB::tryReadImpl(ptr, size);
-        if (rd_sz > 0)
-            total_read_sz += rd_sz;
-    }
-    return total_read_sz;
+  ZoneScopedN("ZlibLoadCB::tryRead");
+  int rd_sz = ZlibLoadCB::tryReadImpl(ptr, size);
+  int total_read_sz = rd_sz;
+  while (rd_sz > 0 && rd_sz < size) {
+      ptr = (char *) ptr + rd_sz;
+      size -= rd_sz;
+      rd_sz = ZlibLoadCB::tryReadImpl(ptr, size);
+      if (rd_sz > 0)
+          total_read_sz += rd_sz;
+  }
+  return total_read_sz;
 }
 
 void ZlibLoadCB::read(void *ptr, int size) {

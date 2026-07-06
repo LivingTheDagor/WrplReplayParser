@@ -209,6 +209,7 @@
 
     int rle0ki_decompress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice)
     {
+      ZoneScoped;
       uint8_t *dst = dstSlice.data();
       size_t maxOriginalSize = dstSlice.size();
       const uint8_t *src = srcSlice.data();

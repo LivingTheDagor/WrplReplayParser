@@ -95,7 +95,11 @@ int main()
     {
       ZoneScopedN("Parsing Overall")
       ReplayPacket pkt{};
-      ParserState *state_ptr = new ParserState{rpl};
+      ParserState *state_ptr = nullptr;
+      {
+        ZoneScopedN("ParseState::ParserState")
+        state_ptr = new ParserState{rpl};
+      }
       ParserState &state = *state_ptr;
       //std::exit(0);
       {

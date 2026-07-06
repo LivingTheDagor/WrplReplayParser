@@ -11,20 +11,34 @@ namespace fs = std::filesystem;
 
 
 IReplayReader *Replay::getReplayReader() {
+  ZoneScopedN("Replay::getReplayReader");
   if (!this->isValid())
     EXCEPTION("Invalid Replay: {}", this->Data.getFileName());
   return new FullDecompressReplayReader{*this};
 }
 
 IReplayReader *Replay::getCompressedReplayReader() {
+  ZoneScopedN("Replay::getCompressedReplayReader");
   if (!this->isValid())
     EXCEPTION("Invalid Replay: {}", this->Data.getFileName());
-  auto data = getData();
-  IBaseLoad *rdr = new InPlaceMemLoadCB((char *) data.data(), (int) data.size());
+  std::span<uint8_t> data;
+  IBaseLoad *rdr = nullptr;
+  {
+  ZoneScopedN("Replay::getCompressedReplayReader::data");
+    data = getData();
+  }
+  {
+  ZoneScopedN("Replay::getCompressedReplayReader::memCB");
+  rdr = new InPlaceMemLoadCB((char *) data.data(), (int) data.size());
+  }
+  {
+  ZoneScopedN("Replay::getCompressedReplayReader::reader");
   return new CompressedReplayReader{*this, rdr, data.size()};
+  }
 }
 
 std::span<uint8_t> Replay::FileReplayData::getData(Replay *rpl) {
+  ZoneScopedN("FileReplayData::getData");
   this->ref_count++;
   if (!this->zlib_data.empty()) {
     return this->zlib_data;
@@ -36,6 +50,7 @@ std::span<uint8_t> Replay::FileReplayData::getData(Replay *rpl) {
 }
 
 void Replay::FileReplayData::afterParse() {
+
   G_ASSERT(ref_count > 0);
   ref_count--;
   if (ref_count == 0) // we don't want to hold onto data for any longer than needed, lots of memory, esp for big replays
@@ -84,6 +99,7 @@ int Replay::InMemoryReplayData::getRemainingSize(size_t from_offs) {
 
 
 Replay::Replay(const std::span<uint8_t> data, bool owns) {
+  ZoneScopedN("Replay::Replay::InMemoryReplayData");
   this->Data.emplace<InMemoryReplayData>(Memory, data, owns);
   load();
 }
@@ -120,6 +136,7 @@ DataBlock *Replay::getFooterBlk() {
   }
 
 void Replay::load() {
+  ZoneScopedN("Replay::load");
   auto file_size = this->Data.getRemainingSize(0);
   BAD_REPLAY(file_size != -1);
   BAD_REPLAY(this->Data.ReadInto(this->header, 0));

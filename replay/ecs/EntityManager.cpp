@@ -204,32 +204,29 @@ namespace ecs {
     chunk_index_t chunk_id;
     InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(templId);
     {
-      std::shared_lock arch_lock(this->data_state->archetypes.archetypes_mtx);
       G_ASSERTF(instTempl, "Template {} not initialized", data_state->getTemplateName(templId));
       ENTITY_LOGD2("Creating new entity {} of template '{}' at {}", eid,
                    data_state->templates.getTemplate(templId)->getName(), ((double) *this->curr_time_ms) / 1000);
-      auto arches = &this->data_state->archetypes;
-
       auto arch_inst = this->arch_data.getArch(archetype_id);
-      auto info = &arches->archetypes[archetype_id];
+      auto info = this->arch_data.getStorageArch(archetype_id);
       chunk_id = arch_inst->getNextAvailableChunkId();
       auto t = arch_inst->reserveChunkId(chunk_id);
       G_ASSERT(t);
       auto archInfo = &info->INFO;
-      auto ComponentInfo = &arches->archetypeComponents[info->COMPONENT_OFS];
+      auto ComponentInfo = info->components.data();
       if(isRecreating) {
         auto &old_desc = this->entDescs[eid];
         archetype_t new_arch_id = archetype_id;
         archetype_t old_arch_id = old_desc.archetype_id;
         auto &new_ARCHETYPE = *this->arch_data.getArch(new_arch_id);
-        auto &new_info = data_state->archetypes.archetypes[new_arch_id];
+        auto &new_info = *this->arch_data.getStorageArch(new_arch_id);
         auto &new_archInfo = *archInfo;
         //auto &new_ComponentInfo = data_state->archetypes.archetypeComponents[new_info.COMPONENT_OFS];
 
         auto &old_ARCHETYPE = *this->arch_data.getArch(old_arch_id);
-        auto &old_info = data_state->archetypes.archetypes[old_arch_id];
+        auto &old_info = *this->arch_data.getStorageArch(old_arch_id);
         //auto &old_archInfo = old_info.INFO;
-        auto &old_ComponentInfo = data_state->archetypes.archetypeComponents[old_info.COMPONENT_OFS];
+        auto &old_ComponentInfo = old_info.components.front();
 
         for (auto comp_info = &old_ComponentInfo; comp_info != &old_ComponentInfo + old_info.COMPONENT_COUNT; comp_info++) {
           auto old_data = old_ARCHETYPE.getCompDataUnsafe(comp_info->DATA_OFFSET, old_desc.chunk_id, comp_info->DATA_SIZE);
@@ -360,8 +357,8 @@ namespace ecs {
     //const InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(desc->templ_id);
     archetype_t archetype_id = desc->archetype_id;
     auto ARCHETYPE = this->arch_data.getArch(archetype_id);
-    auto info = &data_state->archetypes.archetypes[archetype_id];
-    auto ComponentInfo = &data_state->archetypes.archetypeComponents[info->COMPONENT_OFS];
+    auto info = this->arch_data.getStorageArch(archetype_id);
+    auto ComponentInfo = info->components.data();
     //auto archInfo = &info->INFO;
     //if (eid.handle == 0x4008a3) {
     //  LOG("WOMP");
@@ -466,8 +463,8 @@ namespace ecs {
 
       archetype_t archetype_id = desc->archetype_id;
       auto ARCHETYPE = this->arch_data.getArch(archetype_id);
-      auto info = &data_state->archetypes.archetypes[archetype_id];
-      auto ComponentInfo = &data_state->archetypes.archetypeComponents[info->COMPONENT_OFS];
+      auto info = this->arch_data.getStorageArch(archetype_id);
+      auto ComponentInfo = info->components.data();
       // auto archInfo = &info->INFO;
       LOG("DebugPrint of Entity {} of template '{}' of archetype_id {}", eid,
           this->data_state->templates.getTemplate(desc->templ_id)->getName(), archetype_id);
@@ -494,9 +491,8 @@ namespace ecs {
     auto desc = this->entDescs[eid.index()];
     archetype = desc.archetype_id; // should always be valid
     G_ASSERT(archetype != INVALID_ARCHETYPE);
-    std::shared_lock lk(this->data_state->archetypes.archetypes_mtx);
-    G_ASSERT(data_state->archetypes.archetypes[archetype].INFO.getComponentId(index) != INVALID_COMPONENT_INDEX);
-    return data_state->archetypes.getComponentDataUnsafe(this->arch_data, archetype, index, desc.chunk_id);
+    G_ASSERT(this->arch_data.archetypeStorages[archetype]->INFO.getComponentId(index) != INVALID_COMPONENT_INDEX);
+    return this->arch_data.getComponentDataUnsafe(archetype, index, desc.chunk_id);
   }
 
   void *EntityManager::getNullableUnsafe(EntityId eid, component_index_t index, archetype_t &archetype) const {
@@ -505,12 +501,10 @@ namespace ecs {
     auto desc = this->entDescs[eid.index()];
     archetype = desc.archetype_id; // should always be valid
     G_ASSERTF(archetype != INVALID_ARCHETYPE, "Entity {} is invalid", eid);
-    //G_ASSERT(data_state->archetypes.archetypes[archetype].INFO.getComponentId(index) != INVALID_COMPONENT_INDEX);
-    {ZoneScopedN("getNullableUnsafe_lock"); std::shared_lock lk(this->data_state->archetypes.archetypes_mtx);}
-    if (data_state->archetypes.archetypes[archetype].INFO.getComponentId(index) == INVALID_COMPONENT_INDEX)
+    if (this->arch_data.archetypeStorages[archetype]->INFO.getComponentId(index) == INVALID_COMPONENT_INDEX)
       return nullptr;
 
-    return data_state->archetypes.getComponentDataUnsafe(this->arch_data, archetype, index, desc.chunk_id);
+    return this->arch_data.getComponentDataUnsafe(archetype, index, desc.chunk_id);
   }
 
   bool EntityManager::entityHasComponent(EntityId eid, component_index_t index) const {
@@ -519,8 +513,7 @@ namespace ecs {
     archetype_t archetype = desc.archetype_id; // should always be valid
     G_ASSERT(archetype != INVALID_ARCHETYPE);
     //G_ASSERT(data_state->archetypes.archetypes[archetype].INFO.getComponentId(index) != INVALID_COMPONENT_INDEX);
-    std::shared_lock lk(this->data_state->archetypes.archetypes_mtx);
-    if (data_state->archetypes.archetypes[archetype].INFO.getComponentId(index) == INVALID_COMPONENT_INDEX)
+    if (this->arch_data.archetypeStorages[archetype]->INFO.getComponentId(index) == INVALID_COMPONENT_INDEX)
       return false;
     return true;
   }
@@ -538,8 +531,7 @@ namespace ecs {
     archetype_t archetype = INVALID_ARCHETYPE;
     if (!getEntityArchetype(eid, idx, archetype))
       return -1;
-    std::shared_lock lk(this->data_state->archetypes.archetypes_mtx);
-    return data_state->archetypes.getComponentsCount(archetype) - 1; // first is eid
+    return this->arch_data.archetypeStorages[archetype]->COMPONENT_COUNT-1;
   }
 
   ComponentRef EntityManager::getComponentRef(EntityId eid, archetype_component_id cid) const {
@@ -547,13 +539,11 @@ namespace ecs {
     auto desc = this->entDescs.getEntityDesc(eid);
     if (!desc)
       return {};
-
-    std::shared_lock lk(this->data_state->archetypes.archetypes_mtx);
-    auto data = data_state->archetypes.getComponentDataIdUnsafe(this->arch_data, desc->archetype_id, cid,
+    auto data = this->arch_data.getComponentDataIdUnsafe(desc->archetype_id, cid,
                                                                 desc->chunk_id);
     if (!data)
       return {};
-    auto cidx = data_state->archetypes.getComponentUnsafe(desc->archetype_id, cid);
+    auto cidx = this->arch_data.getComponentUnsafe(desc->archetype_id, cid);
     //ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint16_t size);
     auto datacomp_data = data_state->dataComponents.getDataComponent(cidx);
     if (!datacomp_data)
@@ -570,8 +560,7 @@ namespace ecs {
       return {};
     void *data;
     {
-      std::shared_lock lk(this->data_state->archetypes.archetypes_mtx);
-      data = data_state->archetypes.getComponentDataUnsafe(this->arch_data, desc->archetype_id, cidx,
+      data = this->arch_data.getComponentDataUnsafe(desc->archetype_id, cidx,
                                                            desc->chunk_id);
     }
     if (!data)
@@ -587,12 +576,14 @@ namespace ecs {
   }
 
   void EntityManager::sendEventImmediate(EntityId eid, Event &evt) {
+    ZoneScoped;
     if (!this->entDescs.doesEntityExist(eid))
     EXCEPTION("tried to send a query to an entity that doesnt exist");
     this->data_state->sendEventImmediate(eid, evt, *this);
   }
 
   void EntityManager::broadcastEventImmediate(Event &evt) {
+    ZoneScoped;
     this->data_state->broadcastEventImmediate(evt, *this);
   }
 

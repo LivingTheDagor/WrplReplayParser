@@ -44,6 +44,7 @@ namespace net
     BitStream apply_compressed_patch(const BitStream &base_version, const BitStream &compressed_delta,
                                      IMemAlloc *allocator)
     {
+      ZoneScoped;
       BitStream delta{allocator};
       net::delta::decompress(compressed_delta, delta);
       BitStream result = diff_impl(base_version, delta, allocator);

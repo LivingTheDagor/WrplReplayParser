@@ -67,11 +67,10 @@ int main() {
   if (is_server_replay) {
     fs::path t{rpl_path_str};
     rpl = new ServerReplay(t.string());
-    rdr = rpl->getCompressedReplayReader();
   } else {
     rpl = new Replay(rpl_path_str);
-    rdr = rpl->getCompressedReplayReader();
   }
+  rdr = rpl->getReplayReader();
   int idx;
   auto start = std::chrono::high_resolution_clock::now();
   {
@@ -103,7 +102,7 @@ int main() {
   auto ended = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> duration = ended - start;
   // Output the result
-  std::cout << "profile time " << duration.count() << " " << idx << std::endl;
+  LOGI("Finished loading replay in {} ms, packet count: {}", duration.count(), idx);
   //rpl.HeaderBlk.printBlock(0, std::cout);
   //rpl.FooterBlk.printBlock(0, std::cout);
   //ecs::g_entity_mgr->debugPrintEntities();

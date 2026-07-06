@@ -112,6 +112,7 @@ bool FullDecompressReplayReader::getNextPacket(ReplayPacket &packet) {
 
 FullDecompressReplayReader::FullDecompressReplayReader(Replay &replay, double expected_multiply_size) :
   IReplayReader(replay) {
+  ZoneScoped;
   auto zlib_data = replay.getData();
   auto decomp_size = (size_t) (((double) zlib_data.size()) * expected_multiply_size);
   auto ptr = (uint8_t *) malloc(decomp_size);
@@ -152,6 +153,7 @@ CompressedReplayReader::CompressedReplayReader(Replay &replay, IGenLoad *base_re
 
 
 bool CompressedReplayReader::getNextPacket(ReplayPacket &packet) {
+  ZoneScopedN("CompressedReplayReader::getNextPacket");
   uint32_t pkt_sz = getPacketSize(reader);
   if (pkt_sz == 0)
     return false;
@@ -213,6 +215,7 @@ ServerReplayReader<streaming>::ServerReplayReader(ServerReplay &replay) : IRepla
 
 template<bool streaming>
 bool ServerReplayReader<streaming>::getNextPacket(ReplayPacket &packet) {
+  ZoneScoped;
   if (this->curr_reader->getNextPacket(packet))
     return true;
   if (!load_replay())

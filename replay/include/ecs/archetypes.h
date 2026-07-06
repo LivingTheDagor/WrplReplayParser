@@ -156,35 +156,6 @@ namespace ecs {
     // uint16_t entitySize = 0, componentsCnt = 0;
   };
 
-  // holds actual data for a EntityManager instance
-  struct MgrArchetypeStorage {
-    std::vector<Archetype *> data{};
-    void constructArch(archetype_t index, uint32_t entitySize) {
-      if (data.size() <= index) {
-        data.resize(index + 1);
-      }
-      if (!data[index]) {
-        data[index] = new Archetype(entitySize);
-      } else {
-        G_ASSERT(data[index]->entity_size ==
-                 entitySize); // sanity check, should always match as we construct from Archetypes
-      }
-    }
-
-    bool hasArchetype(archetype_t index) { return index < data.size() && data[index] != nullptr; }
-    // all construction of a specific archetype happens earlier, so no checks here
-    Archetype *getArch(archetype_t index) const {
-      G_ASSERT(data[index]);
-      return data[index];
-    }
-
-    ~MgrArchetypeStorage() {
-      for (auto ptr: data) {
-        delete ptr;
-      }
-    }
-  };
-
   class SharedMutexWrapper {
   public:
     SharedMutexWrapper() = default;
@@ -247,73 +218,37 @@ namespace ecs {
     std::shared_mutex mtx_;
   };
 
+  class MgrArchetypeStorage;
+
   class Archetypes {
   public:
     archetype_t size() const { return (archetype_t) archetypes.size(); }
-    inline void createArchetype(archetype_t archetype, MgrArchetypeStorage &storage) {
-      storage.constructArch(archetype, this->archetypes[archetype].ENTITY_SIZE);
-    }
+    void createArchetype(archetype_t archetype, MgrArchetypeStorage &storage);
 
-    inline bool archetypeExists(archetype_t archetype, MgrArchetypeStorage &storage) {
-      return storage.hasArchetype(archetype);
-    }
+    bool archetypeExists(archetype_t archetype, MgrArchetypeStorage &storage);
 
-
-    inline void *getComponentDataUnsafe(const MgrArchetypeStorage &inst_storage, archetype_t archetype,
-                                        component_index_t cidx, chunk_index_t chunkId) const {
-      ZoneScoped;
-      auto arch_data = &archetypes[archetype];
-      archetype_component_id cid = arch_data->INFO.getComponentId(cidx);
-      if (cid == INVALID_ARCHETYPE_COMPONENT_ID)
-        return nullptr;
-      auto storage = &archetypeComponents[cid + arch_data->COMPONENT_OFS];
-      return inst_storage.getArch(archetype)->getCompDataUnsafe(storage->DATA_OFFSET, chunkId, storage->DATA_SIZE);
-    }
-    inline void *getComponentDataIdUnsafe(const MgrArchetypeStorage &inst_storage, archetype_t archetype,
-                                          archetype_component_id cid, chunk_index_t chunkId) const {
-      auto arch_data = &archetypes[archetype];
-      auto storage = &archetypeComponents[cid + arch_data->COMPONENT_OFS];
-      return inst_storage.getArch(archetype)->getCompDataUnsafe(storage->DATA_OFFSET, chunkId, storage->DATA_SIZE);
-    }
-
-    [[nodiscard]] inline uint32_t getComponentSizeFromOfs(archetype_component_id component_id, uint32_t ofs) const;
     archetype_t createArchetype(const component_index_t *__restrict components, uint32_t components_cnt,
                                 DataComponents &dataComponents, ComponentTypes &componentTypes,
                                 template_t parent_template);
     [[nodiscard]] archetype_component_id getComponentsCount(uint32_t archetype) const;
 
     [[nodiscard]] component_index_t getComponentUnsafe(uint32_t archetype, archetype_component_id id) const;
-    [[nodiscard]] inline uint32_t getArchetypeComponentOfsUnsafe(uint32_t archetype) const {
-      return archetypes[archetype].COMPONENT_OFS;
-    }
 
     inline uint32_t getArchetypeComponentCount(archetype_t arch) {
       G_ASSERT(arch < this->archetypes.size());
-      return this->archetypes[arch].COMPONENT_COUNT;
+      return this->archetypes[arch]->COMPONENT_COUNT;
     }
 
   protected:
     SharedMutexWrapper archetypes_mtx{};
     friend GState;
     friend EntityManager; // mgr directly access components for performance, maybe //TODO?
+    friend MgrArchetypeStorage;
     struct ArchetypeInfo {
       component_index_t firstNonEidIndex, count;
       std::unique_ptr<archetype_component_id[]> componentIndexToArchetypeOffset; // todo: make it soa as well
       [[nodiscard]] inline archetype_component_id getComponentId(component_index_t cidx) const;
     };
-
-    struct ArchetypeStorage {
-      uint32_t ENTITY_SIZE;
-      uint32_t COMPONENT_OFS; // offset into archetypeComponents where this particular archetype exists
-      ArchetypeInfo INFO; // used to convert component_index_t (datacomponent) to archetype_component_id
-      archetype_component_id COMPONENT_COUNT;
-      template_t TEMPLATE;
-    };
-
-    ArchetypeStorage &getArchetypeStorageUnsafe(archetype_t arch) { return this->archetypes[arch]; }
-
-    inline uint16_t getComponentOfsFromOfs(archetype_component_id component_id, uint32_t ofs) const;
-    inline template_t getParentTemplate(archetype_t arch) const;
     /// represents component data in relation to an archetype. it is indexed by archetype_component_id;
     struct ArchetypeComponentStorage {
       component_index_t INDEX;
@@ -321,12 +256,22 @@ namespace ecs {
       uint32_t DATA_SIZE; // size of a particular data, assumes a components cant be larger than 65535 bytes
     };
 
+    struct ArchetypeStorage {
+      uint32_t ENTITY_SIZE;
+      ArchetypeInfo INFO; // used to convert component_index_t (datacomponent) to archetype_component_id
+      archetype_component_id COMPONENT_COUNT;
+      template_t TEMPLATE;
+      std::vector<ArchetypeComponentStorage> components;
+    };
+
+    ArchetypeStorage *getArchetypeStorageUnsafe(archetype_t arch) { return this->archetypes[arch]; }
+    inline template_t getParentTemplate(archetype_t arch) const;
+
     /// archetype storage
     /// extra fields holds needed metadata about archetype
-    std::vector<ArchetypeStorage> archetypes;
-    /// global table (for the archetypes) that holds all the components info for all archetypes
-    /// each time an archetype is added, this table is expanded by the number of components that archetype has
-    std::vector<ArchetypeComponentStorage> archetypeComponents;
+    std::vector<ArchetypeStorage*> archetypes;
+
+    ~Archetypes();
   };
   inline archetype_component_id Archetypes::ArchetypeInfo::getComponentId(component_index_t cidx) const {
     ZoneScoped;
@@ -337,19 +282,48 @@ namespace ecs {
       return INVALID_ARCHETYPE_COMPONENT_ID;
     return componentIndexToArchetypeOffset[at];
   }
-  inline component_index_t Archetypes::getComponentUnsafe(uint32_t archetype, archetype_component_id id) const {
-    G_ASSERT(archetype < archetypes.size());
-    uint32_t at = id + getArchetypeComponentOfsUnsafe(archetype);
-    G_ASSERT(at < archetypeComponents.size());
-    return archetypeComponents[at].INDEX;
-  }
 
-  inline uint16_t Archetypes::getComponentOfsFromOfs(archetype_component_id component_id, uint32_t ofs) const {
-    return archetypeComponents[component_id + ofs].DATA_OFFSET;
-    // return archetypeComponents.get<DATA_OFFSET>()[component_id + ofs];
-  }
+  template_t Archetypes::getParentTemplate(archetype_t arch) const { return archetypes[arch]->TEMPLATE; }
 
-  template_t Archetypes::getParentTemplate(archetype_t arch) const { return archetypes[arch].TEMPLATE; }
+  // holds actual data for a EntityManager instance
+  struct MgrArchetypeStorage {
+    std::vector<Archetype *> data{};
+    std::vector<Archetypes::ArchetypeStorage*> archetypeStorages;
+    void constructArch(archetype_t index, Archetypes::ArchetypeStorage* storage) {
+      if (data.size() <= index) {
+        data.resize(index + 1);
+        archetypeStorages.resize(index + 1);
+      }
+      if (!data[index]) {
+        data[index] = new Archetype(storage->ENTITY_SIZE);
+        archetypeStorages[index] = storage;
+      } else {
+        G_ASSERT(data[index]->entity_size ==
+                 storage->ENTITY_SIZE); // sanity check, should always match as we construct from Archetypes
+      }
+    }
+
+    bool hasArchetype(archetype_t index) const { return index < data.size() && data[index] != nullptr; }
+    // all construction of a specific archetype happens earlier, so no checks here
+    Archetype *getArch(archetype_t archetype) const;
+
+    Archetypes::ArchetypeStorage * getStorageArch(archetype_t archetype) const;
+
+    component_index_t getComponentUnsafe(archetype_t archetype, archetype_component_id id) const;
+
+    /// returns a pointer to some component from a specific archetype
+    ///
+    /// @param archetype the archetype to look up
+    /// @param cid the index of your component into the archetype components
+    /// @param chunkId the chunk inside the archetype that holds your component
+    /// @return your pointer or null
+    void * getComponentDataIdUnsafe(archetype_t archetype, archetype_component_id cid, chunk_index_t chunkId) const;
+
+    void *getComponentDataUnsafe(archetype_t archetype, component_index_t cidx, chunk_index_t chunkId) const;
+
+    ~MgrArchetypeStorage();
+  };
+
 } // namespace ecs
 
 

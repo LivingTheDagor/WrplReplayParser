@@ -80,7 +80,7 @@ namespace ecs {
   }
 
   static constexpr int max_query_components_count = 256;
-  EntitySystemDesc *EntitySystemDesc::tail = NULL;
+  EntitySystemDesc *EntitySystemDesc::tail = nullptr;
   uint32_t EntitySystemDesc::generation = 0;
 
   inline void CopyQueryDesc::init(const char *name_, const BaseQueryDesc &d) {
@@ -201,7 +201,7 @@ namespace ecs {
     if (qi != queriesReferences.end()) {
       freeQueriesCount--;
       *qi = 1;
-      uint32_t index = (uint32_t) std::distance(queriesReferences.begin(), qi);
+      auto index = (uint32_t) std::distance(queriesReferences.begin(), qi);
       archetypeQueries[index].reset();
       archetypeEidQueries[index].reset();
       resolvedQueries[index].reset();
@@ -334,7 +334,7 @@ namespace ecs {
       const auto componentCount = archetypes.getArchetypeComponentCount(ai);
       if (componentCount < minRequired) // not enough components to even match
         continue;
-      const auto &archInfo = archetypes.getArchetypeStorageUnsafe(ai).INFO;
+      const auto &archInfo = archetypes.getArchetypeStorageUnsafe(ai)->INFO;
       archetype_component_id tempIds[max_query_components_count];
 
       if (resDesc.getRqCnt()) {
@@ -364,18 +364,18 @@ namespace ecs {
 
       allComponentsArchOffsets.resize(oldOffsets + totalDataComponentsCount);
       const archetype_component_id *__restrict id = tempIds;
-      auto archOffsetsOfs = archetypes.getArchetypeComponentOfsUnsafe(ai);
+      auto arch = archetypes.getArchetypeStorageUnsafe(ai);
       for (auto oi = allComponentsArchOffsets.data() + oldOffsets, oe = oi + totalDataComponentsCount; oi != oe;
            ++oi, ++id)
         *oi = *id == INVALID_ARCHETYPE_COMPONENT_ID ? ArchetypesQuery::INVALID_OFFSET
-                                                    : archetypes.getComponentOfsFromOfs(*id, archOffsetsOfs);
+                                                    : arch->components[*id].DATA_OFFSET;
       queries.push_back(ai);
     }
 
     G_ASSERT(resDesc.getRO().start == resDesc.getRW().start + resDesc.getRW().cnt);
     // G_ASSERT(query.componentsCount == totalDataComponentsCount || !query.componentsType);
 
-    if (!queries.size())
+    if (queries.empty())
       return query.getQueriesCount() != 0;
     G_ASSERTF_RETURN(totalDataComponentsCount == resDesc.getRO().cnt + resDesc.getRW().cnt, false, "{}",
                      totalDataComponentsCount);
@@ -493,7 +493,7 @@ namespace ecs {
       const uint32_t dataComponentsCount = (uint32_t) desc.componentsRW.size() + (uint32_t) desc.componentsRO.size();
       const uint32_t totalComponents =
         (uint32_t) desc.componentsRQ.size() + (uint32_t) desc.componentsNO.size() + dataComponentsCount;
-      G_ASSERT(resDesc.getComponents().size() == 0 || resDesc.getComponents().size() == totalComponents);
+      G_ASSERT(resDesc.getComponents().empty() || resDesc.getComponents().size() == totalComponents);
       resDesc.getComponents().reserve(totalComponents);
       resDesc.getComponents().assign((uint16_t) totalComponents, INVALID_COMPONENT_INDEX);
       resDesc.getOptionalMask().reset();

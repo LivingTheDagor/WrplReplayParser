@@ -163,8 +163,10 @@ namespace ecs {
         }
         this->archetypes.createArchetype(arch_index, storage);
       } else {
-        std::shared_lock lk(this->archetypes.archetypes_mtx);
-        this->archetypes.createArchetype(arch_index, storage);
+        if (storage.getArch(arch_index) == nullptr) {
+          std::shared_lock lk(this->archetypes.archetypes_mtx);
+          this->archetypes.createArchetype(arch_index, storage);
+        }
       }
 
       return arch_index;
