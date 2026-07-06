@@ -56,6 +56,11 @@ option(LDAG_DBGLEVEL_TO_SET "Set the LDAG_DBGLEVEL to a specific value" LDAG_DBG
 message("LDAG_DBGLEVEL=${LDAG_DBGLEVEL_TO_SET}")
 add_compile_definitions(LDAG_DBGLEVEL=${LDAG_DBGLEVEL_TO_SET})
 
+if (NOT DEFINED ECS_USE_WIN_MTX AND ${CMAKE_SYSTEM_NAME} STREQUAL "Windows" AND  ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    set(ECS_USE_WIN_MTX ON)
+    add_compile_definitions(ECS_USE_WIN_MTX)
+endif ()
+
 set_default_flags()
 
 if (PARSER_MY_FLAGS)

@@ -14,6 +14,7 @@ add_library(dagECS
         EventsDB.cpp
         EntityManagerQuery.cpp
         Unit.cpp
+        shared_mutex.cpp
 )
 
 

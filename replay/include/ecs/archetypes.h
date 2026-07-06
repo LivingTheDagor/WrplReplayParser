@@ -6,6 +6,7 @@
 #include "Logger.h"
 #include <shared_mutex>
 #include "BitVector.h"
+#include "ecs/shared_mtx.h"
 
 
 namespace ecs {
@@ -240,7 +241,7 @@ namespace ecs {
     }
 
   protected:
-    SharedMutexWrapper archetypes_mtx{};
+    dagor::shared_mutex archetypes_mtx{};
     friend GState;
     friend EntityManager; // mgr directly access components for performance, maybe //TODO?
     friend MgrArchetypeStorage;

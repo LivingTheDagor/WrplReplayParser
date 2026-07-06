@@ -166,6 +166,7 @@ void DeserializeSeekerData(BitStream &bs) {
 }
 
 bool FMSync(ParserState &state, BitStream &bs) {
+  ZoneScoped;
   uint16_t uid = 0;
   do {
     bool uid_serialized = bs.ReadBit();
@@ -831,21 +832,25 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
 
 
 bool WeaponSync(ParserState &state, BitStream &bs) {
+  ZoneScoped;
   uint8_t rocket_count;
   RET_FAIL(bs.Read(rocket_count));
   for (int i = 0; i < rocket_count; i++) {
+    ZoneScopedN("WeaponSync::ParseRocket");
     RET_FAIL(ParseWeapon(state, bs, getRocket));
   }
 
   uint8_t bomb_count;
   RET_FAIL(bs.Read(bomb_count));
   for (int i = 0; i < bomb_count; i++) {
+    ZoneScopedN("WeaponSync::ParseBomb");
     RET_FAIL(ParseWeapon(state, bs, getBomb));
   }
 
   uint8_t torpedo_count;
   RET_FAIL(bs.Read(torpedo_count));
   for (int i = 0; i < torpedo_count; i++) {
+    ZoneScopedN("WeaponSync::ParseTorpedo");
     RET_FAIL(ParseWeapon(state, bs, getTorpedo));
   }
   return true;

@@ -185,7 +185,7 @@ namespace ecs {
   /// Represents a collection of templates
 
   class TemplateDB {
-    std::shared_mutex template_mtx{};
+    dagor::shared_mutex template_mtx{};
     //std::mutex on_write_mtx{};
 
   public:
