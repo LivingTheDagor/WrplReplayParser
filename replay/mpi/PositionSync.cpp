@@ -699,14 +699,13 @@ Rocket *getTorpedo(ParserState &state, ecs::EntityId eid) {
 typedef Rocket *(*get_weapon_cb)(ParserState &state, ecs::EntityId eid);
 
 bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
-
   bool bool1, bool2;
   RET_FAIL(bs.Read(bool1));
   RET_FAIL(bs.Read(bool2));
   ecs::EntityId eid;
   RET_FAIL(bs.Read(eid));
   Rocket *entity = cb(state, eid);
-  RET_FAIL(entity);
+  //RET_FAIL(entity); // this can fucking happen apparently
   Point3 WeaponPos{};
   bool is_not_compressed;
   RET_FAIL(bs.Read(is_not_compressed));
@@ -740,7 +739,8 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
     v3 = v3 * 15000;
     WeaponPos = {v1, v2, v3};
   }
-  entity->positions.push_back({state.curr_time_ms, WeaponPos});
+  if (entity)
+    entity->positions.push_back({state.curr_time_ms, WeaponPos});
   if (!bool2) {
     int b5;
     bs.ReadZigZag(b5);
@@ -830,8 +830,9 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
   return true;
 }
 
-
+int count = 0;
 bool WeaponSync(ParserState &state, BitStream &bs) {
+  count++;
   ZoneScoped;
   uint8_t rocket_count;
   RET_FAIL(bs.Read(rocket_count));
