@@ -234,9 +234,14 @@ bool FMSync(ParserState &state, BitStream &bs) {
           uint32_t vals_4;
           AngularSpaceTime st{state.curr_time_ms, {}, {}};
           bs.Read(st.location);
-          unit->positions.push_back(st);
           bs.Read(some_packed_val);
+          Point3 someEuler;
+          netutils::unpack_euler(some_packed_val, st.euler);
+          unit->positions.push_back(st);
+
           bs.Read(vals_4);
+          Point3 vel;
+          netutils::unpack_velocity(vals_4, vel, 500);
           uint64_t
             val_5; // holds lots of important data, more like a char[7] instead of a uint64_t, data is read as bytes
           bs.AlignReadToByteBoundary();
