@@ -443,7 +443,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
       unit_position.x = fv1;
       unit_position.z = fv3;
     }
-    if (ref->ref_1 && ref->ref_1 && ref->ref_1->AsTank()) {
+    if (ref->ref_1 && ref->ref_1->AsTank()) {
       auto tank = ref->ref_1->AsTank();
       tank->positions.push_back({state.curr_time_ms, unit_position, direction});
     }
@@ -535,6 +535,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
   bool b3;
   RET_FAIL(bs.Read(b2));
   RET_FAIL(bs.Read(b3));
+    float turret_horizontal=5000;
   for (int i = 0; i < ref->turret_count; i++) {
     bool bool1, bool2, bool3, bool4;
     uint8_t val1, val2;
@@ -547,22 +548,42 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
     }
     RET_FAIL(bs.Read(bool3));
     RET_FAIL(bs.Read(bool4));
+    //if (i==0)
+    //LOGI("turret {}: bool1: {}; val1: {}; bool2: {}; val2: {}; bool3: {}; bool4: {}", i, bool1, val1, bool2, val2,
+    //     bool3, bool4);
     if (b2) {
       if (bs.ReadBit()) {
         uint16_t tv1, tv2;
         uint8_t tv18, tv28;
+        float rot1, rot2, rot11, rot22;
         RET_FAIL(bs.Read(tv1));
         RET_FAIL(bs.Read(tv2));
+        rot1 = UNPACK_S16(tv1, 180.0f);
+        rot2 = UNPACK_S16(tv2, 180.0f);
         RET_FAIL(bs.Read(tv18));
         RET_FAIL(bs.Read(tv28));
+        rot11 = UNPACK_S16(tv18, 180.0f);
+        rot22 = UNPACK_S16(tv28, 180.0f);
         bool extra_stuff;
         RET_FAIL(bs.Read(extra_stuff));
+        //if (i == 0)
+        //  LOGI("{}; {} : {} ", (state.curr_time_ms/1000.0f), rot1, rot2);
+        if (i == 0)
+          turret_horizontal = rot1;
+        //LOGI("rot1: {}; rot2: {}; tv18: {}; tv28: {}", rot1, rot2, tv18, tv28);
         if (extra_stuff) {
           uint16_t extra_val;
           RET_FAIL(bs.Read(extra_val));
+          //;LOGI("extra_val: {}", extra_val);
         }
       }
     }
+  }
+  if (ref->ref_1 && turret_horizontal <= 4000.f && b1) {
+    auto &un_arr = ref->ref_1->positions;
+    //if (!un_arr.empty()) {
+    //  un_arr.back().turret_horizontal = turret_horizontal;
+    //}
   }
   uint8_t sensorsCount{};
   RET_FAIL(bs.Read(sensorsCount));
@@ -744,13 +765,20 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
     v3 = v3 * 15000;
     WeaponPos = {v1, v2, v3};
   }
-  if (entity)
-    entity->positions.push_back({state.curr_time_ms, WeaponPos});
+  SpaceTimeEuler * back = nullptr;
+  if (entity) {
+    entity->positions.push_back({{state.curr_time_ms, WeaponPos}, {}});
+    back = &entity->positions.back();
+  }
   if (!bool2) {
     int b5;
     bs.ReadZigZag(b5);
-    Point3 b6;
-    RET_FAIL(bs.Read(b6));
+    if (back) {
+      RET_FAIL(bs.Read(back->euler));
+    } else {
+      Point3 b6;
+      RET_FAIL(bs.Read(b6));
+    }
     Point3 b7;
     Point3 b8;
     uint16_t temp_t;

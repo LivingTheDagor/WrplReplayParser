@@ -237,7 +237,7 @@ public:
 
 #define G_LOGERR_AND_DO(expression, action, ...) \
   if (DAGOR_UNLIKELY(!(expression))) {           \
-    logerr(__VA_ARGS__);                         \
+    LOGE(__VA_ARGS__);                         \
     action;                                      \
   } else
 

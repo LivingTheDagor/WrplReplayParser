@@ -434,6 +434,7 @@ protected:
       uint32_t front_time_ms = 0.0f;
       ImVec2 front = ImVec2(0.0f, 0.0f);
       Point3 frontEuler{};
+      float front_turret{};
       // we iterate from front to back, so new points first
       for (int idx_ = (int) unit.positions.size() - 6; idx_ >= 0; idx_--) {
         // lets skip over points until we get to our start time
@@ -451,6 +452,7 @@ protected:
           front_time_ms = unit.positions[idx_].time_ms;
           front = curr_point;
           frontEuler = unit.positions[idx_].euler;
+          //front_turret = unit.positions[idx_].turret_horizontal;
           found_front = true;
         }
         bool add = true;
@@ -484,7 +486,11 @@ protected:
           data.draw_list->AddCircle(front, 5.0f, get_player_color(pid, team), 0, 2.0f);
         }
       }
-      DrawYawLine(frontEuler.y, front, 10, IM_COL32(255, 200, 0, 255), 2.0f);
+      if (found_front) {
+        DrawYawLine(frontEuler.y, front, 10, IM_COL32(255, 200, 0, 255), 4.0f);
+        //front_turret = DegToRad(front_turret) + frontEuler.y;
+        //DrawYawLine(front_turret, front, 40, IM_COL32(0, 200, 255, 255), 1.0f);
+      }
     };
 
     on_rocket_cb_t on_rocket_cb = [&data, this](const Rocket &rocket) {
@@ -509,7 +515,7 @@ protected:
       const Point3 *prev = nullptr;
       constexpr int max_distance = 250;
       bool found_front = false;
-      uint32_t front_time_ms = 0.0f;
+      const SpaceTimeEuler * front_val = nullptr;
       ImVec2 front = ImVec2(0.0f, 0.0f);
       // we iterate from front to back, so new points first
       for (int idx_ = (int) rocket.positions.size() - 6; idx_ >= 0; idx_--) {
@@ -525,7 +531,7 @@ protected:
         if (!do_draw)
           continue;
         if (!found_front) {
-          front_time_ms = rocket.positions[idx_].time_ms;
+          front_val = &rocket.positions[idx_];
           front = curr_point;
           found_front = true;
         }
@@ -553,6 +559,10 @@ protected:
                                   0, // ImDrawFlags (0 = open line)
                                   1.f // Thickness
       );
+
+      if (found_front) {
+        DrawYawLine(front_val->euler.y, front, 10, IM_COL32(255, 200, 0, 255), 4.0f);
+      }
     };
 
     if (info.drawn_units == UnitType::TankType) {

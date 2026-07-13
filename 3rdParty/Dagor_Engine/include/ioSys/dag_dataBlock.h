@@ -3,6 +3,7 @@
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 //
 #pragma once
+#include <filesystem>
 
 #ifdef  _TARGET_PC_LINUX
 #define __forceinline inline
@@ -362,6 +363,8 @@ public:
 
     /// Returns name of this DataBlock.
     const char *getBlockName() const { return getName(getNameId()); }
+
+    std::string_view getBlockNameView() const { return getBlockName(); }
 
     /// Changes name of i-th parameter
     void changeBlockName(const char *name);

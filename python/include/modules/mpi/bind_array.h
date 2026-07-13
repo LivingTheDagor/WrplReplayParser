@@ -23,12 +23,6 @@ py::class_<std::array<T, N>> bind_array(py::module_& m, const std::string& name)
         return a[i];
       })
 
-          // __setitem__ with bounds checking
-      .def("__setitem__", [](Array& a, std::size_t i, T val) {
-        if (i >= N) throw py::index_error("index out of range");
-        a[i] = val;
-      })
-
           // __iter__
       .def("__iter__", [](const Array& a) {
         return py::make_iterator(a.begin(), a.end());

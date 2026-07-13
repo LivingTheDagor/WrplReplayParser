@@ -25,13 +25,19 @@ struct SpaceTime {
   bool operator==(const SpaceTime &other) const { return time_ms == other.time_ms && location == other.location; }
 };
 
-struct AngularSpaceTime {
-  uint32_t time_ms = 0;
-  Point3 location{};
+struct SpaceTimeEuler : SpaceTime {
   Point3 euler{};
 
+  bool operator==(const SpaceTimeEuler &other) const {
+    return SpaceTime::operator==(other) && euler == other.euler;
+  }
+};
+
+struct AngularSpaceTime : SpaceTimeEuler {
+  float turret_horizontal{};
+
   bool operator==(const AngularSpaceTime &other) const {
-    return time_ms == other.time_ms && location == other.location && euler == other.euler;
+    return SpaceTimeEuler::operator==(other) && turret_horizontal == other.turret_horizontal;
   }
 };
 
@@ -197,7 +203,7 @@ namespace unit {
     std::vector<std::string> fm_mods{};
     std::vector<CameraTime> camera_pos;
     std::vector<Weapon> weapons{};
-    std::vector<AngularSpaceTime> positions{};
+    std::vector<SpaceTimeEuler> positions{};
 
     UnitWeaponsMask weapons_mask{};
 
@@ -231,6 +237,7 @@ namespace unit {
   class Tank : public Unit {
     GMReflectable gm_data{};
     GM_DVMReflectable gm_dvm_data{};
+
 
   public:
     void Load() override;

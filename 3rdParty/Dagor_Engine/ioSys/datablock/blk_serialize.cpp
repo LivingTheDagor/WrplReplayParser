@@ -17,6 +17,7 @@
 //#include <generic/dag_algorithm.h>
 #include <generic/dag_relocatableFixedVector.h>
 #include <stdio.h> // sprintf
+#include <filesystem>
 
 #include "generic/dag_align.h"
 
@@ -323,6 +324,7 @@ bool DataBlock::printBlock(std::basic_ostream<char> &cb) const {
     if (!saveToTextStream(cwr))
         return false;
     cb.write((char *) cwr.data(), cwr.size());
+  return true;
 }
 
 template<typename T, typename C>

@@ -74,7 +74,7 @@ protected:
 
 public:
   std::pmr::memory_resource * get_allocator() { return &allocator; }
-  IMemAlloc * getMem() { return &G_ALLOC; }
+  IMemAlloc * getMem() { return allocator.getMem(); }
   std::vector<mpi::MpiQueueObject::QueueData> *get_queued_data(ecs::EntityId eid) {
     auto it = mpi_queue.dispatched_objects.find(eid);
     if (it == mpi_queue.dispatched_objects.end())
