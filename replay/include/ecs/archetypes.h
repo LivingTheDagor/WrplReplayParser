@@ -275,7 +275,6 @@ namespace ecs {
     ~Archetypes();
   };
   inline archetype_component_id Archetypes::ArchetypeInfo::getComponentId(component_index_t cidx) const {
-    ZoneScoped;
     if (cidx == 0) // eid
       return 0;
     uint32_t at = (uint32_t) ((int) cidx - (int) firstNonEidIndex);

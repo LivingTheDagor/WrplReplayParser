@@ -550,14 +550,15 @@ namespace net {
     if (clientCidx == ecs::INVALID_COMPONENT_INDEX) // we can't deserialize it, which means type was unknown!
       return false;
     auto datacomp = ecs::g_ecs_data->getDataComponents()->getDataComponent(clientCidx);
-    auto comps = ecs::g_ecs_data->getComponentTypes();
     BitSize_t beforeReadPos = bs.GetReadOffset();
     BitstreamDeserializer bsds(bs, mgr, &objectKeys);
     ecs::ComponentRef cref = mgr->getComponentRefCidx(eid, clientCidx);
     auto old_ptr = cref.value;
-    this->construct_replication_into.resize(cref.getSize());
-    cref.setNewValue(this->construct_replication_into.data(), *this->mgr);
     bool crefIsNull = cref.isNull();
+    if (!crefIsNull) { // if gaijin makes a replay (cough cough infantry) that does an invalid replication, then this code would normally throw an assert when it can just fail normally.
+      this->construct_replication_into.resize(cref.getSize());
+      cref.setNewValue(this->construct_replication_into.data(), *this->mgr);
+    }
     if (DAGOR_LIKELY(!crefIsNull && deserialize_component_typeless(cref, bsds, *mgr))) {
 
       // create storage data
@@ -575,13 +576,13 @@ namespace net {
       // replicated_component_on_client_deserialize(eid, clientCidx);
       return true;
     }
-    // even if its the same value, we dont use it after this
-    cref.destructCopy(cref.value);
     const char *warn_type;
     if (crefIsNull) {
       // the warning is because this entity does not have that component
       warn_type = "Unknown/missing component";
     } else {
+      // even if its the same value, we dont use it after this
+      cref.destructCopy(cref.value);
       // the warning is because we failed to deserialize the component
       warn_type = "Failed to deserialize component";
     }

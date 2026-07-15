@@ -560,8 +560,7 @@ namespace ecs {
       return {};
     void *data;
     {
-      data = this->arch_data.getComponentDataUnsafe(desc->archetype_id, cidx,
-                                                           desc->chunk_id);
+      data = this->arch_data.getComponentDataUnsafe(desc->archetype_id, cidx, desc->chunk_id);
     }
     if (!data)
       return {};
