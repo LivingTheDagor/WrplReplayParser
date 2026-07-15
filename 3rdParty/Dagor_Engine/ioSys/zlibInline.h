@@ -112,7 +112,7 @@ public:
 
     float getCompressionRatio() {
         if (uncompressedTotal)
-            return (float) compressedTotal / uncompressedTotal;
+            return (float) compressedTotal / (float)uncompressedTotal;
         else
             return 0;
     }

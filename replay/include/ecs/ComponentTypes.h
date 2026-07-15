@@ -288,7 +288,7 @@ namespace ecs {
     ~ComponentTypes();
 
     inline ComponentTypeManager *getCTM(type_index_t index) {
-      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid %i index for getCTM", index);
+      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid {} index for getCTM", index);
       auto &data = this->types[index];
       if (data.ctm) {
         return data.ctm;
@@ -314,7 +314,7 @@ namespace ecs {
     }
 
     inline std::string_view getName(type_index_t index) {
-      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), "", "Invalid %i index for getName", index);
+      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), "", "Invalid {} index for getName", index);
       return this->types[index].name;
     }
 
@@ -327,12 +327,12 @@ namespace ecs {
     }
 
     inline const ComponentInfo *getComponentData(type_index_t index) const {
-      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid index %i for getComponentData",
+      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid index {} for getComponentData",
                        index);
       return &this->types[index];
     }
     inline ComponentInfo *getComponentData(type_index_t index) {
-      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid index %i for getComponentData",
+      G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid index {} for getComponentData",
                        index);
       return &this->types[index];
     }
