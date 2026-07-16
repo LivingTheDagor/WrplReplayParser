@@ -1062,6 +1062,47 @@ public:
     }
   }
 
+  void drawMapTab() {
+
+    if (ImGui::BeginChild("Top Information", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
+      drawTeam1();
+      ImGui::SameLine();
+      if (ImGui::BeginChild("Controls", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
+        ImGui::SetNextItemWidth(150.0f);
+        ImGui::InputFloat("##input_path", &current_path_length, 0.0f, 9999.f);
+
+        ImGui::SameLine();
+        ImGui::TextUnformatted("Path length in seconds");
+        ImGui::SetNextItemWidth(400.0f);
+        ImGui::SliderFloat("##slider_path", &current_path_length, 0.0f, 60.0f);
+
+        if (ImGui::Button(show_player_colors ? "Show Team Colors" : "Show Player Colors")) {
+          show_player_colors = !show_player_colors;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(show_missiles ? "Hide Missiles" : "Show Missiles")) {
+          show_missiles = !show_missiles;
+        }
+        ImGui::EndChild();
+      }
+      ImGui::SameLine();
+      drawTeam2();
+      ImGui::EndChild();
+    }
+    if (ImGui::BeginChild("center data", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
+      // ImGui::SliderFloat("##degree_val", &current_look_direction, 0.0f, 360.0f);
+
+      if (ImGui::BeginChild("child_map_slider", ImVec2(0, 0), RESIZE_CHILD_FLAGS,
+                            ImGuiWindowFlags_HorizontalScrollbar)) {
+        DrawMapWrapper(air_map, "Air Map");
+        ImGui::SameLine();
+        DrawMapWrapper(tank_map, "Ground Map");
+        ImGui::EndChild();
+                            }
+      ImGui::EndChild();
+    }
+  }
+
 public:
   void runAll() {
     if (!this->state.finishedLoading()) {
@@ -1104,42 +1145,20 @@ public:
         ImGui::EndChild();
       }
     }
-    if (ImGui::BeginChild("Top Information", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
-      drawTeam1();
-      ImGui::SameLine();
-      if (ImGui::BeginChild("Controls", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
-        ImGui::SetNextItemWidth(150.0f);
-        ImGui::InputFloat("##input_path", &current_path_length, 0.0f, 9999.f);
-
-        ImGui::SameLine();
-        ImGui::TextUnformatted("Path length in seconds");
-        ImGui::SetNextItemWidth(400.0f);
-        ImGui::SliderFloat("##slider_path", &current_path_length, 0.0f, 60.0f);
-
-        if (ImGui::Button(show_player_colors ? "Show Team Colors" : "Show Player Colors")) {
-          show_player_colors = !show_player_colors;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button(show_missiles ? "Hide Missiles" : "Show Missiles")) {
-          show_missiles = !show_missiles;
-        }
-        ImGui::EndChild();
+    if (ImGui::BeginTabBar("Replay Tabs", ImGuiTabBarFlags_None)) {
+      if (ImGui::BeginTabItem("Map")) {
+        drawMapTab();
+        ImGui::EndTabItem();
       }
-      ImGui::SameLine();
-      drawTeam2();
-      ImGui::EndChild();
-    }
-    if (ImGui::BeginChild("center data", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
-      // ImGui::SliderFloat("##degree_val", &current_look_direction, 0.0f, 360.0f);
-
-      if (ImGui::BeginChild("child_map_slider", ImVec2(0, 0), RESIZE_CHILD_FLAGS,
-                            ImGuiWindowFlags_HorizontalScrollbar)) {
-        DrawMapWrapper(air_map, "Air Map");
-        ImGui::SameLine();
-        DrawMapWrapper(tank_map, "Ground Map");
+      if (ImGui::BeginTabItem("Raw Data")) {
+        //drawRawData();
+        ImGui::EndTabItem();
       }
-      ImGui::EndChild();
+      if (ImGui::BeginTabItem("Replay Info")) {
+        //drawReplayInfo();
+        ImGui::EndTabItem();
+      }
+      ImGui::EndTabBar();
     }
-    ImGui::EndChild();
   }
 };
