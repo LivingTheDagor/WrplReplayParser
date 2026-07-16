@@ -44,12 +44,11 @@ namespace ecs {
 
     [[nodiscard]] inline uint32_t get_handle() const { return handle; }
 
-    [[nodiscard]] inline std::string toString(int indent = 0) const { return fmt::format("{:#08x}", this->handle); }
+    [[nodiscard]] inline std::string toString(int indent = 0) const { return fmt::format("{{{}:{}}}", this->index(), this->generation()); }
 
   private:
     friend class ecs::EntityManager;
 
-    // friend unsigned get_generation(const EntityId);
     entity_id_t handle = ECS_INVALID_ENTITY_ID_VAL;
 
     [[nodiscard]] uint32_t generation() const { return handle & ENTITY_GENERATION_MASK; }
