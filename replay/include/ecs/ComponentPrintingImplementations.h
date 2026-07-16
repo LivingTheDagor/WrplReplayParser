@@ -3,21 +3,14 @@
 #ifndef MYEXTENSION_COMPONENTPRINTINGIMPLEMENTATIONS_H
 #define MYEXTENSION_COMPONENTPRINTINGIMPLEMENTATIONS_H
 #include <sstream>
-
-// if no valid printing method found, falls back to this
-template<typename T>
-std::string basicPrint(void *v) {
-  return fmt::format("basicPrint<{}> at {:p}", ecs::ComponentTypeInfo<T>::type_name, v);
-}
-
+#include "fmt/base.h"
+#include "ComponentPrintingImplementationsBase.h"
 
 template<typename T>
-concept has_to_string = requires(T t, int i) {
-  { t.toString(i) } -> std::convertible_to<std::string>;
-};
-
-template<typename T>
-std::string toStringImpl(void *p, int indent) {
+std::string toStringImplECS(const void * const p, int indent) {
+  if constexpr (!instantiable_with<ecs::ComponentTypeInfo, T>) {
+    return toStringImpl<T>(p, indent);
+  }
   if constexpr (ecs::ComponentTypeInfo<T>::type == ecs::ComponentTypeInfo<ecs::Tag>::type)
   // tags have no data, I think this still makes the constexpr chain still clean during compilation
   {
@@ -29,19 +22,12 @@ std::string toStringImpl(void *p, int indent) {
     }
 
     else if constexpr (ecs::ComponentTypeInfo<T>::type == ecs::ComponentTypeInfo<ecs::string>::type) {
-      return fmt::format("\"{}\"", data->c_str()); // remember, ecs::string is a eastl::string, not std::string.
-    } else if constexpr (ecs::ComponentTypeInfo<T>::type == ecs::ComponentTypeInfo<float>::type) {
-      return fmt::format("{:f}", *data);
-    } else if constexpr (ecs::ComponentTypeInfo<T>::type == ecs::ComponentTypeInfo<bool>::type) {
-      return fmt::format("{}", *data ? "true" : "false");
-    } else if constexpr (HasOstreamOperator<T>) {
-      std::ostringstream os;
-      os << *data;
-      return os.str();
-    } else {
-      // Priority 3: Fall back to basicPrint
-      return basicPrint<T>(p);
+      if (std::is_same<T, eastl::string>::value) {
+        return fmt::format("\"{}\"", data->c_str()); // if I ever have ecs::string be an east::string again
+      }
+      return *data;
     }
+    return toStringImpl<T>(data, indent);
   }
 }
 #endif // MYEXTENSION_COMPONENTPRINTINGIMPLEMENTATIONS_H

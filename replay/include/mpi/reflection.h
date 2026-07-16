@@ -13,6 +13,7 @@
 #include <math/integer/dag_IPoint2.h>
 
 #include "mpi.h"
+#include "ecs/ComponentPrintingImplementationsBase.h"
 
 // operation codes for coder func
 #define DANET_REFLECTION_OP_ENCODE 0 // encode data
@@ -154,7 +155,7 @@ namespace danet {
     virtual void *goToTime(uint32_t time_ms) = 0; // does rewinding operation
     virtual void *removePreviousState() = 0; // call during a deserialize fail
   };
-  // vars of this type are linked in one list inside of ReflectableObject
+  // vars of this type are linked in one list inside ReflectableObject
   class ReflectionVarMeta {
     void setValuePtr(void *ptr) {
       char *raw = reinterpret_cast<char *>(this) + sizeof(ReflectionVarMeta);
@@ -170,6 +171,8 @@ namespace danet {
     friend ReflectableObject;
 
   public:
+    virtual ~ReflectionVarMeta() = default;
+    virtual std::string toString() = 0;
     uint8_t persistentId;
     uint16_t flags;
     uint16_t numBits;
@@ -222,6 +225,12 @@ namespace danet {
 
   template<typename T>
   class ReflectionVar : public ReflectionVarMeta {
+  public:
+    std::string toString() override {
+      return toStringImpl<T>(data, 0);
+    }
+
+  private:
     static constexpr reflection_var_encoder getCoder() {
       G_STATIC_ASSERT(HasValidEncoder<T>::value);
       return DefaultEncoderChooser<T>::coder;

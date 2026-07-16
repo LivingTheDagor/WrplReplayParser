@@ -167,7 +167,7 @@ namespace ecs {
 
     std::string toString(void *p, int indent = 0) const override {
       G_FAST_ASSERT(p);
-      return toStringImpl<T>(p, indent);
+      return toStringImplECS<T>(p, indent);
       // ComponentPrinter<T>::print(static_cast<T*>(p));
     }
   };
@@ -205,7 +205,7 @@ namespace ecs {
 
     std::string toString(void *p, int indent = 0) const override {
       G_FAST_ASSERT(p);
-      return toStringImpl<T>(p, indent);
+      return toStringImplECS<T>(p, indent);
     }
   };
 

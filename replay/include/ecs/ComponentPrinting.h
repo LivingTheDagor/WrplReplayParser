@@ -12,7 +12,7 @@
 
 
 template<typename T>
-std::string toStringImpl(void *p, int);
+std::string toStringImplECS(const void * p, int);
 
 // Concept to check if type T supports operator<<
 template<typename T>

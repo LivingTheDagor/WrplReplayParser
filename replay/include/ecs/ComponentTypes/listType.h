@@ -238,7 +238,7 @@ namespace ecs {
       os << fmt::format("({}) (List of {}) [\n", this->size(), ComponentTypeInfo<T>::type_name);
       for (const auto &val: *this) {
 
-        os << fmt::format("{}{}\n", std::string(indent, ' '), toStringImpl<T>((void *) &val, indent + 2));
+        os << fmt::format("{}{}\n", std::string(indent, ' '), toStringImplECS<T>((void *) &val, indent + 2));
         // if(i+1 < this->size())
         //{
         // }
