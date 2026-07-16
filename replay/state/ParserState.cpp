@@ -43,6 +43,7 @@ void ParserState::setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid)
 }
 
 ParserState::~ParserState() {
+  is_dtor = true;
   ZoneScoped;
   this->rewindToMs(0xFFFFFFFF);
   for (auto v: Zones) {
@@ -105,8 +106,12 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
 }
 
 void ParserState::rewindToMs(uint32_t time_ms) {
+  // if replay isn't fully parsed and we are destroying, then we can assume that we are at latest known point anyways.
   if (replay_length_ms == 0xFFFFFFFF) {
-    LOGE("You cannot rewind until the replay has finshed parsing");
+  // we can sometimes call this when we haven't fully parsed the replay
+  // so lets not make useless log messages
+    if (!is_dtor)
+      LOGE("You cannot rewind until the replay has finshed parsing");
     return;
   }
   if (current_rewind_ms == time_ms)

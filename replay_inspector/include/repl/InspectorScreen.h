@@ -1068,34 +1068,53 @@ public:
       loadReplay();
       calculate_data();
     }
-    ZoneScoped if (ImGui::BeginChild("Top Information", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
+    ZoneScoped;
+    if (ImGui::BeginChild("Rewind Time", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
+      ImGui::Text("Replay Length: %.02f seconds", (double) replay_length_f);
+      if (this->state.finishedLoading()) {
+
+        ImGui::SameLine();
+        ImGui::TextUnformatted("Replay Time");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(125.0f);
+        ImGui::InputFloat("##input_time", &current_time, 15.0f, replay_length_f);
+
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(350.0f);
+        ImGui::SliderFloat("##slider_time", &current_time, 15.0f, replay_length_f);
+        if (play_video_thing) {
+          current_time += ImGui::GetIO().DeltaTime * play_speed;
+          if (current_time > this->replay_length_f)
+            play_video_thing = false;
+        }
+        state.rewindToMs((uint32_t) (current_time * 1000));
+
+        ImGui::SameLine();
+        if (ImGui::Button(play_video_thing ? "Playing" : "Paused")) {
+          play_video_thing = !play_video_thing;
+        }
+        ImGui::SameLine();
+        ImGui::TextUnformatted("Play speed");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100.0f);
+        ImGui::InputFloat("##input_time_speed", &play_speed, 0.5f, 16.f);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("##slider_time_speed", &play_speed, 0.5f, 16.f);
+        ImGui::EndChild();
+      }
+    }
+    if (ImGui::BeginChild("Top Information", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
       drawTeam1();
       ImGui::SameLine();
       if (ImGui::BeginChild("Controls", ImVec2(0, 0), RESIZE_CHILD_FLAGS)) {
-        ImGui::SetNextItemWidth(100.0f);
+        ImGui::SetNextItemWidth(150.0f);
         ImGui::InputFloat("##input_path", &current_path_length, 0.0f, 9999.f);
 
         ImGui::SameLine();
         ImGui::TextUnformatted("Path length in seconds");
-
         ImGui::SetNextItemWidth(400.0f);
         ImGui::SliderFloat("##slider_path", &current_path_length, 0.0f, 60.0f);
-
-        if (this->state.finishedLoading()) {
-          ImGui::SetNextItemWidth(50.0f);
-          ImGui::InputFloat("##input_time", &current_time, 15.0f, replay_length_f);
-          ImGui::SameLine();
-          ImGui::TextUnformatted("Replay Time");
-
-          ImGui::SetNextItemWidth(400.0f);
-          ImGui::SliderFloat("##slider_time", &current_time, 15.0f, replay_length_f);
-
-          ImGui::Text("Replay Length: %.02f seconds", (double) replay_length_f);
-          if (ImGui::Button(play_video_thing ? "Playing" : "Paused")) {
-            play_video_thing = !play_video_thing;
-          }
-          ImGui::SameLine();
-        }
 
         if (ImGui::Button(show_player_colors ? "Show Team Colors" : "Show Player Colors")) {
           show_player_colors = !show_player_colors;
@@ -1103,21 +1122,6 @@ public:
         ImGui::SameLine();
         if (ImGui::Button(show_missiles ? "Hide Missiles" : "Show Missiles")) {
           show_missiles = !show_missiles;
-        }
-        if (this->state.finishedLoading()) {
-          if (play_video_thing) {
-            current_time += ImGui::GetIO().DeltaTime * play_speed;
-            if (current_time > this->replay_length_f)
-              play_video_thing = false;
-          }
-          state.rewindToMs((uint32_t) (current_time * 1000));
-
-          ImGui::SetNextItemWidth(100.0f);
-          ImGui::InputFloat("##input_time_speed", &play_speed, 0.5f, 16.f);
-          ImGui::SameLine();
-          ImGui::TextUnformatted("Play speed");
-          ImGui::SetNextItemWidth(400.0f);
-          ImGui::SliderFloat("##slider_time_speed", &play_speed, 0.5f, 16.f);
         }
         ImGui::EndChild();
       }

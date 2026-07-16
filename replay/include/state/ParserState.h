@@ -59,6 +59,7 @@ struct ParserState {
   explicit ParserState(int player_count = 32) : players(player_count) {}
   explicit ParserState(IReplay *replay) : players(replay->getHeader()->player_count) {}
 protected:
+  bool is_dtor{false};
   StateAllocator allocator{};
   mpi::MpiQueueObject mpi_queue{};
   friend mpi::MpiQueueObject;
