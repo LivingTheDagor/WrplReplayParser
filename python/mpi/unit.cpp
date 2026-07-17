@@ -18,16 +18,15 @@ void PyUnit::include(py::module_ &m) {
       return fmt::format("SpaceTime({}, [{}, {}, {}])", st.time_ms, st.location.x, st.location.y, st.location.z);
     });
 
-  py::class_<AngularSpaceTime>(m, "AngularSpaceTime")
-    .def_readonly("time_ms", &AngularSpaceTime::time_ms)
-    .def_readonly("location", &AngularSpaceTime::location)
-    .def_readonly("euler", &AngularSpaceTime::euler)
-    .def("__str__", [](AngularSpaceTime &st) {
-      return fmt::format("AngularSpaceTime({}, [{}, {}, {}], [{}, {}, {}])", st.time_ms, st.location.x, st.location.y,
+  py::class_<SpaceTimeEuler, SpaceTime>(m, "SpaceTimeEuler")
+    .def_readonly("euler", &SpaceTimeEuler::euler)
+    .def("__str__", [](SpaceTimeEuler &st) {
+      return fmt::format("SpaceTimeEuler({}, [{}, {}, {}], [{}, {}, {}])", st.time_ms, st.location.x, st.location.y,
                          st.location.z, st.euler.x, st.euler.y, st.euler.z);
     });
 
   bind_readonly_vector<std::vector<SpaceTime>>(m, "SpaceTimeList");
+  bind_readonly_vector<std::vector<SpaceTimeEuler>>(m, "SpaceTimeEulerList");
 
   py::enum_<UnitType>(unit, "UnitType")
     .value("TankType", UnitType::TankType)
