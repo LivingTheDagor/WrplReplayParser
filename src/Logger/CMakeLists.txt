@@ -16,6 +16,7 @@ target_link_libraries(LOGGER PUBLIC
         cpptrace::cpptrace
         Tracy::TracyClient
         dagBlk::dagBlk
+        Boost::describe
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")

@@ -7,6 +7,18 @@
 template <template <class...> class Z, class... Args>
 concept instantiable_with = requires { typename Z<Args...>; };
 
+
+// Concept to check if type T supports operator<<
+template<typename T>
+concept HasOstreamOperator = requires(std::ostream &os, const T &t) {
+  { os << t } -> std::convertible_to<std::ostream &>;
+};
+
+namespace ecs {
+  template<typename T>
+  struct ComponentTypeInfo;
+}
+
 template <typename T>
 concept has_component_type_name = requires {
   ecs::ComponentTypeInfo<T>::type_name;

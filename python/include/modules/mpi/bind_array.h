@@ -2,11 +2,8 @@
 #include <array>
 #include <stdexcept>
 #include <sstream>
+#include "ecs/ComponentPrintingImplementationsBase.h"
 
-template <typename T>
-concept has_to_string = requires(const T t, int i) {
-    { t.toString(i) } -> std::convertible_to<std::string>;
-};
 template <typename T, std::size_t N>
 py::class_<std::array<T, N>> bind_array(py::module_& m, const std::string& name) {
   using Array = std::array<T, N>;
@@ -34,13 +31,7 @@ py::class_<std::array<T, N>> bind_array(py::module_& m, const std::string& name)
         os << name << "[";
         for (std::size_t i = 0; i < N; ++i) {
           if (i > 0) os << ", ";
-
-
-          if constexpr (has_to_string<T>) {
-              os << a[i].toString(0);
-          } else {
-              os << a[i];
-          }
+          os << toStringImpl<T>(&a[i], 0);
         }
         os << "]";
         return os.str();
