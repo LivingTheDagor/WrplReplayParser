@@ -30,6 +30,7 @@ target_link_libraries(dagECS
         EASTL::EASTL
         LOGGER::LOGGER
         DELTA::DELTA
+        Boost::describe
 )
 add_library(dagECS::dagECS ALIAS dagECS)
 

@@ -2,7 +2,7 @@
 #pragma once
 #define REPL_VER(x) \
   if (!(x))         \
-  return false
+    return false
 
 namespace danet {
   int uint32_tCoder(DANET_ENCODER_SIGNATURE);
@@ -17,8 +17,6 @@ namespace danet {
 
   int boolCoder(DANET_ENCODER_SIGNATURE);
 
-  int floatCoder(DANET_ENCODER_SIGNATURE);
-
   int stringCoder(DANET_ENCODER_SIGNATURE);
 
   int UidCoder(DANET_ENCODER_SIGNATURE);
@@ -30,6 +28,8 @@ namespace danet {
   int ecsEntityId_20arrayCoder(DANET_ENCODER_SIGNATURE);
 
   int CrewUnitsListCoder(DANET_ENCODER_SIGNATURE);
+
+  int floatCoder(DANET_ENCODER_SIGNATURE);
 
   int uint8_t_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE);
 
@@ -43,7 +43,7 @@ namespace danet {
 
   int dummyForFootballStatCoder(DANET_ENCODER_SIGNATURE);
 
-  int teamAvgEloRatingsCoder(DANET_ENCODER_SIGNATURE);
+  int Point3Coder(DANET_ENCODER_SIGNATURE);
 
   int dummyForExitZonesSettingsCoder(DANET_ENCODER_SIGNATURE);
 
@@ -68,62 +68,62 @@ namespace danet {
   int KillerStructCoder(DANET_ENCODER_SIGNATURE);
 
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<danet::Uid> {
     static constexpr reflection_var_encoder coder = UidCoder;
   };
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<std::string> {
     static constexpr reflection_var_encoder coder = stringCoder;
   };
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<uint32_t> {
     static constexpr reflection_var_encoder coder = uint32_tCoder;
   };
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<DataBlock> {
     static constexpr reflection_var_encoder coder = DataBlockCoder;
   };
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<uint8_t> {
     static constexpr reflection_var_encoder coder = uint8_tCoder;
   };
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<danet::Country> {
     static constexpr reflection_var_encoder coder = CountryCoder;
   };
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<uint16_t> {
     static constexpr reflection_var_encoder coder = uint16_tCoder;
   };
 
-  template<>
-  struct DefaultEncoderChooser<std::array<ecs::EntityId, 20>> {
+  template <>
+  struct DefaultEncoderChooser<std::array<ecs::EntityId,20>> {
     static constexpr reflection_var_encoder coder = ecsEntityId_20arrayCoder;
   };
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<danet::CrewUnitsList> {
     static constexpr reflection_var_encoder coder = CrewUnitsListCoder;
   };
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<float> {
     static constexpr reflection_var_encoder coder = floatCoder;
   };
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<bool> {
     static constexpr reflection_var_encoder coder = boolCoder;
   };
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<ecs::EntityId> {
     static constexpr reflection_var_encoder coder = EntityIdCoder;
   };
@@ -164,8 +164,8 @@ namespace danet {
   };
 
   template <>
-  struct DefaultEncoderChooser<danet::teamAvgEloRatings> {
-    static constexpr reflection_var_encoder coder = teamAvgEloRatingsCoder;
+  struct DefaultEncoderChooser<Point3> {
+    static constexpr reflection_var_encoder coder = Point3Coder;
   };
 
   template <>
@@ -209,11 +209,11 @@ namespace danet {
   };
 
   template <>
-  struct DefaultEncoderChooser<std::array<std::string, 2>> {
+  struct DefaultEncoderChooser<std::array<std::string,2>> {
     static constexpr reflection_var_encoder coder = stdstring_2arrayCoder;
   };
 
-  template<>
+  template <>
   struct DefaultEncoderChooser<danet::dummyForDeathInfo> {
     static constexpr reflection_var_encoder coder = dummyForDeathInfoCoder;
   };

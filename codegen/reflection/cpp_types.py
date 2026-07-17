@@ -82,12 +82,6 @@ class dummyForKillStreaksProgress_reg(DataTypeRegister):
         "std::vector<danet::streak, uint8_t> vals;",
     ]
 
-class teamAvgEloRatings_reg(DataTypeRegister):
-    name = "danet::teamAvgEloRatings"
-    members = [
-        "std::array<float, 3> data;",
-    ]
-
 class intPair_reg(DataTypeRegister):
     name = "danet::zigZagPair"
     members = [
@@ -101,6 +95,10 @@ class dummyForExitZonesSettings_reg(DataTypeRegister):
     ]
 class Point2_reg(DataTypeRegister):
     name = "Point2"
+    is_pod = True
+
+class Point3_reg(DataTypeRegister):
+    name = "Point3"
     is_pod = True
 
 class WeatherEffect_reg(DataTypeRegister):
@@ -133,7 +131,6 @@ class WeaponMask_reg(DataTypeRegister):
     name = "danet::WeaponsMask"
     is_pod = True  # not actually, this type is only ever used in once place, so that coder will be defined externally in cpp
 
-
 class dummyForDeathInfo_reg(DataTypeRegister):
     name = "danet::dummyForDeathInfo"
     members = [
@@ -160,7 +157,6 @@ class DamagedState_reg(DataTypeRegister):
         "uint16_t v1;",
         "uint8_t v2;"
     ]
-
 
 class country_reg(DataTypeRegister):
     name = "danet::Country"

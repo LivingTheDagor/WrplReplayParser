@@ -51,25 +51,26 @@ MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
   // some_val, some_val_2);
   if (zone_id == state->Zones.size()) {
     MissionZone *obj;
+    mpi::ObjectID oid = (0x5<<0xb) + (mpi::ObjectID)state->Zones.size();
     switch (zone_type) {
       case 0: {
-        obj = new BombingZone();
+        obj = new BombingZone(oid);
         break;
       }
       case 1: {
-        obj = new CaptureZone();
+        obj = new CaptureZone(oid);
         break;
       }
       case 2: {
-        obj = new RearmZone();
+        obj = new RearmZone(oid);
         break;
       }
       case 3: {
-        obj = new ExitZone();
+        obj = new ExitZone(oid);
         break;
       }
       case 4: {
-        obj = new PickupZone();
+        obj = new PickupZone(oid);
         break;
       }
       default: EXCEPTION("Invalid Zone id: {}", zone_type);
@@ -81,7 +82,7 @@ MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
     if (area == nullptr) {
       LOGE("WARNING: Create dummy MissionArea id: {} for MissionZone id:{} type:{}", mission_area_id, zone_id,
            zone_type);
-      state->missionAreas1[mission_area_id] = new MissionArea();
+      state->missionAreas1[mission_area_id] = new MissionArea(0x16<<0xb + (mpi::ObjectID)mission_area_id);
       area = state->missionAreas1[mission_area_id];
     }
     obj->area = area;
@@ -225,10 +226,11 @@ danet::ReplicatedObject *MissionArea::createReplicatedObject(BitStream &bs, Pars
   std::string v1;
   uint32_t index;
   uint8_t v3;
-  uint16_t index_2;
+  mpi::ObjectID index_2;
+  danet::AreaFlagsEnum areaFlags;
+  TMatrix tm;
   uint32_t v7 = 0; // not always
-  auto x = new MissionArea();
-  x->markVarWithFlag(&x->areaFlags, RVF_CALL_HANDLER_FORCE, true);
+
   for (uint16_t i = 0; i < count; i++) {
     BitSize_t start_size = bs.GetReadOffset();
     switch (serializer255.getFieldId(i)) {
@@ -245,11 +247,11 @@ danet::ReplicatedObject *MissionArea::createReplicatedObject(BitStream &bs, Pars
         break;
       }
       case 4: {
-        bs.Read(*x->areaFlags.data);
+        bs.Read(areaFlags);
         break;
       }
       case 5: {
-        bs.Read(x->tm);
+        bs.Read(tm);
         break;
       }
       case 6: {
@@ -276,6 +278,10 @@ danet::ReplicatedObject *MissionArea::createReplicatedObject(BitStream &bs, Pars
 
     // LOGE("{}; data: {}", serializer255.getFieldId(i), FormatHexToStream(data).str());
   }
+  auto x = new MissionArea(index_2);
+  *x->areaFlags.data = areaFlags;
+  x->tm = tm;
+  x->markVarWithFlag(&x->areaFlags, RVF_CALL_HANDLER_FORCE, true);
   REPLICATION_LOGD3("MissionArea({}) v1: {}; v2: {}; v3: {}; v5: {}; v6: {}; v7: {}",
                     ((double) state->curr_time_ms) / 1000.0, v1, index, v3, x->tm.toString(0), index_2, v7);
   auto idx = index_2 & 0x7FF;

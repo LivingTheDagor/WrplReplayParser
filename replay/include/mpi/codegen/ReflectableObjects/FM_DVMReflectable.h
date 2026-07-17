@@ -4,7 +4,10 @@
 class FM_DVMReflectable : public DVMReflectable {
 public:
   DECL_REFLECTION(FM_DVMReflectable, DVMReflectable)
-  FM_DVMReflectable() : DVMReflectable() {}
+  void drawObject() const override;
+  explicit FM_DVMReflectable(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : DVMReflectable(oid)  {
+  }
+  friend ParserState;
 };
 
 ECS_DECLARE_CREATABLE_TYPE(FM_DVMReflectable);

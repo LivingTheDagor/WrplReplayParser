@@ -4,7 +4,10 @@
 class FMWReflectable : public BaseExtReflectable {
 public:
   DECL_REFLECTION(FMWReflectable, BaseExtReflectable)
-  FMWReflectable() : BaseExtReflectable() {}
+  void drawObject() const override;
+  explicit FMWReflectable(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : BaseExtReflectable(oid)  {
+  }
+  friend ParserState;
 };
 
 ECS_DECLARE_CREATABLE_TYPE(FMWReflectable);

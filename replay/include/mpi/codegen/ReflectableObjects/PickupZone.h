@@ -4,10 +4,12 @@
 class PickupZone : public MissionZone {
 public:
   DECL_REPLICATION(PickupZone, MissionZone)
+  void drawObject() const override;
   danet::ReflectionVar<bool> showOnTacticalMap{"showOnTacticalMap", nullptr, 67};
-  PickupZone() : MissionZone()  {
+  explicit PickupZone(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(oid)  {
     flags.next = &showOnTacticalMap;
     varList.tail = &showOnTacticalMap;
   }
+  friend ParserState;
 };
 

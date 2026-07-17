@@ -4,12 +4,14 @@
 class MissionZone : public danet::ReplicatedObject {
 public:
   DECL_REPLICATION(MissionZone, danet::ReplicatedObject)
+  void drawObject() const override;
   MissionArea* area{};
   danet::ReflectionVar<uint8_t> armyNo{"armyNo", &flags, 2};
   danet::ReflectionVar<uint16_t> flags{"flags", nullptr, 3};
-  MissionZone() : ReplicatedObject()  {
+  explicit MissionZone(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReplicatedObject(oid)  {
     varList.head = &armyNo;
     varList.tail = &flags;
   }
+  friend ParserState;
 };
 

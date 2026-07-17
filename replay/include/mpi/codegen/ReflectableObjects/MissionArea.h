@@ -4,11 +4,13 @@
 class MissionArea : public danet::ReplicatedObject {
 public:
   DECL_REPLICATION(MissionArea, danet::ReplicatedObject)
+  void drawObject() const override;
   TMatrix tm{};
   danet::ReflectionVar<danet::AreaFlagsEnum> areaFlags{"areaFlags", nullptr, 2};
-  MissionArea() : ReplicatedObject()  {
+  explicit MissionArea(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReplicatedObject(oid)  {
     varList.head = &areaFlags;
     varList.tail = &areaFlags;
   }
+  friend ParserState;
 };
 

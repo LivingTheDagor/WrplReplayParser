@@ -65,7 +65,7 @@ class TeamData(ReflectableObject):
     roundScore = Var("float", 7)
 
 class GlobalElo(ReflectableObject):
-    teamAvgEloRatings = Var("danet::teamAvgEloRatings", 2)
+    teamAvgEloRatings = Var("Point3", 2)
 
 class GeneralState(ReflectableObject):
     lastSuperArtilleryTime = Var("float", 2)

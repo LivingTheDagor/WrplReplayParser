@@ -4,15 +4,17 @@
 class CaptureZone : public MissionZone {
 public:
   DECL_REPLICATION(CaptureZone, MissionZone)
+  void drawObject() const override;
   danet::ReflectionVar<int8_t> mpTimeX100{"mpTimeX100", &conqTeam, 67};
   danet::ReflectionVar<uint8_t> conqTeam{"conqTeam", &iconIdx, 68};
   danet::ReflectionVar<uint8_t> iconIdx{"iconIdx", &dummyVarForCapturers, 69};
   danet::ReflectionVar<std::vector<danet::UnitId>> dummyVarForCapturers{"dummyVarForCapturers", &dummyVarForCapturePart, 70};
   danet::ReflectionVar<std::vector<danet::UnitIdStruct>> dummyVarForCapturePart{"dummyVarForCapturePart", &dummyVarForNumOfActiveCapturers, 71};
   danet::ReflectionVar<std::vector<uint8_t>> dummyVarForNumOfActiveCapturers{"dummyVarForNumOfActiveCapturers", nullptr, 72};
-  CaptureZone() : MissionZone()  {
+  explicit CaptureZone(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(oid)  {
     flags.next = &mpTimeX100;
     varList.tail = &dummyVarForNumOfActiveCapturers;
   }
+  friend ParserState;
 };
 

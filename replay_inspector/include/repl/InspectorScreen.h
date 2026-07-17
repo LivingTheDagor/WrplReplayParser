@@ -16,6 +16,7 @@
 
 #include "imgui_internal.h"
 #include "state/ParserState.h"
+#include "ReflectionDefs.h"
 
 
 class MapImage {
@@ -642,7 +643,7 @@ protected:
     ImGui::EndChild();
   }
 
-  float current_time = 15.0f;
+  float current_time = 5.0f;
   float current_path_length = 0.0f;
   float play_speed = 1.0f;
   bool play_video_thing = false;
@@ -1103,6 +1104,61 @@ public:
     }
   }
 
+  void drawReflectableObject(danet::ReflectableObject *robj, char * obj_name) {
+    char name[256] = {};
+    if (obj_name) {
+      fmt::format_to_n(name, 256, "{}: {} ##{}", robj->getClassName(), obj_name, robj->getUID());
+    } else {
+      fmt::format_to_n(name, 256, "{}: {:#x}", robj->getClassName(), robj->getUID());
+    }
+    if (ImGui::TreeNode(name)) {
+      ImGui::BeginTable("Reflectable Object", 3, ImGuiTableFlags_Borders);
+      ImGui::TableSetupColumn("History", ImGuiTableColumnFlags_WidthFixed);
+      ImGui::TableSetupColumn("Var name", ImGuiTableColumnFlags_WidthFixed);
+      ImGui::TableSetupColumn("Var value");
+      ImGui::TableHeadersRow();
+      robj->drawObject();
+      ImGui::EndTable();
+      ImGui::TreePop();
+    }
+  }
+
+
+  void drawReflectableObjects() {
+    drawReflectableObject(&this->state.gen_state, nullptr);
+    drawReflectableObject(&this->state.glob_elo, nullptr);
+    if (ImGui::TreeNode(("Teams"))) {
+      for (auto &obj: this->state.teams) {
+        drawReflectableObject(&obj, nullptr);
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("MPlayer Objects")) {
+      for (auto &obj: this->state.players) {
+        drawReflectableObject(&obj, obj.uid.data->name);
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Zones")) {
+      for (auto obj: this->state.Zones) {
+        if (obj) {
+          //char buff[16];
+          //fmt::format_to_n(buff, 16, "{:#x}", obj->getUID());
+          drawReflectableObject(obj, nullptr);
+        }
+      }
+      ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Areas")) {
+      for (auto obj : this->state.missionAreas2) {
+        if (obj) {
+          drawReflectableObject(obj, nullptr);
+        }
+      }
+      ImGui::TreePop();
+    }
+  }
+
 public:
   void runAll() {
     if (!this->state.finishedLoading()) {
@@ -1118,11 +1174,11 @@ public:
         ImGui::TextUnformatted("Replay Time");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(125.0f);
-        ImGui::InputFloat("##input_time", &current_time, 15.0f, replay_length_f);
+        ImGui::InputFloat("##input_time", &current_time, 0.25f, replay_length_f);
 
         ImGui::SameLine();
         ImGui::SetNextItemWidth(350.0f);
-        ImGui::SliderFloat("##slider_time", &current_time, 15.0f, replay_length_f);
+        ImGui::SliderFloat("##slider_time", &current_time, 5.0f, replay_length_f);
         if (play_video_thing) {
           current_time += ImGui::GetIO().DeltaTime * play_speed;
           if (current_time > this->replay_length_f)
@@ -1146,16 +1202,19 @@ public:
       }
     }
     if (ImGui::BeginTabBar("Replay Tabs", ImGuiTabBarFlags_None)) {
-      if (ImGui::BeginTabItem("Map")) {
+      if (ImGui::BeginTabItem("Map") && ImGui::BeginChild("##MapArea", ImVec2(0, 0), ImGuiChildFlags_None)) {
         drawMapTab();
+        ImGui::EndChild();
         ImGui::EndTabItem();
       }
-      if (ImGui::BeginTabItem("Raw Data")) {
-        //drawRawData();
+      if (ImGui::BeginTabItem("Reflectable Objects") && ImGui::BeginChild("##ReflectableObjectsArea", ImVec2(0, 0), ImGuiChildFlags_None)) {
+        drawReflectableObjects();
+        ImGui::EndChild();
         ImGui::EndTabItem();
       }
-      if (ImGui::BeginTabItem("Replay Info")) {
-        //drawReplayInfo();
+      if (ImGui::BeginTabItem("ECS") && ImGui::BeginChild("##ECSArea", ImVec2(0, 0), ImGuiChildFlags_None)) {
+        //drawECS();
+        ImGui::EndChild();
         ImGui::EndTabItem();
       }
       ImGui::EndTabBar();

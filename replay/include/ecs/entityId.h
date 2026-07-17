@@ -44,7 +44,7 @@ namespace ecs {
 
     [[nodiscard]] inline uint32_t get_handle() const { return handle; }
 
-    [[nodiscard]] inline std::string toString(int indent = 0) const { return fmt::format("{{{}:{}}}", this->index(), this->generation()); }
+    [[nodiscard]] inline std::string toString(int indent = 0) const { return fmt::format("ecs::EntityId{{{}:{}}}", this->index(), this->generation()); }
 
   private:
     friend class ecs::EntityManager;

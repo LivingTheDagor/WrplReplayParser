@@ -4,7 +4,10 @@
 class GM_DVMReflectable : public DVMReflectable {
 public:
   DECL_REFLECTION(GM_DVMReflectable, DVMReflectable)
-  GM_DVMReflectable() : DVMReflectable() {}
+  void drawObject() const override;
+  explicit GM_DVMReflectable(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : DVMReflectable(oid)  {
+  }
+  friend ParserState;
 };
 
 ECS_DECLARE_CREATABLE_TYPE(GM_DVMReflectable);

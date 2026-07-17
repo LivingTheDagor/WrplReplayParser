@@ -56,9 +56,10 @@ struct ChatMessage {
 
 struct ParserState {
 
-  explicit ParserState(int player_count = 32) : players(player_count) {}
-  explicit ParserState(IReplay *replay) : players(replay->getHeader()->player_count) {}
+  explicit ParserState(int player_count = 32);
+  explicit ParserState(IReplay *replay);
 protected:
+  void initialize();
   bool is_dtor{false};
   StateAllocator allocator{};
   mpi::MpiQueueObject mpi_queue{};
@@ -84,7 +85,7 @@ public:
   }
 
   uint32_t replay_length_ms = 0xFFFFFFFF;
-  uint32_t current_rewind_ms; // the time we have rewinded to
+  uint32_t current_rewind_ms = 0; // the time we have rewinded to
   uint32_t curr_time_ms = 0; // the current time in the ECS / state. this wont always math current_rewind_time_ms
   net::CNetwork conn{this};
   mpi::GeneralObject main_dispatch{this};

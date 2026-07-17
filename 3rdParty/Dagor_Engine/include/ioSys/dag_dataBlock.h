@@ -3,6 +3,9 @@
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 //
 #pragma once
+#include "dag_memIo.h"
+
+
 #include <filesystem>
 
 #ifdef  _TARGET_PC_LINUX
@@ -1266,3 +1269,14 @@ static inline void dblk::iterate_params_by_name_and_type(const DataBlock &db, co
 /// @}
 
 /// @}
+template<>
+struct fmt::formatter<DataBlock> {
+public:
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+  template<typename Context>
+  constexpr auto format(DataBlock const &foo, Context &ctx) const {
+    DynamicMemGeneralSaveCB cb{};
+    foo.saveToTextStream(cb);
+    return format_to(ctx.out(), "{}", std::string_view((char*)cb.data(), cb.size()));
+  }
+};

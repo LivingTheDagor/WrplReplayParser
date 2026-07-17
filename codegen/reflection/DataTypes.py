@@ -430,6 +430,7 @@ class DataTypeManager:
                         for line in nm.to_serialize(self):
                             write_indent()
                             io.write(f"{line}\n")
+                        io.write(f"BOOST_DESCRIBE_STRUCT({nm.name}, (), ({', '.join([x.var_name for x in nm.vars])}))\n")
                     else:
                         write_indent()
                         io.write(f"namespace {nm.name} {'{'}\n")
@@ -440,6 +441,7 @@ class DataTypeManager:
         with open(f"{codegen_header_path}/types.h", "w") as f:
             write_header(f)
             f.write("#pragma once\n")
+            f.write("#include <boost/describe.hpp>\n")
             write_namespace(self.datatypes, 0, f)
 
 
@@ -457,16 +459,47 @@ class DataTypeManager:
                 f.write(chooser + "\n")
             f.write("}")
 
+
+            parsed_types = set()
+            with open(f"{codegen_header_path}/forwardDeclarations.h", "w") as f:
+                write_header(f)
+                f.write("#pragma once\n\n")
+                f.write("#include \"mpi/reflection.h\"\n")
+                f.write("#include \"mpi/serializers.h\"\n")
+                for compiled in self.inst_datatypes.values():
+                    name = compiled.datatype.reg.serialize_name(compiled)
+                    if name in parsed_types:
+                        continue
+                    parsed_types.add(name)
+                    f.write(f"extern template class danet::ReflectionVar<{name}>;\n")
+
+            with open(f"{codegen_header_path}/declarations.h", "w") as f:
+                write_header(f)
+                f.write("#pragma once\n\n")
+                f.write("// DO NOT INCLUDE THIS, ONLY TO BE INCLUDED IN reflection.cpp\n")
+
+                for compiled in parsed_types:
+                    f.write(f"template class danet::ReflectionVar<{compiled}>;\n")
+
             with open(f"{codegen_cpp_path}/serializers.cpp", "w") as f:
                 write_header(f)
                 f.write("#include \"mpi/serializers.h\"\n")
                 f.write("#include \"ecs/entityId.h\"\n")
                 f.write("#include \"network/eid.h\"\n")
                 f.write("#include \"state/ParserState.h\"\n")
+
                 f.write("namespace danet {\n")
                 for serializer in self.serializer_strs:
                     f.write(serializer)
                 f.write("}")
+
+            with open(f"{codegen_cpp_path}/mpiUiStubs.cpp", "w") as f:
+                write_header(f)
+                f.write("#include \"mpi/serializers.h\"\n")
+                f.write("#include \"mpi/codegen/ReflIncludes.h\"\n")
+                f.write(f"void danet::ReflectableObject::drawObject() const {{}}\n")
+                for obj in self.RegistredObjects:
+                    f.write(f"void {obj}::drawObject() const {{}}\n")
 
 
     def compile_bindings(self, header_path: str, cpp_path: str):

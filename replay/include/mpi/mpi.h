@@ -45,6 +45,8 @@ namespace mpi // message passing interface
   protected:
     ObjectID mpiObjectUID;
 
+    void setUID(ObjectID uid) { mpiObjectUID = uid; }
+    friend class ParserState;
   public:
     ObjectExtUID mpiObjectExtUID = INVALID_OBJECT_EXT_UID;
 

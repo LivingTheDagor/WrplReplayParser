@@ -184,6 +184,9 @@ CompressedReplayReader::~CompressedReplayReader() {
 }
 
 
+template class ServerReplayReader<false>;
+template class ServerReplayReader<true>;
+
 template<bool streaming>
 bool ServerReplayReader<streaming>::load_replay() {
   delete this->curr_reader;
@@ -224,5 +227,5 @@ bool ServerReplayReader<streaming>::getNextPacket(ReplayPacket &packet) {
 }
 
 
-template class ServerReplayReader<false>;
-template class ServerReplayReader<true>;
+extern template class ServerReplayReader<false>;
+extern template class ServerReplayReader<true>;

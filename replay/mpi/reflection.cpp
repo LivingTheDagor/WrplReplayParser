@@ -465,4 +465,67 @@ namespace danet {
         return false;
     return true;
   }
+
+
+  template<typename T>
+  constexpr reflection_var_encoder ReflectionVar<T>::getCoder() {
+    if constexpr (HasValidEncoder<T>::value)
+    //G_STATIC_ASSERT(HasValidEncoder<T>::value);
+      return DefaultEncoderChooser<T>::coder;
+    return DefaultEncoderChooser<void>::coder;
+  }
+
+
+
+  template<typename T>
+  void ReflectionVar<T>::DrawHistory(IRenderHandler *renderer) {
+    bool doDraw = renderer->setCount(this->spaceHandler.getStates().size(), this->spaceHandler.getCurrIndex());
+    if (!doDraw)
+      return;
+    uint32_t index = 0;
+    for (auto & st : this->spaceHandler.getStates()) {
+      auto str = toStringImpl<T>(&st.data, 0);
+      renderer->DrawIndex(index, st.time_ms, str);
+      index++;
+    }
+    renderer->onEnd();
+  }
+
+  template<typename T>
+  std::string ReflectionVar<T>::toString() {
+    return toStringImpl<T>(data, 0);
+  }
+  template<typename T>
+  void ReflectionVar<T>::init(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder,
+  uint16_t bits) {
+    this->name = name;
+    this->next = next;
+    this->persistentId = pid;
+    this->numBits = bits;
+    this->coder = coder;
+    this->data = (T *) spaceHandler.addState(0);
+    this->handler = &spaceHandler;
+  }
+  template<typename T>
+  ReflectionVar<T>::ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid) : ReflectionVarMeta() {
+    init(name, next, pid, getCoder());
+  }
+  template<typename T>
+  ReflectionVar<T>::ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid,
+  reflection_var_encoder coder_) : ReflectionVarMeta() {
+    init(name, next, pid, coder_);
+  }
+  template<typename T>
+  ReflectionVar<T>::ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count) : ReflectionVarMeta() {
+    init(name, next, pid, getCoder(), bit_count);
+  }
+  template<typename T>
+  ReflectionVar<T>::ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count,
+  reflection_var_encoder coder_) : ReflectionVarMeta() {
+    init(name, next, pid, coder_, bit_count);
+  }
+  template<typename T>
+  T *ReflectionVar<T>::Get() const { return this->getValue<T>(); }
 }; // namespace danet
+
+#include "mpi/codegen/declarations.h"

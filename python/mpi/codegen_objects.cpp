@@ -60,16 +60,19 @@ void PyCodegenObjects::include(py::module_ &m) {
     .def_readonly("missionSupportUnitRef", &MPlayer::missionSupportUnitRef)
     .def_readonly("missionSupportUnitEnabled", &MPlayer::missionSupportUnitEnabled)
     .def_readonly("rageTokens", &MPlayer::rageTokens)
-    .def_readonly("numFreeSpareUsed", &MPlayer::numFreeSpareUsed);
+    .def_readonly("numFreeSpareUsed", &MPlayer::numFreeSpareUsed)
+  ;
   py::class_<TeamData, danet::ReflectableObject, std::unique_ptr<TeamData, py::nodelete>>(mpi, "TeamData")
     .def_readonly("score", &TeamData::score)
     .def_readonly("tickets", &TeamData::tickets)
     .def_readonly("orderCooldownTotal", &TeamData::orderCooldownTotal)
     .def_readonly("orderCooldownLeft", &TeamData::orderCooldownLeft)
     .def_readonly("spawnScore", &TeamData::spawnScore)
-    .def_readonly("roundScore", &TeamData::roundScore);
+    .def_readonly("roundScore", &TeamData::roundScore)
+  ;
   py::class_<GlobalElo, danet::ReflectableObject, std::unique_ptr<GlobalElo, py::nodelete>>(mpi, "GlobalElo")
-    .def_readonly("teamAvgEloRatings", &GlobalElo::teamAvgEloRatings);
+    .def_readonly("teamAvgEloRatings", &GlobalElo::teamAvgEloRatings)
+  ;
   py::class_<GeneralState, danet::ReflectableObject, std::unique_ptr<GeneralState, py::nodelete>>(mpi, "GeneralState")
     .def_readonly("lastSuperArtilleryTime", &GeneralState::lastSuperArtilleryTime)
     .def_readonly("dummyForExitZonesSettings", &GeneralState::dummyForExitZonesSettings)
@@ -87,29 +90,36 @@ void PyCodegenObjects::include(py::module_ &m) {
     .def_readonly("dummyForMapTimers", &GeneralState::dummyForMapTimers)
     .def_readonly("totalDomTeam", &GeneralState::totalDomTeam)
     .def_readonly("totalDomTime", &GeneralState::totalDomTime)
-    .def_readonly("totalDomMult", &GeneralState::totalDomMult);
+    .def_readonly("totalDomMult", &GeneralState::totalDomMult)
+  ;
   py::class_<MissionArea, danet::ReplicatedObject, std::unique_ptr<MissionArea, py::nodelete>>(mpi, "MissionArea")
     .def_readonly("tm", &MissionArea::tm)
-    .def_readonly("areaFlags", &MissionArea::areaFlags);
+    .def_readonly("areaFlags", &MissionArea::areaFlags)
+  ;
   py::class_<MissionZone, danet::ReplicatedObject, std::unique_ptr<MissionZone, py::nodelete>>(mpi, "MissionZone")
     .def_readonly("area", &MissionZone::area)
     .def_readonly("armyNo", &MissionZone::armyNo)
-    .def_readonly("flags", &MissionZone::flags);
+    .def_readonly("flags", &MissionZone::flags)
+  ;
   py::class_<BombingZone, MissionZone, std::unique_ptr<BombingZone, py::nodelete>>(mpi, "BombingZone")
-    .def_readonly("curZoneIntegrity", &BombingZone::curZoneIntegrity);
+    .def_readonly("curZoneIntegrity", &BombingZone::curZoneIntegrity)
+  ;
   py::class_<CaptureZone, MissionZone, std::unique_ptr<CaptureZone, py::nodelete>>(mpi, "CaptureZone")
     .def_readonly("mpTimeX100", &CaptureZone::mpTimeX100)
     .def_readonly("conqTeam", &CaptureZone::conqTeam)
     .def_readonly("iconIdx", &CaptureZone::iconIdx)
     .def_readonly("dummyVarForCapturers", &CaptureZone::dummyVarForCapturers)
     .def_readonly("dummyVarForCapturePart", &CaptureZone::dummyVarForCapturePart)
-    .def_readonly("dummyVarForNumOfActiveCapturers", &CaptureZone::dummyVarForNumOfActiveCapturers);
-  py::class_<RearmZone, MissionZone, std::unique_ptr<RearmZone, py::nodelete>>(mpi, "RearmZone");
-  py::class_<ExitZone, MissionZone, std::unique_ptr<ExitZone, py::nodelete>>(mpi, "ExitZone");
+    .def_readonly("dummyVarForNumOfActiveCapturers", &CaptureZone::dummyVarForNumOfActiveCapturers)
+  ;
+  py::class_<RearmZone, MissionZone, std::unique_ptr<RearmZone, py::nodelete>>(mpi, "RearmZone")
+  ;
+  py::class_<ExitZone, MissionZone, std::unique_ptr<ExitZone, py::nodelete>>(mpi, "ExitZone")
+  ;
   py::class_<PickupZone, MissionZone, std::unique_ptr<PickupZone, py::nodelete>>(mpi, "PickupZone")
-    .def_readonly("showOnTacticalMap", &PickupZone::showOnTacticalMap);
-  py::class_<BaseExtReflectable, danet::ReflectableObject, std::unique_ptr<BaseExtReflectable, py::nodelete>>(
-    mpi, "BaseExtReflectable")
+    .def_readonly("showOnTacticalMap", &PickupZone::showOnTacticalMap)
+  ;
+  py::class_<BaseExtReflectable, danet::ReflectableObject, std::unique_ptr<BaseExtReflectable, py::nodelete>>(mpi, "BaseExtReflectable")
     .def_readonly("isAlternativeShotFreq", &BaseExtReflectable::isAlternativeShotFreq)
     .def_readonly("brokenTurretDriveSpeed", &BaseExtReflectable::brokenTurretDriveSpeed)
     .def_readonly("brokenTurretDriveMult", &BaseExtReflectable::brokenTurretDriveMult)
@@ -163,17 +173,20 @@ void PyCodegenObjects::include(py::module_ &m) {
     .def_readonly("timeToNextSmokeScreen", &BaseExtReflectable::timeToNextSmokeScreen)
     .def_readonly("smokeScreenCount", &BaseExtReflectable::smokeScreenCount)
     .def_readonly("smokeScreenActived", &BaseExtReflectable::smokeScreenActived)
-    .def_readonly("crewStatMult", &BaseExtReflectable::crewStatMult);
-  py::class_<FMWReflectable, BaseExtReflectable, std::unique_ptr<FMWReflectable, py::nodelete>>(mpi, "FMWReflectable");
-  py::class_<GMReflectable, BaseExtReflectable, std::unique_ptr<GMReflectable, py::nodelete>>(mpi, "GMReflectable");
-  py::class_<DVMReflectable, danet::ReflectableObject, std::unique_ptr<DVMReflectable, py::nodelete>>(mpi,
-                                                                                                      "DVMReflectable")
-    .def_readonly("dummyVarForDamagedStateReflection", &DVMReflectable::dummyVarForDamagedStateReflection);
-  py::class_<FM_DVMReflectable, DVMReflectable, std::unique_ptr<FM_DVMReflectable, py::nodelete>>(mpi,
-                                                                                                  "FM_DVMReflectable");
-  py::class_<GM_DVMReflectable, DVMReflectable, std::unique_ptr<GM_DVMReflectable, py::nodelete>>(mpi,
-                                                                                                  "GM_DVMReflectable");
-  py::class_<UnitWeaponsMask, danet::ReflectableObject, std::unique_ptr<UnitWeaponsMask, py::nodelete>>(
-    mpi, "UnitWeaponsMask")
-    .def_readonly("dummyVarForAmmoPartsMask", &UnitWeaponsMask::dummyVarForAmmoPartsMask);
+    .def_readonly("crewStatMult", &BaseExtReflectable::crewStatMult)
+  ;
+  py::class_<FMWReflectable, BaseExtReflectable, std::unique_ptr<FMWReflectable, py::nodelete>>(mpi, "FMWReflectable")
+  ;
+  py::class_<GMReflectable, BaseExtReflectable, std::unique_ptr<GMReflectable, py::nodelete>>(mpi, "GMReflectable")
+  ;
+  py::class_<DVMReflectable, danet::ReflectableObject, std::unique_ptr<DVMReflectable, py::nodelete>>(mpi, "DVMReflectable")
+    .def_readonly("dummyVarForDamagedStateReflection", &DVMReflectable::dummyVarForDamagedStateReflection)
+  ;
+  py::class_<FM_DVMReflectable, DVMReflectable, std::unique_ptr<FM_DVMReflectable, py::nodelete>>(mpi, "FM_DVMReflectable")
+  ;
+  py::class_<GM_DVMReflectable, DVMReflectable, std::unique_ptr<GM_DVMReflectable, py::nodelete>>(mpi, "GM_DVMReflectable")
+  ;
+  py::class_<UnitWeaponsMask, danet::ReflectableObject, std::unique_ptr<UnitWeaponsMask, py::nodelete>>(mpi, "UnitWeaponsMask")
+    .def_readonly("dummyVarForAmmoPartsMask", &UnitWeaponsMask::dummyVarForAmmoPartsMask)
+  ;
 }

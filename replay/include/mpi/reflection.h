@@ -86,6 +86,13 @@ namespace pybind11 {
   class class_;
 }
 
+class IRenderHandler {
+public:
+  virtual bool setCount(uint32_t count, uint32_t curr_offs) = 0;
+  virtual void DrawIndex(uint32_t idx, uint32_t time_ms, std::string & value) = 0;
+  virtual void onEnd() = 0;
+};
+
 namespace danet {
   class ReflectionVarMeta;
 
@@ -172,8 +179,10 @@ namespace danet {
 
   public:
     virtual ~ReflectionVarMeta() = default;
+    virtual void DrawHistory(IRenderHandler* renderer) = 0;
     virtual std::string toString() = 0;
     uint8_t persistentId;
+    bool isOpen = false; // used with ui stuff
     uint16_t flags;
     uint16_t numBits;
     const char *name;
@@ -226,15 +235,11 @@ namespace danet {
   template<typename T>
   class ReflectionVar : public ReflectionVarMeta {
   public:
-    std::string toString() override {
-      return toStringImpl<T>(data, 0);
-    }
+    void DrawHistory(IRenderHandler* renderer) override;
+    std::string toString() override;
 
   private:
-    static constexpr reflection_var_encoder getCoder() {
-      G_STATIC_ASSERT(HasValidEncoder<T>::value);
-      return DefaultEncoderChooser<T>::coder;
-    }
+    static constexpr reflection_var_encoder getCoder();
 
     template<typename type_, typename... options>
     friend class pybind11::class_;
@@ -264,37 +269,19 @@ namespace danet {
 
   public:
     ReflectionVar() = delete; // some values NEED to be set
-    void init(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder = getCoder(),
-              uint16_t bits = sizeof(T) << 3) {
-      this->name = name;
-      this->next = next;
-      this->persistentId = pid;
-      this->numBits = bits;
-      this->coder = coder;
-      this->data = (T *) spaceHandler.addState(0);
-      this->handler = &spaceHandler;
-    }
+    void init(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder = nullptr,
+              uint16_t bits = sizeof(T) << 3);
 
-    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid) : ReflectionVarMeta() {
-      init(name, next, pid);
-    }
+    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid);
 
-    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder_) :
-      ReflectionVarMeta() {
-      init(name, next, pid, coder_);
-    }
+    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder_);
 
-    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count) : ReflectionVarMeta() {
-      init(name, next, pid, getCoder(), bit_count);
-    }
+    ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count);
 
     ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count,
-                  reflection_var_encoder coder_) :
-      ReflectionVarMeta() {
-      init(name, next, pid, coder_, bit_count);
-    }
+                  reflection_var_encoder coder_);
 
-    T *Get() const { return this->getValue<T>(); }
+    T *Get() const;
     //~ReflectionVar() {
     //  delete data;
     //}
@@ -531,6 +518,10 @@ namespace danet {
     // implemented automatically in DECL_REFLECTION macros
 
     virtual const char *getClassName() const = 0;
+
+    /// 'draws' the object with ImGui or preferred GUI
+    /// include the stub target
+    virtual void drawObject() const;
 
     void rewindToTime(uint32_t time_ms) {
       for (ReflectionVarMeta *m = varList.head; m; m = m->next) {

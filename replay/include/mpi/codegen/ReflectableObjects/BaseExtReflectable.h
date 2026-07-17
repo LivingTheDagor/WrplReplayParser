@@ -4,6 +4,7 @@
 class BaseExtReflectable : public danet::ReflectableObject {
 public:
   DECL_REFLECTION(BaseExtReflectable, danet::ReflectableObject)
+  void drawObject() const override;
   danet::ReflectionVar<bool> isAlternativeShotFreq{"isAlternativeShotFreq", &brokenTurretDriveSpeed, 33};
   danet::ReflectionVar<float> brokenTurretDriveSpeed{"brokenTurretDriveSpeed", &brokenTurretDriveMult, 55};
   danet::ReflectionVar<float> brokenTurretDriveMult{"brokenTurretDriveMult", &isBreechDamaged, 56};
@@ -11,8 +12,7 @@ public:
   danet::ReflectionVar<bool> hasModuleEffectsToRepair{"hasModuleEffectsToRepair", &moduleEffectsRepairAtTime, 58};
   danet::ReflectionVar<float> moduleEffectsRepairAtTime{"moduleEffectsRepairAtTime", &curNightVisionMode, 59};
   danet::ReflectionVar<int> curNightVisionMode{"curNightVisionMode", &dummyVarForMissionAddText, 40};
-  danet::ReflectionVar<std::array<std::string, 2>> dummyVarForMissionAddText{"dummyVarForMissionAddText",
-                                                                             &supportPlanesCount, 5};
+  danet::ReflectionVar<std::array<std::string,2>> dummyVarForMissionAddText{"dummyVarForMissionAddText", &supportPlanesCount, 5};
   danet::ReflectionVar<uint32_t> supportPlanesCount{"supportPlanesCount", &supportPlaneCatapultsFuseMask, 49};
   danet::ReflectionVar<uint8_t> supportPlaneCatapultsFuseMask{"supportPlaneCatapultsFuseMask", &lastBuildingTime, 50};
   danet::ReflectionVar<float> lastBuildingTime{"lastBuildingTime", &visualReloadProgress, 62};
@@ -45,10 +45,8 @@ public:
   danet::ReflectionVar<float> scoutStartTime{"scoutStartTime", &scoutCooldown, 26};
   danet::ReflectionVar<float> scoutCooldown{"scoutCooldown", &prepareRepairAssisteeTime, 27};
   danet::ReflectionVar<float> prepareRepairAssisteeTime{"prepareRepairAssisteeTime", &prepareRepairAssistantTime, 28};
-  danet::ReflectionVar<float> prepareRepairAssistantTime{"prepareRepairAssistantTime", &prepareExtinguishAssistantTime,
-                                                         35};
-  danet::ReflectionVar<float> prepareExtinguishAssistantTime{"prepareExtinguishAssistantTime", &nextUseArtilleryTime,
-                                                             47};
+  danet::ReflectionVar<float> prepareRepairAssistantTime{"prepareRepairAssistantTime", &prepareExtinguishAssistantTime, 35};
+  danet::ReflectionVar<float> prepareExtinguishAssistantTime{"prepareExtinguishAssistantTime", &nextUseArtilleryTime, 47};
   danet::ReflectionVar<float> nextUseArtilleryTime{"nextUseArtilleryTime", &prepareRepairCooldownsTime, 29};
   danet::ReflectionVar<float> prepareRepairCooldownsTime{"prepareRepairCooldownsTime", &killer, 37};
   danet::ReflectionVar<danet::KillerStruct> killer{"killer", &isNeedRepairHelp, 30};
@@ -61,10 +59,11 @@ public:
   danet::ReflectionVar<uint8_t> smokeScreenCount{"smokeScreenCount", &smokeScreenActived, 52};
   danet::ReflectionVar<bool> smokeScreenActived{"smokeScreenActived", &crewStatMult, 53};
   danet::ReflectionVar<float> crewStatMult{"crewStatMult", nullptr, 63};
-  BaseExtReflectable() : ReflectableObject() {
+  explicit BaseExtReflectable(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(oid)  {
     varList.head = &isAlternativeShotFreq;
     varList.tail = &crewStatMult;
   }
+  friend ParserState;
 };
 
 ECS_DECLARE_CREATABLE_TYPE(BaseExtReflectable);

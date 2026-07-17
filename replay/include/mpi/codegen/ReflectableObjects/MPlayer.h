@@ -4,8 +4,9 @@
 class MPlayer : public danet::ReflectableObject {
 public:
   DECL_REFLECTION(MPlayer, danet::ReflectableObject)
-  std::unordered_set<unit::Unit *> currentOwnedUnits{};
-  std::vector<unit::Unit *> allOwnedUnits{};
+  void drawObject() const override;
+  std::unordered_set<unit::Unit*> currentOwnedUnits{};
+  std::vector<unit::Unit*> allOwnedUnits{};
   danet::ReflectionVar<danet::Uid> uid{"uid", &invitedNickName, 2};
   danet::ReflectionVar<std::string> invitedNickName{"invitedNickName", &nickLocKey, 3};
   danet::ReflectionVar<std::string> nickLocKey{"nickLocKey", &ClanTag, 4, danet::TranslatedCoder};
@@ -18,10 +19,8 @@ public:
   danet::ReflectionVar<uint16_t> memberId{"memberId", &customState, 11};
   danet::ReflectionVar<DataBlock> customState{"customState", &score, 12};
   danet::ReflectionVar<uint16_t> score{"score", &dummyForSupportPlanes, 13};
-  danet::ReflectionVar<std::array<ecs::EntityId, 20>> dummyForSupportPlanes{"dummyForSupportPlanes",
-                                                                            &dummyForCrewUnitsList, 14};
-  danet::ReflectionVar<danet::CrewUnitsList> dummyForCrewUnitsList{"dummyForCrewUnitsList", &disabledByMatchingSlots,
-                                                                   15};
+  danet::ReflectionVar<std::array<ecs::EntityId,20>> dummyForSupportPlanes{"dummyForSupportPlanes", &dummyForCrewUnitsList, 14};
+  danet::ReflectionVar<danet::CrewUnitsList> dummyForCrewUnitsList{"dummyForCrewUnitsList", &disabledByMatchingSlots, 15};
   danet::ReflectionVar<uint32_t> disabledByMatchingSlots{"disabledByMatchingSlots", &brokenSlots, 16};
   danet::ReflectionVar<uint32_t> brokenSlots{"brokenSlots", &wasReadySlots, 17};
   danet::ReflectionVar<uint32_t> wasReadySlots{"wasReadySlots", &spareAircraftInSlots, 18};
@@ -36,10 +35,8 @@ public:
   danet::ReflectionVar<ecs::EntityId> spectatedModelIndex{"spectatedModelIndex", &dummyForCountUsedSlots, 27};
   danet::ReflectionVar<std::vector<uint8_t>> dummyForCountUsedSlots{"dummyForCountUsedSlots", &dummyForSpawnCosts, 28};
   danet::ReflectionVar<std::vector<uint32_t>> dummyForSpawnCosts{"dummyForSpawnCosts", &dummyForSpawnDelayTimes, 29};
-  danet::ReflectionVar<std::vector<uint16_t>> dummyForSpawnDelayTimes{"dummyForSpawnDelayTimes",
-                                                                      &dummyForKillStreaksProgress, 30};
-  danet::ReflectionVar<danet::dummyForKillStreaksProgress> dummyForKillStreaksProgress{"dummyForKillStreaksProgress",
-                                                                                       &state, 31};
+  danet::ReflectionVar<std::vector<uint16_t>> dummyForSpawnDelayTimes{"dummyForSpawnDelayTimes", &dummyForKillStreaksProgress, 30};
+  danet::ReflectionVar<danet::dummyForKillStreaksProgress> dummyForKillStreaksProgress{"dummyForKillStreaksProgress", &state, 31};
   danet::ReflectionVar<uint16_t> state{"state", &squadScore, 32};
   danet::ReflectionVar<uint32_t> squadScore{"squadScore", &ownedUnitRef, 33};
   danet::ReflectionVar<ecs::EntityId> ownedUnitRef{"ownedUnitRef", &controlledUnitRef, 34};
@@ -58,10 +55,11 @@ public:
   danet::ReflectionVar<bool> missionSupportUnitEnabled{"missionSupportUnitEnabled", &rageTokens, 47};
   danet::ReflectionVar<uint16_t> rageTokens{"rageTokens", &numFreeSpareUsed, 48};
   danet::ReflectionVar<uint32_t> numFreeSpareUsed{"numFreeSpareUsed", nullptr, 50};
-  MPlayer() : ReflectableObject() {
+  explicit MPlayer(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(oid)  {
     varList.head = &uid;
     varList.tail = &numFreeSpareUsed;
   }
+  friend ParserState;
 };
 
 ECS_DECLARE_CREATABLE_TYPE(MPlayer);

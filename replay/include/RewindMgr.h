@@ -81,6 +81,8 @@ protected:
 public:
   const dag::Vector<TimeState> &getStates() const { return this->timeStates; }
 
+  uint32_t getCurrIndex() const { return curr_index; }
+
   template<typename... Args>
   TimeState &rewindTo(uint32_t time_ms, Args... args) {
     curr_index = eastl::clamp(curr_index, (uint32_t) 0, (uint32_t) this->timeStates.size());

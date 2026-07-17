@@ -16,7 +16,7 @@ void PyMpiTypes::include(py::module_ &m) {
 
   auto mpi = m.def_submodule("mpi");
   py::class_<danet::Uid>(mpi, "Uid")
-    .def_readonly("player_id", &danet::Uid::player_id)
+    .def_readonly("player_id", &danet::Uid::account_id)
     .def_property_readonly("player_name", [](const danet::Uid &self) { return str_to_py_str(self.get_player_name()); })
     .def("as_bytes", [](danet::Uid &self) {
       std::string payload{};

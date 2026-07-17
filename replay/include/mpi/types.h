@@ -55,7 +55,7 @@ namespace danet {
 
 #pragma pack(push, 1) // FUCK OFF COMPILER THIS IS 90 BYTES not 96 CAUSE GAIJIN SAID SO
   struct Uid {
-    int64_t player_id{}; // bots are negative
+    int64_t account_id{}; // bots are negative
     char name[81]{};
     AccountType account_type{};
 
@@ -64,6 +64,7 @@ namespace danet {
   };
 #pragma pack(pop)
   G_STATIC_ASSERT(sizeof(danet::Uid) == 90);
+  
   class WeaponsMask;
 
   // a WeaponMask uses a bitfield to represent what weapons still visually exist
@@ -172,6 +173,56 @@ namespace danet {
   };
 
 } // namespace danet
+template<>
+struct fmt::formatter<danet::AccountType> {
+public:
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+  template<typename Context>
+  constexpr auto format(danet::AccountType const &val, Context &ctx) const {
+    const char * str = nullptr;
+    switch (val) {
+      case danet::None: str = "None"; break;
+        case danet::PC: str = "PC"; break;
+      case danet::Xbox: str = "Xbox"; break;
+      case danet::Psn: str = "Psn"; break;
+      default: str = "Unknown"; break;
+    }
+    return fmt::format_to(ctx.out(), "{}({})", static_cast<int>(val), str);
+  }
+};
 
+template<>
+struct fmt::formatter<danet::Uid> {
+public:
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+  template<typename Context>
+  constexpr auto format(danet::Uid const &val, Context &ctx) const {
+    return fmt::format_to(ctx.out(), "account_id: {}; name: {}; account_type: {}", val.account_id, val.get_player_name(), val.account_type);
+  }
+};
 
+template<>
+struct fmt::formatter<danet::Country> {
+public:
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+  template<typename Context>
+  constexpr auto format(danet::Country const &val, Context &ctx) const {
+    const char * str = nullptr;
+    switch (val){
+      case danet::USA: str = "USA"; break;
+        case danet::GERMANY: str = "GERMANY"; break;
+        case danet::RUSSIA: str = "RUSSIA"; break;
+        case danet::BRITAIN: str = "BRITAIN"; break;
+        case danet::JAPAN: str = "JAPAN"; break;
+        case danet::CHINA: str = "CHINA"; break;
+        case danet::FRANCE: str = "FRANCE"; break;
+        case danet::ITALY: str = "ITALY"; break;
+        
+        case danet::SWEDEN: str = "SWEDEN"; break;
+        case danet::ISRAEL: str = "ISRAEL"; break;
+        default: str = "UNKNOWN"; break;
+    }
+    return format_to(ctx.out(), "{}({})", static_cast<int>(val), str);
+  }
+};
 #endif // WTFILEUTILS_TYPES_H

@@ -45,10 +45,24 @@ def generate_reflectables(header_codegen_path: str, cpp_codegen_path: str, force
 
 
     mgr.compile(header_codegen_path, cpp_codegen_path) # probably wont fail
+    with open(f"{header_codegen_path}/forwardDeclarations.h", "w") as f:
+        write_header(f)
+        f.write("#pragma once\n\n")
+        f.write("#include \"mpi/reflection.h\"\n")
+        f.write("#include \"mpi/serializers.h\"\n")
+        parsed_types = set()
+        for compiled in mgr.inst_datatypes.values():
+            name = compiled.datatype.reg.serialize_name(compiled)
+            if name in parsed_types:
+                continue
+            parsed_types.add(name)
+            f.write(f"extern template class danet::ReflectionVar<{name}>;\n")
+
+
     with open(f"{header_codegen_path}/ReflIncludes.h", "w") as f1:
         write_header(f1)
         f1.write("#pragma once\n")
-        f1.write("#include \"mpi/serializers.h\"\n")
+        f1.write("#include \"forwardDeclarations.h\"\n")
         for header in refl_include_paths:
             f1.write(f"#include \"{header}\"\n")
         f1.write("#include \"mpi/Replication.h\"\n")

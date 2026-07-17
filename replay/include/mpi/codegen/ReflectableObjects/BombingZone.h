@@ -4,10 +4,12 @@
 class BombingZone : public MissionZone {
 public:
   DECL_REPLICATION(BombingZone, MissionZone)
+  void drawObject() const override;
   danet::ReflectionVar<float> curZoneIntegrity{"curZoneIntegrity", nullptr, 67};
-  BombingZone() : MissionZone()  {
+  explicit BombingZone(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(oid)  {
     flags.next = &curZoneIntegrity;
     varList.tail = &curZoneIntegrity;
   }
+  friend ParserState;
 };
 

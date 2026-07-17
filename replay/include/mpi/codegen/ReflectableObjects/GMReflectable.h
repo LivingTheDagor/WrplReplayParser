@@ -4,7 +4,10 @@
 class GMReflectable : public BaseExtReflectable {
 public:
   DECL_REFLECTION(GMReflectable, BaseExtReflectable)
-  GMReflectable() : BaseExtReflectable() {}
+  void drawObject() const override;
+  explicit GMReflectable(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : BaseExtReflectable(oid)  {
+  }
+  friend ParserState;
 };
 
 ECS_DECLARE_CREATABLE_TYPE(GMReflectable);

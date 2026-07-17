@@ -28,6 +28,9 @@ class NullIndexList:
     def __len__(self):
         return len(self.ls)
 
+# class Flags:
+#     def __init__(self, ):
+
 class ReflectableObject(ABC):
     def __init__(self):
         pass
@@ -87,6 +90,7 @@ class InstReflectable:
             for v in self.obj.private:
                 self.oss.write(f"  {str(v)}\n")
         self.oss.write("public:\n"f"  DECL_REFLECTION({self.obj_name}, {self.parent_name})\n")
+        self.oss.write("  void drawObject() const override;\n")
         if hasattr(self.obj, "public"):
             for v in self.obj.public:
                 self.oss.write(f"  {str(v)}\n")
@@ -150,7 +154,7 @@ class InstReflectable:
         return self.parent_obj.getLastVar()
 
     def write_ctor(self):
-        self.oss.write(f"  {self.obj_name}() : {self.parent_name_no_namespace}() " " {\n")
+        self.oss.write(f"  explicit {self.obj_name}(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : {self.parent_name_no_namespace}(oid) " " {\n")
         if self.is_base:
             self.oss.write(f"    varList.head = &{self.first_var};\n")
 
@@ -159,7 +163,7 @@ class InstReflectable:
                 last_var = self.parent_obj.getLastVar()
                 self.oss.write(f"    {last_var[0]}.next = &{self.first_var};\n")
             self.oss.write(f"    varList.tail = &{self.last_var};\n")
-        self.oss.write("  }\n")
+        self.oss.write("  }\n  friend ParserState;\n")
     def write_footer(self):
         self.oss.write("};\n\n")
         self.oss.write(f"ECS_DECLARE_CREATABLE_TYPE({self.obj_name});\n")
@@ -185,6 +189,7 @@ class InstReplicated(InstReflectable):
                 for v in self.obj.private:
                     self.oss.write(f"  {str(v)}\n")
         self.oss.write("public:\n"f"  DECL_REPLICATION({self.obj_name}, {self.parent_name})\n")
+        self.oss.write("  void drawObject() const override;\n")
         if hasattr(self.obj, "public"):
             if self.parent_obj and hasattr(self.parent_obj.obj, "public") and self.parent_obj.obj.public == self.obj.public:
                 pass

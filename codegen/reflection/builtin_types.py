@@ -1,7 +1,6 @@
 from .DataTypes import DataTypeRegister
 from .custom_rw import *
 
-
 class bool_reg(DataTypeRegister):
     name = "bool"
     is_pod = True
@@ -100,10 +99,8 @@ class zigZagVector_reg(DataTypeRegister):
     def get_base_name(datatype: 'DataTypeCompiled'):
         return "std::vector"
 
-
 class array_reg(DataTypeRegister):
     name = "std::array"
     template_type_args = [DataTypeType, int]
     custom_loader = array_loader
     custom_writer = array_writer
-
