@@ -116,7 +116,7 @@ public:
 
   bool ParsePacket(ReplayPacket &pkt);
 
-  inline void rewindToMs(uint32_t time_ms);
+  void rewindToMs(uint32_t time_ms);
 
   bool finishedLoading() { return this->replay_length_ms != 0xFFFFFFFF; }
 };
