@@ -11,6 +11,7 @@ add_library(dagIoSys
         zlibIoFatal.cpp
         zstdIo.cpp
         zstdIoFatal.cpp
+        chainedMemIo.cpp
 )
 
 

@@ -4,6 +4,7 @@ add_library(dag_math
         perlin.cpp
         mathAng.cpp
         alloc.cpp
+        geomTree.cpp
 )
 
 
