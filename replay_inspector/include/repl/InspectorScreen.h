@@ -1198,8 +1198,8 @@ public:
         ImGui::SameLine();
         ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("##slider_time_speed", &play_speed, 0.5f, 16.f);
-        ImGui::EndChild();
       }
+      ImGui::EndChild();
     }
     if (ImGui::BeginTabBar("Replay Tabs", ImGuiTabBarFlags_None)) {
       if (ImGui::BeginTabItem("Map") && ImGui::BeginChild("##MapArea", ImVec2(0, 0), ImGuiChildFlags_None)) {

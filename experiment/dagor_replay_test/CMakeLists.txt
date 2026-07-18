@@ -17,6 +17,7 @@ target_link_libraries(dagor_rpl_test
         ZLIB::ZLIB
         ParserState::ParserState
         Translate::Translate
+        MPI_UI_STUBS::MPI_UI_STUBS
         # mimalloc
 
 )

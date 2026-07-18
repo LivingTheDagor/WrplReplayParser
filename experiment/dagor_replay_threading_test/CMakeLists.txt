@@ -15,6 +15,7 @@ target_link_libraries(dagor_rpl_threading_test
         INIT::INIT
         Replay::Replay
         ZLIB::ZLIB
+        MPI_UI_STUBS::MPI_UI_STUBS
         # mimalloc
 
 )
