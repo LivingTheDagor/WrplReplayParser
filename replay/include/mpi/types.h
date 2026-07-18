@@ -201,6 +201,38 @@ public:
   }
 };
 
+template <>
+struct fmt::formatter<danet::WeaponsMask> {
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+  template<typename Context>
+  constexpr auto format(danet::WeaponsMask const &val, Context &ctx) const {
+    return fmt::format_to(ctx.out(), "{}", toStringImplTyped(&val.weapons, 0));
+  }
+};
+
+inline std::string format_bits(const uint8_t* ptr, size_t bitcount) {
+  std::string out;
+  out.reserve(bitcount);
+
+  for (size_t i = 0; i < bitcount; ++i) {
+    size_t byte_index = i / 8;
+    size_t bit_index  = 7 - (i % 8);   // MSB-first
+    bool bit = (ptr[byte_index] >> bit_index) & 1;
+    out.push_back(bit ? '1' : '0');
+  }
+
+  return out;
+}
+
+template<>
+struct fmt::formatter<danet::WeaponMask> {
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+  template<typename Context>
+  constexpr auto format(danet::WeaponMask const &val, Context &ctx) const {
+    return fmt::format_to(ctx.out(), "WeaponMask(weapon_index: {}, ammo_count: {}, mask: {})", val.get_weapon_index(), val.get_num_weapons(), format_bits(val.get_mask_c(), val.get_num_weapons()));
+  }
+};
+
 template<>
 struct fmt::formatter<danet::Country> {
 public:

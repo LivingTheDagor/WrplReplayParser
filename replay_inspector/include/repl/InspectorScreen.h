@@ -1123,7 +1123,6 @@ public:
     }
   }
 
-
   void drawReflectableObjects() {
     drawReflectableObject(&this->state.gen_state, nullptr);
     drawReflectableObject(&this->state.glob_elo, nullptr);
@@ -1156,6 +1155,61 @@ public:
         }
       }
       ImGui::TreePop();
+    }
+  }
+
+  void drawECS() {
+    //state.g_entity_mgr
+  }
+
+  template <typename T>
+  void drawVar(const char * varname, const T & var, bool expanded_default = true) {
+    ImGui::TableNextColumn();
+    ImGui::TextUnformatted(varname);
+    ImGui::TableNextColumn();
+    auto str = toStringImplTyped(&var, 0);
+    drawStr(str, &var, varname, expanded_default);
+  }
+
+  void drawUnit() {
+    
+  }
+
+  void drawUnits() {
+    for (auto unit: state.getUnitLookup()) {
+      if (unit) {
+        char buff[64] = {};
+        auto translated = translate::localize_index(unit->name_index_1);
+        if (translated == nullptr)
+          translated = "<UNKNOWN>";
+        fmt::format_to_n(buff, 64, "uid {}; type: {}; name: {}", unit->uid, unit->getUnitTypeName(), translated);
+        if (ImGui::TreeNode(buff)) {
+          ImGui::BeginTable("Unit Data", 2, ImGuiTableFlags_Borders);
+
+          ImGui::TableSetupColumn("name", ImGuiTableColumnFlags_WidthFixed);
+          ImGui::TableSetupColumn("value");
+          ImGui::TableHeadersRow();
+          auto shop_val = translate::localize_index(unit->name_index_shop);
+          auto idx_0_val = translate::localize_index(unit->name_index_0);
+          auto idx_1_val = translate::localize_index(unit->name_index_1);
+          auto idx_2_val = translate::localize_index(unit->name_index_2);
+          drawVar("uid", unit->uid);
+          drawVar("created_at_ms", unit->created_at_ms);
+          drawVar("killed_at_ms", unit->killed_at_ms);
+          drawVar("killed_position", unit->killed_position);
+          drawVar("destroyed_at_ms", unit->destroyed_at_ms);
+          drawVar("curr_eid", unit->curr_eid);
+          drawVar("unitType", unit->unitType);
+          drawVar("unit_name", unit->unit_name);
+          drawVar("raw_unit_name", unit->raw_unit_name);
+          drawVar("shop_name: ", std::string_view(shop_val ? shop_val : "<UNKNOWN>"));
+          drawVar("name_index_0: ", std::string_view(idx_0_val ? idx_0_val : "<UNKNOWN>"));
+          drawVar("name_index_1: ", std::string_view(idx_1_val ? idx_1_val : "<UNKNOWN>"));
+          drawVar("name_index_2: ", std::string_view(idx_2_val ? idx_2_val : "<UNKNOWN>"));
+          ImGui::EndTable();
+          ImGui::TreePop();
+        }
+      }
     }
   }
 
@@ -1214,6 +1268,11 @@ public:
       }
       if (ImGui::BeginTabItem("ECS") && ImGui::BeginChild("##ECSArea", ImVec2(0, 0), ImGuiChildFlags_None)) {
         //drawECS();
+        ImGui::EndChild();
+        ImGui::EndTabItem();
+      }
+      if (ImGui::BeginTabItem("Units") && ImGui::BeginChild("##UnitsArea", ImVec2(0, 0), ImGuiChildFlags_None)) {
+        drawUnits();
         ImGui::EndChild();
         ImGui::EndTabItem();
       }

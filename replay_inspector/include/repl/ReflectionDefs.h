@@ -2,6 +2,22 @@
 #include "mpi/serializers.h"
 #include "mpi/codegen/ReflIncludes.h"
 
+
+inline void drawStr(const std::string &str, const void* unique_ptr, const char * varname = "", bool default_open = true) {
+  if (str.contains('\n')) {
+    char buff[40];
+    fmt::format_to_n(buff, 40, "##{}{}", fmt::ptr(unique_ptr), varname);
+    ImGui::SetNextItemOpen(default_open, ImGuiCond_Once);
+    if (ImGui::TreeNode(buff)) {
+      ImGui::TextUnformatted(str.c_str());
+      ImGui::TreePop();
+    }
+  } else {
+    ImGui::TextUnformatted(str.c_str());
+  }
+}
+
+
 class DrawHistory : public IRenderHandler {
 public:
   void onEnd() override {
@@ -64,17 +80,7 @@ void danet::ReflectableObject::drawObject() const {
     ImGui::TextUnformatted(var->name);
     ImGui::TableNextColumn();
     auto str = var->toString();
-    if (str.contains('\n')) {
-      char buff[40];
-      fmt::format_to_n(buff, 40, "##{}{}", fmt::ptr(this), var->name);
-      ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-      if (ImGui::TreeNode(buff)) {
-        ImGui::TextUnformatted(str.c_str());
-        ImGui::TreePop();
-      }
-    } else {
-    ImGui::TextUnformatted(str.c_str());
-    }
+    drawStr(str, (void*)this, var->name);
   }
 }
 void MPlayer::drawObject() const {ReflectableObject::drawObject();}

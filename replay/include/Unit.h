@@ -170,6 +170,7 @@ namespace unit {
 
     virtual ~Unit() = default;
     virtual void Load();
+    virtual const char * getUnitTypeName() = 0;
 
     std::vector<std::string> getTags() const { return getUnitTagsBlk(unit_tags); }
 
@@ -219,10 +220,12 @@ namespace unit {
   bool LoadFromStorage(Unit *unit, const FieldSerializerDict &data);
 
   class Aircraft : public Unit {
+  private:
     FMWReflectable fmv_data{};
     FM_DVMReflectable fm_dvm_data{};
 
   public:
+    const char *getUnitTypeName() override;
     explicit Aircraft(uint16_t uid) : Unit(uid, AircraftType) {
       base_data = &fmv_data;
       base_dvm_data = &fm_dvm_data;
@@ -240,6 +243,7 @@ namespace unit {
 
 
   public:
+    const char *getUnitTypeName() override;
     void Load() override;
 
     explicit Tank(uint16_t uid) : Unit(uid, TankType) {
@@ -255,3 +259,18 @@ namespace unit {
     bool operator==(const UnitRef &other) const { return unit == other.unit; }
   };
 } // namespace unit
+template<>
+struct fmt::formatter<UnitType> {
+public:
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+  template<typename Context>
+  constexpr auto format(UnitType const &val, Context &ctx) const {
+    const char * str = nullptr;
+    switch (val){
+      case UnitType::TankType: str = "TankType"; break;
+      case UnitType::AircraftType: str = "AircraftType"; break;
+      default: str = "UNKNOWN"; break;
+    }
+    return format_to(ctx.out(), "{}({})", static_cast<int>(val), str);
+  }
+};

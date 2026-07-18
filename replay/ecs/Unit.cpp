@@ -17,6 +17,9 @@ namespace unit {
       return (Aircraft *) this;
     return nullptr;
   }
+  const char *Aircraft::getUnitTypeName() {
+    return "Aircraft";
+  }
 
 #define RET_FAIL(opt) \
   if (!(opt))         \
@@ -374,6 +377,9 @@ namespace unit {
       }
     }
     return nullptr;
+  }
+  const char *Tank::getUnitTypeName() {
+    return "Tank";
   }
   void Tank::Load() {
 
