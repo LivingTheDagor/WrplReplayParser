@@ -75,7 +75,17 @@ protected:
   void onPacket(ReplayPacket *pkt) { conn.onPacket(pkt, pkt->timestamp_ms); }
 
 public:
-  std::pmr::memory_resource * get_allocator() { return &allocator; }
+
+  template <class T, class... Args>
+  T * _new(Args&&... args) {
+    return allocator._new<T>(std::forward<Args>(args)...);
+  }
+  template <class T>
+  void _delete(T *ptr) {
+    allocator._delete(ptr);
+  }
+  StateAllocator * get_allocator() { return &allocator; }
+
   IMemAlloc * getMem() { return allocator.getMem(); }
   std::vector<mpi::MpiQueueObject::QueueData> *get_queued_data(ecs::EntityId eid) {
     auto it = mpi_queue.dispatched_objects.find(eid);
@@ -104,9 +114,13 @@ public:
   int current_packet_index = -1;
 
 
-  ecs::EntityId getUnitEid(uint16_t uid);
+  ecs::EntityId getUnitEid(uint16_t uid) const;
 
-  unit::Unit *getUnitObj(uint16_t uid);
+  const std::vector<unit::Unit*> getUnitLookup() {
+    return this->uid_unit_lookup;
+  }
+
+  unit::Unit *getUnitObj(uint16_t uid) const;
 
   void setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid);
 

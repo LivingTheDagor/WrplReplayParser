@@ -27,7 +27,7 @@ void ParserState::initialize() {
   }
 }
 
-ecs::EntityId ParserState::getUnitEid(uint16_t uid) {
+ecs::EntityId ParserState::getUnitEid(uint16_t uid) const {
   uid &= 0x7FF;
   if (uid == 0x7FF || uid >= this->uid_lookup.size()) {
     return ecs::INVALID_ENTITY_ID;
@@ -35,7 +35,7 @@ ecs::EntityId ParserState::getUnitEid(uint16_t uid) {
   return this->uid_lookup[uid];
 }
 
-unit::Unit *ParserState::getUnitObj(uint16_t uid) {
+unit::Unit *ParserState::getUnitObj(uint16_t uid) const {
   uid &= 0x7FF;
   if (uid == 0x7FF || uid >= this->uid_unit_lookup.size()) {
     return nullptr;
@@ -64,7 +64,8 @@ ParserState::~ParserState() {
     delete v;
   }
   for (auto v: BattleMessages) {
-    delete v;
+    _delete(v);
+    //delete v;
   }
   for (auto v: missionAreas1) {
     delete v;
@@ -100,7 +101,7 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       if (m != nullptr) {
         mpi::send(m);
         if (m->delete_message)
-          delete m;
+          this->allocator._delete(m);
       }
       break;
     }

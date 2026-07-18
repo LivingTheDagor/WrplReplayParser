@@ -59,6 +59,20 @@ class StateAllocator : public std::pmr::memory_resource {
     return this == &other;
   }
 public:
+  template <class T, class... Args>
+  T * _new(Args&&... args) {
+  void * mem = do_allocate(sizeof(T), alignof(T));
+  return new (mem) T(std::forward<Args>(args)...);
+}
+
+  template <class T>
+  void _delete(const T * ptr) {
+  if (ptr) {
+    if (!ptr) return;
+    std::destroy_at(ptr);
+    do_deallocate(static_cast<void*>(const_cast<T*>(ptr)), sizeof(T), alignof(T));
+  }
+}
   StateAllocator() = default;
   ~StateAllocator() = default;
 

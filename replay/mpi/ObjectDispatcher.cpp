@@ -6,6 +6,7 @@
 #include "mpi/GeneralObject.h"
 #include "Unit.h"
 #include "mpi/PositionSync.h"
+#include "state/ParserState.h"
 
 CREATE_HANDLE(handle_object_dispatcher, "ObjectDispatcher")
 
@@ -33,37 +34,43 @@ namespace mpi {
       case Reflection1:
       case Reflection2:
       case ReflectionNoDecompress: {
-        return new Message(this, mid);
+        return state->_new<Message>(this, mid);
+        //return new Message(this, mid);
         break;
       }
       case Kill: {
-        return new KillMessage(this);
+        return state->_new<KillMessage>(this);
+        ///return new KillMessage(this);
         DISPATCHER_LOGD1("KILL");
         break;
       }
       case Awards: {
-        return new AwardMessage(this);
+        return state->_new<AwardMessage>(this);
+        ///return new AwardMessage(this);
         DISPATCHER_LOGD1("Awards");
         break;
       }
       case SevereDamage: {
-        return new SevereDamageMessage(this);
+        return state->_new<SevereDamageMessage>(this);
         DISPATCHER_LOGD1("SevereDamage");
         break;
       }
       case CriticalDamage: {
-        return new CriticalDamageMessage(this);
+        return state->_new<CriticalDamageMessage>(this);
+        //return new CriticalDamageMessage(this);
         DISPATCHER_LOGD1("CriticalDamage");
         break;
       }
       case Tank1:
       case Tank2: {
         DISPATCHER_LOGD1("Tank");
-        return new TankMessage(this, mid);
+        return state->_new<TankMessage>(this, mid);
+        //return new TankMessage(this, mid);
       }
       case Rocket1:
       case Rocket2: {
-        return new BSMessage(this, mid);
+        return state->_new<BSMessage>(this, mid);
+        //return new BSMessage(this, mid);
       }
     }
     // LOG("no mid found\n");
