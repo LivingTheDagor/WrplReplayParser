@@ -22,9 +22,6 @@ void ParserState::initialize() {
   for (size_t i = 0; i < this->players.size(); i++) {
     this->players[i].setUID((mpi::ObjectID)((0xe<<0xb)+i));
   }
-  for (mpi::ObjectID i = 0; i < teams.size(); i++) {
-    this->teams[i].setUID((mpi::ObjectID)((0xf<<0xb)+i));
-  }
 }
 
 ecs::EntityId ParserState::getUnitEid(uint16_t uid) const {

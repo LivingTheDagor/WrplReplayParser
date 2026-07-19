@@ -225,7 +225,3 @@ bool ServerReplayReader<streaming>::getNextPacket(ReplayPacket &packet) {
     return false;
   return this->curr_reader->getNextPacket(packet);
 }
-
-
-extern template class ServerReplayReader<false>;
-extern template class ServerReplayReader<true>;

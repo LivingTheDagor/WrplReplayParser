@@ -64,3 +64,5 @@ public:
   bool getNextPacket(ReplayPacket &packet) override;
 };
 
+extern template class ServerReplayReader<false>;
+extern template class ServerReplayReader<true>;

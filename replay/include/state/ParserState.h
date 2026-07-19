@@ -103,7 +103,11 @@ public:
   std::pmr::vector<MPlayer> players{get_allocator()};
   ecs::EntityManager g_entity_mgr{this}; // this order is required as g_entity_mgr needs to be destroyed before players
   std::pmr::vector<MissionZone *> Zones{get_allocator()};
-  std::array<TeamData, 3> teams{}; // team[0] is global data, teams[1] is first team, teams[2] is second team
+  std::array<TeamData, 3> teams{
+    TeamData{0xf<<0xb+0},
+    TeamData(0xf<<0xb+1),
+    TeamData(0xf<<0xb+2)
+  }; // team[0] is global data, teams[1] is first team, teams[2] is second team
   std::pmr::vector<ChatMessage> chatMessages{get_allocator()};
   GlobalElo glob_elo{};
   GeneralState gen_state{};
