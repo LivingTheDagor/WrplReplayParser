@@ -23,7 +23,6 @@ target_link_libraries(dagIoSys
         EASTL::EASTL
         LOGGER::LOGGER
         FS::FS
-
 )
 add_library(dagIoSys::dagIoSys ALIAS dagIoSys)
 

@@ -175,17 +175,12 @@ bool CompressedReplayReader::getNextPacket(ReplayPacket &packet) {
   return true;
 }
 
-
 CompressedReplayReader::~CompressedReplayReader() {
   if (this->acquired_lock)
     ((Replay *) this->owner)->Data.afterParse();
   this->reader.ceaseReading();
   delete base_reader;
 }
-
-
-template class ServerReplayReader<false>;
-template class ServerReplayReader<true>;
 
 template<bool streaming>
 bool ServerReplayReader<streaming>::load_replay() {
@@ -225,3 +220,6 @@ bool ServerReplayReader<streaming>::getNextPacket(ReplayPacket &packet) {
     return false;
   return this->curr_reader->getNextPacket(packet);
 }
+
+template class ServerReplayReader<false>;
+template class ServerReplayReader<true>;

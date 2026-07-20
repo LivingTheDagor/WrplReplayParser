@@ -12,6 +12,8 @@ add_library(dagBlk
 add_library(dagBlk::dagBlk ALIAS dagBlk)
 
 target_link_libraries(dagBlk
+        PUBLIC
+        DAG_MATH::DAG_MATH
         EASTL::EASTL
         LOGGER::LOGGER
         XXH3::XXH3

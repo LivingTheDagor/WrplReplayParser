@@ -570,7 +570,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
         //  LOGI("{}; {} : {} ", (state.curr_time_ms/1000.0f), rot1, rot2);
         if (i == 0)
           turret_horizontal = rot1;
-        //LOGI("rot1: {}; rot2: {}; tv18: {}; tv28: {}", rot1, rot2, tv18, tv28);
+        //LOGI("{} at {}; rot1: {}; rot2: {}", i, state.curr_time_ms/1000.f, rot1, rot2);
         if (extra_stuff) {
           uint16_t extra_val;
           RET_FAIL(bs.Read(extra_val));
