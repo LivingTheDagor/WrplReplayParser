@@ -6,7 +6,16 @@
 
 bool separateServerSideDetection_g = true;
 bool resyncSaclosGuidanceParams = true; // actually known to be true, hopefully
-
+#if LDAG_DBGLEVEL > 0
+#define RET_FAIL(op) G_ASSERT((op));
+#else
+#define RET_FAIL(op) \
+do {               \
+if (!(op)) {     \
+return false;  \
+}                \
+} while (0)
+#endif
 bool SensorsControlStates::deserialize(BitStream &bs) {
   first_bool = bs.ReadBit();
   uint8_t sensor_type;
@@ -22,24 +31,24 @@ bool SensorsControlStates::deserialize(BitStream &bs) {
       int16_t packed_val_1;
       int16_t packed_val_2;
       int16_t packed_val_3;
-      bs.Read(bit_packed);
+      RET_FAIL(bs.Read(bit_packed));
       field136_0x88 = (uint8_t) bit_packed & 0xf;
       field137_0x89 = (uint8_t) (bit_packed >> 4) & 0x3f;
       field138_0x8a = (uint8_t) (bit_packed >> 10) & 0xf;
-      bs.Read(some_data_1);
-      bs.Read(packed_val_1);
-      bs.Read(packed_val_2);
-      bs.Read(packed_val_3);
+      RET_FAIL(bs.Read(some_data_1));
+      RET_FAIL(bs.Read(packed_val_1));
+      RET_FAIL(bs.Read(packed_val_2));
+      RET_FAIL(bs.Read(packed_val_3));
       some_data_2 = netutils::UNPACKS<int16_t>(packed_val_1, 1.0f);
       some_data_4 = netutils::UNPACKS<int16_t>(packed_val_2, PI);
       some_data_5 = netutils::UNPACKS<int16_t>(packed_val_2, PI);
       if (bit_packed < 0) {
-        bs.Read(some_data_6[0]);
+        RET_FAIL(bs.Read(some_data_6[0]));
       }
       bool bool_thing = bs.ReadBit();
       if (bool_thing) {
         uint8_t bVar7;
-        bs.Read(bVar7);
+        RET_FAIL(bs.Read(bVar7));
         this->some_data_6[1] = bVar7 & 1;
         this->field149_0xa4 = (int) ((char) (bVar7 << 5) >> 6);
         this->field150_0xa8 = (int) ((char) (bVar7 << 3) >> 6);
@@ -52,12 +61,12 @@ bool SensorsControlStates::deserialize(BitStream &bs) {
       }
       field136_0x88 = bs.ReadBit();
       int16_t v;
-      bs.Read(v);
+      RET_FAIL(bs.Read(v));
       some_data_1 = netutils::UNPACKS<int16_t>(v, PI);
-      bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_2), 0x60);
-      bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_5),
-                  0x60); // ok for some fucking reason some_data_6 is a float here
-      bs.Read(field147_0xa8);
+      RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_2), 0x60));
+      RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_5),
+                  0x60)); // ok for some fucking reason some_data_6 is a float here
+      RET_FAIL(bs.Read(field147_0xa8));
       break;
     }
     case 3: {
@@ -67,7 +76,7 @@ bool SensorsControlStates::deserialize(BitStream &bs) {
     case 4: {
       bool stuff_is_read = bs.ReadBit();
       if (stuff_is_read) {
-        bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_1), 0x60);
+        RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_1), 0x60));
       }
       break;
     }
@@ -75,60 +84,61 @@ bool SensorsControlStates::deserialize(BitStream &bs) {
   }
   bool stores_vec_thang = bs.ReadBit();
   if (stores_vec_thang) {
-    bs.ReadBits(&field132_0x84, 6);
+    RET_FAIL(bs.ReadBits(&field132_0x84, 6));
     field4_0x4.resize(field132_0x84);
     for (int i = 0; i < field132_0x84; i++) {
-      bs.Read(field4_0x4[i]);
+      RET_FAIL(bs.Read(field4_0x4[i]));
     }
-    bs.ReadBits(&field133_0x85, 6);
+    RET_FAIL(bs.ReadBits(&field133_0x85, 6));
   }
   return true;
 }
 
 
 bool TargetDesignationControlState::deserialize(BitStream &bs) {
-  bs.Read(v1);
-  bs.Read(v2);
+  RET_FAIL(bs.Read(v1));
+  RET_FAIL(bs.Read(v2));
   v3 = bs.ReadBit();
   if (v3) {
-    bs.Read(v4);
+    RET_FAIL(bs.Read(v4));
   }
   write_compressed = bs.ReadBit();
   if (write_compressed) {
-    bs.Read(v6);
+    RET_FAIL(bs.Read(v6));
     netutils::read_vector(bs, v9, 4000.0f);
   } else {
-    bs.Read(v7);
-    bs.Read(v9);
+    RET_FAIL(bs.Read(v7));
+    RET_FAIL(bs.Read(v9));
   }
-  bs.Read(v5);
+  RET_FAIL(bs.Read(v5));
   v8 = bs.ReadBit();
   v10 = bs.ReadBit();
   auto read_some_float = bs.ReadBit();
   if (read_some_float) {
     uint8_t temp;
-    bs.Read(temp);
+    RET_FAIL(bs.Read(temp));
     v11 = netutils::UNPACK<uint8_t>(temp, 1);
   }
-  v12 = bs.ReadBit();
-  bool has_v14 = bs.ReadBit();
+  bool has_v14;
+  RET_FAIL(bs.Read(v12));
+  RET_FAIL(bs.Read(has_v14));
   v13 = bs.ReadBit();
   if (has_v14) {
-    bs.Read(v14);
+    RET_FAIL(bs.Read(v14));
   } else
     v14 = 0;
-  bool has_v15 = bs.ReadBit();
+  bool has_v15;
+  RET_FAIL(bs.Read(has_v15));
   if (has_v15) {
-    bs.Read(v15);
+    RET_FAIL(bs.Read(v15));
   }
   return true;
 }
 
 bool CounterMeasuresControlState::deserialize(BitStream &bs) {
-  bool ret = true;
-  ret &= bs.Read(v1);
-  ret &= bs.Read(v2);
-  return ret;
+  RET_FAIL(bs.Read(v1));
+  RET_FAIL(bs.Read(v2));
+  return true;
 }
 std::vector<std::string> unit::getUnitTagsBlk(const DataBlock *blk) {
   if (!blk)
@@ -340,16 +350,7 @@ struct TankRef {
   uint8_t turret_count = 0;
 };
 
-#if LDAG_DBGLEVEL > 0
-#define RET_FAIL(op) G_ASSERT((op));
-#else
-#define RET_FAIL(op) \
-  do {               \
-    if (!(op)) {     \
-      return false;  \
-    }                \
-  } while (0)
-#endif
+
 struct SubVehicleDynData {
   Quat quat;
   float f4;
@@ -487,7 +488,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
       }
       RET_FAIL(bs.Read(some_val_3));
       RET_FAIL(bs.Read(some_val_4));
-      G_ASSERT(some_val_4[3] <= 9);
+      RET_FAIL(some_val_4[3] <= 9);
       std::vector<uint8_t> some_vals_5{};
       some_vals_5.resize(some_val_4[3]);
       for (auto &b: some_val_4) {
@@ -598,15 +599,15 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
     RET_FAIL(bs.Read(some_weird_val));
   }
   uint8_t counterMeasuresCount;
-  bs.Read(counterMeasuresCount);
+  RET_FAIL(bs.Read(counterMeasuresCount));
   RET_FAIL(counterMeasuresCount <= COUNTER_MEASURES_COUNT);
   thread_local std::vector<CounterMeasuresControlState> counterMeasures{counterMeasuresCount};
   for (auto &c: counterMeasures) {
     RET_FAIL(c.deserialize(bs));
   }
   uint8_t targetsNum = 0;
-  bs.ReadBits(&targetsNum, 4);
-  G_ASSERT(targetsNum <= 8);
+  RET_FAIL(bs.ReadBits(&targetsNum, 4));
+  RET_FAIL(targetsNum <= 8);
   thread_local std::vector<TargetDesignationControlState> targets{targetsNum};
   for (auto &t: targets) {
     RET_FAIL(t.deserialize(bs));
@@ -655,7 +656,7 @@ bool GMSync(ParserState &state, BitStream &bs) {
           auto &hist = state.NetDelta.getHistory(uid_lower);
           auto res = state.NetDelta.netDelta.readDelta(bs, &hist);
           if (res.ok) {
-            ParseVehicleInfo(state, res.bs, &ref, true);
+            RET_FAIL(ParseVehicleInfo(state, res.bs, &ref, true));
           }
         } else {
           bs.AlignReadToByteBoundary();
