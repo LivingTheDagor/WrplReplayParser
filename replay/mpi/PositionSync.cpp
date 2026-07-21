@@ -601,14 +601,16 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
   uint8_t counterMeasuresCount;
   RET_FAIL(bs.Read(counterMeasuresCount));
   RET_FAIL(counterMeasuresCount <= COUNTER_MEASURES_COUNT);
-  thread_local std::vector<CounterMeasuresControlState> counterMeasures{counterMeasuresCount};
+  thread_local std::vector<CounterMeasuresControlState> counterMeasures{};
+  counterMeasures.resize(counterMeasuresCount);
   for (auto &c: counterMeasures) {
     RET_FAIL(c.deserialize(bs));
   }
   uint8_t targetsNum = 0;
   RET_FAIL(bs.ReadBits(&targetsNum, 4));
   RET_FAIL(targetsNum <= 8);
-  thread_local std::vector<TargetDesignationControlState> targets{targetsNum};
+  thread_local std::vector<TargetDesignationControlState> targets{};
+  targets.resize(targetsNum);
   for (auto &t: targets) {
     RET_FAIL(t.deserialize(bs));
   }
@@ -656,7 +658,10 @@ bool GMSync(ParserState &state, BitStream &bs) {
           auto &hist = state.NetDelta.getHistory(uid_lower);
           auto res = state.NetDelta.netDelta.readDelta(bs, &hist);
           if (res.ok) {
-            RET_FAIL(ParseVehicleInfo(state, res.bs, &ref, true));
+            bool ret = ParseVehicleInfo(state, res.bs, &ref, true);
+            if (ret == false && ref.ref_1 != nullptr) {
+              LOGE("Failed to parse info for ground unit {} of uid {}", ref.ref_1->unit_name, ref.ref_1->uid);
+            }
           }
         } else {
           bs.AlignReadToByteBoundary();
