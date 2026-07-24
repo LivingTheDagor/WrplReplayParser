@@ -71,17 +71,6 @@ public:
   assert_failed_ext(file, line, func, expr_str, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__))
 
 
-#define DAGOR_DBGLEVEL 2
-#if DAGOR_DBGLEVEL < 1
-// No side-effects in release
-#define G_ASSERT_EX(expression, expr_str)            (expression)
-#define G_ASSERTF_EX(expression, expr_str, fmt, ...) (expression)
-#define G_ASSERT(expression)                         (expression)
-#define G_ASSERTF(expression, fmt, ...)              (expression)
-#define G_ASSERTF_ONCE(expression, fmt, ...)         (expression)
-#define G_FAST_ASSERT(expression)                    (expression)
-#define G_ASSERT_FAIL(fmt, ...)                      ((void) 0)
-#else
 #define G_ASSERT_EX(expression, expr_str)                                \
   do {                                                                   \
     const bool g_assert_result_ = !!(expression);                        \
@@ -112,6 +101,16 @@ public:
 #define G_ASSERT(expression)            G_ASSERT_EX(expression, #expression)
 #define G_ASSERTF(expression, fmt, ...) G_ASSERTF_EX(expression, #expression, fmt __VA_OPT__(, ) __VA_ARGS__)
 
+#if LDAG_DBGLEVEL > 0
+#define DG_ASSERT(expression)            G_ASSERT_EX(expression, #expression)
+#define DG_ASSERTF(expression, fmt, ...) G_ASSERTF_EX(expression, #expression, fmt
+#else
+#define DG_ASSERT(expression) (expression)
+#define DG_ASSERTF(expression, fmt, ...) (expression)
+#endif
+
+
+
 // This assertion API is faster because it's won't do any function calls within, therefore not translating
 // functions that call it in non-leaf functions (and preventing optimizer to inline it for example)
 // It's also smaller in terms of code size: on x86[_64] it's only 3 (test+jmp+int3) instructions long
@@ -126,7 +125,6 @@ public:
     if (DAGOR_UNLIKELY(!(expr))) \
       G_DEBUG_BREAK_FORCED;      \
   } while (0)
-#endif
 #endif
 
 // _LOG functions check the condition and produce error messages even

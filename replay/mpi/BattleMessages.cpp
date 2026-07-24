@@ -2,6 +2,17 @@
 #include "state/ParserState.h"
 
 
+
+/*
+#define BAD_DEFAULT \
+default: {          \
+  LOGE("")          \
+}
+
+inline bool parseSerializer(mpi::Message * message, std::function<bool(BitStream *, uint32_t)> cb) {
+  uint32_t fieldes = message.
+
+}*/
 #define MESSAGE_SWITCH_HEADER                                                                                      \
   uint32_t fields = this->readFieldsSizeAndFlag();                                                                 \
   if (fields == 0) /* no data was serialized in a message that expects data*/                                      \

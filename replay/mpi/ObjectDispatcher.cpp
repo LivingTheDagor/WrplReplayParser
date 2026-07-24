@@ -347,6 +347,8 @@ namespace mpi {
   bool TankMessage::readPayload(ParserState *state) { return this->payload.Read(this->data); }
 
   void TankMessage::writePayload() { this->payload.Write(this->data); }
+  bool CameraStateMessage::readPayload(ParserState *state) {
+  }
 } // namespace mpi
 
 ECS_REGISTER_CTM_TYPE(MPlayer, nullptr);
