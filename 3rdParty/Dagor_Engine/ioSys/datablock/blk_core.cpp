@@ -481,7 +481,7 @@ DataBlock *DataBlock::getBlockByName(int name_id, int start_after, bool expect_s
     if (expect_single && singleBlockChecking)
         for (uint32_t i = 0, cnt = 0, e = blockCount(); i < e && cnt < 2; ++i)
             if (getBlock(i)->getNameId() == name_id && ++cnt > 1)
-                logerr("BLK: more than one block '%s' in <%s>", getBlock(i)->getBlockName(), resolveFilename());
+                logerr("BLK: more than one block '{}' in '{}'", getBlock(i)->getBlockName(), resolveFilename());
 #else
     (void) (expect_single);
 #endif
@@ -509,7 +509,7 @@ DataBlock *DataBlock::addNewBlock(const char *name) {
     const uint32_t bCnt = blockCount();
     constexpr auto maxBlocksCount = eastl::numeric_limits<decltype(blocksCount)>::max();
     G_ASSERTF_RETURN(bCnt < maxBlocksCount, getBlock(bCnt - 1),
-                     "DataBlock::addNewBlock(%s) blockCount=%d reaches limit of %d max blocks", name, bCnt,
+                     "DataBlock::addNewBlock({}) blockCount={} reaches limit of {} max blocks", name, bCnt,
                      maxBlocksCount);
     auto nb = new(shared->allocateBlock()) DataBlock(shared, name);
     insertAt(data->data.size(), sizeof(block_id_t), (const char *) &nb);
@@ -753,13 +753,13 @@ void DataBlock::shrink() {
                 insertParamAt<string_t>(i, p.nameId, paramData);
             else
                 insertNewParamRaw(i, p.nameId, p.type, dblk::get_type_size(p.type), paramData);
-            // debug("pid=%d used=%d (%d), params = %d", i, getUsedSize(), data->data.size(), paramCount());
+            // debug("pid={} used={} ({}) params = {}", i, getUsedSize(), data->data.size(), paramCount());
             eastl::swap(newData, data->data);
             eastl::swap(newParamsCount, paramsCount);
         }
         eastl::swap(newData, data->data);
         eastl::swap(newParamsCount, paramsCount);
-        // debug("2 getUsedSize()=%d blocks = %d", getUsedSize(), blocks);
+        // debug("2 getUsedSize()={} blocks = {}", getUsedSize(), blocks);
         data->data.shrink_to_fit();
     }
     for (int i = 0, e = blockCount(); i < e; ++i)
@@ -899,7 +899,7 @@ void DataBlock::clearParams() {
 }
 
 void DataBlock::reset() {
-    G_ASSERTF_RETURN(topMost() || hasNoNameId(), , "trying to reset child datablock: nameId=%d topMost=%d", getNameId(),
+    G_ASSERTF_RETURN(topMost() || hasNoNameId(), , "trying to reset child datablock: nameId={} topMost={}", getNameId(),
                      topMost());
     nameIdAndFlags &= ~NAME_ID_MASK;
     if (topMost())
