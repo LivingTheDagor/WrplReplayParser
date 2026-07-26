@@ -242,7 +242,7 @@ bool FMSync(ParserState &state, BitStream &bs) {
           }
           uint32_t some_packed_val;
           uint32_t vals_4;
-          SpaceTimeEuler st{state.curr_time_ms, {}, {}};
+          SpaceTimeEuler st{{}, {}};
           bs.Read(st.location);
           bs.Read(some_packed_val);
           Point3 someEuler;
@@ -448,7 +448,6 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
     if (ref->ref_1 && ref->ref_1->AsTank()) {
       auto tank = ref->ref_1->AsTank();
       auto ref = tank->positions.reserveOne();
-      ref->time_ms = state.curr_time_ms;
       ref->euler = direction;
       ref->location = unit_position;
       tank->positions.checkAndPush(&state);
@@ -778,8 +777,9 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
   }
   SpaceTimeEuler * back = nullptr;
   if (entity) {
-    entity->positions.push_back({{state.curr_time_ms, WeaponPos}, {}});
-    back = &entity->positions.back();
+    back = entity->positions.reserveOne();
+    back->location = WeaponPos;
+    entity->positions.checkAndPush(&state); // we don't compare, so this shouldn't invalidate our pointer
   }
   if (!bool2) {
     int b5;

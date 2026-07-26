@@ -495,12 +495,13 @@ protected:
       auto &state = this->state;
       // front is earliest point
       // back is latest point
-      if (rocket.positions.front().time_ms > data.time_start_ms || rocket.destroyed_at_ms < data.time_end_ms)
+      auto &positions = rocket.positions.history();
+      if (positions.front().time_ms > data.time_start_ms || rocket.destroyed_at_ms < data.time_end_ms)
         return; // no points in range, skip
 
       screen_points.resize(0);
-      screen_points.reserve(rocket.positions.size());
-      if (rocket.positions.size() <= 5)
+      screen_points.reserve(positions.size());
+      if (positions.size() <= 5)
         return;
 
       const Point3 *prev = nullptr;
@@ -509,20 +510,20 @@ protected:
       const SpaceTimeEuler * front_val = nullptr;
       ImVec2 front = ImVec2(0.0f, 0.0f);
       // we iterate from front to back, so new points first
-      for (int idx_ = (int) rocket.positions.size() - 6; idx_ >= 0; idx_--) {
+      for (int idx_ = (int) positions.size() - 6; idx_ >= 0; idx_--) {
         // lets skip over points until we get to our start time
-        if (rocket.positions[idx_].time_ms > data.time_start_ms)
+        if (positions[idx_].time_ms > data.time_start_ms)
           continue;
         // we reached end? break
-        if (rocket.positions[idx_].time_ms < data.time_end_ms)
+        if (positions[idx_].time_ms < data.time_end_ms)
           break;
-        auto &pos = rocket.positions[idx_].location;
+        auto &pos = positions[idx_].data.location;
         bool do_draw = true;
         auto curr_point = UVToScreen(*data.info, pos, data.canvas_p0, data.info->mapSize, do_draw);
         if (!do_draw)
           continue;
         if (!found_front) {
-          front_val = &rocket.positions[idx_];
+          front_val = &positions[idx_].data;
           front = curr_point;
           found_front = true;
         }

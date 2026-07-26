@@ -20,10 +20,9 @@ struct CameraTime {
 };
 
 struct SpaceTime {
-  uint32_t time_ms = 0;
   Point3 location{};
 
-  bool operator==(const SpaceTime &other) const { return time_ms == other.time_ms && location == other.location; }
+  bool operator==(const SpaceTime &other) const { return location == other.location; }
 };
 
 struct SpaceTimeEuler : SpaceTime {

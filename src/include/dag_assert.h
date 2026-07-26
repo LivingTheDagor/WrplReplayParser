@@ -103,10 +103,10 @@ public:
 
 #if LDAG_DBGLEVEL > 0
 #define DG_ASSERT(expression)            G_ASSERT_EX(expression, #expression)
-#define DG_ASSERTF(expression, fmt, ...) G_ASSERTF_EX(expression, #expression, fmt
+#define DG_ASSERTF(expression, fmt, ...) G_ASSERTF_EX(expression, #expression, fmt __VA_OPT__(, ) __VA_ARGS__)
 #else
-#define DG_ASSERT(expression) (expression)
-#define DG_ASSERTF(expression, fmt, ...) (expression)
+#define DG_ASSERT(expression) ((void)(expression))
+#define DG_ASSERTF(expression, fmt, ...) ((void)(expression))
 #endif
 
 

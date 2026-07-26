@@ -7,6 +7,7 @@
 #include "network/eid.h"
 #include <math/dag_mathUtils.h>
 #include "gameMath/quantization.h"
+#include "state/ParserState.h"
 
 void hello() { std::cout << ""; }
 

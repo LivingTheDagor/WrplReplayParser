@@ -497,6 +497,7 @@ class DataTypeManager:
                 write_header(f)
                 f.write("#include \"mpi/serializers.h\"\n")
                 f.write("#include \"mpi/codegen/ReflIncludes.h\"\n")
+                f.write("#include \"state/ParserState.h\"\n")
                 f.write(f"void danet::ReflectableObject::drawObject() const {{}}\n")
                 for obj in self.RegistredObjects:
                     f.write(f"void {obj}::drawObject() const {{}}\n")
@@ -622,7 +623,7 @@ extern PyCodegenObjects py_codegen_objects;
                     ...
 
                 io = StringIO()
-                state_str = f"danet::ReflectionVar<{full}>::SpaceHandler::TimeState"
+                state_str = f"danet::ReflectionVar<{full}>::TimeState"
                 io.write(f"  //danet::ReflectionVar<{full}> bindings\n")
 
                 #write TimeState instance
@@ -636,9 +637,10 @@ extern PyCodegenObjects py_codegen_objects;
 
 
                 io.write(f"  py::class_<danet::ReflectionVar<{full}>>(gen, \"{full_substituted}_var\")\n")
-                io.write(f"  .def_readonly(\"data\", &danet::ReflectionVar<{full}>::data)\n")
+                io.write(f"  .def_property_readonly(\"data\", [](danet::ReflectionVar<{full}> &self){{return self.curr();}}, py::return_value_policy::reference_internal)\n")
+                io.write(f"  .def_property_readonly(\"time_ms\", [](danet::ReflectionVar<{full}> &self){{return self.currState()->time_ms;}})\n")
                 io.write(
-                    f"  .def_property_readonly(\"history\", [](danet::ReflectionVar<{full}> &self){{return &self.get_history();}}, py::return_value_policy::reference_internal);\n\n\n")
+                    f"  .def_property_readonly(\"history\", [](danet::ReflectionVar<{full}> &self){{return &self.history();}}, py::return_value_policy::reference_internal);\n\n\n")
                 all_written_objects.append(io)
 
             f.write("include_types_0(gen);\n}")

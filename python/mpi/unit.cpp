@@ -11,19 +11,31 @@ PyUnit py_unit;
 void PyUnit::include(py::module_ &m) {
   DO_INCLUDE()
   auto unit = m.def_submodule("unit");
-  py::class_<SpaceTime>(m, "SpaceTime")
-    .def_readonly("time_ms", &SpaceTime::time_ms)
+  py::class_<SpaceTime>(unit, "SpaceTime")
     .def_readonly("location", &SpaceTime::location)
     .def("__str__", [](SpaceTime &st) {
-      return fmt::format("SpaceTime({}, [{}, {}, {}])", st.time_ms, st.location.x, st.location.y, st.location.z);
+      return fmt::format("SpaceTime([{}, {}, {}])", st.location.x, st.location.y, st.location.z);
     });
 
-  py::class_<SpaceTimeEuler, SpaceTime>(m, "SpaceTimeEuler")
+  py::class_<SpaceTimeEuler, SpaceTime>(unit, "SpaceTimeEuler")
     .def_readonly("euler", &SpaceTimeEuler::euler)
     .def("__str__", [](SpaceTimeEuler &st) {
-      return fmt::format("SpaceTimeEuler({}, [{}, {}, {}], [{}, {}, {}])", st.time_ms, st.location.x, st.location.y,
+      return fmt::format("SpaceTimeEuler([{}, {}, {}], [{}, {}, {}])", st.location.x, st.location.y,
                          st.location.z, st.euler.x, st.euler.y, st.euler.z);
     });
+
+
+  py::class_<ObjectRewindState<SpaceTimeEuler, false>::TimeState>(m, "SpaceTimeEulerTS")
+  .def_readonly("time_ms", &ObjectRewindState<SpaceTimeEuler, false>::TimeState::time_ms)
+  .def_readonly("value", &ObjectRewindState<SpaceTimeEuler, false>::TimeState::data);
+
+  bind_readonly_vector<dag::Vector<ObjectRewindState<SpaceTimeEuler, false>::TimeState>>(m, "SpaceTimeEulerTSList");
+
+
+  py::class_<ObjectRewindState<SpaceTimeEuler, false>>(m, "SpaceTimeEulerHistory")
+   .def_property_readonly("data", [](ObjectRewindState<SpaceTimeEuler, false> &self){return *self.curr();}, py::return_value_policy::reference_internal)
+   .def_property_readonly("time_ms", [](ObjectRewindState<SpaceTimeEuler, false> &self){return self.currState()->time_ms;})
+   .def_property_readonly("history", [](ObjectRewindState<SpaceTimeEuler, false> &self){return &self.history();}, py::return_value_policy::reference_internal);
 
   bind_readonly_vector<std::vector<SpaceTime>>(m, "SpaceTimeList");
   bind_readonly_vector<std::vector<SpaceTimeEuler>>(m, "SpaceTimeEulerList");
@@ -40,7 +52,6 @@ void PyUnit::include(py::module_ &m) {
 
 
   py_codegen_objects.include(m); // codegen objects require unit::Unit to exist
-
 
   py::class_<unit::Aircraft, unit::Unit, std::unique_ptr<unit::Aircraft, py::nodelete>>(unit, "Aircraft");
 

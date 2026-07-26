@@ -81,7 +81,7 @@ static void iterate_all_rockets_ecs_query(ecs::EntityManager &manager, Callable 
 void iterate_all_rockets(ParserState &state, on_rocket_cb_t &on_weapon) {
   ZoneScoped iterate_all_rockets_ecs_query(state.g_entity_mgr,
                                            [&on_weapon](const Rocket &rocket_component, ecs::EntityManager &manager) {
-                                             if (!rocket_component.positions.empty()) {
+                                             if (!rocket_component.positions.history().empty()) {
                                                if (rocket_component.destroyed_at_ms > *manager.curr_time_ms &&
                                                    *manager.curr_time_ms >= rocket_component.created_at_ms) {
                                                  on_weapon(rocket_component);
@@ -97,7 +97,7 @@ static void iterate_all_bombs_ecs_query(ecs::EntityManager &manager, Callable c)
 void iterate_all_bombs(ParserState &state, on_bomb_cb_t &on_weapon) {
   ZoneScoped iterate_all_bombs_ecs_query(state.g_entity_mgr,
                                          [&on_weapon](const Bomb &bomb_component, ecs::EntityManager &manager) {
-     if (!bomb_component.positions.empty()) {
+     if (!bomb_component.positions.history().empty()) {
        if (bomb_component.destroyed_at_ms > *manager.curr_time_ms &&
            *manager.curr_time_ms >= bomb_component.created_at_ms) {
          on_weapon(bomb_component);

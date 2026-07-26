@@ -64,7 +64,7 @@ static void iterate_all_rockets_ecs_query(ecs::EntityManager &manager, Callable 
 std::vector<Rocket *> collect_all_rockets(ParserState &state) {
   std::vector<Rocket *> rockets;
   iterate_all_rockets_ecs_query(state.g_entity_mgr, [&rockets](Rocket &rocket_component) {
-    if (!rocket_component.positions.empty()) {
+    if (!rocket_component.positions.history().empty()) {
       rockets.push_back(&rocket_component);
     }
   });
@@ -77,7 +77,7 @@ static void iterate_all_bombs_ecs_query(ecs::EntityManager &manager, Callable c)
 std::vector<Bomb *> collect_all_bombs(ParserState &state) {
   std::vector<Bomb *> bombs;
   iterate_all_bombs_ecs_query(state.g_entity_mgr, [&bombs](Bomb &bomb_component) {
-    if (!bomb_component.positions.empty()) {
+    if (!bomb_component.positions.history().empty()) {
       bombs.push_back(&bomb_component);
     }
   });
