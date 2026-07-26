@@ -13,7 +13,7 @@ namespace ecs {
 
 
   void EntityCreatedAction::forward(EntityManager &mgr) {
-    //LOGI("EntityCreatedAction::forward: {}", this->time_ms);
+    //LOGI("EntityCreatedAction::forward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Rewind);
     mgr.swap_desc(before, after);
     auto ptr = mgr.getNullable<ecs::EntityId>(after, ECS_HASH("eid"));
@@ -24,7 +24,7 @@ namespace ecs {
   }
 
   void EntityCreatedAction::backward(EntityManager &mgr) {
-    //LOGI("EntityCreatedAction::backward: {}", this->time_ms);
+    //LOGI("EntityCreatedAction::backward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Fastforward);
     auto ptr = mgr.getNullable<ecs::EntityId>(after, ECS_HASH("eid"));
     G_ASSERT(ptr);
@@ -35,7 +35,7 @@ namespace ecs {
   }
 
   void EntityDestroyedAction::forward(EntityManager &mgr) {
-    //LOGI("EntityDestroyedAction::forward: {}", this->time_ms);
+    //LOGI("EntityDestroyedAction::forward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Rewind);
     auto ptr = mgr.getNullable<ecs::EntityId>(after, ECS_HASH("eid"));
     G_ASSERT(ptr);
@@ -46,7 +46,7 @@ namespace ecs {
   }
 
   void EntityDestroyedAction::backward(EntityManager &mgr) {
-    //LOGI("EntityDestroyedAction::backward: {}", this->time_ms);
+    //LOGI("EntityDestroyedAction::backward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Fastforward);
     mgr.swap_desc(before, after);
     auto ptr = mgr.getNullable<ecs::EntityId>(after, ECS_HASH("eid"));
@@ -71,6 +71,7 @@ namespace ecs {
 
   // swap is inherently reversible, so the only difference between these is the assert
   void ComponentUpdateAction::forward(EntityManager &mgr) {
+    //LOGI("ComponentUpdateAction::forward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Rewind);
     auto ref = mgr.getComponentRefCidx(eid, cidx);
     G_ASSERT(!ref.isNull());
@@ -79,6 +80,7 @@ namespace ecs {
   }
 
   void ComponentUpdateAction::backward(EntityManager &mgr) {
+    //LOGI("ComponentUpdateAction::backward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Fastforward);
     auto ref = mgr.getComponentRefCidx(eid, cidx);
     G_ASSERT(!ref.isNull());
@@ -86,49 +88,24 @@ namespace ecs {
     last_direction = DIRECTION::Rewind;
   }
 
-  void RewindManager::rewindTo(uint32_t time_ms, EntityManager &mgr) {
-    const int sz = (int) actions.size();
-    if (sz == 0)
-      return;
-
-    // curr_index in [0, sz]:
-    //   0   = no actions applied
-    //   sz  = all actions applied
-    //   k   = actions [0, k-1] applied, action k is next to apply forward
-    curr_index = std::clamp(curr_index, 0, sz);
-    auto curr_time = getTime(curr_index - 1);
-    size_t test_size = 0;
-    if (curr_time < time_ms) {
-      auto iter = std::upper_bound(actions.begin() + curr_index, actions.end(), time_ms,
-                                   [](uint32_t val, const ACTION_ARRAY_CONTAINER &data) {
-                                     auto action = (RewindAction *) data.data();
-                                     return val < action->time_ms;
-                                   });
-      test_size = std::distance(actions.begin(), iter);
-    } else {
-      auto iter = std::lower_bound(actions.begin(), actions.begin() + curr_index, time_ms,
-                                   [](const ACTION_ARRAY_CONTAINER &data, uint32_t val) {
-                                     auto action = (RewindAction *) data.data();
-                                     return action->time_ms < val;
-                                   });
-      test_size = std::distance(actions.begin(), iter);
+  EcsRewindEvent::~EcsRewindEvent() {
+    for (auto &action: this->events) {
+      auto *data = reinterpret_cast<RewindAction *>(action.data());
+      data->~RewindAction();
     }
-
-    // Undo actions whose time is strictly after target: action[curr_index-1] was last applied
-    while (curr_index > 0 && getTime(curr_index - 1) > time_ms) {
-      --curr_index;
-      *mgr.curr_time_ms = getTime(curr_index - 1);
-      getAction(curr_index)->backward(mgr);
+  }
+  void EcsRewindEvent::forward(ParserState &state) {
+    for (auto &action: this->events) {
+      auto *data = reinterpret_cast<RewindAction *>(action.data());
+      data->forward(state.g_entity_mgr);
     }
+  }
 
-    // Apply actions whose time is within target
-    while (curr_index < sz && getTime(curr_index) <= time_ms) {
-      *mgr.curr_time_ms = getTime(curr_index - 1);
-      getAction(curr_index)->forward(mgr);
-      ++curr_index;
+  void EcsRewindEvent::backward(ParserState &state) {
+    for (auto it = this->events.rbegin(); it != this->events.rend(); ++it) {
+      auto *data = reinterpret_cast<RewindAction *>(it->data());
+      data->backward(state.g_entity_mgr);
     }
-    G_ASSERT(test_size == curr_index);
-    mgr.broadcastEventImmediate(EventRewind{time_ms});
   }
 
   CompileTimeQueryDesc *CompileTimeQueryDesc::tail = nullptr;
@@ -281,8 +258,8 @@ namespace ecs {
 
     auto storage_eid = this->allocateOneEid(); // (int16_t)eid.get_generation()
 
-    auto idx = this->rewindManager.createCreationAction(*curr_time_ms, storage_eid, eid);
-    eidToEventCreationMap[eid] = idx;
+    this->curr_event->createCreationAction(storage_eid, eid);
+    eidToEventCreationMap[eid] = storage_eid;
     this->entDescs.Allocate(eid);
     this->entDescs[eid.index()] = {templId, archetype_id, eid.generation(), chunk_id};
     this->wasInit.clear();
@@ -327,8 +304,7 @@ namespace ecs {
         RESERVED_EID_RANGE) {
       G_ASSERT(!this->entDescs.basic_destroyed.test(eid.index(), false));
       //auto new_eid = this->allocateOneEid();
-      auto creation_action = (EntityCreatedAction*)this->rewindManager.getState(eidToEventCreationMap[eid]).data.data();
-      auto new_eid = creation_action->before;
+      auto new_eid = eidToEventCreationMap[eid];
       G_ASSERT(new_eid);
       eidToEventCreationMap.erase(eid);
       sendEventImmediate(eid, EventEntityDestroyedBasic{new_eid, true});
@@ -338,7 +314,7 @@ namespace ecs {
       swap_desc(eid, new_eid);
       //add_sub_template(new_eid, "dagor_destroyed_t");
       this->entDescs.basic_destroyed.set(new_eid.index(), true);
-      this->rewindManager.createDestroyAction(*curr_time_ms, new_eid, eid);
+      this->curr_event->createDestroyAction(new_eid, eid);
       return true;
     }
 

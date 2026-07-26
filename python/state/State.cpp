@@ -68,7 +68,6 @@ void PyReplayState::include(py::module_ &m) {
     .def_readonly("zones", &ParserState::Zones)
     .def_readonly("areas", &ParserState::missionAreas2)
     .def_readonly("replay_length_ms", &ParserState::replay_length_ms)
-    .def_readonly("current_rewind_ms", &ParserState::current_rewind_ms)
     .def_readonly("curr_time_ms", &ParserState::curr_time_ms)
     .def("rewind_to", &ParserState::rewindToMs,
          py::doc("Rewind the Parser state to any particular time in the replay. Not exact"))

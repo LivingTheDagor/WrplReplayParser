@@ -78,9 +78,10 @@ void iterate_all_units(ParserState &state) {
       auto &unit = *unit__ref.unit;
       // log_ext("", 0, DEFAULT_SINK_HANDLER, LOGLEVEL::INFO, fmt::format("{}, {}", unit__ref.unit->uid,
       // unit__className));
-      uint32_t time_ms = unit.positions.empty() ? 0 : unit.positions[unit.positions.size() - 1].time_ms;
+      auto &history = unit.positions.history();
+      uint32_t time_ms = history.empty() ? 0 : history[history.size() - 1].time_ms;
       LOGI("{} {} owned by {} (eid {:#x}) last path at {}({})", unit.uid, unit__className, unit.owner_pid,
-           eid.get_handle(), ((float) time_ms) / 1000.f, unit.positions.size());
+           eid.get_handle(), ((float) time_ms) / 1000.f, history.size());
     } else {
       LOGI("unk unit {}", unit__className);
     }
@@ -93,7 +94,7 @@ std::vector<unit::Unit *> collect_all_units(ParserState &state) {
   iterate_all_units_ecs_query(
     state.g_entity_mgr,
     [&units](const unit::UnitRef &unit__ref, const ecs::string &unit__className, const ecs::EntityId eid) {
-      if (unit__ref.unit && !unit__ref.unit->positions.empty()) {
+      if (unit__ref.unit && !unit__ref.unit->positions.history().empty()) {
         units.push_back(unit__ref.unit);
       }
       return ecs::QueryCbResult::Continue;

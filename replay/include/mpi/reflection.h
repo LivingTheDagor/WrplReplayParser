@@ -14,6 +14,7 @@
 
 #include "mpi.h"
 #include "ecs/ComponentPrintingImplementationsBase.h"
+#include "state/StateRewinder.h"
 
 // operation codes for coder func
 #define DANET_REFLECTION_OP_ENCODE 0 // encode data
@@ -152,29 +153,8 @@ namespace danet {
   }
 
 
-  // is attached to a var, represents its various states throughout a replay
-  class ISpaceHandler {
-  public:
-    virtual ~ISpaceHandler() = default;
-    virtual void *addState(uint32_t time_ms) = 0; // add state for this var at this time, return pointer to value
-    virtual void *
-    checkPreviousState() = 0; // checks if previous state is same as the one before it, deletes recent if so
-    virtual void *goToTime(uint32_t time_ms) = 0; // does rewinding operation
-    virtual void *removePreviousState() = 0; // call during a deserialize fail
-  };
   // vars of this type are linked in one list inside ReflectableObject
   class ReflectionVarMeta {
-    void setValuePtr(void *ptr) {
-      char *raw = reinterpret_cast<char *>(this) + sizeof(ReflectionVarMeta);
-      std::memcpy(raw, &ptr, sizeof(ptr));
-    }
-
-    void **getPtrPtr() {
-      const char *raw = reinterpret_cast<const char *>(this) + sizeof(ReflectionVarMeta);
-      const void *const *storedPtr = reinterpret_cast<const void *const *>(raw);
-      return const_cast<void **>(storedPtr);
-    }
-
     friend ReflectableObject;
 
   public:
@@ -188,27 +168,17 @@ namespace danet {
     const char *name;
     reflection_var_encoder coder;
     ReflectionVarMeta *next;
-    ISpaceHandler *handler;
+    IObjectRewindState *handler;
     friend ReflectableObject;
 
     const char *getVarName() const { return name; }
 
     template<class T>
     T *getValue() const {
-      const char *raw = reinterpret_cast<const char *>(this) + sizeof(ReflectionVarMeta);
-      const T *const *storedPtr = reinterpret_cast<const T *const *>(raw);
-      return const_cast<T *>(*storedPtr);
+      return static_cast<T *>(handler->getPtr());
     }
-
     void setChanged(bool f) { flags = f ? (flags | RVF_CHANGED) : (flags & ~RVF_CHANGED); }
-
-    void setNewVar(uint32_t time_ms) { setValuePtr(this->handler->addState(time_ms)); }
-
-    void verifyVar() { setValuePtr(this->handler->checkPreviousState()); }
-
-    void resetVar() { setValuePtr(this->handler->removePreviousState()); }
   };
-
 
   template<typename T>
   struct DefaultEncoderChooser;
@@ -233,7 +203,7 @@ namespace danet {
 
 
   template<typename T>
-  class ReflectionVar : public ReflectionVarMeta {
+  class ReflectionVar : public ReflectionVarMeta, public ObjectRewindState<T, true> {
   public:
     void DrawHistory(IRenderHandler* renderer) override;
     std::string toString() override;
@@ -243,30 +213,6 @@ namespace danet {
 
     template<typename type_, typename... options>
     friend class pybind11::class_;
-
-  public:
-    // so pybind11 can see it
-    struct SpaceHandler : public RewindMgr<SpaceHandler, T, true>, public ISpaceHandler {
-      typedef RewindMgr<SpaceHandler, T, true> BASE;
-      friend BASE;
-
-      void forward(BASE::TimeState &) {} // dummy implementation
-      void backward(BASE::TimeState &) {} // dummy implementation
-      void *addState(uint32_t time_ms) override { return &this->emplaceNew(time_ms).data; }
-
-      void *checkPreviousState() override { return &this->CompareToPrevious().data; }
-
-      void *goToTime(uint32_t time_ms) override { return &this->rewindTo(time_ms).data; }
-
-      void *removePreviousState() override { return &this->RemovePrevious().data; }
-    };
-
-    const auto &get_history() const { return spaceHandler.getStates(); }
-
-    T *data = nullptr; // MUST BE FIRST VAR
-  private:
-    SpaceHandler spaceHandler;
-
   public:
     ReflectionVar() = delete; // some values NEED to be set
     void init(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder = nullptr,
@@ -281,7 +227,7 @@ namespace danet {
     ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count,
                   reflection_var_encoder coder_);
 
-    T *Get() const;
+    const T *Get() const;
     //~ReflectionVar() {
     //  delete data;
     //}
@@ -523,11 +469,6 @@ namespace danet {
     /// include the stub target
     virtual void drawObject() const;
 
-    void rewindToTime(uint32_t time_ms) {
-      for (ReflectionVarMeta *m = varList.head; m; m = m->next) {
-        m->setValuePtr(m->handler->goToTime(time_ms));
-      }
-    }
   };
 
   class ReplicatedObject : public ReflectableObject {

@@ -22,6 +22,72 @@ void ParserState::initialize() {
   for (size_t i = 0; i < this->players.size(); i++) {
     this->players[i].setUID((mpi::ObjectID)((0xe<<0xb)+i));
   }
+  this->g_entity_mgr.curr_event = _new<ecs::EcsRewindEvent>();
+}
+#if LDAG_DBGLEVEL > 0
+void IObjectRewindState::pushBackState(ParserState *state, uint32_t prev, uint32_t curr) {
+  state->registerStateChange(this, prev, curr);
+}
+void ParserState::registerStateChange(IObjectRewindState *state, uint32_t back, uint32_t curr) {
+  this->curr_ms_rewind_refs.emplace_back(RewindRef{state, curr, back});
+}
+
+#else
+void IObjectRewindState::pushBackState(ParserState *state) {
+  state->registerStateChange(this);
+}
+void ParserState::registerStateChange(IObjectRewindState *state) {
+  this->curr_ms_rewind_refs.emplace_back(RewindRef{state});
+}
+#endif
+
+class StateUpdateEvent : public IRewindEvent {
+public:
+  StateUpdateEvent(ParserState *state, std::pmr::vector<RewindRef> &states) : states(state->get_allocator()) {
+    this->states = std::move(states);
+  }
+  ~StateUpdateEvent() override = default;
+  void forward(ParserState &state) override {
+    for (auto & st : states) {
+#if LDAG_DBGLEVEL > 0
+      st.state->rewindForward(st.forward_index);
+#else
+      st.state->rewindForward();
+#endif
+    }
+  }
+  void backward(ParserState &state) override {
+
+    for (auto it = this->states.rbegin(); it != this->states.rend(); ++it) {
+#if LDAG_DBGLEVEL > 0
+      it->state->rewindBackward(it->rewind_index);
+#else
+      it->state->rewindBackward();
+#endif
+    }
+  }
+
+private:
+  std::pmr::vector<RewindRef> states;
+
+};
+
+void ParserState::beforePacket(ReplayPacket &pkt) {
+  if (pkt.timestamp_ms > this->state_update_start_time_ms) {
+    if (!this->curr_ms_rewind_refs.empty()) {
+      auto evt = this->_new<StateUpdateEvent>(this, this->curr_ms_rewind_refs);
+      // just in case
+      this->curr_ms_rewind_refs.resize(0);
+      this->curr_ms_rewind_refs.shrink_to_fit();
+      this->rewinder.add_action(*this, evt);
+    }
+    state_update_start_time_ms = pkt.timestamp_ms;
+  }
+  if (pkt.timestamp_ms > this->g_entity_mgr.last_time_modified) {
+    this->rewinder.add_action(*this, this->g_entity_mgr.curr_event);
+    this->g_entity_mgr.curr_event = this->_new<ecs::EcsRewindEvent>();
+    this->g_entity_mgr.last_time_modified = pkt.timestamp_ms;
+  }
 }
 
 ecs::EntityId ParserState::getUnitEid(uint16_t uid) const {
@@ -54,25 +120,29 @@ void ParserState::setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid)
 }
 
 ParserState::~ParserState() {
+  _in_destruction_state = this;
   is_dtor = true;
   ZoneScoped;
   this->rewindToMs(0xFFFFFFFF);
-  for (auto v: Zones) {
-    delete v;
-  }
   for (auto v: BattleMessages) {
     _delete(v);
-    //delete v;
   }
-  for (auto v: missionAreas1) {
-    delete v;
+  for (auto v : Zones) {
+    _delete(v);
   }
+  for (auto v: this->missionAreas1) {
+    _delete(v);
+  }
+  for (auto v: this->missionAreas2) {
+    _delete(v);
+  }
+  _delete(g_entity_mgr.curr_event);
 }
 
 bool ParserState::ParsePacket(ReplayPacket &pkt) {
   ZoneScoped;
+  beforePacket(pkt);
   curr_time_ms = pkt.timestamp_ms;
-  current_rewind_ms = curr_time_ms;
   current_packet_index++;
   switch (pkt.type) {
     case ReplayPacketType::EndMarker: {
@@ -108,7 +178,7 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       break;
     }
     case ReplayPacketType::ECS: {
-      onPacket(&pkt);
+      conn.onPacket(&pkt, pkt.timestamp_ms);
       break;
     }
     case ReplayPacketType::Snapshot: break;
@@ -118,27 +188,50 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
 }
 
 void ParserState::rewindToMs(uint32_t time_ms) {
+  ZoneScoped;
+  rewinder.rewind_to_ms(*this, time_ms);
+}
+
+StateRewinder::StateRewinder(ParserState *state) : actions_vector(&state->get_allocator()->dagAlloc) {
+  this->state = state;
+  actions_vector.reserve(1000);
+  curr_index = 0;
+}
+StateRewinder::~StateRewinder() {
+  for (auto v: actions_vector) {
+    state->_delete(v.event);
+  }
+}
+void StateRewinder::rewind_to_ms(ParserState &parser_state, uint32_t time_ms) {
   // if replay isn't fully parsed and we are destroying, then we can assume that we are at latest known point anyways.
-  if (replay_length_ms == 0xFFFFFFFF) {
-  // we can sometimes call this when we haven't fully parsed the replay
-  // so lets not make useless log messages
-    if (!is_dtor)
+  if (parser_state.replay_length_ms == 0xFFFFFFFF) {
+    // we can sometimes call this when we haven't fully parsed the replay
+    // so lets not make useless log messages
+    if (!parser_state.is_dtor)
       LOGE("You cannot rewind until the replay has finshed parsing");
     return;
   }
-  if (current_rewind_ms == time_ms)
-    return;
-  // LOGI("rewinding to {} from {}", time_ms, current_rewind_ms);
-  current_rewind_ms = time_ms;
-  this->g_entity_mgr.rewindTo(time_ms);
-  for (auto &p: players)
-    p.rewindToTime(time_ms);
-  for (auto &p: teams)
-    p.rewindToTime(time_ms);
-  for (auto &p: Zones)
-    p->rewindToTime(time_ms);
-  for (auto &p: missionAreas2)
-    if (p)
-      p->rewindToTime(time_ms);
-  curr_time_ms = time_ms;
+  const uint32_t sz = actions_vector.size();
+    if (sz == 0)
+      return;
+
+    if (curr_index > 0 && actions_vector[curr_index - 1].time_ms_at > time_ms) {
+      while (curr_index > 0 && actions_vector[curr_index - 1].time_ms_at > time_ms) {
+        --curr_index;
+        parser_state.curr_time_ms = actions_vector[curr_index].time_ms_at;
+        actions_vector[curr_index].event->backward(parser_state);
+      }
+    } else {
+      while (curr_index < sz && actions_vector[curr_index].time_ms_at <= time_ms) {
+        parser_state.curr_time_ms = actions_vector[curr_index].time_ms_at;
+        actions_vector[curr_index].event->forward(parser_state);
+        ++curr_index;
+      }
+    }
 }
+void StateRewinder::add_action(ParserState &parser_state, IRewindEvent *action) {
+  actions_vector.emplace_back( action);
+  actions_vector.back().time_ms_at = parser_state.curr_time_ms;
+  curr_index = actions_vector.size();
+}
+

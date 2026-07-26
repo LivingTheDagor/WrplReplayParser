@@ -416,46 +416,36 @@ protected:
       auto pid = unit.owner_pid;
       if (pid == -1 || pid >= this->state.players.size())
         return;
-      auto team = *this->state.players[pid].team.data;
+      auto team = *this->state.players[pid].team.curr();
       static std::vector<ImVec2> screen_points;
       auto &state = this->state;
       // front is earliest point
       // back is latest point
-      if (unit.positions.front().time_ms > data.time_start_ms || unit.killed_at_ms < data.time_end_ms)
+      auto & positions = unit.positions.history();
+      if (positions.front().time_ms > data.time_start_ms || unit.killed_at_ms < data.time_end_ms)
         return; // no points in range, skip
 
       screen_points.resize(0);
-      screen_points.reserve(unit.positions.size());
-      if (unit.positions.size() <= 5)
+      screen_points.reserve(positions.size());
+      if (positions.size() <= 5)
         return;
 
       const Point3 *prev = nullptr;
       constexpr int max_distance = 250;
-      bool found_front = false;
-      uint32_t front_time_ms = 0.0f;
-      ImVec2 front = ImVec2(0.0f, 0.0f);
-      Point3 frontEuler{};
-      float front_turret{};
       // we iterate from front to back, so new points first
-      for (int idx_ = (int) unit.positions.size() - 6; idx_ >= 0; idx_--) {
+      for (int idx_ = (int) positions.size() - 6; idx_ >= 0; idx_--) {
         // lets skip over points until we get to our start time
-        if (unit.positions[idx_].time_ms > data.time_start_ms)
+        if (positions[idx_].time_ms > data.time_start_ms)
           continue;
         // we reached end? break
-        if (unit.positions[idx_].time_ms < data.time_end_ms)
+        if (positions[idx_].time_ms < data.time_end_ms)
           break;
-        auto &pos = unit.positions[idx_].location;
+        auto &pos = positions[idx_].data.location;
         bool do_draw = true;
         auto curr_point = UVToScreen(*data.info, pos, data.canvas_p0, data.info->mapSize, do_draw);
         if (!do_draw)
           continue;
-        if (!found_front) {
-          front_time_ms = unit.positions[idx_].time_ms;
-          front = curr_point;
-          frontEuler = unit.positions[idx_].euler;
-          //front_turret = unit.positions[idx_].turret_horizontal;
-          found_front = true;
-        }
+
         bool add = true;
         if (prev) {
           auto sqrt_val = sqrt((pos.x - prev->x) * (pos.x - prev->x) + (pos.z - prev->z) * (pos.z - prev->z));
@@ -479,18 +469,18 @@ protected:
                                   0, // ImDrawFlags (0 = open line)
                                   3.f // Thickness
       );
-      if (found_front && front_time_ms <= data.time_start_ms && front_time_ms >= data.time_end_ms) {
+      auto front = unit.positions.currState();
+      bool draw_front = true;
+      ImVec2 front_uv = UVToScreen(*data.info, front->data.location, data.canvas_p0, data.info->mapSize, draw_front);
+      draw_front = draw_front && front->time_ms <= data.time_start_ms && front->time_ms >= data.time_end_ms;
+      if (draw_front) {
         bool is_dead = unit.killed_at_ms <= data.time_start_ms && unit.killed_at_ms >= data.time_end_ms;
         if (is_dead) {
-          DrawX(data.draw_list, front, 10.0f, 4.0f);
+          DrawX(data.draw_list, front_uv, 10.0f, 4.0f);
         } else {
-          data.draw_list->AddCircle(front, 5.0f, get_player_color(pid, team), 0, 2.0f);
+          data.draw_list->AddCircle(front_uv, 5.0f, get_player_color(pid, team), 0, 2.0f);
         }
-      }
-      if (found_front) {
-        DrawYawLine(frontEuler.y, front, 10, IM_COL32(255, 200, 0, 255), 4.0f);
-        //front_turret = DegToRad(front_turret) + frontEuler.y;
-        //DrawYawLine(front_turret, front, 40, IM_COL32(0, 200, 255, 255), 1.0f);
+        DrawYawLine(front->data.euler.y, front_uv, 10, IM_COL32(255, 200, 0, 255), 4.0f);
       }
     };
 
@@ -500,7 +490,7 @@ protected:
 
       if (!player__id || *player__id == -1 || *player__id >= this->state.players.size())
         return;
-      auto team = *this->state.players[*player__id].team.data;
+      auto team = *this->state.players[*player__id].team.curr();
       static std::vector<ImVec2> screen_points;
       auto &state = this->state;
       // front is earliest point
@@ -578,21 +568,25 @@ protected:
 
 #define SQUARE(x) ((x) * (x))
 
-    for (auto &objs: this->state.Zones) {
-      auto area_flags = *objs->flags.data;
+    for (auto objs: this->state.Zones) {
+
+      auto curr_obj = *objs->curr();
+      if (!curr_obj)
+        continue;
+      auto area_flags = *curr_obj->flags.curr();
       auto valid_air = info.drawn_units == UnitType::AircraftType && (area_flags & 1 << 9) != 0;
       auto valid_tank = info.drawn_units == UnitType::TankType && (area_flags & 1 << 10) != 0;
       if (valid_air || valid_tank) {
-        auto true_center = objs->area->tm.col[3];
-        auto center = TMToCenter(objs->area->tm);
+        auto true_center = curr_obj->area->tm.col[3];
+        auto center = TMToCenter(curr_obj->area->tm);
         bool do_draw = true;
         auto center_vec = UVToScreen(info, center, canvas_p0, info.mapSize, do_draw, true);
         auto true_center_vec = UVToScreen(info, true_center, canvas_p0, info.mapSize, do_draw, true);
         if (!do_draw)
           continue;
         auto radius = std::sqrt((SQUARE(center_vec.x - true_center_vec.x) + SQUARE(center_vec.y - true_center_vec.y)));
-        if (auto capture = dynamic_cast<CaptureZone *>(objs)) {
-          DrawCapturePoint(draw_list, true_center_vec, radius, *capture->mpTimeX100.data);
+        if (auto capture = dynamic_cast<CaptureZone *>(curr_obj)) {
+          DrawCapturePoint(draw_list, true_center_vec, radius, *capture->mpTimeX100.curr());
         } else {
           ImU32 color_filled = IM_COL32(255, 0, 0, 50);
           ImU32 color = IM_COL32(255, 0, 0, 200);
@@ -673,12 +667,11 @@ public:
     int teams[3] = {0, 0, 0};
     ImVec2 ret = longest_player_name_size;
     for (const auto &player: state.players) {
-      auto team = *player.team.data;
+      auto team = *player.team.curr();
       G_ASSERT(team <= 3);
       teams[team]++;
-      // not a perfect solution (think symbol characters) but good enough
 
-      ImVec2 temp = ImGui::CalcTextSize(player.uid.data->name);
+      ImVec2 temp = ImGui::CalcTextSize(player.uid.curr()->name);
       ret = temp.x > ret.x ? temp : ret;
     }
     longest_player_name_size = ret;
@@ -906,13 +899,13 @@ public:
       auto &player_data = this->state.players[index];
       ImGui::TableNextColumn();
 
-      ImGui::Text("%i", player_data.dummyForRoundScore.data->combined);
+      ImGui::Text("%i", player_data.dummyForRoundScore.curr()->combined);
       ImGui::TableNextColumn();
 
-      ImGui::Text("%i:%s", index, player_data.uid.data->name);
+      ImGui::Text("%i:%s", index, player_data.uid.curr()->name);
       ImGui::TableNextColumn();
 
-      auto owned_eid = *player_data.ownedUnitRef.data;
+      auto owned_eid = *player_data.ownedUnitRef.curr();
       auto unit__ref = this->state.g_entity_mgr.getNullable<unit::UnitRef>(owned_eid, ECS_HASH("unit__ref"));
       if (!unit__ref || !unit__ref->unit) {
         ImGui::TextUnformatted("<NONE>");
@@ -932,7 +925,7 @@ public:
     } else if constexpr (team == 2) {
       ImGui::TableNextColumn();
       auto &player_data = this->state.players[index];
-      auto owned_eid = *player_data.ownedUnitRef.data;
+      auto owned_eid = *player_data.ownedUnitRef.curr();
       auto unit__ref = this->state.g_entity_mgr.getNullable<unit::UnitRef>(owned_eid, ECS_HASH("unit__ref"));
       if (!unit__ref || !unit__ref->unit) {
         draw_circle(6.0f, red);
@@ -950,10 +943,10 @@ public:
         ImGui::TextUnformatted(name);
       }
       ImGui::TableNextColumn();
-      ImGui::Text("%i:%s", index, player_data.uid.data->name);
+      ImGui::Text("%i:%s", index, player_data.uid.curr()->name);
 
       ImGui::TableNextColumn();
-      ImGui::Text("%i", player_data.dummyForRoundScore.data->combined);
+      ImGui::Text("%i", player_data.dummyForRoundScore.curr()->combined);
 
       ImGui::TableNextColumn();
       draw_circle(6.0f, curr_color);
@@ -963,15 +956,15 @@ public:
   void collect_sort_players(std::vector<int> &indexes_out, uint8_t team_index) {
     for (uint8_t i = 0; i < (uint8_t) this->state.players.size(); i++) {
       auto &curr_player = this->state.players[i];
-      auto team = *curr_player.team.data;
+      auto team = *curr_player.team.curr();
       if (team == team_index) {
         indexes_out.push_back(i);
       }
     }
     auto &players = this->state.players;
     std::sort(indexes_out.begin(), indexes_out.end(), [&players](auto a, auto b) {
-      auto &player1_score = players[a].dummyForRoundScore.data->combined;
-      auto &player2_score = players[b].dummyForRoundScore.data->combined;
+      auto &player1_score = players[a].dummyForRoundScore.curr()->combined;
+      auto &player2_score = players[b].dummyForRoundScore.curr()->combined;
       return player1_score > player2_score;
     });
   }
@@ -1104,7 +1097,7 @@ public:
     }
   }
 
-  void drawReflectableObject(danet::ReflectableObject *robj, char * obj_name) {
+  void drawReflectableObject(danet::ReflectableObject *robj, const char * obj_name) {
     char name[256] = {};
     if (obj_name) {
       fmt::format_to_n(name, 256, "{}: {} ##{}", robj->getClassName(), obj_name, robj->getUID());
@@ -1134,24 +1127,24 @@ public:
     }
     if (ImGui::TreeNode("MPlayer Objects")) {
       for (auto &obj: this->state.players) {
-        drawReflectableObject(&obj, obj.uid.data->name);
+        drawReflectableObject(&obj, obj.uid.curr()->name);
       }
       ImGui::TreePop();
     }
     if (ImGui::TreeNode("Zones")) {
       for (auto obj: this->state.Zones) {
-        if (obj) {
+        if (obj->curr()) {
           //char buff[16];
           //fmt::format_to_n(buff, 16, "{:#x}", obj->getUID());
-          drawReflectableObject(obj, nullptr);
+          drawReflectableObject(*obj->curr(), nullptr);
         }
       }
       ImGui::TreePop();
     }
     if (ImGui::TreeNode("Areas")) {
       for (auto obj : this->state.missionAreas2) {
-        if (obj) {
-          drawReflectableObject(obj, nullptr);
+        if (obj->curr()) {
+          drawReflectableObject(*obj->curr(), nullptr);
         }
       }
       ImGui::TreePop();

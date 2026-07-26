@@ -117,6 +117,7 @@ public:
 // Downside of it - no pretty message box with message when something gone wrong (only standard Unhandled
 // exception/Segfault one) It's programmer's job to choose wisely which one to use for each specific case (but generally
 // it's better to stick to G_ASSERT)
+#define DAGOR_DBGLEVEL 2
 #if DAGOR_DBGLEVEL > 1
 #define G_FAST_ASSERT G_ASSERT
 #else

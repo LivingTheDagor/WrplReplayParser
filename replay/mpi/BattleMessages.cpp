@@ -146,13 +146,12 @@ namespace mpi {
     }*/
   }
 
-
-  if (offended_unit && !offended_unit->positions.empty()) {
-    offended_unit->killed_position = offended_unit->positions.back().location;
+  if (offended_unit && !offended_unit->positions.history().empty()) {
+    offended_unit->killed_position = offended_unit->positions.history().back().data.location;
     offended_unit_position = offended_unit->killed_position;
   }
-  if (offender_unit && !offender_unit->positions.empty()) {
-    offender_unit_position = offender_unit->positions.back().location;
+  if (offender_unit && !offender_unit->positions.history().empty()) {
+    offender_unit_position = offender_unit->positions.history().back().data.location;
   }
   return true;
 }

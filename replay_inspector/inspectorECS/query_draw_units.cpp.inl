@@ -21,7 +21,7 @@ void iterate_all_tanks(ParserState &state, on_unit_cb_t &on_unit) {
   ZoneScoped;
   iterate_all_tanks_ecs_query(state.g_entity_mgr,
     [&on_unit](const unit::UnitRef &unit__ref, const int unit__playerId, ecs::EntityManager &manager) {
-      if (unit__playerId != -1 && unit__ref.unit && !unit__ref.unit->positions.empty()) {
+      if (unit__playerId != -1 && unit__ref.unit && !unit__ref.unit->positions.history().empty()) {
         auto unit = unit__ref.unit;
         if (unit->destroyed_at_ms >= *manager.curr_time_ms && *manager.curr_time_ms >= unit->created_at_ms) {
           on_unit(*unit);
@@ -34,7 +34,7 @@ void iterate_all_aircraft(ParserState &state, on_unit_cb_t &on_unit) {
   ZoneScoped;
   iterate_all_aircraft_ecs_query(state.g_entity_mgr,
     [&on_unit](const unit::UnitRef &unit__ref, const int unit__playerId, ecs::EntityManager &manager) {
-      if (unit__playerId != -1 && unit__ref.unit && !unit__ref.unit->positions.empty()) {
+      if (unit__playerId != -1 && unit__ref.unit && !unit__ref.unit->positions.history().empty()) {
         auto unit = unit__ref.unit;
         if (unit->destroyed_at_ms > *manager.curr_time_ms && *manager.curr_time_ms >= unit->created_at_ms) {
           on_unit(*unit);

@@ -314,11 +314,12 @@ namespace danet {
 
         continue;
       }
-      v->setNewVar(state->curr_time_ms);
+      v->handler->reserveOneV();
+      //v->setNewVar(state->curr_time_ms);
       G_ASSERT(v->coder);
       int out = (*v->coder)(DANET_REFLECTION_OP_DECODE, v, this, &bs, state);
       if (!out) {
-        v->resetVar();
+        v->handler->deleteLastV();
         LOGE("(REFLECTION) can't decode value for var '{}' in obj {} (type = '{}')", v->getVarName(), fmt::ptr(this),
              getClassName());
         bs.SetReadOffset(ppp);
@@ -335,11 +336,11 @@ namespace danet {
         // but WarShip fields really differ from those of HeavyVehicleModel
         bs.SetReadOffset(ppp);
         idFieldSerializer.skipReadingField(j, bs); // skip
-        v->resetVar();
+        v->handler->deleteLastV();
         // ret = false;
         continue;
       }
-      v->verifyVar();
+      v->handler->checkAndPushV(state);
       G_ASSERT(!(v->flags & RVF_DESERIALIZED));
       if (v->flags & RVF_NEED_DESERIALIZE)
         v->flags |= RVF_DESERIALIZED;
@@ -479,11 +480,11 @@ namespace danet {
 
   template<typename T>
   void ReflectionVar<T>::DrawHistory(IRenderHandler *renderer) {
-    bool doDraw = renderer->setCount(this->spaceHandler.getStates().size(), this->spaceHandler.getCurrIndex());
+    bool doDraw = renderer->setCount(this->history().size(), this->getCurrIndex());
     if (!doDraw)
       return;
     uint32_t index = 0;
-    for (auto & st : this->spaceHandler.getStates()) {
+    for (auto & st : this->history()) {
       auto str = toStringImpl<T>(&st.data, 0);
       renderer->DrawIndex(index, st.time_ms, str);
       index++;
@@ -493,7 +494,7 @@ namespace danet {
 
   template<typename T>
   std::string ReflectionVar<T>::toString() {
-    return toStringImpl<T>(data, 0);
+    return toStringImpl<T>(this->getPtr(), 0);
   }
   template<typename T>
   void ReflectionVar<T>::init(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder,
@@ -503,8 +504,7 @@ namespace danet {
     this->persistentId = pid;
     this->numBits = bits;
     this->coder = coder;
-    this->data = (T *) spaceHandler.addState(0);
-    this->handler = &spaceHandler;
+    this->handler = this;
   }
   template<typename T>
   ReflectionVar<T>::ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid) : ReflectionVarMeta() {
@@ -525,7 +525,7 @@ namespace danet {
     init(name, next, pid, coder_, bit_count);
   }
   template<typename T>
-  T *ReflectionVar<T>::Get() const { return this->getValue<T>(); }
+  const T *ReflectionVar<T>::Get() const { return this->curr(); }
 }; // namespace danet
 
 #include "mpi/codegen/declarations.h"

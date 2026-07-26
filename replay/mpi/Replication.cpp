@@ -6,6 +6,17 @@ CREATE_HANDLE(handle_replication, "Replication")
 
 void force_link_replication() { std::cout << ""; }
 
+template <typename T>
+void grow(std::pmr::vector<T*> &vec, ParserState * state, uint32_t new_size) {
+  if (new_size > vec.size()) {
+    vec.resize(new_size);
+    for (uint32_t i = 0; i < new_size; i++) {
+      if (vec[i] == nullptr) {
+        vec[i] = state->_new<T>();
+      }
+    }
+  }
+}
 
 MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
   IdFieldSerializer255 serializer255{};
@@ -54,42 +65,44 @@ MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
     mpi::ObjectID oid = (0x5<<0xb) + (mpi::ObjectID)state->Zones.size();
     switch (zone_type) {
       case 0: {
-        obj = new BombingZone(oid);
+        obj = state->_new<BombingZone>(oid);
         break;
       }
       case 1: {
-        obj = new CaptureZone(oid);
+        obj = state->_new<CaptureZone>(oid);
         break;
       }
       case 2: {
-        obj = new RearmZone(oid);
+        obj = state->_new<RearmZone>(oid);
         break;
       }
       case 3: {
-        obj = new ExitZone(oid);
+        obj = state->_new<ExitZone>(oid);
         break;
       }
       case 4: {
-        obj = new PickupZone(oid);
+        obj = state->_new<PickupZone>(oid);
         break;
       }
       default: EXCEPTION("Invalid Zone id: {}", zone_type);
     }
-    if (mission_area_id >= state->missionAreas1.size()) {
-      state->missionAreas1.resize(mission_area_id + 1, nullptr);
-    }
+    grow(state->missionAreas1, state, mission_area_id + 1);
     auto area = state->missionAreas1[mission_area_id];
-    if (area == nullptr) {
+    if (area->curr() == nullptr) {
       LOGE("WARNING: Create dummy MissionArea id: {} for MissionZone id:{} type:{}", mission_area_id, zone_id,
            zone_type);
-      state->missionAreas1[mission_area_id] = new MissionArea(0x16<<0xb + (mpi::ObjectID)mission_area_id);
+      auto & ref = state->missionAreas1[mission_area_id];
+      *ref->reserveOne() = state->_new<MissionArea>((0x16<<0xb) + (mpi::ObjectID)mission_area_id);
+      ref->checkAndPush(state);
       area = state->missionAreas1[mission_area_id];
     }
-    obj->area = area;
-    state->Zones.push_back(obj);
+    obj->area = *area->curr();
+    grow(state->Zones, state, zone_id + 1);
+    *state->Zones[zone_id]->reserveOne() = obj;
+    state->Zones[zone_id]->checkAndPush(state);
   }
   bs.SetReadOffset(end);
-  return state->Zones[zone_id];
+  return *state->Zones[zone_id]->curr();
 }
 
 IMPLEMENT_REPLICATION(Airfield) // 0
@@ -278,24 +291,22 @@ danet::ReplicatedObject *MissionArea::createReplicatedObject(BitStream &bs, Pars
 
     // LOGE("{}; data: {}", serializer255.getFieldId(i), FormatHexToStream(data).str());
   }
-  auto x = new MissionArea(index_2);
-  *x->areaFlags.data = areaFlags;
+
+  auto x = state->_new<MissionArea>(index_2);
+  *x->areaFlags.reserveOne() = areaFlags;
+  x->areaFlags.checkAndPush(state);
   x->tm = tm;
   x->markVarWithFlag(&x->areaFlags, RVF_CALL_HANDLER_FORCE, true);
   REPLICATION_LOGD3("MissionArea({}) v1: {}; v2: {}; v3: {}; v5: {}; v6: {}; v7: {}",
                     ((double) state->curr_time_ms) / 1000.0, v1, index, v3, x->tm.toString(0), index_2, v7);
   auto idx = index_2 & 0x7FF;
-  if (idx >= state->missionAreas2.size()) {
-    state->missionAreas2.resize(idx + 1, nullptr);
-  }
-  if (index >= state->missionAreas1.size()) {
-    state->missionAreas1.resize(index + 1, nullptr);
-  }
-  state->missionAreas1[index] = x;
-  if (state->missionAreas2[idx]) {
-    delete state->missionAreas2[idx];
-  }
-  state->missionAreas2[idx] = x;
+  grow(state->missionAreas2, state, idx + 1);
+  grow(state->missionAreas1, state, index + 1);
+  *state->missionAreas1[index]->reserveOne() = x;
+  state->missionAreas1[index]->checkAndPush(state);
+
+  *state->missionAreas2[idx]->reserveOne() = x;
+  state->missionAreas2[idx]->checkAndPush(state);
   REPLICATION_LOGD2("Parsing Replicated MissionArea");
   return nullptr;
 }

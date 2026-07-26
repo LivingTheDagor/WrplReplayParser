@@ -10,6 +10,7 @@
 #include "math/dag_TMatrix.h"
 #include "mpi/types.h"
 #include "mpi/codegen/ReflIncludes.h"
+#include "state/StateRewinder.h"
 // #include "mpi/mpi.h"
 // #include "mpi/codegen/ReflIncludes.h"
 
@@ -204,7 +205,7 @@ namespace unit {
     std::vector<std::string> fm_mods{};
     std::vector<CameraTime> camera_pos;
     std::vector<Weapon> weapons{};
-    std::vector<SpaceTimeEuler> positions{};
+    ObjectRewindState<SpaceTimeEuler, false> positions{};
 
     UnitWeaponsMask weapons_mask{};
 

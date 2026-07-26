@@ -242,12 +242,13 @@ bool FMSync(ParserState &state, BitStream &bs) {
           }
           uint32_t some_packed_val;
           uint32_t vals_4;
-          AngularSpaceTime st{state.curr_time_ms, {}, {}};
+          SpaceTimeEuler st{state.curr_time_ms, {}, {}};
           bs.Read(st.location);
           bs.Read(some_packed_val);
           Point3 someEuler;
           netutils::unpack_euler(some_packed_val, st.euler);
-          unit->positions.push_back(st);
+          *unit->positions.reserveOne() = st;
+          unit->positions.checkAndPush(&state);
 
           bs.Read(vals_4);
           Point3 vel;
@@ -446,7 +447,11 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
     }
     if (ref->ref_1 && ref->ref_1->AsTank()) {
       auto tank = ref->ref_1->AsTank();
-      tank->positions.push_back({state.curr_time_ms, unit_position, direction});
+      auto ref = tank->positions.reserveOne();
+      ref->time_ms = state.curr_time_ms;
+      ref->euler = direction;
+      ref->location = unit_position;
+      tank->positions.checkAndPush(&state);
     }
     Point3 out_2;
     if (ref->val1) {

@@ -288,7 +288,7 @@ namespace mpi {
       case 5: {
         // LOGE("Getting Zone with id {}", count);
         if (count < state->Zones.size()) {
-          return state->Zones[count];
+          return *state->Zones[count]->curr();
         } else {
           DISPATCHER_LOGE("Warning, Zone with id {} doesn't exist in Zone array", count);
         }
@@ -330,7 +330,7 @@ namespace mpi {
       }
       case 0x16: {
         if (count < state->missionAreas2.size()) {
-          auto var = state->missionAreas2[count];
+          auto var = *state->missionAreas2[count]->curr();
           if (!var)
             LOGE("Invalid MissionArea index");
           return var;

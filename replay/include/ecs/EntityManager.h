@@ -20,10 +20,10 @@
 #include <shared_mutex>
 #include "EASTL/vector_map.h"
 #include "EASTL/vector_set.h"
-#include "RewindMgr.h"
 #include <ioSys/dag_dataBlock.h>
 
 #include "wyhash.h"
+#include "state/StateRewinder.h"
 
 
 DEFINE_HANDLE(handle_ecs)
@@ -361,8 +361,8 @@ namespace ecs {
     friend EntityManager;
 
   public:
-    EntityCreatedAction(const uint32_t time_ms, const EntityId before, const EntityId after) :
-      RewindAction(time_ms), before(before), after(after) {}
+    EntityCreatedAction(const EntityId before, const EntityId after) :
+      RewindAction(), before(before), after(after) {}
     ~EntityCreatedAction() override = default;
     void forward(EntityManager &mgr) override;
     void backward(EntityManager &mgr) override;
@@ -374,8 +374,8 @@ namespace ecs {
     friend EntityManager;
 
   public:
-    EntityDestroyedAction(const uint32_t time_ms, const EntityId before, const EntityId after) :
-      RewindAction(time_ms), before(before), after(after) {}
+    EntityDestroyedAction(const EntityId before, const EntityId after) :
+      RewindAction(), before(before), after(after) {}
     ~EntityDestroyedAction() override = default;
     void forward(EntityManager &mgr) override;
     void backward(EntityManager &mgr) override;
@@ -392,8 +392,8 @@ namespace ecs {
     EntityId eid; // entity that received replicated component
     ecs::component_index_t cidx; // component index of replicated component
   public:
-    ComponentUpdateAction(const uint32_t time_ms, void *ptr, EntityId eid, ecs::component_index_t cidx) :
-      RewindAction(time_ms), ptr(ptr), eid(eid), cidx(cidx) {}
+    ComponentUpdateAction(void *ptr, EntityId eid, ecs::component_index_t cidx) :
+      RewindAction(), ptr(ptr), eid(eid), cidx(cidx) {}
     // should only be called on emgr destruction
     ~ComponentUpdateAction() override;
     void forward(EntityManager &mgr) override;
@@ -405,106 +405,37 @@ namespace ecs {
              std::max(sizeof(EntityCreatedAction), sizeof(EntityDestroyedAction))); // basically useless but hehehe
   using ACTION_ARRAY_CONTAINER = std::array<uint8_t, MAX_ACTION_SIZE>;
 
-
-  class ECSRewindManager : public RewindMgr<ECSRewindManager, ACTION_ARRAY_CONTAINER> {
-    typedef RewindMgr<ECSRewindManager, ACTION_ARRAY_CONTAINER> BASE;
-    friend BASE;
-    friend ParserState;
-
-    void forward(BASE::TimeState &data, EntityManager *mgr) {
-      auto action = reinterpret_cast<RewindAction *>(data.data.data());
-      action->forward(*mgr);
-    }
-
-    void backward(BASE::TimeState &data, EntityManager *mgr) {
-      auto action = reinterpret_cast<RewindAction *>(data.data.data());
-      action->backward(*mgr);
-    }
-
+  class EcsRewindEvent : public IRewindEvent {
   public:
-    ~ECSRewindManager() {
-      for (auto &obj: this->timeStates) {
-        auto action = reinterpret_cast<RewindAction *>(obj.data.data());
-        action->~RewindAction();
-      }
-    }
+    ~EcsRewindEvent() override;
+    void forward(ParserState &state) override;
+    void backward(ParserState &state) override;
 
-    uint32_t createCreationAction(uint32_t time_ms, EntityId invalid_storage, EntityId valid_storage) {
+
+    void createCreationAction(EntityId invalid_storage, EntityId valid_storage) {
       G_STATIC_ASSERT(sizeof(EntityCreatedAction) <= MAX_ACTION_SIZE);
-      auto &base = this->emplaceNew(time_ms);
-      new (base.data.data()) EntityCreatedAction(time_ms, invalid_storage, valid_storage);
-      return this->timeStates.size() - 1;
+      this->events.push_back(ACTION_ARRAY_CONTAINER{});
+      auto &base = this->events.back();
+      new (base.data()) EntityCreatedAction(invalid_storage, valid_storage);
     }
 
-    uint32_t createDestroyAction(uint32_t time_ms, EntityId invalid_storage, EntityId valid_storage) {
+    void createDestroyAction(EntityId invalid_storage, EntityId valid_storage) {
       G_STATIC_ASSERT(sizeof(EntityDestroyedAction) <= MAX_ACTION_SIZE);
-      auto &base = this->emplaceNew(time_ms);
-      new (base.data.data()) EntityDestroyedAction(time_ms, invalid_storage, valid_storage);
-      return this->timeStates.size() - 1;
+      this->events.push_back(ACTION_ARRAY_CONTAINER{});
+      auto &base = this->events.back();
+      new (base.data()) EntityDestroyedAction(invalid_storage, valid_storage);
     }
 
-    uint32_t createComponentUpdateAction(uint32_t time_ms, void *ptr, EntityId eid, ecs::component_index_t cidx) {
-      auto &base = this->emplaceNew(time_ms);
+    void createComponentUpdateAction(void *ptr, EntityId eid, ecs::component_index_t cidx) {
+      this->events.push_back(ACTION_ARRAY_CONTAINER{});
+      auto &base = this->events.back();
       G_STATIC_ASSERT(sizeof(ComponentUpdateAction) <= MAX_ACTION_SIZE);
-      new (base.data.data()) ComponentUpdateAction(time_ms, ptr, eid, cidx);
-      return this->timeStates.size() - 1;
-    }
-  };
-
-  class RewindManager {
-    // allocation is not really needed here, so lets try it inplace
-    std::vector<ACTION_ARRAY_CONTAINER> actions;
-    int curr_index{};
-
-    inline RewindAction *getAction(uint32_t index) {
-      auto &base = actions[index];
-      return reinterpret_cast<RewindAction *>(base.data());
+      new (base.data()) ComponentUpdateAction(ptr, eid, cidx);
     }
 
-    inline uint32_t getTime(int index) {
-      if (index < 0)
-        return 0;
-      if (index >= (int) actions.size())
-        return 0xFFFFFFFF;
-      auto action = getAction(index);
-      return action->time_ms;
-    }
-
+  private:
     friend EntityManager;
-    friend net::Connection;
-    RewindManager() { actions.reserve(1000); }
-    uint32_t createCreationAction(uint32_t time_ms, EntityId invalid_storage, EntityId valid_storage) {
-      uint32_t action_idx = (uint32_t) actions.size();
-      actions.emplace_back();
-      G_STATIC_ASSERT(sizeof(EntityCreatedAction) <= MAX_ACTION_SIZE);
-      auto &base = actions.back();
-      new (base.data()) EntityCreatedAction(time_ms, invalid_storage, valid_storage);
-      curr_index = (uint32_t) actions.size();
-      return action_idx;
-    }
-
-    uint32_t createDestroyAction(uint32_t time_ms, EntityId invalid_storage, EntityId valid_storage) {
-      uint32_t action_idx = (uint32_t) actions.size();
-      actions.emplace_back();
-      auto &base = actions.back();
-      G_STATIC_ASSERT(sizeof(EntityDestroyedAction) <= MAX_ACTION_SIZE);
-      new (base.data()) EntityDestroyedAction(time_ms, invalid_storage, valid_storage);
-      curr_index = (uint32_t) actions.size();
-      return action_idx;
-    }
-
-    uint32_t createComponentUpdateAction(uint32_t time_ms, void *ptr, EntityId eid, ecs::component_index_t cidx) {
-      uint32_t action_idx = (uint32_t) actions.size();
-      actions.emplace_back();
-      auto &base = actions.back();
-      G_STATIC_ASSERT(sizeof(ComponentUpdateAction) <= MAX_ACTION_SIZE);
-      new (base.data()) ComponentUpdateAction(time_ms, ptr, eid, cidx);
-      curr_index = (uint32_t) actions.size();
-      return action_idx;
-    }
-
-
-    void rewindTo(uint32_t, EntityManager &mgr);
+    std::vector<ACTION_ARRAY_CONTAINER> events;
   };
 
   class EntityManager {
@@ -518,7 +449,7 @@ namespace ecs {
     std::deque<ecs::entity_id_t> freeIndices, freeIndicesReserved;
     ecs::entity_id_t nextReservedIndex = 0;
 
-    std::unordered_map<EntityId, uint32_t> eidToEventCreationMap;
+    std::unordered_map<EntityId, EntityId> eidToEventCreationMap;
 
     void swap_desc(EntityId e1, EntityId e2);
     friend net::Connection;
@@ -625,8 +556,6 @@ namespace ecs {
       return this->data_state->performQuery(*this, h, fun, user_data);
     }
 
-    void rewindTo(uint32_t time) { rewindManager.rewindTo(time, this); }
-
   protected:
     friend Component;
     friend InstantiatedTemplate;
@@ -634,13 +563,14 @@ namespace ecs {
     friend RewindAction;
     friend EntityCreatedAction;
     friend EntityDestroyedAction;
+    friend ParserState;
 
     GState *data_state = g_ecs_data.get();
     EntityDescs entDescs;
     BitVector wasInit{false}; // used during entity creation
     MgrArchetypeStorage arch_data; // EntityManager now only owns raw entity storage
-
-    ECSRewindManager rewindManager; // needs to be the first thing destroyed
+    uint32_t last_time_modified = 0;
+    EcsRewindEvent * curr_event;
   };
 } // namespace ecs
 

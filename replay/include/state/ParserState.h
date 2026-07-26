@@ -12,7 +12,9 @@
 #include "tracy/Tracy.hpp"
 #endif
 #include "StateAllocator.h"
+#include "StateRewinder.h"
 #include "memory/dag_memBase.h"
+#include "StateRewinder.h"
 
 namespace unit {
   class Unit;
@@ -54,6 +56,22 @@ struct ChatMessage {
   inline bool FromBS(BitStream &bs);
 };
 
+
+
+struct RewindRef {
+  IObjectRewindState *state; // this assumes the memory location of ANY rewindable object will never be changed after registration
+  // only for sanity checking
+#if LDAG_DBGLEVEL > 0
+  uint32_t forward_index;
+  uint32_t rewind_index;
+#endif
+};
+
+// used to hold the state currently being destroyed
+// unless if you somehow destroy multiple states at the same time in the same thread
+// this will always represent the state currently in destruction, and can be used to pass it around without complex destruction logic
+inline thread_local ParserState * _in_destruction_state{};
+
 struct ParserState {
 
   explicit ParserState(int player_count = 32);
@@ -66,13 +84,27 @@ protected:
   friend mpi::MpiQueueObject;
 
   friend mpi::IObject *mpi::ObjectDispatcher(mpi::ObjectID oid, mpi::ObjectExtUID extUid, ParserState *state);
+  friend StateRewinder;
 
 
   // could replace with a tuple vector, basically the same thing with less space
-  std::vector<ecs::EntityId> uid_lookup{};
-  std::vector<unit::Unit *> uid_unit_lookup{};
+  std::pmr::vector<ecs::EntityId> uid_lookup{&allocator};
+  std::pmr::vector<unit::Unit *> uid_unit_lookup{&allocator};
 
-  void onPacket(ReplayPacket *pkt) { conn.onPacket(pkt, pkt->timestamp_ms); }
+  // when we started collecting states
+  uint32_t state_update_start_time_ms{};
+  // holds all the current updates for the current time_ms
+  std::pmr::vector<RewindRef> curr_ms_rewind_refs{&allocator};
+
+#if LDAG_DBGLEVEL > 0
+  void registerStateChange(IObjectRewindState *state, uint32_t back, uint32_t curr);
+#else
+  void registerStateChange(IObjectRewindState *state);
+#endif
+
+  void beforePacket(ReplayPacket &pkt);
+
+  friend IObjectRewindState;
 
 public:
 
@@ -86,7 +118,7 @@ public:
   }
   StateAllocator * get_allocator() { return &allocator; }
 
-  IMemAlloc * getMem() { return allocator.getMem(); }
+  StateAllocator::DagAllocType getMem() { return allocator.getMem(); }
   std::vector<mpi::MpiQueueObject::QueueData> *get_queued_data(ecs::EntityId eid) {
     auto it = mpi_queue.dispatched_objects.find(eid);
     if (it == mpi_queue.dispatched_objects.end())
@@ -95,14 +127,13 @@ public:
   }
 
   uint32_t replay_length_ms = 0xFFFFFFFF;
-  uint32_t current_rewind_ms = 0; // the time we have rewinded to
-  uint32_t curr_time_ms = 0; // the current time in the ECS / state. this wont always math current_rewind_time_ms
+  uint32_t curr_time_ms = 0; // the current time in the ECS / state.
   net::CNetwork conn{this};
   mpi::GeneralObject main_dispatch{this};
   net_delta_t NetDelta{allocator.getMem()};
   std::pmr::vector<MPlayer> players{get_allocator()};
   ecs::EntityManager g_entity_mgr{this}; // this order is required as g_entity_mgr needs to be destroyed before players
-  std::pmr::vector<MissionZone *> Zones{get_allocator()};
+  std::pmr::vector<ObjectRewindState<MissionZone*, false, true>*> Zones{get_allocator()};
   std::array<TeamData, 3> teams{
     TeamData{0xf<<0xb+0},
     TeamData(0xf<<0xb+1),
@@ -112,15 +143,16 @@ public:
   GlobalElo glob_elo{};
   GeneralState gen_state{};
   std::pmr::vector<const mpi::IBattleMessage *> BattleMessages{get_allocator()};
-  std::pmr::vector<MissionArea *> missionAreas1{get_allocator()};
-  std::pmr::vector<MissionArea *> missionAreas2{get_allocator()};
+  // missionArea1 owns the ptrs
+  std::pmr::vector<ObjectRewindState<MissionArea*, false, true>*> missionAreas1{get_allocator()};
+  std::pmr::vector<ObjectRewindState<MissionArea*, false>*> missionAreas2{get_allocator()};
 
   int current_packet_index = -1;
 
 
   ecs::EntityId getUnitEid(uint16_t uid) const;
 
-  const std::vector<unit::Unit*> getUnitLookup() {
+  const std::pmr::vector<unit::Unit*> &getUnitLookup() const {
     return this->uid_unit_lookup;
   }
 
@@ -136,8 +168,124 @@ public:
 
   void rewindToMs(uint32_t time_ms);
 
-  bool finishedLoading() { return this->replay_length_ms != 0xFFFFFFFF; }
+  bool finishedLoading() const { return this->replay_length_ms != 0xFFFFFFFF; }
+
+private:
+  StateRewinder rewinder{this};
 };
 
+template<typename T, bool do_compare, bool take_ownership>
+void *ObjectRewindState<T, do_compare, take_ownership>::reserveOneV() {
+  return this->reserveOne();
+}
+template<typename T, bool do_compare, bool take_ownership>
+void ObjectRewindState<T, do_compare, take_ownership>::deleteLastV() {
+  this->deleteLast();
+}
+template<typename T, bool do_compare, bool take_ownership>
+void ObjectRewindState<T, do_compare, take_ownership>::checkAndPushV(ParserState *state) {
+  this->checkAndPush(state);
+}
+template<typename T, bool do_compare, bool take_ownership>
+void *ObjectRewindState<T, do_compare, take_ownership>::getPtr() {
+  return &this->state->data;
+}
+
+template<typename T, bool do_compare, bool take_ownership>
+ObjectRewindState<T, do_compare, take_ownership>::ObjectRewindState() : time_states() {
+  this->time_states.emplace_back(TimeState{});
+  this->time_states.back().time_ms = 0;
+  this->state = &this->time_states.back();
+}
+template<typename T, bool do_compare, bool take_ownership>
+ObjectRewindState<T, do_compare, take_ownership>::~ObjectRewindState() {
+  if constexpr (take_ownership) {
+    auto g_state = _in_destruction_state;
+    for (auto &s: this->time_states) {
+      g_state->_delete(s.data);
+    }
+  }
+}
+
+#if LDAG_DBGLEVEL > 0
+template<typename T, bool do_compare, bool take_ownership>
+void ObjectRewindState<T, do_compare, take_ownership>::rewindForward(uint32_t expected_idx) {
+  G_ASSERT(this->curr_index < this->time_states.size()-1);
+  this->curr_index++;
+  ++this->state;
+  G_ASSERT(this->curr_index == expected_idx);
+  G_ASSERT(this->state == &this->time_states[this->curr_index]);
+}
+template<typename T, bool do_compare, bool take_ownership>
+void ObjectRewindState<T, do_compare, take_ownership>::rewindBackward(uint32_t expected_idx) {
+  G_ASSERT(this->curr_index > 0);
+  this->curr_index--;
+  --this->state;
+  G_ASSERT(this->curr_index == expected_idx);
+  G_ASSERT(this->state == &this->time_states[this->curr_index]);
+}
+
+#else
+template<typename T, bool do_compare, bool take_ownership>
+void ObjectRewindState<T, do_compare, take_ownership>::rewindForward() {
+  this->curr_index++;
+  ++this->state;
+}
+template<typename T, bool do_compare, bool take_ownership>
+void ObjectRewindState<T, do_compare, take_ownership>::rewindBackward() {
+  this->curr_index--;
+  --this->state;
+}
+#endif
+
+template<typename T, bool do_compare, bool take_ownership>
+T *ObjectRewindState<T, do_compare, take_ownership>::reserveOne() {
+#if LDAG_DBGLEVEL > 0
+  DG_ASSERT(!hasReserved);
+  hasReserved = true;
+#endif
+  auto back = &this->time_states.push_back();
+  state = back;
+  return &back->data;
+}
+
+template<typename T, bool do_compare, bool take_ownership>
+void ObjectRewindState<T, do_compare, take_ownership>::deleteLast() {
+#if LDAG_DBGLEVEL > 0
+  G_ASSERT(hasReserved);
+  hasReserved = false;
+#endif
+  this->time_states.pop_back();
+  state = &this->time_states.back();
+}
+
+template<typename T, bool do_compare, bool take_ownership>
+void ObjectRewindState<T, do_compare, take_ownership>::checkAndPush(ParserState *state) {
+#if LDAG_DBGLEVEL > 0
+  G_ASSERT(hasReserved);
+  hasReserved = false;
+#endif
+  if constexpr (do_compare) {
+    if (this->time_states.size() > 1) {
+      auto &prev = this->time_states[this->time_states.size() - 2];
+      auto &curr = this->time_states.back();
+      if (prev.data == curr.data) {
+        this->time_states.pop_back();
+        this->state = &this->time_states.back();
+        return;
+      }
+    }
+  }
+  DG_ASSERT(this->time_states.size() > 1);
+  this->time_states.back().time_ms = state->curr_time_ms;
+  this->state = &this->time_states.back();
+  curr_index++;
+#if LDAG_DBGLEVEL > 0
+  // we always create one component in ctor, so there will always be at least '2' components when serializing state change
+  this->pushBackState(state, this->curr_index-1, this->curr_index);
+#else
+  this->pushBackState(state);
+#endif
+}
 
 #endif // MYEXTENSION_PARSERSTATE_H

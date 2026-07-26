@@ -569,7 +569,7 @@ namespace net {
       cref.value = old_ptr;
       cref.swap(storage_ptr);
       // object must be initialized before we can do anything
-      mgr->rewindManager.createComponentUpdateAction(*mgr->curr_time_ms, storage_ptr, eid, clientCidx);
+      mgr->curr_event->createComponentUpdateAction(storage_ptr, eid, clientCidx);
       CONN_LOGD2("Replicating Component {}({}) for entity {:#x} for template {}. data: {}", datacomp->getName(),
                  ecs::g_ecs_data->getComponentTypes()->getName(cref.getTypeId()), eid.get_handle(),
                  this->mgr->getEntityTemplateName(eid), cref.toString());

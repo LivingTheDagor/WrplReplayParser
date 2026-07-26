@@ -4,6 +4,7 @@
 #include "ecs/ComponentTypesDefs.h"
 #include "ecs/EntityManager.h" // g_ecs_state
 #include "FileSystem.h"
+#include "state/ParserState.h"
 
 namespace unit {
   Tank *Unit::AsTank() {

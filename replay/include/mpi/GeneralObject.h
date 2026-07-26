@@ -25,6 +25,7 @@ namespace mpi {
       Tank2 = 0xf074,
       Rocket1 = 0xf11a,
       Rocket2 = 0xf0db,
+      UnitCamera = 0xf0cc
     };
     Message *dispatchMpiMessage(MessageID mid) override;
     void applyMpiMessage(const Message *m) override;
@@ -46,6 +47,19 @@ namespace mpi {
     TankMessage(IObject *o, MessageID mid) : Message(o, mid) {}
     bool readPayload(ParserState *state) override;
     void writePayload() override;
+  };
+
+  class CameraStateMessage : public Message {
+  public:
+    Point3 camera_circle_euler{}; // where camera is pointing
+    Point3 camera_offset{}; // camera offset from commander hatch or smg
+    Point3 gun_circle_euler{}; // where aiming reticle is pointing
+    uint8_t some_val{};
+    float some_magnititude{};
+    bool tracking_weapon{};
+    ecs::EntityId weapon_eid{};
+    CameraStateMessage(IObject * o) : Message(o, GeneralObject::UnitCamera) {}
+    bool readPayload(ParserState *state) override;
   };
 
   class IBattleMessage : public Message {
