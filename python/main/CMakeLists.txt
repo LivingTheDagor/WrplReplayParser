@@ -1,25 +1,3 @@
-# Find the specified Python version, or use any found by default
-if(PYTHON_VERSION)
-    find_package(Python ${PYTHON_VERSION} REQUIRED COMPONENTS Interpreter Development)
-else()
-    find_package(Python 3.12...3.12.13 REQUIRED COMPONENTS Interpreter Development)
-endif()
-
-# Try to find pybind11 via find_package first
-find_package(pybind11 QUIET)
-
-# If not found, fetch pybind11 automatically
-if(NOT pybind11_FOUND)
-    message(STATUS "pybind11 not found, fetching via FetchContent")
-    include(FetchContent)
-    FetchContent_Declare(
-            pybind11
-            GIT_REPOSITORY https://github.com/pybind/pybind11.git
-            GIT_TAG v2.11.1
-    )
-    FetchContent_MakeAvailable(pybind11)
-endif()
-
 # Now set up your module
 pybind11_add_module(PyReplayParser
         # ecs.cpp
