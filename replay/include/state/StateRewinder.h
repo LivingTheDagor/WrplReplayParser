@@ -63,7 +63,8 @@ protected:
 /// do_compare tells the state to compare the previous state with the current state and drop it if they are equal
 /// take_ownership tells the state to delete the objects when the state is destroyed.
 ///   assumes type T is a pointer with take_ownership set to true
-template <typename T, bool do_compare = true, bool take_ownership = false>
+/// create_default tells the state to created a default, zeroed state as the first value
+template <typename T, bool do_compare = true, bool take_ownership = false, bool create_default = true>
 class ObjectRewindState : public IObjectRewindState {
 public:
   void *reserveOneV() override;

@@ -174,31 +174,33 @@ private:
   StateRewinder rewinder{this};
 };
 
-template<typename T, bool do_compare, bool take_ownership>
-void *ObjectRewindState<T, do_compare, take_ownership>::reserveOneV() {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+void *ObjectRewindState<T, do_compare, take_ownership, create_default>::reserveOneV() {
   return this->reserveOne();
 }
-template<typename T, bool do_compare, bool take_ownership>
-void ObjectRewindState<T, do_compare, take_ownership>::deleteLastV() {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+void ObjectRewindState<T, do_compare, take_ownership, create_default>::deleteLastV() {
   this->deleteLast();
 }
-template<typename T, bool do_compare, bool take_ownership>
-void ObjectRewindState<T, do_compare, take_ownership>::checkAndPushV(ParserState *state) {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+void ObjectRewindState<T, do_compare, take_ownership, create_default>::checkAndPushV(ParserState *state) {
   this->checkAndPush(state);
 }
-template<typename T, bool do_compare, bool take_ownership>
-void *ObjectRewindState<T, do_compare, take_ownership>::getPtr() {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+void *ObjectRewindState<T, do_compare, take_ownership, create_default>::getPtr() {
   return &this->state->data;
 }
 
-template<typename T, bool do_compare, bool take_ownership>
-ObjectRewindState<T, do_compare, take_ownership>::ObjectRewindState() : time_states() {
-  this->time_states.emplace_back(TimeState{});
-  this->time_states.back().time_ms = 0;
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+ObjectRewindState<T, do_compare, take_ownership, create_default>::ObjectRewindState() : time_states() {
+  if constexpr (create_default) {
+    this->time_states.emplace_back(TimeState{});
+    this->time_states.back().time_ms = 0;
+  }
   this->state = &this->time_states.back();
 }
-template<typename T, bool do_compare, bool take_ownership>
-ObjectRewindState<T, do_compare, take_ownership>::~ObjectRewindState() {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+ObjectRewindState<T, do_compare, take_ownership, create_default>::~ObjectRewindState() {
   if constexpr (take_ownership) {
     auto g_state = _in_destruction_state;
     for (auto &s: this->time_states) {
@@ -208,16 +210,16 @@ ObjectRewindState<T, do_compare, take_ownership>::~ObjectRewindState() {
 }
 
 #if LDAG_DBGLEVEL > 0
-template<typename T, bool do_compare, bool take_ownership>
-void ObjectRewindState<T, do_compare, take_ownership>::rewindForward(uint32_t expected_idx) {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+void ObjectRewindState<T, do_compare, take_ownership, create_default>::rewindForward(uint32_t expected_idx) {
   G_ASSERT(this->curr_index < this->time_states.size()-1);
   this->curr_index++;
   ++this->state;
   G_ASSERT(this->curr_index == expected_idx);
   G_ASSERT(this->state == &this->time_states[this->curr_index]);
 }
-template<typename T, bool do_compare, bool take_ownership>
-void ObjectRewindState<T, do_compare, take_ownership>::rewindBackward(uint32_t expected_idx) {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+void ObjectRewindState<T, do_compare, take_ownership, create_default>::rewindBackward(uint32_t expected_idx) {
   G_ASSERT(this->curr_index > 0);
   this->curr_index--;
   --this->state;
@@ -226,20 +228,20 @@ void ObjectRewindState<T, do_compare, take_ownership>::rewindBackward(uint32_t e
 }
 
 #else
-template<typename T, bool do_compare, bool take_ownership>
-void ObjectRewindState<T, do_compare, take_ownership>::rewindForward() {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+void ObjectRewindState<T, do_compare, take_ownership, create_default>::rewindForward() {
   this->curr_index++;
   ++this->state;
 }
-template<typename T, bool do_compare, bool take_ownership>
-void ObjectRewindState<T, do_compare, take_ownership>::rewindBackward() {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+void ObjectRewindState<T, do_compare, take_ownership, create_default>::rewindBackward() {
   this->curr_index--;
   --this->state;
 }
 #endif
 
-template<typename T, bool do_compare, bool take_ownership>
-T *ObjectRewindState<T, do_compare, take_ownership>::reserveOne() {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+T *ObjectRewindState<T, do_compare, take_ownership, create_default>::reserveOne() {
 #if LDAG_DBGLEVEL > 0
   DG_ASSERT(!hasReserved);
   hasReserved = true;
@@ -249,8 +251,8 @@ T *ObjectRewindState<T, do_compare, take_ownership>::reserveOne() {
   return &back->data;
 }
 
-template<typename T, bool do_compare, bool take_ownership>
-void ObjectRewindState<T, do_compare, take_ownership>::deleteLast() {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+void ObjectRewindState<T, do_compare, take_ownership, create_default>::deleteLast() {
 #if LDAG_DBGLEVEL > 0
   G_ASSERT(hasReserved);
   hasReserved = false;
@@ -259,8 +261,8 @@ void ObjectRewindState<T, do_compare, take_ownership>::deleteLast() {
   state = &this->time_states.back();
 }
 
-template<typename T, bool do_compare, bool take_ownership>
-void ObjectRewindState<T, do_compare, take_ownership>::checkAndPush(ParserState *state) {
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+void ObjectRewindState<T, do_compare, take_ownership, create_default>::checkAndPush(ParserState *state) {
 #if LDAG_DBGLEVEL > 0
   G_ASSERT(hasReserved);
   hasReserved = false;
@@ -276,10 +278,13 @@ void ObjectRewindState<T, do_compare, take_ownership>::checkAndPush(ParserState 
       }
     }
   }
-  DG_ASSERT(this->time_states.size() > 1);
   this->time_states.back().time_ms = state->curr_time_ms;
   this->state = &this->time_states.back();
-  curr_index++;
+  curr_index = this->time_states.size()-1;
+  if constexpr (!create_default) {
+    if (curr_index == 0)
+      return;
+  }
 #if LDAG_DBGLEVEL > 0
   // we always create one component in ctor, so there will always be at least '2' components when serializing state change
   this->pushBackState(state, this->curr_index-1, this->curr_index);

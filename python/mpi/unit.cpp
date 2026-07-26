@@ -25,17 +25,17 @@ void PyUnit::include(py::module_ &m) {
     });
 
 
-  py::class_<ObjectRewindState<SpaceTimeEuler, false>::TimeState>(m, "SpaceTimeEulerTS")
-  .def_readonly("time_ms", &ObjectRewindState<SpaceTimeEuler, false>::TimeState::time_ms)
-  .def_readonly("value", &ObjectRewindState<SpaceTimeEuler, false>::TimeState::data);
+  py::class_<ObjectRewindState<SpaceTimeEuler, false, false, false>::TimeState>(m, "SpaceTimeEulerTS")
+  .def_readonly("time_ms", &ObjectRewindState<SpaceTimeEuler, false, false, false>::TimeState::time_ms)
+  .def_readonly("value", &ObjectRewindState<SpaceTimeEuler, false, false, false>::TimeState::data);
 
-  bind_readonly_vector<dag::Vector<ObjectRewindState<SpaceTimeEuler, false>::TimeState>>(m, "SpaceTimeEulerTSList");
+  bind_readonly_vector<dag::Vector<ObjectRewindState<SpaceTimeEuler, false, false, false>::TimeState>>(m, "SpaceTimeEulerTSList");
 
 
-  py::class_<ObjectRewindState<SpaceTimeEuler, false>>(m, "SpaceTimeEulerHistory")
-   .def_property_readonly("data", [](ObjectRewindState<SpaceTimeEuler, false> &self){return *self.curr();}, py::return_value_policy::reference_internal)
-   .def_property_readonly("time_ms", [](ObjectRewindState<SpaceTimeEuler, false> &self){return self.currState()->time_ms;})
-   .def_property_readonly("history", [](ObjectRewindState<SpaceTimeEuler, false> &self){return &self.history();}, py::return_value_policy::reference_internal);
+  py::class_<ObjectRewindState<SpaceTimeEuler, false, false, false>>(m, "SpaceTimeEulerHistory")
+   .def_property_readonly("data", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self){return *self.curr();}, py::return_value_policy::reference_internal)
+   .def_property_readonly("time_ms", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self){return self.currState()->time_ms;})
+   .def_property_readonly("history", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self){return &self.history();}, py::return_value_policy::reference_internal);
 
   bind_readonly_vector<std::vector<SpaceTime>>(m, "SpaceTimeList");
   bind_readonly_vector<std::vector<SpaceTimeEuler>>(m, "SpaceTimeEulerList");

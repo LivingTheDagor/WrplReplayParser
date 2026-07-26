@@ -105,7 +105,7 @@ struct FlightModelWrapStorageComponent : FieldSerializerDict {};
 
 
 struct Rocket {
-  ObjectRewindState<SpaceTimeEuler, false> positions{};
+  ObjectRewindState<SpaceTimeEuler, false, false, false> positions{};
   uint32_t created_at_ms = 0xFFFFFFFF;
   uint32_t destroyed_at_ms = 0xFFFFFFFF; // when a rocket 'dies / explodes'
 

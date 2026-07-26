@@ -1,6 +1,6 @@
 # Find the specified Python version, or use any found by default
-if(PYTHON_VERSION)
-    find_package(Python ${PYTHON_VERSION} REQUIRED COMPONENTS Interpreter Development)
+if(PYTHON_VERSION_TO_USE)
+    find_package(Python ${PYTHON_VERSION_TO_USE} REQUIRED COMPONENTS Interpreter Development)
 else()
     find_package(Python 3.12...3.12.13 REQUIRED COMPONENTS Interpreter Development)
 endif()
@@ -17,7 +17,7 @@ if(NOT pybind11_FOUND)
     FetchContent_Declare(
             pybind11
             GIT_REPOSITORY https://github.com/pybind/pybind11.git
-            GIT_TAG        v2.13.6
+            GIT_TAG        v3.0.4
     )
     FetchContent_MakeAvailable(pybind11)
 endif()

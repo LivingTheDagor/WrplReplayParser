@@ -204,7 +204,7 @@ namespace unit {
     std::vector<std::string> fm_mods{};
     std::vector<CameraTime> camera_pos;
     std::vector<Weapon> weapons{};
-    ObjectRewindState<SpaceTimeEuler, false> positions{};
+    ObjectRewindState<SpaceTimeEuler, false, false, false> positions{};
 
     UnitWeaponsMask weapons_mask{};
 
