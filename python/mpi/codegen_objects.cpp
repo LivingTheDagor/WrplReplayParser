@@ -120,6 +120,7 @@ void PyCodegenObjects::include(py::module_ &m) {
     .def_readonly("showOnTacticalMap", &PickupZone::showOnTacticalMap)
   ;
   py::class_<BaseExtReflectable, danet::ReflectableObject, std::unique_ptr<BaseExtReflectable, py::nodelete>>(mpi, "BaseExtReflectable")
+    .def_readonly("camera_data", &BaseExtReflectable::camera_data)
     .def_readonly("isAlternativeShotFreq", &BaseExtReflectable::isAlternativeShotFreq)
     .def_readonly("brokenTurretDriveSpeed", &BaseExtReflectable::brokenTurretDriveSpeed)
     .def_readonly("brokenTurretDriveMult", &BaseExtReflectable::brokenTurretDriveMult)

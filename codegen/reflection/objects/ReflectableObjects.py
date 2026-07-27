@@ -1,6 +1,7 @@
 from .obj_base import ReflectableObject, ReplicatedObject
 from .obj_base import ReflectionVarMeta as Var
 from .obj_base import SimpleVar as SVar
+from .obj_base import Method as Method
 
 class MPlayer(ReflectableObject):
     public = [
@@ -121,8 +122,14 @@ class ExitZone(MissionZone):
 class PickupZone(MissionZone):
     showOnTacticalMap = Var("bool", 0x43)
 
-
 class BaseExtReflectable(ReflectableObject):
+    protected = [
+        Method("mpi::Message * dispatchMpiMessage(mpi::MessageID mid) override;"),
+        Method("void applyMpiMessage(const mpi::Message *m) override;")
+    ]
+    public = [
+        SVar("ObjectRewindState<danet::CameraData, false, false, false>", "camera_data")
+    ]
     isAlternativeShotFreq = Var("bool", 33)
     # name:brokenTurretDriveJammedTime;addr:0x281a670;id:54;flags:0;size:64
     brokenTurretDriveSpeed = Var("float", 55)
@@ -184,10 +191,18 @@ class BaseExtReflectable(ReflectableObject):
 
 
 class FMWReflectable(BaseExtReflectable):  # id 0
+    protected = [
+        Method("mpi::Message * dispatchMpiMessage(mpi::MessageID mid) override;"),
+        Method("void applyMpiMessage(const mpi::Message *m) override;")
+    ]
     pass
 
 
 class GMReflectable(BaseExtReflectable):  # id 1
+    protected = [
+        Method("mpi::Message * dispatchMpiMessage(mpi::MessageID mid) override;"),
+        Method("void applyMpiMessage(const mpi::Message *m) override;")
+    ]
     pass
 
 

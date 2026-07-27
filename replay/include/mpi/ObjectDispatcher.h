@@ -37,6 +37,7 @@ namespace mpi {
 
     friend ParserState;
 
+    MpiQueueObject(ParserState *state) : danet::ReflectableObject(state) {}
   public:
     DECL_REFLECTION(MpiQueueObject, danet::ReflectableObject)
 

@@ -6,11 +6,10 @@ public:
   DECL_REFLECTION(DVMReflectable, danet::ReflectableObject)
   void drawObject() const override;
   danet::ReflectionVar<std::vector<danet::DamagedState>> dummyVarForDamagedStateReflection{"dummyVarForDamagedStateReflection", nullptr, 3, danet::dummyVarForDamagedStateReflectionCoder};
-  explicit DVMReflectable(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(oid)  {
+  explicit DVMReflectable(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(state, oid)  {
     varList.head = &dummyVarForDamagedStateReflection;
     varList.tail = &dummyVarForDamagedStateReflection;
   }
   friend ParserState;
 };
 
-ECS_DECLARE_CREATABLE_TYPE(DVMReflectable);

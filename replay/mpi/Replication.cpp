@@ -65,23 +65,23 @@ MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
     mpi::ObjectID oid = (0x5<<0xb) + (mpi::ObjectID)state->Zones.size();
     switch (zone_type) {
       case 0: {
-        obj = state->_new<BombingZone>(oid);
+        obj = state->_new<BombingZone>(state, oid);
         break;
       }
       case 1: {
-        obj = state->_new<CaptureZone>(oid);
+        obj = state->_new<CaptureZone>(state, oid);
         break;
       }
       case 2: {
-        obj = state->_new<RearmZone>(oid);
+        obj = state->_new<RearmZone>(state, oid);
         break;
       }
       case 3: {
-        obj = state->_new<ExitZone>(oid);
+        obj = state->_new<ExitZone>(state, oid);
         break;
       }
       case 4: {
-        obj = state->_new<PickupZone>(oid);
+        obj = state->_new<PickupZone>(state, oid);
         break;
       }
       default: EXCEPTION("Invalid Zone id: {}", zone_type);
@@ -92,7 +92,7 @@ MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
       LOGE("WARNING: Create dummy MissionArea id: {} for MissionZone id:{} type:{}", mission_area_id, zone_id,
            zone_type);
       auto & ref = state->missionAreas1[mission_area_id];
-      *ref->reserveOne() = state->_new<MissionArea>((0x16<<0xb) + (mpi::ObjectID)mission_area_id);
+      *ref->reserveOne() = state->_new<MissionArea>(state, (0x16<<0xb) + (mpi::ObjectID)mission_area_id);
       ref->checkAndPush(state);
       area = state->missionAreas1[mission_area_id];
     }
@@ -292,7 +292,7 @@ danet::ReplicatedObject *MissionArea::createReplicatedObject(BitStream &bs, Pars
     // LOGE("{}; data: {}", serializer255.getFieldId(i), FormatHexToStream(data).str());
   }
 
-  auto x = state->_new<MissionArea>(index_2);
+  auto x = state->_new<MissionArea>(state, index_2);
   *x->areaFlags.reserveOne() = areaFlags;
   x->areaFlags.checkAndPush(state);
   x->tm = tm;

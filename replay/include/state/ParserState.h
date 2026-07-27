@@ -74,13 +74,13 @@ inline thread_local ParserState * _in_destruction_state{};
 
 struct ParserState {
 
-  explicit ParserState(int player_count = 32);
+  explicit ParserState(uint32_t player_count = 32);
   explicit ParserState(IReplay *replay);
 protected:
-  void initialize();
+  void initialize(uint32_t player_couunt);
   bool is_dtor{false};
   StateAllocator allocator{};
-  mpi::MpiQueueObject mpi_queue{};
+  mpi::MpiQueueObject mpi_queue{this};
   friend mpi::MpiQueueObject;
 
   friend mpi::IObject *mpi::ObjectDispatcher(mpi::ObjectID oid, mpi::ObjectExtUID extUid, ParserState *state);
@@ -135,13 +135,13 @@ public:
   ecs::EntityManager g_entity_mgr{this}; // this order is required as g_entity_mgr needs to be destroyed before players
   std::pmr::vector<ObjectRewindState<MissionZone*, false, true>*> Zones{get_allocator()};
   std::array<TeamData, 3> teams{
-    TeamData{0xf<<0xb+0},
-    TeamData(0xf<<0xb+1),
-    TeamData(0xf<<0xb+2)
+    TeamData{this, (0xf<<0xb)+0},
+    TeamData(this, (0xf<<0xb)+1),
+    TeamData(this, (0xf<<0xb)+2)
   }; // team[0] is global data, teams[1] is first team, teams[2] is second team
   std::pmr::vector<ChatMessage> chatMessages{get_allocator()};
-  GlobalElo glob_elo{};
-  GeneralState gen_state{};
+  GlobalElo glob_elo{this};
+  GeneralState gen_state{this};
   std::pmr::vector<const mpi::IBattleMessage *> BattleMessages{get_allocator()};
   // missionArea1 owns the ptrs
   std::pmr::vector<ObjectRewindState<MissionArea*, false, true>*> missionAreas1{get_allocator()};
@@ -159,8 +159,6 @@ public:
   unit::Unit *getUnitObj(uint16_t uid) const;
 
   void setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid);
-
-  void setPlayerCount(int player_count) { players.resize(player_count); }
 
   ~ParserState();
 
@@ -196,8 +194,10 @@ ObjectRewindState<T, do_compare, take_ownership, create_default>::ObjectRewindSt
   if constexpr (create_default) {
     this->time_states.emplace_back(TimeState{});
     this->time_states.back().time_ms = 0;
+    this->state = &this->time_states.back();
+  } else {
+    this->state = nullptr;
   }
-  this->state = &this->time_states.back();
 }
 template<typename T, bool do_compare, bool take_ownership, bool create_default>
 ObjectRewindState<T, do_compare, take_ownership, create_default>::~ObjectRewindState() {

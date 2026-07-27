@@ -165,6 +165,7 @@ namespace unit {
 
   class Unit {
   protected:
+    ParserState * state = nullptr;
   public:
     bool LoadFromStorage(const FieldSerializerDict &dict);
 
@@ -174,7 +175,7 @@ namespace unit {
 
     std::vector<std::string> getTags() const { return getUnitTagsBlk(unit_tags); }
 
-    Unit(uint16_t uid, UnitType unit_type) : uid(uid), unitType(unit_type) {}
+    Unit(ParserState * state, uint16_t uid, UnitType unit_type) : state(state), uid(uid), unitType(unit_type) {}
 
     // does this entity actually exist in the ECS, or has it been moved after server ordered destruction?
     BaseExtReflectable *base_data = nullptr;
@@ -206,7 +207,7 @@ namespace unit {
     std::vector<Weapon> weapons{};
     ObjectRewindState<SpaceTimeEuler, false, false, false> positions{};
 
-    UnitWeaponsMask weapons_mask{};
+    UnitWeaponsMask weapons_mask{state};
 
     const DataBlock *unit_wpcost{};
     const DataBlock *unit_tags{};
@@ -221,12 +222,12 @@ namespace unit {
 
   class Aircraft : public Unit {
   private:
-    FMWReflectable fmv_data{};
-    FM_DVMReflectable fm_dvm_data{};
+    FMWReflectable fmv_data{state};
+    FM_DVMReflectable fm_dvm_data{state};
 
   public:
     const char *getUnitTypeName() override;
-    explicit Aircraft(uint16_t uid) : Unit(uid, AircraftType) {
+    explicit Aircraft(ParserState * state, uint16_t uid) : Unit(state, uid, AircraftType) {
       base_data = &fmv_data;
       base_dvm_data = &fm_dvm_data;
     }
@@ -238,15 +239,15 @@ namespace unit {
   };
 
   class Tank : public Unit {
-    GMReflectable gm_data{};
-    GM_DVMReflectable gm_dvm_data{};
+    GMReflectable gm_data{state};
+    GM_DVMReflectable gm_dvm_data{state};
 
 
   public:
     const char *getUnitTypeName() override;
     void Load() override;
 
-    explicit Tank(uint16_t uid) : Unit(uid, TankType) {
+    explicit Tank(ParserState * state, uint16_t uid) : Unit(state, uid, TankType) {
       base_data = &gm_data;
       base_dvm_data = &gm_dvm_data;
     }

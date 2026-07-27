@@ -95,5 +95,23 @@ void PyMpiTypes::include(py::module_ &m) {
       }
     });
 
+  py::class_<danet::CameraData>(mpi, "CameraData")
+    .def_readonly("camera_euler", &danet::CameraData::camera_euler)
+    .def_readonly("gun_pointer", &danet::CameraData::gun_pointer);
+
+
+  py::class_<ObjectRewindState<danet::CameraData, false, false, false>::TimeState>(mpi, "CameradataTS")
+  .def_readonly("time_ms", &ObjectRewindState<danet::CameraData, false, false, false>::TimeState::time_ms)
+  .def_readonly("value", &ObjectRewindState<danet::CameraData, false, false, false>::TimeState::data);
+
+  bind_readonly_vector<dag::Vector<ObjectRewindState<danet::CameraData, false, false, false>::TimeState>>(mpi, "CameraDataTSList");
+
+
+  py::class_<ObjectRewindState<danet::CameraData, false, false, false>>(mpi, "CameraDataHistory")
+   .def_property_readonly("data", [](ObjectRewindState<danet::CameraData, false, false, false> &self){return *self.curr();}, py::return_value_policy::reference_internal)
+   .def_property_readonly("time_ms", [](ObjectRewindState<danet::CameraData, false, false, false> &self){return self.currState()->time_ms;})
+   .def_property_readonly("history", [](ObjectRewindState<danet::CameraData, false, false, false> &self){return &self.history();}, py::return_value_policy::reference_internal);
+
+
   py_codegen_types.include(m);
 }

@@ -6,7 +6,7 @@ public:
   DECL_REPLICATION(PickupZone, MissionZone)
   void drawObject() const override;
   danet::ReflectionVar<bool> showOnTacticalMap{"showOnTacticalMap", nullptr, 67};
-  explicit PickupZone(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(oid)  {
+  explicit PickupZone(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(state, oid)  {
     flags.next = &showOnTacticalMap;
     varList.tail = &showOnTacticalMap;
   }

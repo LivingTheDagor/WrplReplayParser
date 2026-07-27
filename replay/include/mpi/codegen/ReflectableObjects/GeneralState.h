@@ -22,11 +22,10 @@ public:
   danet::ReflectionVar<uint8_t> totalDomTeam{"totalDomTeam", &totalDomTime, 16};
   danet::ReflectionVar<uint16_t> totalDomTime{"totalDomTime", &totalDomMult, 17};
   danet::ReflectionVar<uint8_t> totalDomMult{"totalDomMult", nullptr, 18};
-  explicit GeneralState(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(oid)  {
+  explicit GeneralState(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(state, oid)  {
     varList.head = &lastSuperArtilleryTime;
     varList.tail = &totalDomMult;
   }
   friend ParserState;
 };
 
-ECS_DECLARE_CREATABLE_TYPE(GeneralState);

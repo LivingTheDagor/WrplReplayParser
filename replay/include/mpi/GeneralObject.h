@@ -3,30 +3,31 @@
 #ifndef WTFILEUTILS_GENERALOBJECT_H
 #define WTFILEUTILS_GENERALOBJECT_H
 #include "mpi.h"
-
+namespace MPI_PACKETS {
+  enum MainEnum : uint16_t {
+    SevereDamage = 0xf157,
+    CriticalDamage = 0xf056,
+    Kill = 0xf058,
+    Awards = 0xf078,
+    Action = 0xf028,
+    Replication = 0xd039,
+    ReflectionNoDecompress = 0xf0aa,
+    Reflection1 = 0xf02d,
+    Reflection2 = 0xd136,
+    ACTUALLY_NOT_REFLECTION = 0xd137,
+    Tank1 = 0xf073,
+    Tank2 = 0xf074,
+    Rocket1 = 0xf11a,
+    Rocket2 = 0xf0db,
+    UnitCamera = 0xf0cc
+  };
+}
 namespace mpi {
 
   struct GeneralObject : public IObject {
-    ParserState *state;
-    GeneralObject(ParserState *state) : IObject(0x5802) { this->state = state; }
+    GeneralObject(ParserState *state) : IObject(state, 0x5802) {}
 
-    enum MainEnum : uint16_t {
-      SevereDamage = 0xf157,
-      CriticalDamage = 0xf056,
-      Kill = 0xf058,
-      Awards = 0xf078,
-      Action = 0xf028,
-      Replication = 0xd039,
-      ReflectionNoDecompress = 0xf0aa,
-      Reflection1 = 0xf02d,
-      Reflection2 = 0xd136,
-      ACTUALLY_NOT_REFLECTION = 0xd137,
-      Tank1 = 0xf073,
-      Tank2 = 0xf074,
-      Rocket1 = 0xf11a,
-      Rocket2 = 0xf0db,
-      UnitCamera = 0xf0cc
-    };
+
     Message *dispatchMpiMessage(MessageID mid) override;
     void applyMpiMessage(const Message *m) override;
     ~GeneralObject() override = default;
@@ -51,14 +52,14 @@ namespace mpi {
 
   class CameraStateMessage : public Message {
   public:
-    Point3 camera_circle_euler{}; // where camera is pointing
+    Quat camera_circle_quat{}; // where camera is pointing
     Point3 camera_offset{}; // camera offset from commander hatch or smg
-    Point3 gun_circle_euler{}; // where aiming reticle is pointing
+    Point3 gun_circle_norm_vector{}; // normalized vector of where the gun circle is pointing
     uint8_t some_val{};
-    float some_magnititude{};
+    float some_magnitude{};
     bool tracking_weapon{};
     ecs::EntityId weapon_eid{};
-    CameraStateMessage(IObject * o) : Message(o, GeneralObject::UnitCamera) {}
+    CameraStateMessage(IObject * o) : Message(o, MPI_PACKETS::UnitCamera) {}
     bool readPayload(ParserState *state) override;
   };
 
@@ -95,7 +96,7 @@ namespace mpi {
     bool readPayload(ParserState *state) override;
 
   public:
-    KillMessage(IObject *o) : IBattleMessage(o, GeneralObject::Kill) {}
+    KillMessage(IObject *o) : IBattleMessage(o, MPI_PACKETS::Kill) {}
     std::string offender_vehicle; // case 2
     std::string used_weapon; // case 0xa
     std::string destroyed_weapon; // case 0xc
@@ -120,7 +121,7 @@ namespace mpi {
     bool readPayload(ParserState *state) override;
 
   public:
-    CriticalDamageMessage(IObject *o) : IBattleMessage(o, GeneralObject::CriticalDamage) {}
+    CriticalDamageMessage(IObject *o) : IBattleMessage(o, MPI_PACKETS::CriticalDamage) {}
 
     unit::Unit *offended_unit;
     int player_pid;
@@ -134,7 +135,7 @@ namespace mpi {
     bool readPayload(ParserState *state) override;
 
   public:
-    SevereDamageMessage(IObject *o) : IBattleMessage(o, GeneralObject::SevereDamage) {}
+    SevereDamageMessage(IObject *o) : IBattleMessage(o, MPI_PACKETS::SevereDamage) {}
     unit::Unit *offended_unit;
     int player_pid;
     std::string vehicle;
@@ -146,7 +147,7 @@ namespace mpi {
     bool readPayload(ParserState *state) override;
 
   public:
-    AwardMessage(IObject *o) : IBattleMessage(o, GeneralObject::Awards) {}
+    AwardMessage(IObject *o) : IBattleMessage(o, MPI_PACKETS::Awards) {}
 
     int player_pid;
     std::string award{};

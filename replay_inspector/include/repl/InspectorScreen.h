@@ -3,6 +3,8 @@
 
 #include "imgui.h"
 #include "stb_image.h"
+#include "math/dag_mathAng.h"
+
 #include <SDL.h>
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
@@ -284,6 +286,13 @@ protected:
                                    info.mapBottomRightZoomed.y - info.mapTopLeftZoomed.y);
   }
 
+  Point2 vectorToDegrees(const Point3 &vec) {
+    Point2 ret;
+    ret.x = atan2f(-vec.y, sqrtf(vec.x * vec.x + vec.z * vec.z));
+    ret.y = atan2f(vec.x, vec.z);
+    return ret;
+  }
+
   void DrawMap(MapInfo &info, const char *table_name) {
     ZoneScoped if (!info.curr_image) return;
     ImGui::PushID(&info);
@@ -474,6 +483,15 @@ protected:
       ImVec2 front_uv = UVToScreen(*data.info, front->data.location, data.canvas_p0, data.info->mapSize, draw_front);
       draw_front = draw_front && front->time_ms <= data.time_start_ms && front->time_ms >= data.time_end_ms;
       if (draw_front) {
+
+        auto * camera_data = unit.base_data->camera_data.currState();
+        // we only want to draw data if camera_data is younger than 250 ms
+        if (camera_data && state.curr_time_ms - camera_data->time_ms < 1000) {
+
+          DrawYawLine(camera_data->data.gun_pointer.x, front_uv, 40, IM_COL32(255, 0, 0, 255), 2.0f);
+          DrawYawLine(camera_data->data.camera_euler.y, front_uv, 50, IM_COL32(255, 200, 0, 255), 2.0f);
+        }
+
         bool is_dead = unit.killed_at_ms <= data.time_start_ms && unit.killed_at_ms >= data.time_end_ms;
         if (is_dead) {
           DrawX(data.draw_list, front_uv, 10.0f, 4.0f);

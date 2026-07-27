@@ -4,6 +4,7 @@
 #include "ecs/ComponentTypesDefs.h"
 #include "ecs/EntityManager.h" // g_ecs_state
 #include "FileSystem.h"
+#include "math/dag_mathAng.h"
 #include "state/ParserState.h"
 
 namespace unit {
@@ -399,3 +400,41 @@ namespace unit {
   }
 
 } // namespace unit
+
+
+mpi::Message *GMReflectable::dispatchMpiMessage(mpi::MessageID mid) {return BaseExtReflectable::dispatchMpiMessage(mid);}
+void GMReflectable::applyMpiMessage(const mpi::Message *m) {BaseExtReflectable::applyMpiMessage(m);}
+
+mpi::Message *FMWReflectable::dispatchMpiMessage(mpi::MessageID mid) {return BaseExtReflectable::dispatchMpiMessage(mid);}
+void FMWReflectable::applyMpiMessage(const mpi::Message *m) {BaseExtReflectable::applyMpiMessage(m);}
+
+mpi::Message *BaseExtReflectable::dispatchMpiMessage(mpi::MessageID mid) {
+  ZoneScoped;
+  switch (mid) {
+    case MPI_PACKETS::UnitCamera: {
+      return state->_new<mpi::CameraStateMessage>(this);
+    }
+    default:
+      break;
+  }
+  return nullptr;
+}
+void BaseExtReflectable::applyMpiMessage(const mpi::Message *m) {
+  ZoneScoped;
+  switch (m->id) {
+    case MPI_PACKETS::UnitCamera: {
+      auto camera_m = (mpi::CameraStateMessage *) m;
+
+      Point3 camera_euler;
+      quat_to_euler(camera_m->camera_circle_quat, camera_euler.y, camera_euler.x, camera_euler.z);
+      Point2 gun_pointer = dir_to_sph_ang(camera_m->gun_circle_norm_vector);
+      gun_pointer.x -= PI/2;
+      camera_euler.y -= PI/2;
+      *camera_data.reserveOne() = {camera_euler, gun_pointer };
+      camera_data.checkAndPush(state);
+      break;
+    }
+    default:
+      break;
+  }
+}

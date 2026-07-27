@@ -6,7 +6,7 @@ public:
   DECL_REPLICATION(BombingZone, MissionZone)
   void drawObject() const override;
   danet::ReflectionVar<float> curZoneIntegrity{"curZoneIntegrity", nullptr, 67};
-  explicit BombingZone(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(oid)  {
+  explicit BombingZone(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(state, oid)  {
     flags.next = &curZoneIntegrity;
     varList.tail = &curZoneIntegrity;
   }

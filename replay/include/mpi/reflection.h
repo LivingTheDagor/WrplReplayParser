@@ -284,17 +284,18 @@ namespace danet {
     char _pad[sizeof(void *) - sizeof(uint32_t)]{}; //-V730_NOINIT
 #endif
 
-    // dummy mpi implementation
-    virtual mpi::Message *dispatchMpiMessage(mpi::MessageID /*mid*/) override { return NULL; }
-
-    virtual void applyMpiMessage(const mpi::Message * /*m*/) override {}
 
   protected: // only childs can create and delete this class
     static const int EndReflVarQuotaNumber = 0;
     static const int SizeReflVarQuotaNumber = 64;
 
-    ReflectableObject(mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) :
-      mpi::IObject(uid),
+    // dummy mpi implementation
+    virtual mpi::Message *dispatchMpiMessage(mpi::MessageID /*mid*/) override { return nullptr; }
+
+    virtual void applyMpiMessage(const mpi::Message * /*m*/) override {}
+
+    ReflectableObject(ParserState * state, mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) :
+      mpi::IObject(state, uid),
       debugWatermark(DANET_WATERMARK),
       prevChanged(nullptr),
       nextChanged(nullptr),
@@ -473,7 +474,7 @@ namespace danet {
 
   class ReplicatedObject : public ReflectableObject {
   public:
-    ReplicatedObject(mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) : ReflectableObject(uid) {
+    ReplicatedObject(ParserState * state, mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) : ReflectableObject(state, uid) {
       setRelfectionFlag(REPLICATED);
     }
 

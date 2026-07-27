@@ -6,11 +6,10 @@ public:
   DECL_REFLECTION(UnitWeaponsMask, danet::ReflectableObject)
   void drawObject() const override;
   danet::ReflectionVar<danet::WeaponsMask> dummyVarForAmmoPartsMask{"dummyVarForAmmoPartsMask", nullptr, 2, danet::WeaponsCoder};
-  explicit UnitWeaponsMask(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(oid)  {
+  explicit UnitWeaponsMask(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(state, oid)  {
     varList.head = &dummyVarForAmmoPartsMask;
     varList.tail = &dummyVarForAmmoPartsMask;
   }
   friend ParserState;
 };
 
-ECS_DECLARE_CREATABLE_TYPE(UnitWeaponsMask);

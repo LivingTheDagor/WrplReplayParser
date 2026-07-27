@@ -11,7 +11,7 @@ public:
   danet::ReflectionVar<std::vector<danet::UnitId>> dummyVarForCapturers{"dummyVarForCapturers", &dummyVarForCapturePart, 70};
   danet::ReflectionVar<std::vector<danet::UnitIdStruct>> dummyVarForCapturePart{"dummyVarForCapturePart", &dummyVarForNumOfActiveCapturers, 71};
   danet::ReflectionVar<std::vector<uint8_t>> dummyVarForNumOfActiveCapturers{"dummyVarForNumOfActiveCapturers", nullptr, 72};
-  explicit CaptureZone(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(oid)  {
+  explicit CaptureZone(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(state, oid)  {
     flags.next = &mpTimeX100;
     varList.tail = &dummyVarForNumOfActiveCapturers;
   }

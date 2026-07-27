@@ -2,6 +2,7 @@
 
 #ifndef WTFILEUTILS_TYPES_H
 #define WTFILEUTILS_TYPES_H
+#include "math/dag_Quat.h"
 
 namespace unit {
   class Unit;
@@ -16,6 +17,7 @@ namespace unit {
 #include "ecs/entityId.h"
 #include "math/dag_Point3.h"
 #include "reflection.h"
+
 namespace danet {
   enum AreaFlagsEnum : uint16_t {
     air = 1 << 0,
@@ -171,7 +173,15 @@ namespace danet {
     SWEDEN = 9,
     ISRAEL = 10
   };
+  struct CameraData {
+    friend bool operator==(const CameraData &lhs, const CameraData &rhs) {
+      return lhs.camera_euler == rhs.camera_euler
+             && lhs.gun_pointer == rhs.gun_pointer;
+    }
 
+    Point3 camera_euler;
+    Point2 gun_pointer; // x is horizontal, y vertical. no rotation component
+  };
 } // namespace danet
 template<>
 struct fmt::formatter<danet::AccountType> {

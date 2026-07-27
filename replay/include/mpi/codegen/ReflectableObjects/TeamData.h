@@ -11,11 +11,10 @@ public:
   danet::ReflectionVar<uint32_t> orderCooldownLeft{"orderCooldownLeft", &spawnScore, 5};
   danet::ReflectionVar<uint32_t> spawnScore{"spawnScore", &roundScore, 6};
   danet::ReflectionVar<float> roundScore{"roundScore", nullptr, 7};
-  explicit TeamData(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(oid)  {
+  explicit TeamData(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(state, oid)  {
     varList.head = &score;
     varList.tail = &roundScore;
   }
   friend ParserState;
 };
 
-ECS_DECLARE_CREATABLE_TYPE(TeamData);

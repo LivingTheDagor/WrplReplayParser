@@ -14,6 +14,13 @@ class SimpleVar:
     def __str__(self):
         return f"{self.datatype} {self.name}{'{}'};"
 
+class Method:
+    def __init__(self, method_data : str):
+        self.method_data = method_data
+
+    def __str__(self):
+        return f"{self.method_data}"
+
 class NullIndexList:
     def __init__(self, ls: list[tuple[str, 'ReflectionVarMeta']]):
         self.ls: list[tuple[str, 'ReflectionVarMeta']] = ls
@@ -53,6 +60,12 @@ class ReflectionVarMeta:
         if self.EncoderName == "":
             self.EncoderName = mgr.request_reflectionVar_serializer(self.data_type)
 
+def _own_members(self, access: str):
+    # only members defined directly on this class, not inherited
+    if access in self.obj.__dict__:
+        return self.obj.__dict__[access]
+    return None
+
 class InstReflectable:
     def __init__(self, obj: ReflectableObject, oss:StringIO, mgr: 'DataTypeManager'):
         assert len(obj.__bases__) == 1
@@ -79,21 +92,38 @@ class InstReflectable:
             if(isinstance(attr_val, ReflectionVarMeta)): # only care about ReflectionVarMeta vals,
                 yield (attr_name, attr_val)
 
-    def write_header(self):
-        self.oss.write(f"class {self.obj_name} : public {self.parent_name} {'{'}\n")
-        if hasattr(self.obj, "protected"):
+    def _own_members(self, access: str):
+        if access in self.obj.__dict__:
+            return self.obj.__dict__[access]
+        return None
+
+    def write_protections(self):
+        own_protect = self._own_members("protected")
+        if own_protect and hasattr(self.obj, "protected"):
             self.oss.write("protected:\n")
             for v in self.obj.protected:
                 self.oss.write(f"  {str(v)}\n")
-        if hasattr(self.obj, "private"):
+
+        own_private = self._own_members("private")
+        if own_private and hasattr(self.obj, "private"):
             self.oss.write("private:\n")
             for v in self.obj.private:
                 self.oss.write(f"  {str(v)}\n")
-        self.oss.write("public:\n"f"  DECL_REFLECTION({self.obj_name}, {self.parent_name})\n")
-        self.oss.write("  void drawObject() const override;\n")
-        if hasattr(self.obj, "public"):
+
+        own_public = self._own_members("public")
+        if own_public and hasattr(self.obj, "public"):
+            self.oss.write("public:\n")
             for v in self.obj.public:
                 self.oss.write(f"  {str(v)}\n")
+
+
+    def write_header(self):
+
+        self.oss.write(f"class {self.obj_name} : public {self.parent_name} {'{'}\n")
+        self.write_protections()
+        self.oss.write("public:\n"f"  DECL_REFLECTION({self.obj_name}, {self.parent_name})\n")
+        self.oss.write("  void drawObject() const override;\n")
+
 
     def write_header_bindings(self):
         self.oss.write(f"  py::class_<{self.obj_name}, {self.parent_name}, std::unique_ptr<{self.obj_name}, py::nodelete>>(mpi, \"{self.obj_name}\")\n")
@@ -141,7 +171,8 @@ class InstReflectable:
                 pass
             else:
                 for v in self.obj.public:
-                    self.oss.write(f"    .def_readonly(\"{v.name}\", &{self.obj_name}::{v.name})\n")
+                    if isinstance(v, SimpleVar):
+                        self.oss.write(f"    .def_readonly(\"{v.name}\", &{self.obj_name}::{v.name})\n")
 
         for v in self.vars.ls:
             self.oss.write(f"    .def_readonly(\"{v[0]}\", &{self.obj_name}::{v[0]})\n")
@@ -154,7 +185,7 @@ class InstReflectable:
         return self.parent_obj.getLastVar()
 
     def write_ctor(self):
-        self.oss.write(f"  explicit {self.obj_name}(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : {self.parent_name_no_namespace}(oid) " " {\n")
+        self.oss.write(f"  explicit {self.obj_name}(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : {self.parent_name_no_namespace}(state, oid) " " {\n")
         if self.is_base:
             self.oss.write(f"    varList.head = &{self.first_var};\n")
 
@@ -166,7 +197,6 @@ class InstReflectable:
         self.oss.write("  }\n  friend ParserState;\n")
     def write_footer(self):
         self.oss.write("};\n\n")
-        self.oss.write(f"ECS_DECLARE_CREATABLE_TYPE({self.obj_name});\n")
 
 class InstReplicated(InstReflectable):
     def __init__(self, obj: ReplicatedObject, oss: StringIO, mgr: 'DataTypeManager'):
@@ -175,27 +205,9 @@ class InstReplicated(InstReflectable):
 
     def write_header(self):
         self.oss.write(f"class {self.obj_name} : public {self.parent_name} {'{'}\n")
-        if hasattr(self.obj, "protected"):
-            if self.parent_obj and hasattr(self.parent_obj.obj, "protected") and self.parent_obj.obj.protected == self.obj.protected:
-                pass
-            else:
-                self.oss.write("protected:\n")
-                for v in self.obj.protected:
-                    self.oss.write(f"  {str(v)}\n")
-        if hasattr(self.obj, "private"):
-            if self.parent_obj and hasattr(self.parent_obj.obj, "private") and self.parent_obj.obj.private == self.obj.private:
-                pass
-            else:
-                for v in self.obj.private:
-                    self.oss.write(f"  {str(v)}\n")
+        self.write_protections()
         self.oss.write("public:\n"f"  DECL_REPLICATION({self.obj_name}, {self.parent_name})\n")
         self.oss.write("  void drawObject() const override;\n")
-        if hasattr(self.obj, "public"):
-            if self.parent_obj and hasattr(self.parent_obj.obj, "public") and self.parent_obj.obj.public == self.obj.public:
-                pass
-            else:
-                for v in self.obj.public:
-                    self.oss.write(f"  {str(v)}\n")
 
     def write_footer(self):
         self.oss.write("};\n\n")

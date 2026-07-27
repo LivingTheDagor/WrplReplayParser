@@ -5,7 +5,9 @@
 #include "state/ParserState.h"
 #include "mpi/GeneralObject.h"
 #include "Unit.h"
+#include "math/dag_mathAng.h"
 #include "mpi/PositionSync.h"
+#include "network/eid.h"
 #include "state/ParserState.h"
 
 CREATE_HANDLE(handle_object_dispatcher, "ObjectDispatcher")
@@ -30,45 +32,45 @@ namespace mpi {
     ZoneScoped;
     // LOG("incoming mid: 0x%x\n", mid);
     switch (mid) {
-      case Replication:
-      case Reflection1:
-      case Reflection2:
-      case ReflectionNoDecompress: {
+      case MPI_PACKETS::Replication:
+      case MPI_PACKETS::Reflection1:
+      case MPI_PACKETS::Reflection2:
+      case MPI_PACKETS::ReflectionNoDecompress: {
         return state->_new<Message>(this, mid);
         //return new Message(this, mid);
         break;
       }
-      case Kill: {
+      case MPI_PACKETS::Kill: {
         return state->_new<KillMessage>(this);
         ///return new KillMessage(this);
         DISPATCHER_LOGD1("KILL");
         break;
       }
-      case Awards: {
+      case MPI_PACKETS::Awards: {
         return state->_new<AwardMessage>(this);
         ///return new AwardMessage(this);
         DISPATCHER_LOGD1("Awards");
         break;
       }
-      case SevereDamage: {
+      case MPI_PACKETS::SevereDamage: {
         return state->_new<SevereDamageMessage>(this);
         DISPATCHER_LOGD1("SevereDamage");
         break;
       }
-      case CriticalDamage: {
+      case MPI_PACKETS::CriticalDamage: {
         return state->_new<CriticalDamageMessage>(this);
         //return new CriticalDamageMessage(this);
         DISPATCHER_LOGD1("CriticalDamage");
         break;
       }
-      case Tank1:
-      case Tank2: {
+      case MPI_PACKETS::Tank1:
+      case MPI_PACKETS::Tank2: {
         DISPATCHER_LOGD1("Tank");
         return state->_new<TankMessage>(this, mid);
         //return new TankMessage(this, mid);
       }
-      case Rocket1:
-      case Rocket2: {
+      case MPI_PACKETS::Rocket1:
+      case MPI_PACKETS::Rocket2: {
         return state->_new<BSMessage>(this, mid);
         //return new BSMessage(this, mid);
       }
@@ -83,27 +85,27 @@ namespace mpi {
     auto bs = (BitStream *) &m->payload;
     // LOG("Deserialzing for Reflection type: %0x\n", mid);
     switch (mid) {
-      case Kill: {
+      case MPI_PACKETS::Kill: {
         const KillMessage *kill_m = dynamic_cast<const KillMessage *>(m);
         if (kill_m->offended_unit) {
           kill_m->offended_unit->killed_at_ms = this->state->curr_time_ms;
         }
         [[fallthrough]];
       }
-      case SevereDamage:
-      case CriticalDamage:
-      case Awards: {
+      case MPI_PACKETS::SevereDamage:
+      case MPI_PACKETS::CriticalDamage:
+      case MPI_PACKETS::Awards: {
         m->delete_message = false;
         const IBattleMessage *battle_m = dynamic_cast<const IBattleMessage *>(m);
         this->state->BattleMessages.push_back(battle_m);
         break;
       }
-      case ReflectionNoDecompress: {
+      case MPI_PACKETS::ReflectionNoDecompress: {
         danet::deserializeReflectables(*bs, obj_dispatcher, this->state);
         break;
       }
-      case Reflection1:
-      case Reflection2: {
+      case MPI_PACKETS::Reflection1:
+      case  MPI_PACKETS::Reflection2: {
         uint8_t tmp = 0;
         bs->Read(tmp);
         bool isCompressed = tmp == 1;
@@ -118,7 +120,7 @@ namespace mpi {
         danet::deserializeReflectables(*outBs, obj_dispatcher, this->state);
         break;
       }
-      case Replication: {
+      case MPI_PACKETS::Replication: {
         uint8_t do_weird_check;
         bs->Read(do_weird_check);
         int16_t sorta_confirms_is_compressed;
@@ -132,8 +134,8 @@ namespace mpi {
         }
         break;
       }
-      case Tank1:
-      case Tank2: {
+      case MPI_PACKETS::Tank1:
+      case MPI_PACKETS::Tank2: {
         auto tankM = (TankMessage *) m;
         auto ret = GMSync(*state, tankM->data);
         if (!ret) {
@@ -141,8 +143,8 @@ namespace mpi {
         }
         return;
       }
-      case Rocket1:
-      case Rocket2: {
+      case MPI_PACKETS::Rocket1:
+      case MPI_PACKETS::Rocket2: {
         auto bsM = (BSMessage *) m;
         bool ret = WeaponSync(*state, bsM->data);
         if (!ret) {
@@ -347,9 +349,53 @@ namespace mpi {
   bool TankMessage::readPayload(ParserState *state) { return this->payload.Read(this->data); }
 
   void TankMessage::writePayload() { this->payload.Write(this->data); }
+
+
+  #define RET_FAIL(opt) \
+  if (!(opt))         \
+  return false
+
   bool CameraStateMessage::readPayload(ParserState *state) {
+    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+      switch (field_id) {
+        case 1: {
+          RET_FAIL(bs->Read(this->camera_circle_quat));
+          break;
+        }
+        case 2: {
+          RET_FAIL(bs->Read(this->camera_offset));
+          break;
+        }
+        case 3: {
+          RET_FAIL(bs->Read(this->gun_circle_norm_vector));
+          break;
+        }
+        case 4: {
+          RET_FAIL(bs->Read(this->some_val));
+          break;
+        }
+        case 5: {
+          RET_FAIL(bs->Read(this->some_magnitude));
+          break;
+        }
+        case 6: {
+          RET_FAIL(bs->Read(this->tracking_weapon));
+          break;
+        }
+        case 7: {
+          RET_FAIL(net::read_eid(*bs, this->weapon_eid));
+          break;
+        }
+        MPI_SERIALIZER_DEFAULT
+      }
+      return true;
+    });
+    return valid;
   }
 } // namespace mpi
 
-ECS_REGISTER_CTM_TYPE(MPlayer, nullptr);
-ECS_AUTO_REGISTER_COMPONENT_BASE(MPlayer, "m_player", nullptr)
+struct Mplayer_dummy : ecs::Tag {};
+
+ECS_DECLARE_CREATABLE_TYPE(Mplayer_dummy);
+ECS_REGISTER_CTM_TYPE(Mplayer_dummy, nullptr);
+ECS_AUTO_REGISTER_COMPONENT_BASE(Mplayer_dummy, "m_player", nullptr)

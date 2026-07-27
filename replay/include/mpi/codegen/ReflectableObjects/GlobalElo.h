@@ -6,11 +6,10 @@ public:
   DECL_REFLECTION(GlobalElo, danet::ReflectableObject)
   void drawObject() const override;
   danet::ReflectionVar<Point3> teamAvgEloRatings{"teamAvgEloRatings", nullptr, 2};
-  explicit GlobalElo(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(oid)  {
+  explicit GlobalElo(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(state, oid)  {
     varList.head = &teamAvgEloRatings;
     varList.tail = &teamAvgEloRatings;
   }
   friend ParserState;
 };
 
-ECS_DECLARE_CREATABLE_TYPE(GlobalElo);

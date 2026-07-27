@@ -12,15 +12,17 @@ bool ChatMessage::FromBS(BitStream &bs) {
   ok &= bs.Read(complaints);
   return ok;
 }
-ParserState::ParserState(int player_count): players(player_count) {
-  initialize();
+ParserState::ParserState(uint32_t player_count) {
+  initialize(player_count);
 }
-ParserState::ParserState(IReplay *replay) : players(replay->getHeader()->player_count) {
-  initialize();
+ParserState::ParserState(IReplay *replay) {
+  initialize(replay->getHeader()->player_count);
 }
-void ParserState::initialize() {
-  for (size_t i = 0; i < this->players.size(); i++) {
-    this->players[i].setUID((mpi::ObjectID)((0xe<<0xb)+i));
+void ParserState::initialize(uint32_t player_count) {
+  DG_ASSERT(this->players.size() == 0);
+  this->players.reserve(player_count);
+  for (size_t i = 0; i < player_count; i++) {
+    this->players.emplace_back(this, (mpi::ObjectID)((0xe<<0xb)+i));
   }
   this->g_entity_mgr.curr_event = _new<ecs::EcsRewindEvent>();
 }

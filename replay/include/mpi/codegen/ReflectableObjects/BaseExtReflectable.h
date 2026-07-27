@@ -2,6 +2,11 @@
 #pragma once
 
 class BaseExtReflectable : public danet::ReflectableObject {
+protected:
+  mpi::Message * dispatchMpiMessage(mpi::MessageID mid) override;
+  void applyMpiMessage(const mpi::Message *m) override;
+public:
+  ObjectRewindState<danet::CameraData, false, false, false> camera_data{};
 public:
   DECL_REFLECTION(BaseExtReflectable, danet::ReflectableObject)
   void drawObject() const override;
@@ -59,11 +64,10 @@ public:
   danet::ReflectionVar<uint8_t> smokeScreenCount{"smokeScreenCount", &smokeScreenActived, 52};
   danet::ReflectionVar<bool> smokeScreenActived{"smokeScreenActived", &crewStatMult, 53};
   danet::ReflectionVar<float> crewStatMult{"crewStatMult", nullptr, 63};
-  explicit BaseExtReflectable(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(oid)  {
+  explicit BaseExtReflectable(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(state, oid)  {
     varList.head = &isAlternativeShotFreq;
     varList.tail = &crewStatMult;
   }
   friend ParserState;
 };
 
-ECS_DECLARE_CREATABLE_TYPE(BaseExtReflectable);

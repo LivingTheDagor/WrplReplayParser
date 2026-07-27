@@ -3,11 +3,12 @@
 
 class MissionArea : public danet::ReplicatedObject {
 public:
+  TMatrix tm{};
+public:
   DECL_REPLICATION(MissionArea, danet::ReplicatedObject)
   void drawObject() const override;
-  TMatrix tm{};
   danet::ReflectionVar<danet::AreaFlagsEnum> areaFlags{"areaFlags", nullptr, 2};
-  explicit MissionArea(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReplicatedObject(oid)  {
+  explicit MissionArea(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReplicatedObject(state, oid)  {
     varList.head = &areaFlags;
     varList.tail = &areaFlags;
   }

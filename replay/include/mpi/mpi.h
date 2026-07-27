@@ -11,6 +11,7 @@
 #include "dag_assert.h"
 #include "unordered_map"
 #include "unordered_set"
+#include "type_name.h"
 
 struct ParserState;
 
@@ -43,6 +44,7 @@ namespace mpi // message passing interface
   class IObject // base class for objects that handle messages
   {
   protected:
+    ParserState * state;
     ObjectID mpiObjectUID;
 
     void setUID(ObjectID uid) { mpiObjectUID = uid; }
@@ -56,7 +58,9 @@ namespace mpi // message passing interface
 
     virtual ~IObject() = default;
 
-    explicit IObject(ObjectID uid = INVALID_OBJECT_ID) : mpiObjectUID(uid) {}
+    explicit IObject(ParserState * state, ObjectID uid = INVALID_OBJECT_ID) : state(state), mpiObjectUID(uid) {
+      DG_ASSERT(this->state);
+    }
 
     [[nodiscard]] ObjectID getUID() const { return mpiObjectUID; }
 
@@ -109,6 +113,11 @@ namespace mpi // message passing interface
       curr_index = 0                        \
   }
 
+#define MPI_SERIALIZER_DEFAULT                                \
+default: {                                                    \
+  EXCEPTION("Unknown id found in message serializer switch"); \
+  break;                                                      \
+}
 
   class Message // base class for all messages
   {
@@ -130,6 +139,8 @@ namespace mpi // message passing interface
     uint32_t readFieldsSizeAndFlag() { return idFieldSerializer.readFieldsSizeAndFlag(payload); }
 
     void checkFieldSize(uint8_t index, BitSize_t size) { idFieldSerializer.checkFieldSize(index, size); }
+
+    inline bool parse(const std::function<bool(const BitStream *, uint32_t)> &cb);
 
   private:
     IdFieldSerializer32 idFieldSerializer;
@@ -194,4 +205,27 @@ namespace mpi // message passing interface
   void register_object_dispatcher(object_dispatcher od); // register function for dispatch objects
   IObject *dispatch_object(mpi::ObjectID oid, ObjectExtUID ext_uid, ParserState *state);
 
+
+  inline bool Message::parse(const std::function<bool(const BitStream *, uint32_t)> &cb) {
+    ZoneScoped;
+    uint32_t fields = this->readFieldsSizeAndFlag();
+    if (fields == 0) /* no data was serialized in a message that expects data*/
+      return false;
+    /* sizes are stored based on # of fields, they are not stored based on a field index, so we need a separate var
+ * counting iterations*/
+    for (uint8_t curr_field_index = 0; fields != 0; curr_field_index++) {
+      uint8_t curr_field = 0;
+      while (((fields >> curr_field) & 1) == 0)
+        curr_field++; /* this just iterates over all the fields to find the next one*/
+      fields &= ~(1 << (curr_field & 0x1f)); /*this is done to remove previous (and maybe current????) field index*/
+      /* dont ask me how it works, its probably compiler black magic that created this, or Gaijin did*/
+      BitSize_t start_index = this->payload.GetReadOffset();
+      bool ret = cb(&this->payload, curr_field);
+      if (!ret) {
+        LOGE("{} failed to parse field {} (index {}) of mid {:#x}", util::type_name_of_obj(this), curr_field, curr_field_index, this->id);
+      }
+      this->checkFieldSize(curr_field_index, this->payload.GetReadOffset() - start_index);
+    }
+    return true;
+  }
 }; // namespace mpi

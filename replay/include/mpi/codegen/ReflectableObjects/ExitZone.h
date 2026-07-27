@@ -5,7 +5,7 @@ class ExitZone : public MissionZone {
 public:
   DECL_REPLICATION(ExitZone, MissionZone)
   void drawObject() const override;
-  explicit ExitZone(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(oid)  {
+  explicit ExitZone(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(state, oid)  {
   }
   friend ParserState;
 };

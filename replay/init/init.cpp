@@ -15,15 +15,8 @@ namespace mpi {
     virtual ~BaseListener() = default;
     void receiveMpiMessage(const Message *msg, SystemID receiver) override { msg->obj->applyMpiMessage(msg); }
   };
-  class DummyObject : public IObject {
-  public:
-    Message *dispatchMpiMessage(MessageID mid) override { return nullptr; }
-    void applyMpiMessage(const Message *m) override {}
-  };
 
   static BaseListener base;
-  static DummyObject dummy;
-  IObject *dispatcher(ObjectID, ObjectExtUID) { return &dummy; }
 } // namespace mpi
 
 bool TranslationAllowed = false;
@@ -87,3 +80,4 @@ void initialize(const std::string &game_path, const std::string &logfile_path, b
   size_t pull_val = framework_primary_pulls;
   G_UNUSED(pull_val);
 }
+

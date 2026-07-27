@@ -2,12 +2,14 @@
 #pragma once
 
 class GMReflectable : public BaseExtReflectable {
+protected:
+  mpi::Message * dispatchMpiMessage(mpi::MessageID mid) override;
+  void applyMpiMessage(const mpi::Message *m) override;
 public:
   DECL_REFLECTION(GMReflectable, BaseExtReflectable)
   void drawObject() const override;
-  explicit GMReflectable(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : BaseExtReflectable(oid)  {
+  explicit GMReflectable(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : BaseExtReflectable(state, oid)  {
   }
   friend ParserState;
 };
 
-ECS_DECLARE_CREATABLE_TYPE(GMReflectable);

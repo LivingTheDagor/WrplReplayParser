@@ -3,10 +3,11 @@
 
 class MPlayer : public danet::ReflectableObject {
 public:
-  DECL_REFLECTION(MPlayer, danet::ReflectableObject)
-  void drawObject() const override;
   std::unordered_set<unit::Unit*> currentOwnedUnits{};
   std::vector<unit::Unit*> allOwnedUnits{};
+public:
+  DECL_REFLECTION(MPlayer, danet::ReflectableObject)
+  void drawObject() const override;
   danet::ReflectionVar<danet::Uid> uid{"uid", &invitedNickName, 2};
   danet::ReflectionVar<std::string> invitedNickName{"invitedNickName", &nickLocKey, 3};
   danet::ReflectionVar<std::string> nickLocKey{"nickLocKey", &ClanTag, 4, danet::TranslatedCoder};
@@ -55,11 +56,10 @@ public:
   danet::ReflectionVar<bool> missionSupportUnitEnabled{"missionSupportUnitEnabled", &rageTokens, 47};
   danet::ReflectionVar<uint16_t> rageTokens{"rageTokens", &numFreeSpareUsed, 48};
   danet::ReflectionVar<uint32_t> numFreeSpareUsed{"numFreeSpareUsed", nullptr, 50};
-  explicit MPlayer(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(oid)  {
+  explicit MPlayer(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : ReflectableObject(state, oid)  {
     varList.head = &uid;
     varList.tail = &numFreeSpareUsed;
   }
   friend ParserState;
 };
 
-ECS_DECLARE_CREATABLE_TYPE(MPlayer);

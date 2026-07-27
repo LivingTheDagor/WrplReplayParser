@@ -34,6 +34,11 @@ namespace util {
   }
 
   template <typename T>
+  std::string type_name_of_obj(const T * obj) {
+    return detail::demangle_or_fallback(typeid(*obj).name());
+  }
+
+  template <typename T>
   std::string type_name_of(const T&) {
     return type_name<T>();
   }

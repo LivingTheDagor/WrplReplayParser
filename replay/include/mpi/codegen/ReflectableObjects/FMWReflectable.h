@@ -2,12 +2,14 @@
 #pragma once
 
 class FMWReflectable : public BaseExtReflectable {
+protected:
+  mpi::Message * dispatchMpiMessage(mpi::MessageID mid) override;
+  void applyMpiMessage(const mpi::Message *m) override;
 public:
   DECL_REFLECTION(FMWReflectable, BaseExtReflectable)
   void drawObject() const override;
-  explicit FMWReflectable(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : BaseExtReflectable(oid)  {
+  explicit FMWReflectable(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : BaseExtReflectable(state, oid)  {
   }
   friend ParserState;
 };
 
-ECS_DECLARE_CREATABLE_TYPE(FMWReflectable);

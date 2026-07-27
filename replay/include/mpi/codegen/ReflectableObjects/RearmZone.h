@@ -5,7 +5,7 @@ class RearmZone : public MissionZone {
 public:
   DECL_REPLICATION(RearmZone, MissionZone)
   void drawObject() const override;
-  explicit RearmZone(mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(oid)  {
+  explicit RearmZone(ParserState *state, mpi::ObjectID oid = mpi::INVALID_OBJECT_ID) : MissionZone(state, oid)  {
   }
   friend ParserState;
 };
