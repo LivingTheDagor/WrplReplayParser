@@ -6,6 +6,7 @@
 namespace danet {
 
   int UidCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::Uid>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -19,6 +20,7 @@ namespace danet {
   }
 
   int stringCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<std::string>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -32,6 +34,7 @@ namespace danet {
   }
 
   int uint32_tCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<uint32_t>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -45,6 +48,7 @@ namespace danet {
   }
 
   int DataBlockCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<DataBlock>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -58,6 +62,7 @@ namespace danet {
   }
 
   int uint8_tCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<uint8_t>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -71,6 +76,7 @@ namespace danet {
   }
 
   int CountryCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::Country>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -84,6 +90,7 @@ namespace danet {
   }
 
   int uint16_tCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<uint16_t>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -97,6 +104,7 @@ namespace danet {
   }
 
   int ecsEntityId_20arrayCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<std::array<ecs::EntityId,20>>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       for(auto & v : *(data)) {
@@ -114,6 +122,7 @@ namespace danet {
   }
 
   int CrewUnitsListCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::CrewUnitsList>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write((uint8_t)data->crew.size());
@@ -141,6 +150,7 @@ namespace danet {
   }
 
   int floatCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<float>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -154,6 +164,7 @@ namespace danet {
   }
 
   int boolCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<bool>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -167,6 +178,7 @@ namespace danet {
   }
 
   int EntityIdCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<ecs::EntityId>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       net::write_eid(*bs, *(data));
@@ -180,6 +192,7 @@ namespace danet {
   }
 
   int uint8_t_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<std::vector<uint8_t>>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write((uint8_t)data->size());
@@ -201,6 +214,7 @@ namespace danet {
   }
 
   int uint32_t_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<std::vector<uint32_t>>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write((uint8_t)data->size());
@@ -222,6 +236,7 @@ namespace danet {
   }
 
   int uint16_t_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<std::vector<uint16_t>>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write((uint8_t)data->size());
@@ -243,6 +258,7 @@ namespace danet {
   }
 
   int dummyForKillStreaksProgressCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::dummyForKillStreaksProgress>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write((uint8_t)data->vals.size());
@@ -268,6 +284,7 @@ namespace danet {
   }
 
   int RoundScoreCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::RoundScore>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(data->combined);
@@ -291,6 +308,7 @@ namespace danet {
   }
 
   int dummyForPlayerStatCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::dummyForPlayerStat>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(data->v1);
@@ -350,6 +368,7 @@ namespace danet {
   }
 
   int dummyForFootballStatCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::dummyForFootballStat>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(data->v1);
@@ -367,6 +386,7 @@ namespace danet {
   }
 
   int Point3Coder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<Point3>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -380,6 +400,7 @@ namespace danet {
   }
 
   int dummyForExitZonesSettingsCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::dummyForExitZonesSettings>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->WriteZigZag((int)data->vals.size());
@@ -405,6 +426,7 @@ namespace danet {
   }
 
   int intCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<int>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -418,6 +440,7 @@ namespace danet {
   }
 
   int WeatherEffectsCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::WeatherEffects>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write((uint32_t)data->effects.size());
@@ -441,6 +464,7 @@ namespace danet {
   }
 
   int Point2Coder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<Point2>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -454,6 +478,7 @@ namespace danet {
   }
 
   int AreaFlagsEnumCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::AreaFlagsEnum>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -467,6 +492,7 @@ namespace danet {
   }
 
   int int8_tCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<int8_t>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(*(data));
@@ -480,6 +506,7 @@ namespace danet {
   }
 
   int danetUnitId_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<std::vector<danet::UnitId>>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write((uint8_t)data->size());
@@ -501,6 +528,7 @@ namespace danet {
   }
 
   int danetUnitIdStruct_uint8_tvectorCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<std::vector<danet::UnitIdStruct>>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write((uint8_t)data->size());
@@ -524,6 +552,7 @@ namespace danet {
   }
 
   int stdstring_2arrayCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<std::array<std::string,2>>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       for(auto & v : *(data)) {
@@ -541,6 +570,7 @@ namespace danet {
   }
 
   int dummyForDeathInfoCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::dummyForDeathInfo>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(data->v1);
@@ -562,6 +592,7 @@ namespace danet {
   }
 
   int KillerStructCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::KillerStruct>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       bs->Write(data->player_id);

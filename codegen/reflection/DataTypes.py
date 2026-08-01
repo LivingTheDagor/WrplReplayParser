@@ -338,6 +338,7 @@ class DataTypeManager:
         inst = DataTypeInst("data", data_type, True, 1)
         return f"""
   int {name}(DANET_ENCODER_SIGNATURE) {'{'}
+    ZoneScoped;
     auto data = meta->getValue<{datatype}>();
     if (op == DANET_REFLECTION_OP_ENCODE) {'{'}
 {self.get_ReflectionVar_writer(inst)}

@@ -287,17 +287,18 @@ namespace danet {
     // read var indexes
     idFieldSerializer.readFieldsIndex(bs);
     ReflectionVarMeta *v = varList.head;
-    // LOG("Deserializing Vars for %p: ", this);
-    for (uint16_t j = 0; (uint32_t) j < numVars; ++j) {
-      v = getVarByPersistentId(idFieldSerializer.getFieldId(j));
-      if (v) {
-        G_ASSERT((v->flags & RVF_NEED_DESERIALIZE) == 0);
-        v->flags |= RVF_NEED_DESERIALIZE; // mark vars that we going to deserialize
-        // LOG("%s; ", v->name);
+    {
+      ZoneScopedN("ReflectableObject::varCollection");
+      for (uint16_t j = 0; (uint32_t) j < numVars; ++j) {
+        v = getVarByPersistentId(idFieldSerializer.getFieldId(j));
+        if (v) {
+          G_ASSERT((v->flags & RVF_NEED_DESERIALIZE) == 0);
+          v->flags |= RVF_NEED_DESERIALIZE; // mark vars that we going to deserialize
+          // LOG("%s; ", v->name);
+        }
+        varsToRead[j] = v;
       }
-      varsToRead[j] = v;
     }
-    // LOG("\n");
 
     // allow objects choose what flags to deserialize
     onBeforeVarsDeserialization();
@@ -305,6 +306,7 @@ namespace danet {
     // read var data
     bool ret = true;
     for (uint16_t j = 0; j < numVars; ++j) {
+      ZoneScopedN("ReflectableObject::varParse");
       v = varsToRead[j];
       // int old_value = v ? *v->getValue<int>() : 0;
       BitSize_t ppp = bs.GetReadOffset();

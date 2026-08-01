@@ -7,6 +7,7 @@ namespace danet {
   int TranslatedCoder(DANET_ENCODER_SIGNATURE) { return stringCoder(op, meta, ro, bs, state); }
 
   int WeirdFloatSerializer(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<uint8_t>(); // in reality, this maybe 2, 3, or even 4 floats
     G_ASSERT(meta->numBits % 0x20 == 0 &&
              meta->numBits <= 0x80); // must be alligned to 4 bytes and be less than 16 bytes (float and max 4 floats)
@@ -23,6 +24,7 @@ namespace danet {
   int InvalidSerializer(DANET_ENCODER_SIGNATURE) { return 2; }
 
   int WeaponsCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<danet::WeaponsMask>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       for (auto &weapon: data->weapons) {
@@ -49,6 +51,7 @@ namespace danet {
   }
 
   int dummyVarForDamagedStateReflectionCoder(DANET_ENCODER_SIGNATURE) {
+    ZoneScoped;
     auto data = meta->getValue<std::vector<danet::DamagedState>>();
     if (op == DANET_REFLECTION_OP_ENCODE) {
       // dunno where it gets the data for some_bit from, so its bad bad bad for now
