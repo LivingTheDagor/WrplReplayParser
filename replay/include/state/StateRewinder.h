@@ -28,7 +28,7 @@ private:
   StateRewinder(ParserState *state);
   ~StateRewinder();
 
-  dag::Vector<RewindAction, StateAllocator::StateDagAlloc*> actions_vector;
+  dag::Vector<RewindAction, StateAllocator::DagAllocType> actions_vector;
   uint32_t curr_index{};
 
   void rewind_to_ms(ParserState &parser_state, uint32_t time_ms);

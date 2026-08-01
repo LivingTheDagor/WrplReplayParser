@@ -14,6 +14,14 @@
 // #include "mpi/mpi.h"
 // #include "mpi/codegen/ReflIncludes.h"
 
+struct TurretData {
+  // relative data as written directly in packet
+  // only one tank right now uses the Point3.z val, the Turm 3 with its 3 axis turret
+  Point3 turret_rel{};
+  // turret data normalized to world
+  Point3 turret_abs{};
+};
+
 struct CameraTime {
   uint32_t time_ms;
   // todo, I know the structure just have to reimplement it in cpp
@@ -166,6 +174,8 @@ namespace unit {
   class Unit {
   protected:
     ParserState * state = nullptr;
+
+    void loadWeaponData(const std::string &path);
   public:
     bool LoadFromStorage(const FieldSerializerDict &dict);
 

@@ -1,4 +1,3 @@
-
 #include "Unit.h"
 #include "idFieldSerializer.h"
 #include "ecs/ComponentTypesDefs.h"
@@ -19,97 +18,18 @@ namespace unit {
       return (Aircraft *) this;
     return nullptr;
   }
-  const char *Aircraft::getUnitTypeName() {
-    return "Aircraft";
-  }
-
-#define RET_FAIL(opt) \
-  if (!(opt))         \
-  return false
-
-  bool unit::Unit::LoadFromStorage(const FieldSerializerDict &data) {
-    BitStream bs{data.data.data(), data.data.size(), false};
-    IdFieldSerializer255 IdFieldSerializer{};
-    uint32_t end;
-    uint16_t count = IdFieldSerializer.readFieldsSizeAndCount(bs, end);
-    if (!IdFieldSerializer.readFieldsIndex(bs)) {
-      return false;
-    }
-
-    for (uint16_t i = 0; i < count; ++i) {
-      auto fieldId = IdFieldSerializer.getFieldId(i);
-      auto f_size_bits = IdFieldSerializer.getFieldSize(i);
-      auto start_offs = bs.GetReadOffset();
-
-      switch (fieldId) {
-        case 0x5: {
-          RET_FAIL(bs.Read(spawn_position));
-          break;
-        }
-        case 0x6: {
-          RET_FAIL(bs.Read(raw_unit_name));
-          break;
-        }
-        case 0x7: {
-          RET_FAIL(bs.Read(player_internal_name));
-          break;
-        }
-        case 0x8: {
-          RET_FAIL(bs.Read(loadout_name));
-          break;
-        }
-        case 0x9: {
-          RET_FAIL(bs.Read(skin_name));
-          break;
-        }
-        case 0xd: {
-          RET_FAIL(bs.Read(owner_pid));
-          break;
-        }
-        case 0x33: {
-          BitStream t_bs;
-          RET_FAIL(bs.Read(t_bs));
-          uint8_t sz;
-          RET_FAIL(t_bs.Read(sz));
-          RET_FAIL(sz <= 6); // it should always be 6 currently, so if anything weird has happened best to know
-          storage_weapons.resize(sz);
-          for (auto &weapon: storage_weapons) {
-            RET_FAIL(t_bs.Read(weapon.launcher));
-            RET_FAIL(t_bs.Read(weapon.bullet));
-            RET_FAIL(t_bs.Read(weapon.count));
-          }
-          RET_FAIL(t_bs.Read(sz));
-          weapon_mods.resize(sz);
-          for (auto &mod: weapon_mods)
-            RET_FAIL(t_bs.Read(mod));
-          RET_FAIL(t_bs.Read(sz));
-          fm_mods.resize(sz);
-          for (auto &mod: fm_mods)
-            RET_FAIL(t_bs.Read(mod));
-          break;
-        }
-        case 0x34: {
-          RET_FAIL(bs.Read(camo_info));
-          break;
-        }
-        case 0x40: {
-          RET_FAIL(bs.Read(custom_weapons_blk));
-          break;
-        }
-      }
-      if (bs.GetReadOffset() != start_offs && bs.GetReadOffset() != (start_offs + f_size_bits)) {
-        LOGE("Error while parsing Storage, parsed invalid size for id {:#x}", fieldId);
-      }
-      bs.SetReadOffset(start_offs + f_size_bits);
-    }
-    Load();
-    return true;
-  }
-
   struct weap {
     int id;
     const char *name;
   };
+
+  void blkPrint(DataBlock &blk) {
+    blk.printBlock(std::cout);
+    std::cout.flush();
+  }
+
+
+  const char *Aircraft::getUnitTypeName() { return "Aircraft"; }
 
   std::array<weap, 18> weapon_id_match = {{{0, "machine gun"},
                                            {1, "cannon"},
@@ -130,7 +50,6 @@ namespace unit {
                                            {0xf, "special gun"},
                                            {0x10, "smoke"}}};
 
-
   int get_weapon_id(std::string_view weapon_name) {
     for (auto &[id, name]: weapon_id_match) {
       if (strcmp(weapon_name.data(), name) == 0)
@@ -146,10 +65,9 @@ namespace unit {
     return -1;
   }
 
-  void blkPrint(DataBlock &blk) {
-    blk.printBlock(std::cout);
-    std::cout.flush();
-  }
+#define RET_FAIL(opt) \
+  if (!(opt))         \
+  return false
 
   bool getWeaponPresetAndSlot(const DataBlock &weapons, int WeaponSlotNid, int WeaponPresetNid,
                               DataBlock &custom_weapons, int custom_blk_index, DataBlock const **WeaponSlot,
@@ -201,21 +119,17 @@ namespace unit {
     const DataBlock *blk = nullptr;
   };
 
-  void Aircraft::Load() {
-    unit_name = raw_unit_name;
-    unit::Unit::Load();
-    // blkPrint(this->custom_weapons_blk);
-    DataBlock empty_blk{};
+  void Unit::loadWeaponData(const std::string &path) {
     if (this->unit_name == "dummy_plane") // fuck the bitch
       return;
-    auto vehicle_blk = fmt::format("gamedata/flightmodels/{}.blk", this->unit_name);
     DataBlock blk{};
-    if (!dblk::load(blk, vehicle_blk)) {
+    if (!dblk::load(blk, path)) {
       LOGE("failed to load unit blk for unit {}", this->unit_name);
       return;
     }
-    DataBlock in_file_weapon_preset{}; // even though we are modifying this block in place, the only thing that may be
-                                       // affected is the name map
+    DataBlock in_file_weapon_preset{};
+    // even though we are modifying this block in place, the only thing that may be
+    // affected is the name map
     DataBlock *weapon_preset{};
     if (this->loadout_name.empty()) {
       weapon_preset = &in_file_weapon_preset; // empty block
@@ -275,8 +189,6 @@ namespace unit {
     if (!found) {
       weapons_nid = blk.getNameId("Weapon");
       auto mod_blk = blk.getBlockByNameEx("commonWeapons");
-      if (!mod_blk)
-        mod_blk = &empty_blk;
       for (int j = 0; j < mod_blk->blockCount(); j++) {
         auto weap_blk = mod_blk->getBlock(j);
         if (weap_blk->getBlockNameId() == weapons_nid)
@@ -337,7 +249,6 @@ namespace unit {
         this->weapons.emplace_back(weapon_id, weapon_count, emitter, blk_str);
       }
     } else {
-
       int WeaponNid = weapon_preset->getNameId("Weapon"), weaponNid = weapon_preset->getNameId("weapon");
       for (int i = 0; i < weapon_preset->blockCount(); i++) {
         auto curr_preset = weapon_preset->getBlock(i);
@@ -368,6 +279,94 @@ namespace unit {
     });
   }
 
+  bool unit::Unit::LoadFromStorage(const FieldSerializerDict &data) {
+    BitStream bs{data.data.data(), data.data.size(), false};
+    IdFieldSerializer255 IdFieldSerializer{};
+    uint32_t end;
+    uint16_t count = IdFieldSerializer.readFieldsSizeAndCount(bs, end);
+    if (!IdFieldSerializer.readFieldsIndex(bs)) {
+      return false;
+    }
+
+    for (uint16_t i = 0; i < count; ++i) {
+      auto fieldId = IdFieldSerializer.getFieldId(i);
+      auto f_size_bits = IdFieldSerializer.getFieldSize(i);
+      auto start_offs = bs.GetReadOffset();
+
+      switch (fieldId) {
+        case 0x5: {
+          RET_FAIL(bs.Read(spawn_position));
+          break;
+        }
+        case 0x6: {
+          RET_FAIL(bs.Read(raw_unit_name));
+          break;
+        }
+        case 0x7: {
+          RET_FAIL(bs.Read(player_internal_name));
+          break;
+        }
+        case 0x8: {
+          RET_FAIL(bs.Read(loadout_name));
+          break;
+        }
+        case 0x9: {
+          RET_FAIL(bs.Read(skin_name));
+          break;
+        }
+        case 0xd: {
+          RET_FAIL(bs.Read(owner_pid));
+          break;
+        }
+        case 0x33: {
+          BitStream t_bs;
+          RET_FAIL(bs.Read(t_bs));
+          uint8_t sz;
+          RET_FAIL(t_bs.Read(sz));
+          RET_FAIL(sz <= 6);
+          // it should always be 6 currently, so if anything weird has happened best to know
+          storage_weapons.resize(sz);
+          for (auto &weapon: storage_weapons) {
+            RET_FAIL(t_bs.Read(weapon.launcher));
+            RET_FAIL(t_bs.Read(weapon.bullet));
+            RET_FAIL(t_bs.Read(weapon.count));
+          }
+          RET_FAIL(t_bs.Read(sz));
+          weapon_mods.resize(sz);
+          for (auto &mod: weapon_mods)
+            RET_FAIL(t_bs.Read(mod));
+          RET_FAIL(t_bs.Read(sz));
+          fm_mods.resize(sz);
+          for (auto &mod: fm_mods)
+            RET_FAIL(t_bs.Read(mod));
+          break;
+        }
+        case 0x34: {
+          RET_FAIL(bs.Read(camo_info));
+          break;
+        }
+        case 0x40: {
+          RET_FAIL(bs.Read(custom_weapons_blk));
+          break;
+        }
+      }
+      if (bs.GetReadOffset() != start_offs && bs.GetReadOffset() != (start_offs + f_size_bits)) {
+        LOGE("Error while parsing Storage, parsed invalid size for id {:#x}", fieldId);
+      }
+      bs.SetReadOffset(start_offs + f_size_bits);
+    }
+    Load();
+    return true;
+  }
+
+
+  void Aircraft::Load() {
+    unit_name = raw_unit_name;
+    unit::Unit::Load();
+    auto vehicle_blk = fmt::format("gamedata/flightmodels/{}.blk", this->unit_name);
+    loadWeaponData(vehicle_blk);
+  }
+
   Weapon *Aircraft::getWeapon(uint32_t ref) {
     if (this->weapons.empty())
       return nullptr;
@@ -380,13 +379,19 @@ namespace unit {
     }
     return nullptr;
   }
-  const char *Tank::getUnitTypeName() {
-    return "Tank";
-  }
-  void Tank::Load() {
 
-    unit_name = raw_unit_name.c_str() + 11;
+  const char *Tank::getUnitTypeName() { return "Tank"; }
+
+  void Tank::Load() {
+    auto cstr = raw_unit_name.c_str();
+    if (std::string_view{cstr, 17} == "tracked_vehicles/") {
+      unit_name = cstr + 17;
+    } else {
+      unit_name = raw_unit_name.c_str() + 11;
+    }
     Unit::Load();
+    auto vehicle_blk = fmt::format("gamedata/units/{}.blk", this->raw_unit_name);
+    loadWeaponData(vehicle_blk);
   }
 
 
@@ -398,15 +403,20 @@ namespace unit {
     name_index_1 = translate::get_locale_index(fmt::format("{}_1", this->unit_name));
     name_index_2 = translate::get_locale_index(fmt::format("{}_2", this->unit_name));
   }
-
 } // namespace unit
 
 
-mpi::Message *GMReflectable::dispatchMpiMessage(mpi::MessageID mid) {return BaseExtReflectable::dispatchMpiMessage(mid);}
-void GMReflectable::applyMpiMessage(const mpi::Message *m) {BaseExtReflectable::applyMpiMessage(m);}
+mpi::Message *GMReflectable::dispatchMpiMessage(mpi::MessageID mid) {
+  return BaseExtReflectable::dispatchMpiMessage(mid);
+}
 
-mpi::Message *FMWReflectable::dispatchMpiMessage(mpi::MessageID mid) {return BaseExtReflectable::dispatchMpiMessage(mid);}
-void FMWReflectable::applyMpiMessage(const mpi::Message *m) {BaseExtReflectable::applyMpiMessage(m);}
+void GMReflectable::applyMpiMessage(const mpi::Message *m) { BaseExtReflectable::applyMpiMessage(m); }
+
+mpi::Message *FMWReflectable::dispatchMpiMessage(mpi::MessageID mid) {
+  return BaseExtReflectable::dispatchMpiMessage(mid);
+}
+
+void FMWReflectable::applyMpiMessage(const mpi::Message *m) { BaseExtReflectable::applyMpiMessage(m); }
 
 mpi::Message *BaseExtReflectable::dispatchMpiMessage(mpi::MessageID mid) {
   ZoneScoped;
@@ -414,11 +424,11 @@ mpi::Message *BaseExtReflectable::dispatchMpiMessage(mpi::MessageID mid) {
     case MPI_PACKETS::UnitCamera: {
       return state->_new<mpi::CameraStateMessage>(this);
     }
-    default:
-      break;
+    default: break;
   }
   return nullptr;
 }
+
 void BaseExtReflectable::applyMpiMessage(const mpi::Message *m) {
   ZoneScoped;
   switch (m->id) {
@@ -428,13 +438,12 @@ void BaseExtReflectable::applyMpiMessage(const mpi::Message *m) {
       Point3 camera_euler;
       quat_to_euler(camera_m->camera_circle_quat, camera_euler.y, camera_euler.x, camera_euler.z);
       Point2 gun_pointer = dir_to_sph_ang(camera_m->gun_circle_norm_vector);
-      gun_pointer.x -= PI/2;
-      camera_euler.y -= PI/2;
-      *camera_data.reserveOne() = {camera_euler, gun_pointer };
+      gun_pointer.x -= PI / 2;
+      camera_euler.y -= PI / 2;
+      *camera_data.reserveOne() = {camera_euler, gun_pointer};
       camera_data.checkAndPush(state);
       break;
     }
-    default:
-      break;
+    default: break;
   }
 }

@@ -271,6 +271,7 @@ namespace danet {
   }
 
   bool ReflectableObject::deserialize(BitStream &bs, int /* data_size */, ParserState *state) {
+    ZoneScopedN("ReflectableObject::deserialize");
     checkWatermark();
 
     BitSize_t end_pos = 0;
@@ -366,6 +367,7 @@ namespace danet {
       return -1;
 
     for (int i = 0; i < numReflectables; ++i) {
+      ZoneScopedN("deserializeReflectables::loop");
       uint16_t data_written = 0xffff;
       if (!bs.Read(data_written))
         return -2;

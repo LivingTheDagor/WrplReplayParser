@@ -216,7 +216,8 @@ bool FMSync(ParserState &state, BitStream &bs) {
             bool unk2 = bs.ReadBit();
             uint8_t count = 0;
             bs.ReadBits(&count, 4);
-            thread_local std::vector<bool> temp_bits{};
+            //std::vector<uint32_t>
+            dag::Vector<bool, StateAllocator::DagAllocType> temp_bits(state.getMem());
             temp_bits.reserve(count);
             for (int i = 0; i < count; i++) {
               temp_bits.push_back(bs.ReadBit());
@@ -227,7 +228,7 @@ bool FMSync(ParserState &state, BitStream &bs) {
           if (zig_val < 0) { // no negatives
             return false;
           }
-          thread_local std::vector<int32_t> vals;
+          std::pmr::vector<int32_t> vals{state.get_allocator()};
           vals.resize(zig_val);
           for (int i = 0; i < zig_val; i++) { // actually is weapons
             int temp, temp1;
@@ -289,10 +290,10 @@ bool FMSync(ParserState &state, BitStream &bs) {
           }
           uint8_t sensorsCount;
           bs.Read(sensorsCount);
-          G_ASSERT(sensorsCount <= SENSORS_COUNT);
-          std::vector<SensorsControlStates> sensors{sensorsCount};
+          RET_FAIL(sensorsCount <= SENSORS_COUNT);
+          std::pmr::vector<SensorsControlStates> sensors{sensorsCount, state.get_allocator()};
           for (auto &s: sensors) {
-            G_ASSERT(s.deserialize(bs));
+            RET_FAIL(s.deserialize(bs));
           }
           uint8_t v;
           if (sensorsCount != 0) {
@@ -301,20 +302,20 @@ bool FMSync(ParserState &state, BitStream &bs) {
 
           uint8_t counterMeasuresCount;
           bs.Read(counterMeasuresCount);
-          G_ASSERT(counterMeasuresCount <= COUNTER_MEASURES_COUNT);
-          std::vector<CounterMeasuresControlState> counterMeasures{counterMeasuresCount};
+          RET_FAIL(counterMeasuresCount <= COUNTER_MEASURES_COUNT);
+          std::pmr::vector<CounterMeasuresControlState> counterMeasures{counterMeasuresCount, state.get_allocator()};
           for (auto &c: counterMeasures) {
-            G_ASSERT(c.deserialize(bs));
+            RET_FAIL(c.deserialize(bs));
           }
           uint8_t counter_measures_v;
           if (counterMeasuresCount > 0)
             bs.Read(counter_measures_v);
           uint8_t targetsNum = 0;
           bs.ReadBits(&targetsNum, 4);
-          G_ASSERT(targetsNum <= TARGETS_NUM);
-          std::vector<TargetDesignationControlState> targets{targetsNum};
+          RET_FAIL(targetsNum <= TARGETS_NUM);
+          std::pmr::vector<TargetDesignationControlState> targets{targetsNum, state.get_allocator()};
           for (auto &t: targets) {
-            t.deserialize(bs);
+            RET_FAIL(t.deserialize(bs));
           }
           bool bit_thing;
           bs.Read(bit_thing);

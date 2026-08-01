@@ -15,9 +15,9 @@ target_link_libraries(dagor_rpl_threading_test
         INIT::INIT
         Replay::Replay
         ZLIB::ZLIB
+        ParserState::ParserState
+        Translate::Translate
         MPI_UI_STUBS::MPI_UI_STUBS
-        # mimalloc
-
 )
 
 target_include_directories(dagor_rpl_threading_test

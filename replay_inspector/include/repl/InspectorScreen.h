@@ -888,6 +888,12 @@ public:
     }
   }
 
+  ecs::EntityId getCurrEid(MPlayer &player) {
+    if (player.controlledUnitRef.curr()->index() != 0)
+      return *player.controlledUnitRef.curr();
+    return *player.ownedUnitRef.curr();
+  }
+
   void draw_circle(float radius, ImU32 color) {
     ImVec2 center = ImGui::GetCursorScreenPos();
     center.x += radius;
@@ -924,7 +930,7 @@ public:
       ImGui::Text("%i:%s", index, player_data.uid.curr()->name);
       ImGui::TableNextColumn();
 
-      auto owned_eid = *player_data.ownedUnitRef.curr();
+      auto owned_eid = getCurrEid(player_data);
       auto unit__ref = this->state.g_entity_mgr.getNullable<unit::UnitRef>(owned_eid, ECS_HASH("unit__ref"));
       if (!unit__ref || !unit__ref->unit) {
         ImGui::TextUnformatted("<NONE>");
@@ -944,7 +950,7 @@ public:
     } else if constexpr (team == 2) {
       ImGui::TableNextColumn();
       auto &player_data = this->state.players[index];
-      auto owned_eid = *player_data.ownedUnitRef.curr();
+      auto owned_eid = getCurrEid(player_data);
       auto unit__ref = this->state.g_entity_mgr.getNullable<unit::UnitRef>(owned_eid, ECS_HASH("unit__ref"));
       if (!unit__ref || !unit__ref->unit) {
         draw_circle(6.0f, red);

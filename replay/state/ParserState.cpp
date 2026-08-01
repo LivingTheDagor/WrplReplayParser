@@ -194,7 +194,7 @@ void ParserState::rewindToMs(uint32_t time_ms) {
   rewinder.rewind_to_ms(*this, time_ms);
 }
 
-StateRewinder::StateRewinder(ParserState *state) : actions_vector(&state->get_allocator()->dagAlloc) {
+StateRewinder::StateRewinder(ParserState *state) : actions_vector(state->getMem()) {
   this->state = state;
   actions_vector.reserve(1000);
   curr_index = 0;
