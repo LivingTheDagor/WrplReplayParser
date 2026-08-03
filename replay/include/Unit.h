@@ -8,6 +8,7 @@
 #include <ioSys/dag_dataBlock.h>
 #include "ecs/entityId.h"
 #include "math/dag_TMatrix.h"
+#include "math/dag_geomTree.h"
 #include "mpi/types.h"
 #include "mpi/codegen/ReflIncludes.h"
 #include "state/StateRewinder.h"
@@ -161,21 +162,28 @@ namespace unit {
     std::string name{};
   };
 
+  struct TurretData {
+
+  };
+
   struct Weapon {
     int weapon_id = -1;
     int weapon_index = -1;
     std::string emitter{};
     std::string blk_path{};
     std::string weapon_name{};
-    std::vector<Ammunition> munitions{};
+    std::vector<Ammunition> munitions{}; // not currently populated
+
     // std::string ammunition_count{};
   };
 
   class Unit {
   protected:
     ParserState * state = nullptr;
-
     void loadWeaponData(const std::string &path);
+
+    GeomNodeTree *geom_tree = nullptr;
+
   public:
     bool LoadFromStorage(const FieldSerializerDict &dict);
 
