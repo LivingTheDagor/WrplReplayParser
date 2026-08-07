@@ -548,8 +548,10 @@ namespace ecs {
     auto ref = mgr->getNullable<unit::UnitRef>(Rocket_data.ownerEid, ECS_HASH("unit__ref"));
     if (ref && ref->unit) {
       if (auto aircraft = ref->unit->AsAircraft()) {
+        Rocket_data.owned_by = aircraft;
         auto weap = aircraft->getWeapon(Rocket_data.weapon_ref);
         if (weap) {
+          Rocket_data.weapon_obj = weap;
           ENTITY_LOGD1("new Rocket created is of blk: {}", weap->blk_path);
         } else {
           ENTITY_LOGE("unable to find blk for rocket of id: {:#x}; unit name: {}", Rocket_data.weapon_ref,

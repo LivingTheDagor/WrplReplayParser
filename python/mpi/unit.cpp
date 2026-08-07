@@ -96,6 +96,8 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("emitter", &unit::Weapon::emitter)
     .def_readonly("blk_path", &unit::Weapon::blk_path)
     .def_readonly("weapon_name", &unit::Weapon::weapon_name)
+    .def_readonly("name_index", &unit::Weapon::name_index)
+    .def_readonly("name_index_short", &unit::Weapon::name_index_short)
     .def_property_readonly(
       "turret", [](unit::Weapon &self) { return self.turret_desc.get(); }, py::return_value_policy::reference_internal);
 
@@ -141,7 +143,9 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("created_at_ms", &Rocket::created_at_ms)
     .def_readonly("destroyed_at_ms", &Rocket::destroyed_at_ms)
     .def_readonly("ownerEid", &Rocket::ownerEid)
-    .def_readonly("eid2", &Rocket::eid2);
+    .def_readonly("eid2", &Rocket::eid2)
+    .def_readonly("weapon_obj", &Rocket::weapon_obj)
+    .def_readonly("owned_by", &Rocket::owned_by);
 
   py::class_<Bomb, Rocket, std::unique_ptr<Bomb, py::nodelete>>(unit, "Bomb");
   py::class_<Torpedo, Rocket, std::unique_ptr<Torpedo, py::nodelete>>(unit, "Torpedo");

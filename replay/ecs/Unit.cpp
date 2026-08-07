@@ -210,6 +210,61 @@ namespace unit {
     *turret_state.reserveOne() = data;
     turret_state.checkAndPush(&state);
   }
+
+  const char *parse_weapon_container(const DataBlock *blk) {
+    auto blk_val = blk->getStr("blk", nullptr);
+    DG_ASSERT(blk_val);
+    if (blk->getBool("container", false)) {
+      DataBlock temp_blk;
+      if (dblk::load(temp_blk, blk_val)) {
+        return parse_weapon_container(&temp_blk);
+      }
+    }
+    return blk_val;
+  }
+
+  Weapon::Weapon(const DataBlock *blk, Unit *unit, std::vector<uint16_t> &weapons_count) {
+    auto trigger = blk->getStr("trigger", nullptr);
+    auto blk_str = blk->getStr("blk", nullptr);
+    auto emitter = blk->getStr("emitter", nullptr);
+    if (!trigger || !blk_str || !emitter) {
+      LOGE("error while making final weapon vector for unit {}", unit->unit_name);
+      return;
+    }
+    this->weapon_id = get_weapon_id(trigger);
+    this->weapon_index = weapons_count[weapon_id];
+    this->emitter = emitter;
+    this->blk_path = parse_weapon_container(blk);
+    fs::path blk_fs_path = this->blk_path;
+    this->weapon_name = blk_fs_path.filename().string();
+    if (this->weapon_name.ends_with(".blk")) {
+      this->weapon_name.erase(this->weapon_name.length() - 4);
+    }
+    this->name_index = translate::get_locale_index(fmt::format("weapons/{}", this->weapon_name));
+    this->name_index_short = translate::get_locale_index(fmt::format("weapons/{}/short", this->weapon_name));
+    if (this->weapon_name != "dummy_weapon")
+      DG_ASSERT(this->name_index != translate::INVALID_TRANSLATE_INDEX);
+
+    weapons_count[weapon_id]++;
+    if (unit->hasTree()) {
+      this->loadTurretData(blk, unit->turret_tree.get());
+    }
+  }
+
+  void Weapon::loadTurretData(const DataBlock *weap_blk, TurretTree *tree) {
+    auto turret_blk = weap_blk->getBlockByName("turret");
+    if (!turret_blk)
+      return;
+
+    auto head_str = turret_blk->getStr("head", nullptr);
+    auto gun_str = turret_blk->getStr("gun", nullptr);
+    DG_ASSERT(head_str && gun_str);
+    auto head_node = tree->getUsefulNode(head_str);
+    auto gun_node = tree->getUsefulNode(gun_str);
+    DG_ASSERT(head_node && gun_node);
+    turret_desc = std::make_unique<TurretDesc>(head_node, gun_node);
+  }
+
   void Unit::loadWeaponData(const std::string &path) {
     ZoneScopedN("Unit::loadWeaponData");
     if (this->unit_name == "dummy_plane") // fuck the bitch
@@ -331,46 +386,14 @@ namespace unit {
                        [](const LauncherInfo &f, const LauncherInfo &s) { return f.order < s.order; });
       this->weapons.reserve(launchers.size());
       for (auto &launcher: launchers) {
-        auto trigger = launcher.blk->getStr("trigger", nullptr);
-        auto blk_str = launcher.blk->getStr("blk", nullptr);
-        auto emitter = launcher.blk->getStr("emitter", nullptr);
-        if (!trigger || !blk_str || !emitter) {
-          LOGE("error while making final weapon vector for unit {}", this->unit_name);
-          return;
-        }
-        DataBlock launcher_blk{};
-        if (!dblk::load(launcher_blk, blk_str)) {
-          LOGE("error while making final weapon vector for unit {}", this->unit_name);
-          return;
-        }
-        int weapon_id = get_weapon_id(trigger);
-        int weapon_count = weapons_count[weapon_id];
-        weapons_count[weapon_id]++;
-        this->weapons.emplace_back(weapon_id, weapon_count, emitter, blk_str);
-        this->loadTurretData(this->weapons.back(), launcher.blk);
+        this->weapons.emplace_back(launcher.blk, this, weapons_count);
       }
     } else {
       int WeaponNid = weapon_preset->getNameId("Weapon"), weaponNid = weapon_preset->getNameId("weapon");
       for (int i = 0; i < weapon_preset->blockCount(); i++) {
         auto curr_preset = weapon_preset->getBlock(i);
         if (curr_preset->getBlockNameId() == WeaponNid || curr_preset->getBlockNameId() == weaponNid) {
-          auto trigger = curr_preset->getStr("trigger", nullptr);
-          auto blk_str = curr_preset->getStr("blk", nullptr);
-          auto emitter = curr_preset->getStr("emitter", nullptr);
-          if (!trigger || !blk_str || !emitter) {
-            LOGE("error while making final weapon vector for unit {}", this->unit_name);
-            return;
-          }
-          DataBlock launcher_blk{};
-          if (!dblk::load(launcher_blk, blk_str)) {
-            LOGE("error while making final weapon vector for unit {}", this->unit_name);
-            return;
-          }
-          int weapon_id = get_weapon_id(trigger);
-          int weapon_count = weapons_count[weapon_id];
-          weapons_count[weapon_id]++;
-          this->weapons.emplace_back(weapon_id, weapon_count, emitter, blk_str);
-          this->loadTurretData(this->weapons.back(), curr_preset);
+          this->weapons.emplace_back(curr_preset, this, weapons_count);
         }
       }
     }

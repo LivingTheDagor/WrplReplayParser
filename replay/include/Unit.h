@@ -114,7 +114,7 @@ namespace unit {
   protected:
     GeomNodeTree::Index16 parent_index;
     GeomNodeTree::Index16 curr_index;
-    bool is_useful_node = false;
+    mutable bool is_useful_node = false;
 
   protected:
     friend struct TurretTree;
@@ -122,7 +122,7 @@ namespace unit {
   public:
     Point3 turret_rel{};
     Point3 turret_abs{};
-    TurretNode(GeomNodeTree::Index16 idx, GeomNodeTree::Index16 parent) : curr_index(idx), parent_index(parent) {}
+    TurretNode(GeomNodeTree::Index16 idx, GeomNodeTree::Index16 parent) : parent_index(parent), curr_index(idx) {}
   };
 
   struct TurretTree {
@@ -167,7 +167,6 @@ namespace unit {
     ObjectRewindState<TurretData, false, false, false> turret_state{};
 
     void setData(Point3 turret_info) {
-      head->turret_rel = {};
       head->turret_abs = {};
       head->turret_rel = turret_info;
       head->turret_rel.y = 0.f;
@@ -183,10 +182,15 @@ namespace unit {
     std::string emitter{};
     std::string blk_path{};
     std::string weapon_name{};
+    translate::translate_index_t name_index{}; // weapon name translate index
+    translate::translate_index_t name_index_short{};
     std::vector<Ammunition> munitions{}; // not currently populated
     std::unique_ptr<TurretDesc> turret_desc{};
 
-    // std::string ammunition_count{};
+    Weapon(const DataBlock *blk, Unit *unit, std::vector<uint16_t> &weapons_count);
+
+  private:
+    void loadTurretData(const DataBlock *weapon_blk, TurretTree *tree);
   };
 
   class Unit {
@@ -199,8 +203,11 @@ namespace unit {
     GeomNodeTree geom_tree{};
     std::unique_ptr<TurretTree> turret_tree{};
 
+    friend Weapon;
 
   public:
+    bool hasTree() const { return has_tree; }
+
     bool LoadFromStorage(const FieldSerializerDict &dict);
 
     virtual ~Unit() = default;

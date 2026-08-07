@@ -115,7 +115,8 @@ struct Rocket {
   ecs::EntityId eid2;
   uint8_t u1_1;
   uint32_t u4_1;
-  uint32_t weapon_ref; // maybe some flags?
+  uint32_t weapon_ref;
+  unit::Weapon *weapon_obj;
   Point3 starting_pos;
   Point4 u16_1;
   Point3 u12_2;
@@ -135,6 +136,7 @@ struct Rocket {
   uint32_t u4_6;
   uint8_t u1_6;
   Point2 u8_1;
+  unit::Unit *owned_by;
   std::string toString(int indent) const {
     std::ostringstream oss{};
     oss << fmt::format("[Rocket, owner: {:#x};"
