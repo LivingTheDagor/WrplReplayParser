@@ -66,7 +66,7 @@ int main()
   }
 #endif
   std::string logfile_str = (conf_dir / "logfile.txt").string();
-  initialize(bin_path_str, logfile_str);
+  initialize(bin_path_str, "", logfile_str);
   //g_log_handler.start_thread();
   //auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
   IReplayReader *rdr = nullptr;

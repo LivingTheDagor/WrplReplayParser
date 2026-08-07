@@ -44,10 +44,13 @@ size_t getEntrySize(GrpData *data, const ResData *curr, size_t file_size) {
 grpManager::grpManager() {}
 void grpManager::initialize(const fs::path &fs_path) {
   ZoneScopedN("grpManager::initialize");
-  fs::path dir = fs_path;
-  for (const auto &entry: fs::directory_iterator(dir)) {
-    if (entry.is_regular_file()) {
-      const fs::path &file = entry.path();
+  if (!fs::exists(fs_path)) {
+    LOGE("grpManager::initialize: path does not exist: {}", fs_path.string());
+    return;
+  }
+  for (const auto &fs_entry: fs::directory_iterator(fs_path)) {
+    if (fs_entry.is_regular_file()) {
+      const fs::path &file = fs_entry.path();
       if (file.extension() == ".grp") {
         grpRef grp_data{file};
         auto grp = grp_data.grp;

@@ -60,7 +60,7 @@ int main() {
   }
 #endif
   std::string logfile_str = (conf_dir / "logfile.txt").string();
-  initialize(bin_path_str, logfile_str);
+  initialize(bin_path_str, "", logfile_str);
   //auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
   IReplayReader *rdr = nullptr;
   IReplay *rpl = nullptr;

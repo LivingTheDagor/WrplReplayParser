@@ -14,9 +14,9 @@ std::vector<Rocket *> collect_all_rockets(ParserState &state);
 
 std::vector<Bomb *> collect_all_bombs(ParserState &state);
 
-void initialize_wrapper(const std::string &VromfsPath, const std::string &logfile_path, bool fonts = false,
-                        bool lang = true, bool mis = true) {
-  std::thread t(initialize, VromfsPath, logfile_path, fonts, lang, mis);
+void initialize_wrapper(const std::string &VromfsPath, const std::string &grp_path, const std::string &logfile_path,
+                        bool fonts = false, bool lang = true, bool mis = true) {
+  std::thread t(initialize, VromfsPath, grp_path, logfile_path, fonts, lang, mis);
   t.join();
 }
 
@@ -27,45 +27,61 @@ void PyReplayState::include(py::module_ &m) {
   py_battle_messages.include(m);
   py_unit.include(m);
 
-  py::class_<ObjectRewindState<MissionArea*, false>::TimeState>(m, "MissionAreaTS")
-  .def_readonly("time_ms", &ObjectRewindState<MissionArea*, false>::TimeState::time_ms)
-  .def_readonly("value", &ObjectRewindState<MissionArea*, false>::TimeState::data);
+  py::class_<ObjectRewindState<MissionArea *, false>::TimeState>(m, "MissionAreaTS")
+    .def_readonly("time_ms", &ObjectRewindState<MissionArea *, false>::TimeState::time_ms)
+    .def_readonly("value", &ObjectRewindState<MissionArea *, false>::TimeState::data);
 
-  bind_readonly_vector<dag::Vector<ObjectRewindState<MissionArea*, false>::TimeState>>(m, "MissionAreaTSList");
+  bind_readonly_vector<dag::Vector<ObjectRewindState<MissionArea *, false>::TimeState>>(m, "MissionAreaTSList");
 
-  py::class_<ObjectRewindState<MissionZone*, false>::TimeState>(m, "MissionZoneTS")
-  .def_readonly("time_ms", &ObjectRewindState<MissionZone*, false>::TimeState::time_ms)
-  .def_readonly("value", &ObjectRewindState<MissionZone*, false>::TimeState::data);
+  py::class_<ObjectRewindState<MissionZone *, false>::TimeState>(m, "MissionZoneTS")
+    .def_readonly("time_ms", &ObjectRewindState<MissionZone *, false>::TimeState::time_ms)
+    .def_readonly("value", &ObjectRewindState<MissionZone *, false>::TimeState::data);
 
-  bind_readonly_vector<dag::Vector<ObjectRewindState<MissionZone*, false>::TimeState>>(m, "MissionZoneTSList");
+  bind_readonly_vector<dag::Vector<ObjectRewindState<MissionZone *, false>::TimeState>>(m, "MissionZoneTSList");
 
-  py::class_<ObjectRewindState<MissionZone*, false, true>::TimeState>(m, "MissionZone2TS")
-  .def_readonly("time_ms", &ObjectRewindState<MissionZone*, false, true>::TimeState::time_ms)
-  .def_readonly("value", &ObjectRewindState<MissionZone*, false, true>::TimeState::data);
+  py::class_<ObjectRewindState<MissionZone *, false, true>::TimeState>(m, "MissionZone2TS")
+    .def_readonly("time_ms", &ObjectRewindState<MissionZone *, false, true>::TimeState::time_ms)
+    .def_readonly("value", &ObjectRewindState<MissionZone *, false, true>::TimeState::data);
 
-  bind_readonly_vector<dag::Vector<ObjectRewindState<MissionZone*, false, true>::TimeState>>(m, "MissionZone2TSList");
+  bind_readonly_vector<dag::Vector<ObjectRewindState<MissionZone *, false, true>::TimeState>>(m, "MissionZone2TSList");
 
-  py::class_<ObjectRewindState<MissionArea*, false>>(m, "MissionAreaHistory")
-   .def_property_readonly("data", [](ObjectRewindState<MissionArea*, false> &self){return *self.curr();}, py::return_value_policy::reference_internal)
-   .def_property_readonly("time_ms", [](ObjectRewindState<MissionArea*, false> &self){return self.currState()->time_ms;})
-   .def_property_readonly("history", [](ObjectRewindState<MissionArea*, false> &self){return &self.history();}, py::return_value_policy::reference_internal);
+  py::class_<ObjectRewindState<MissionArea *, false>>(m, "MissionAreaHistory")
+    .def_property_readonly(
+      "data", [](ObjectRewindState<MissionArea *, false> &self) { return *self.curr(); },
+      py::return_value_policy::reference_internal)
+    .def_property_readonly("time_ms",
+                           [](ObjectRewindState<MissionArea *, false> &self) { return self.currState()->time_ms; })
+    .def_property_readonly(
+      "history", [](ObjectRewindState<MissionArea *, false> &self) { return &self.history(); },
+      py::return_value_policy::reference_internal);
 
-  py::class_<ObjectRewindState<MissionZone*, false>>(m, "MissionZoneHistory")
-    .def_property_readonly("data", [](ObjectRewindState<MissionZone*, false> &self){return *self.curr();}, py::return_value_policy::reference_internal)
-    .def_property_readonly("time_ms", [](ObjectRewindState<MissionZone*, false> &self){return self.currState()->time_ms;})
-    .def_property_readonly("history", [](ObjectRewindState<MissionZone*, false> &self){return &self.history();}, py::return_value_policy::reference_internal);
+  py::class_<ObjectRewindState<MissionZone *, false>>(m, "MissionZoneHistory")
+    .def_property_readonly(
+      "data", [](ObjectRewindState<MissionZone *, false> &self) { return *self.curr(); },
+      py::return_value_policy::reference_internal)
+    .def_property_readonly("time_ms",
+                           [](ObjectRewindState<MissionZone *, false> &self) { return self.currState()->time_ms; })
+    .def_property_readonly(
+      "history", [](ObjectRewindState<MissionZone *, false> &self) { return &self.history(); },
+      py::return_value_policy::reference_internal);
 
-  py::class_<ObjectRewindState<MissionZone*, false, true>>(m, "MissionZoneHistory2")
-  .def_property_readonly("data", [](ObjectRewindState<MissionZone*, false, true> &self){return *self.curr();}, py::return_value_policy::reference_internal)
-  .def_property_readonly("time_ms", [](ObjectRewindState<MissionZone*, false, true> &self){return self.currState()->time_ms;})
-  .def_property_readonly("history", [](ObjectRewindState<MissionZone*, false, true> &self){return &self.history();}, py::return_value_policy::reference_internal);
+  py::class_<ObjectRewindState<MissionZone *, false, true>>(m, "MissionZoneHistory2")
+    .def_property_readonly(
+      "data", [](ObjectRewindState<MissionZone *, false, true> &self) { return *self.curr(); },
+      py::return_value_policy::reference_internal)
+    .def_property_readonly(
+      "time_ms", [](ObjectRewindState<MissionZone *, false, true> &self) { return self.currState()->time_ms; })
+    .def_property_readonly(
+      "history", [](ObjectRewindState<MissionZone *, false, true> &self) { return &self.history(); },
+      py::return_value_policy::reference_internal);
 
-  bind_readonly_vector_no_contain<dag::Vector<ObjectRewindState<MissionArea*, false>>>(m, "MissionAreaHistoryList");
-  bind_readonly_vector_no_contain<dag::Vector<ObjectRewindState<MissionZone*, false>>>(m, "MissionZoneHistoryList");
-  bind_readonly_vector_no_contain<dag::Vector<ObjectRewindState<MissionZone*, false, true>>>(m, "MissionZoneHistoryList2");
+  bind_readonly_vector_no_contain<dag::Vector<ObjectRewindState<MissionArea *, false>>>(m, "MissionAreaHistoryList");
+  bind_readonly_vector_no_contain<dag::Vector<ObjectRewindState<MissionZone *, false>>>(m, "MissionZoneHistoryList");
+  bind_readonly_vector_no_contain<dag::Vector<ObjectRewindState<MissionZone *, false, true>>>(
+    m, "MissionZoneHistoryList2");
 
-  m.def("initialize", &initialize_wrapper, py::arg("VromfsPath"), py::arg("logfile_path"), py::arg("fonts") = false,
-        py::arg("lang") = true, py::arg("mis") = true,
+  m.def("initialize", &initialize_wrapper, py::arg("VromfsPath"), py::arg("grp_path") = "",
+        py::arg("logfile_path") = "", py::arg("fonts") = false, py::arg("lang") = true, py::arg("mis") = true,
         "Initialize the ReplayParser with the given VromfsPath and logfile path.");
   m.def("g_log_flush", []() {
     g_log_handler->wait_until_empty();

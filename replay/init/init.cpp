@@ -32,14 +32,17 @@ void print_all_files_full_paths(const fs::path &root = fs::current_path()) {
 }
 static bool has_init = false;
 // runs basic init steps
-void initialize(const std::string &game_path, const std::string &logfile_path, bool fonts, bool lang, bool mis) {
+void initialize(const std::string &game_path, const std::string &grp_dir, const std::string &logfile_path, bool fonts, bool lang, bool mis) {
   if (has_init)
     return;
 
   has_init = true;
   ZoneScoped;
-  fs::path dir = (fs::path)game_path / "content" / "base" / "res" / "tanks";
-  g_grp_manager.initialize(dir);
+  if (grp_dir.empty()) {
+    g_grp_manager.initialize((fs::path)game_path / "content" / "base" / "res" / "tanks");
+  } else {
+    g_grp_manager.initialize(grp_dir);
+  }
   if (!logfile_path.empty())
     g_log_handler->set_default_sink_logfile(logfile_path);
   g_log_handler->start_thread();
