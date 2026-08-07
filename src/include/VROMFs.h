@@ -87,6 +87,7 @@ class VromfsFile : public File {
 
 public:
   explicit VromfsFile(const std::shared_ptr<FileIndex> &index) : File(index) {
+    ZoneScopedN("VromfsFile::VromfsFile");
     auto as_vf = asIndex();
     f_length = (size_t) as_vf->data.size();
     read_offs = 0;

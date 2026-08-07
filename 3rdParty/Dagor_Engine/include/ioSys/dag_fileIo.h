@@ -21,52 +21,55 @@
 /// File load callback.
 class LFileGeneralLoadCB : public IBaseLoad {
 public:
-    File *fileHandle;
+  File *fileHandle;
 
-    explicit LFileGeneralLoadCB(File *handle = nullptr);
+  explicit LFileGeneralLoadCB(File *handle = nullptr);
 
-    void read(void *ptr, int size) override;
+  void read(void *ptr, int size) override;
 
-    int tryRead(void *ptr, int size) override;
+  int tryRead(void *ptr, int size) override;
 
-    int tell() override;
+  int tell() override;
 
-    void seekto(int) override;
+  void seekto(int) override;
 
-    bool seekrel(int) override;
+  bool seekrel(int) override;
 
-    const char *getTargetName() override { return fileHandle->getFullFilePath().string().c_str(); }
+  const char *getTargetName() override { return fileHandle->getFullFilePath().string().c_str(); }
 
-    const VROMFs *getTargetVromFs() const override;
+  const VROMFs *getTargetVromFs() const override;
 
-    std::span<char> getTargetRomData() const override {
-        if (fileHandle) return fileHandle->readRaw();
-        return {};
-    }
+  std::span<char> getTargetRomData() const override {
+    if (fileHandle)
+      return fileHandle->readRaw();
+    return {};
+  }
 };
 
 
 /// Callback for reading whole file. Closes file in destructor.
 class FullFileLoadCB : public LFileGeneralLoadCB {
-    int64_t targetDataSz = -1;
+  int64_t targetDataSz = -1;
 
 public:
-    FullFileLoadCB() = default;;
+  FullFileLoadCB() = default;
+  ;
 
-    inline explicit FullFileLoadCB(const std::string_view &fname, bool lower_fname = false) {
-        fileHandle = nullptr;
-        open(fname, lower_fname);
-    }
+  inline explicit FullFileLoadCB(const std::string_view &fname, bool lower_fname = false) {
+    ZoneScopedN("FullFileLoadCB::FullFileLoadCB");
+    fileHandle = nullptr;
+    open(fname, lower_fname);
+  }
 
-    inline ~FullFileLoadCB() override { close(); }
+  inline ~FullFileLoadCB() override { close(); }
 
-    bool open(const std::string_view &fname, bool lower_fname = false);
+  bool open(const std::string_view &fname, bool lower_fname = false);
 
-    void close();
+  void close();
 
-    void beginFullFileBlock();
+  void beginFullFileBlock();
 
-    int64_t getTargetDataSize() override { return targetDataSz; }
+  int64_t getTargetDataSize() override { return targetDataSz; }
 };
 
 /// @}

@@ -15,6 +15,7 @@ bool FileManager::mountVromfs(const std::string &vromfsPath) {
 }
 
 std::unique_ptr<File> FileManager::getFile(const fs::path &path, bool lower, bool prioritizeVromfs) {
+  ZoneScopedN("FileManager::getFile");
   fs::path to_use;
   if (lower) {
     std::string tmp = path.string();
@@ -89,6 +90,7 @@ bool FileManager::unmountVromfs(const std::string &vromfs_name) {
 }
 
 std::unique_ptr<File> FileManager::loadRealFsFile(const fs::path &path) {
+  ZoneScopedN("FileManager::loadRealFsFile");
   std::shared_ptr<HostFileIndex> index;
   if (path.is_absolute()) {
     if (fs::exists(path)) {
@@ -113,6 +115,7 @@ std::unique_ptr<File> FileManager::loadRealFsFile(const fs::path &path) {
 }
 
 std::unique_ptr<File> FileManager::loadVromfsFile(const fs::path &path) {
+  ZoneScopedN("FileManager::loadVromfsFile");
   if (this->loaded_vromfs.empty())
     return nullptr;
   SmartFSHandle file = getObject(path);

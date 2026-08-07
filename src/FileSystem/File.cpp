@@ -21,16 +21,24 @@ void HostFile::Save(std::ofstream *cb) {
 }
 
 void HostFileIndex::init() {
-  std::ifstream file_stream(this->name, std::ios::binary);
+  ZoneScopedN("HostFileIndex::init");
+  std::ifstream file_stream;
+  {
+    ZoneScopedN("HostFileIndex::init::open");
+    file_stream.open(this->name, std::ios::binary);
+  }
   if (!file_stream.is_open()) {
     this->file_length = -1;
     return;
   }
   this->file_length = 0;
-  file_stream.seekg(0, std::ios::end);
-  std::streamoff payload = file_stream.tellg();
-  file_stream.seekg(0);
-  this->file_length = payload;
+  {
+    ZoneScopedN("HostFileIndex::init::determine_length");
+    file_stream.seekg(0, std::ios::end);
+    std::streamoff payload = file_stream.tellg();
+    file_stream.seekg(0);
+    this->file_length = payload;
+  }
 }
 
 std::unique_ptr<File> HostFileIndex::getFile(std::shared_ptr<FileIndex> ths) { return std::make_unique<HostFile>(ths); }

@@ -49,6 +49,7 @@ void grpManager::initialize(const fs::path &fs_path) {
     return;
   }
   for (const auto &fs_entry: fs::directory_iterator(fs_path)) {
+    ZoneScopedN("grpManager::initialize::parse_fs_entry");
     if (fs_entry.is_regular_file()) {
       const fs::path &file = fs_entry.path();
       if (file.extension() == ".grp") {
