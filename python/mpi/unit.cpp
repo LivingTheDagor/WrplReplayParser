@@ -20,22 +20,28 @@ void PyUnit::include(py::module_ &m) {
   py::class_<SpaceTimeEuler, SpaceTime>(unit, "SpaceTimeEuler")
     .def_readonly("euler", &SpaceTimeEuler::euler)
     .def("__str__", [](SpaceTimeEuler &st) {
-      return fmt::format("SpaceTimeEuler([{}, {}, {}], [{}, {}, {}])", st.location.x, st.location.y,
-                         st.location.z, st.euler.x, st.euler.y, st.euler.z);
+      return fmt::format("SpaceTimeEuler([{}, {}, {}], [{}, {}, {}])", st.location.x, st.location.y, st.location.z,
+                         st.euler.x, st.euler.y, st.euler.z);
     });
 
 
   py::class_<ObjectRewindState<SpaceTimeEuler, false, false, false>::TimeState>(m, "SpaceTimeEulerTS")
-  .def_readonly("time_ms", &ObjectRewindState<SpaceTimeEuler, false, false, false>::TimeState::time_ms)
-  .def_readonly("value", &ObjectRewindState<SpaceTimeEuler, false, false, false>::TimeState::data);
+    .def_readonly("time_ms", &ObjectRewindState<SpaceTimeEuler, false, false, false>::TimeState::time_ms)
+    .def_readonly("value", &ObjectRewindState<SpaceTimeEuler, false, false, false>::TimeState::data);
 
-  bind_readonly_vector<dag::Vector<ObjectRewindState<SpaceTimeEuler, false, false, false>::TimeState>>(m, "SpaceTimeEulerTSList");
+  bind_readonly_vector<dag::Vector<ObjectRewindState<SpaceTimeEuler, false, false, false>::TimeState>>(
+    m, "SpaceTimeEulerTSList");
 
 
   py::class_<ObjectRewindState<SpaceTimeEuler, false, false, false>>(m, "SpaceTimeEulerHistory")
-   .def_property_readonly("data", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self){return *self.curr();}, py::return_value_policy::reference_internal)
-   .def_property_readonly("time_ms", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self){return self.currState()->time_ms;})
-   .def_property_readonly("history", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self){return &self.history();}, py::return_value_policy::reference_internal);
+    .def_property_readonly(
+      "data", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self) { return *self.curr(); },
+      py::return_value_policy::reference_internal)
+    .def_property_readonly(
+      "time_ms", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self) { return self.currState()->time_ms; })
+    .def_property_readonly(
+      "history", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self) { return &self.history(); },
+      py::return_value_policy::reference_internal);
 
   bind_readonly_vector<std::vector<SpaceTime>>(m, "SpaceTimeList");
   bind_readonly_vector<std::vector<SpaceTimeEuler>>(m, "SpaceTimeEulerList");
@@ -57,12 +63,41 @@ void PyUnit::include(py::module_ &m) {
 
   py::class_<unit::Tank, unit::Unit, std::unique_ptr<unit::Tank, py::nodelete>> t(unit, "Tank");
 
+  py::class_<unit::TurretData>(m, "TurretData")
+    .def_readonly("rel", &unit::TurretData::rel)
+    .def_readonly("abs", &unit::TurretData::abs);
+
+  py::class_<ObjectRewindState<unit::TurretData, false, false, false>::TimeState>(m, "TurretDataTS")
+    .def_readonly("time_ms", &ObjectRewindState<unit::TurretData, false, false, false>::TimeState::time_ms)
+    .def_readonly("value", &ObjectRewindState<unit::TurretData, false, false, false>::TimeState::data);
+
+  bind_readonly_vector<dag::Vector<ObjectRewindState<unit::TurretData, false, false, false>::TimeState>>(
+    m, "TurretDataTSList");
+
+
+  py::class_<ObjectRewindState<unit::TurretData, false, false, false>>(m, "TurretDataHistory")
+    .def_property_readonly(
+      "data", [](ObjectRewindState<unit::TurretData, false, false, false> &self) { return *self.curr(); },
+      py::return_value_policy::reference_internal)
+    .def_property_readonly(
+      "time_ms",
+      [](ObjectRewindState<unit::TurretData, false, false, false> &self) { return self.currState()->time_ms; })
+    .def_property_readonly(
+      "history", [](ObjectRewindState<unit::TurretData, false, false, false> &self) { return &self.history(); },
+      py::return_value_policy::reference_internal);
+
+
+  py::class_<unit::TurretDesc, std::unique_ptr<unit::TurretDesc, py::nodelete>>(unit, "TurretDesc")
+    .def_readonly("turret_state", &unit::TurretDesc::turret_state);
+
   py::class_<unit::Weapon>(unit, "Weapon")
     .def_readonly("weapon_id", &unit::Weapon::weapon_id)
     .def_readonly("weapon_index", &unit::Weapon::weapon_index)
     .def_readonly("emitter", &unit::Weapon::emitter)
     .def_readonly("blk_path", &unit::Weapon::blk_path)
-    .def_readonly("weapon_name", &unit::Weapon::weapon_name);
+    .def_readonly("weapon_name", &unit::Weapon::weapon_name)
+    .def_property_readonly(
+      "turret", [](unit::Weapon &self) { return self.turret_desc.get(); }, py::return_value_policy::reference_internal);
 
   un.def_readonly("base_data", &unit::Unit::base_data)
     .def_readonly("base_dvm_data", &unit::Unit::base_dvm_data)

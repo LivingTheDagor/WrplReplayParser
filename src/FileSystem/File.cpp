@@ -24,6 +24,7 @@ void HostFileIndex::init() {
   std::ifstream file_stream(this->name, std::ios::binary);
   if (!file_stream.is_open()) {
     this->file_length = -1;
+    return;
   }
   this->file_length = 0;
   file_stream.seekg(0, std::ios::end);
@@ -51,6 +52,7 @@ void HostFile::init_hf() {
   auto actual = (HostFileIndex *) this->index.get();
   if (actual->file_length != -1) {
     this->file_stream.open(actual->name, std::ios::binary);
+    DG_ASSERT(this->file_stream.is_open());
     this->f_length = actual->file_length;
     this->read_offs = 0;
   }

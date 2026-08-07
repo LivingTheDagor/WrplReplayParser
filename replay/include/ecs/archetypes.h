@@ -219,7 +219,7 @@ namespace ecs {
     std::shared_mutex mtx_;
   };
 
-  class MgrArchetypeStorage;
+  struct MgrArchetypeStorage;
 
   class Archetypes {
   public:

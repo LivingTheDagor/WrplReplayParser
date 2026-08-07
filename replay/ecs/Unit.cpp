@@ -4,6 +4,7 @@
 #include "ecs/EntityManager.h" // g_ecs_state
 #include "FileSystem.h"
 #include "math/dag_mathAng.h"
+#include "res/grpManager.h"
 #include "state/ParserState.h"
 
 namespace unit {
@@ -28,6 +29,80 @@ namespace unit {
     std::cout.flush();
   }
 
+  unit::TurretTree::TurretTree(GeomNodeTree *tree) : tree(tree) {
+    nodes.reserve(tree->nodeCount() + 1);
+    size_t last_size = nodes.capacity();
+    for (GeomNodeTree::Index16 i(0), ie(tree->nodeCount()); i != ie; ++i) {
+      auto name = tree->getNodeName(i);
+      if (name == nullptr) {
+        name = "root"; // name stored in static mem, so should always exist
+      }
+
+      nodes.emplace_back(i, tree->getParentNodeIdx(i));
+      DG_ASSERT(nodes.capacity() == last_size);
+      name_to_idx[name] = &nodes.back();
+    }
+  }
+  TurretNode *TurretTree::getNode(std::string_view name) {
+    auto iter = name_to_idx.find(name);
+    if (iter != name_to_idx.end()) {
+      return iter->second;
+    }
+    return nullptr;
+  }
+  TurretNode *TurretTree::getUsefulNode(std::string_view name) {
+    auto node = getNode(name);
+    if (!node)
+      return nullptr;
+    auto iter_node = node;
+    while (iter_node) {
+      iter_node->is_useful_node = true;
+      if (iter_node->parent_index) {
+        iter_node = &nodes[iter_node->parent_index.index()];
+      } else {
+        break;
+      }
+    }
+    return node;
+  }
+
+  void unit::TurretTree::doAbsUpdate() {
+    ZoneScopedN("TurretTree::doAbsUpdate");
+    if (nodes.empty())
+      return;
+
+    // Nodes are stored in tree index order, so parents always precede children — one forward pass is sufficient.
+    for (auto &node: nodes) {
+      if (!node.is_useful_node)
+        continue;
+      GeomNodeTree::Index16 parent_idx = node.parent_index;
+
+      TurretNode *parent = nullptr;
+      Point3 parent_abs = {0.f, 0.f, 0.f};
+      if (parent_idx) { // non-root
+        parent = &nodes[parent_idx.index()];
+        parent_abs = parent->turret_abs;
+      }
+
+      node.turret_abs = parent_abs + node.turret_rel;
+      if (node.turret_rel == Point3{0.f, 0.f, 0.f}) {
+        continue;
+      }
+      // if (!is_head_node) {
+      //   node.turret_abs = parent_abs + node.turret_rel;
+      // } else {
+      //  only accumulate Y rotation, ignore X and Z
+      //}
+
+      // Wrap each axis into (-180, 180]
+      {
+        ZoneScopedN("TurretTree::normalizing");
+        node.turret_abs.x = norm_s_ang_deg(node.turret_abs.x);
+        node.turret_abs.y = norm_s_ang_deg(node.turret_abs.y);
+        node.turret_abs.z = norm_s_ang_deg(node.turret_abs.z);
+      }
+    }
+  }
 
   const char *Aircraft::getUnitTypeName() { return "Aircraft"; }
 
@@ -118,8 +193,25 @@ namespace unit {
     int tier = -1;
     const DataBlock *blk = nullptr;
   };
+  std::string getGoodSkelName(const std::string &str) {
+    std::string payload;
+    if (str.ends_with("_a"))
+      payload = fmt::format("{}_skeleton", str.substr(0, str.length() - 2));
+    else
+      payload = fmt::format("{}_skeleton", str);
+    return payload;
+  }
 
+  void TurretDesc::push_curr_state(ParserState &state) {
+    ZoneScopedN("TurretDesc::push_curr_state");
+    TurretData data{};
+    data.rel = head->turret_rel;
+    data.abs = head->turret_abs;
+    *turret_state.reserveOne() = data;
+    turret_state.checkAndPush(&state);
+  }
   void Unit::loadWeaponData(const std::string &path) {
+    ZoneScopedN("Unit::loadWeaponData");
     if (this->unit_name == "dummy_plane") // fuck the bitch
       return;
     DataBlock blk{};
@@ -127,6 +219,14 @@ namespace unit {
       LOGE("failed to load unit blk for unit {}", this->unit_name);
       return;
     }
+    auto model_name = blk.getStr("model", "");
+    auto skel_name = getGoodSkelName(model_name);
+    has_tree = g_grp_manager.getTree(skel_name, geom_tree);
+    if (has_tree) {
+      this->turret_tree = std::make_unique<unit::TurretTree>(&geom_tree);
+    }
+    // if (this->AsTank())
+    //   G_ASSERT(geom_tree.nodeCount() > 0);
     DataBlock in_file_weapon_preset{};
     // even though we are modifying this block in place, the only thing that may be
     // affected is the name map
@@ -247,6 +347,7 @@ namespace unit {
         int weapon_count = weapons_count[weapon_id];
         weapons_count[weapon_id]++;
         this->weapons.emplace_back(weapon_id, weapon_count, emitter, blk_str);
+        this->loadTurretData(this->weapons.back(), launcher.blk);
       }
     } else {
       int WeaponNid = weapon_preset->getNameId("Weapon"), weaponNid = weapon_preset->getNameId("weapon");
@@ -269,6 +370,7 @@ namespace unit {
           int weapon_count = weapons_count[weapon_id];
           weapons_count[weapon_id]++;
           this->weapons.emplace_back(weapon_id, weapon_count, emitter, blk_str);
+          this->loadTurretData(this->weapons.back(), curr_preset);
         }
       }
     }
@@ -277,6 +379,21 @@ namespace unit {
         return f.weapon_index < s.weapon_index;
       return f.weapon_id < s.weapon_id;
     });
+  }
+  void Unit::loadTurretData(Weapon &weapon, const DataBlock *weap_blk) {
+    if (!this->has_tree)
+      return;
+    auto turret_blk = weap_blk->getBlockByName("turret");
+    if (!turret_blk)
+      return;
+
+    auto head_str = turret_blk->getStr("head", nullptr);
+    auto gun_str = turret_blk->getStr("gun", nullptr);
+    DG_ASSERT(head_str && gun_str);
+    auto head_node = this->turret_tree->getUsefulNode(head_str);
+    auto gun_node = this->turret_tree->getUsefulNode(gun_str);
+    DG_ASSERT(head_node && gun_node);
+    weapon.turret_desc = std::make_unique<TurretDesc>(head_node, gun_node);
   }
 
   bool unit::Unit::LoadFromStorage(const FieldSerializerDict &data) {
@@ -402,6 +519,31 @@ namespace unit {
     name_index_0 = translate::get_locale_index(fmt::format("{}_0", this->unit_name));
     name_index_1 = translate::get_locale_index(fmt::format("{}_1", this->unit_name));
     name_index_2 = translate::get_locale_index(fmt::format("{}_2", this->unit_name));
+  }
+  Weapon *Unit::getWeapon(uint16_t idx) {
+    if (idx >= this->weapons.size())
+      return nullptr;
+    return &this->weapons[idx];
+  }
+  void Unit::calculateTurretData() {
+    ZoneScopedN("Unit::calculateTurretData");
+    if (!this->has_tree)
+      return;
+
+    Point3 currEuler = this->positions.curr()->euler;
+    float pitch = currEuler.x;
+    float yaw = currEuler.y;
+    float roll = currEuler.z;
+
+    yaw = RadToDeg(yaw);
+    pitch = RadToDeg(pitch);
+    roll = RadToDeg(roll);
+
+    yaw = norm_s_ang_deg(yaw);
+    pitch = norm_s_ang_deg(pitch);
+    roll = norm_s_ang_deg(roll);
+    this->turret_tree->nodes[0].turret_rel = Point3(yaw, pitch, roll);
+    this->turret_tree->doAbsUpdate();
   }
 } // namespace unit
 

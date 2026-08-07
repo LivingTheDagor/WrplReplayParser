@@ -43,7 +43,7 @@ struct GrpData
   PatchableTab<ResEntry> resTable;
   PatchableTab<ResData> resData;
 
-  inline char *dumpBase() const;
+  char *dumpBase() const;
   void patchDescOnly(uint32_t hdr_label);
   void patchData();
   const char *getName(int idx) const { return nameMap[idx] != -1 ? dumpBase() + nameMap[idx] : NULL; }

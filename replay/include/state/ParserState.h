@@ -57,9 +57,9 @@ struct ChatMessage {
 };
 
 
-
 struct RewindRef {
-  IObjectRewindState *state; // this assumes the memory location of ANY rewindable object will never be changed after registration
+  IObjectRewindState
+    *state; // this assumes the memory location of ANY rewindable object will never be changed after registration
   // only for sanity checking
 #if LDAG_DBGLEVEL > 0
   uint32_t forward_index;
@@ -69,13 +69,15 @@ struct RewindRef {
 
 // used to hold the state currently being destroyed
 // unless if you somehow destroy multiple states at the same time in the same thread
-// this will always represent the state currently in destruction, and can be used to pass it around without complex destruction logic
-inline thread_local ParserState * _in_destruction_state{};
+// this will always represent the state currently in destruction, and can be used to pass it around without complex
+// destruction logic
+inline thread_local ParserState *_in_destruction_state{};
 
 struct ParserState {
 
   explicit ParserState(uint32_t player_count = 32);
   explicit ParserState(IReplay *replay);
+
 protected:
   void initialize(uint32_t player_couunt);
   bool is_dtor{false};
@@ -107,16 +109,15 @@ protected:
   friend IObjectRewindState;
 
 public:
-
-  template <class T, class... Args>
-  T * _new(Args&&... args) {
+  template<class T, class... Args>
+  T *_new(Args &&...args) {
     return allocator._new<T>(std::forward<Args>(args)...);
   }
-  template <class T>
+  template<class T>
   void _delete(T *ptr) {
     allocator._delete(ptr);
   }
-  StateAllocator * get_allocator() { return &allocator; }
+  StateAllocator *get_allocator() { return &allocator; }
 
   StateAllocator::DagAllocType getMem() { return allocator.getMem(); }
   std::vector<mpi::MpiQueueObject::QueueData> *get_queued_data(ecs::EntityId eid) {
@@ -133,28 +134,24 @@ public:
   net_delta_t NetDelta{allocator.getMem()};
   std::pmr::vector<MPlayer> players{get_allocator()};
   ecs::EntityManager g_entity_mgr{this}; // this order is required as g_entity_mgr needs to be destroyed before players
-  std::pmr::vector<ObjectRewindState<MissionZone*, false, true>*> Zones{get_allocator()};
+  std::pmr::vector<ObjectRewindState<MissionZone *, false, true> *> Zones{get_allocator()};
   std::array<TeamData, 3> teams{
-    TeamData{this, (0xf<<0xb)+0},
-    TeamData(this, (0xf<<0xb)+1),
-    TeamData(this, (0xf<<0xb)+2)
-  }; // team[0] is global data, teams[1] is first team, teams[2] is second team
+    TeamData{this, (0xf << 0xb) + 0}, TeamData(this, (0xf << 0xb) + 1),
+    TeamData(this, (0xf << 0xb) + 2)}; // team[0] is global data, teams[1] is first team, teams[2] is second team
   std::pmr::vector<ChatMessage> chatMessages{get_allocator()};
   GlobalElo glob_elo{this};
   GeneralState gen_state{this};
   std::pmr::vector<const mpi::IBattleMessage *> BattleMessages{get_allocator()};
   // missionArea1 owns the ptrs
-  std::pmr::vector<ObjectRewindState<MissionArea*, false, true>*> missionAreas1{get_allocator()};
-  std::pmr::vector<ObjectRewindState<MissionArea*, false>*> missionAreas2{get_allocator()};
+  std::pmr::vector<ObjectRewindState<MissionArea *, false, true> *> missionAreas1{get_allocator()};
+  std::pmr::vector<ObjectRewindState<MissionArea *, false> *> missionAreas2{get_allocator()};
 
   int current_packet_index = -1;
 
 
   ecs::EntityId getUnitEid(uint16_t uid) const;
 
-  const std::pmr::vector<unit::Unit*> &getUnitLookup() const {
-    return this->uid_unit_lookup;
-  }
+  const std::pmr::vector<unit::Unit *> &getUnitLookup() const { return this->uid_unit_lookup; }
 
   unit::Unit *getUnitObj(uint16_t uid) const;
 
@@ -212,7 +209,7 @@ ObjectRewindState<T, do_compare, take_ownership, create_default>::~ObjectRewindS
 #if LDAG_DBGLEVEL > 0
 template<typename T, bool do_compare, bool take_ownership, bool create_default>
 void ObjectRewindState<T, do_compare, take_ownership, create_default>::rewindForward(uint32_t expected_idx) {
-  G_ASSERT(this->curr_index < this->time_states.size()-1);
+  G_ASSERT(this->curr_index < this->time_states.size() - 1);
   this->curr_index++;
   ++this->state;
   G_ASSERT(this->curr_index == expected_idx);
@@ -242,6 +239,7 @@ void ObjectRewindState<T, do_compare, take_ownership, create_default>::rewindBac
 
 template<typename T, bool do_compare, bool take_ownership, bool create_default>
 T *ObjectRewindState<T, do_compare, take_ownership, create_default>::reserveOne() {
+  ZoneScopedN("ObjectRewindState::reserveOne");
 #if LDAG_DBGLEVEL > 0
   DG_ASSERT(!hasReserved);
   hasReserved = true;
@@ -263,6 +261,7 @@ void ObjectRewindState<T, do_compare, take_ownership, create_default>::deleteLas
 
 template<typename T, bool do_compare, bool take_ownership, bool create_default>
 void ObjectRewindState<T, do_compare, take_ownership, create_default>::checkAndPush(ParserState *state) {
+  ZoneScopedN("ObjectRewindState::checkAndPush");
 #if LDAG_DBGLEVEL > 0
   G_ASSERT(hasReserved);
   hasReserved = false;
@@ -280,14 +279,15 @@ void ObjectRewindState<T, do_compare, take_ownership, create_default>::checkAndP
   }
   this->time_states.back().time_ms = state->curr_time_ms;
   this->state = &this->time_states.back();
-  curr_index = this->time_states.size()-1;
+  curr_index = this->time_states.size() - 1;
   if constexpr (!create_default) {
     if (curr_index == 0)
       return;
   }
 #if LDAG_DBGLEVEL > 0
-  // we always create one component in ctor, so there will always be at least '2' components when serializing state change
-  this->pushBackState(state, this->curr_index-1, this->curr_index);
+  // we always create one component in ctor, so there will always be at least '2' components when serializing state
+  // change
+  this->pushBackState(state, this->curr_index - 1, this->curr_index);
 #else
   this->pushBackState(state);
 #endif

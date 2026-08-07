@@ -1,5 +1,6 @@
 add_library(resMgr STATIC
         grpLoader.cpp
+        grpManager.cpp
 )
 
 

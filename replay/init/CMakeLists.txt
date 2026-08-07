@@ -12,6 +12,7 @@ target_link_libraries(INIT
         MPI::MPI
         WTEvents::WTEvents
         Translate::Translate
+        resMgr::resMgr
 )
 
 set(INCLUDES

@@ -8,6 +8,7 @@
 #include "mpi/codegen/ReflIncludes.h"
 #include "state/ParserState.h"
 #include "translate.h"
+#include "res/grpManager.h"
 
 namespace mpi {
   class BaseListener : public IMessageListener {
@@ -34,9 +35,11 @@ static bool has_init = false;
 void initialize(const std::string &game_path, const std::string &logfile_path, bool fonts, bool lang, bool mis) {
   if (has_init)
     return;
+
   has_init = true;
   ZoneScoped;
-  // print_all_files_full_paths();
+  fs::path dir = (fs::path)game_path / "content" / "base" / "res" / "tanks";
+  g_grp_manager.initialize(dir);
   if (!logfile_path.empty())
     g_log_handler->set_default_sink_logfile(logfile_path);
   g_log_handler->start_thread();

@@ -12,21 +12,7 @@
 #include "mpi/types.h"
 #include "mpi/codegen/ReflIncludes.h"
 #include "state/StateRewinder.h"
-// #include "mpi/mpi.h"
-// #include "mpi/codegen/ReflIncludes.h"
-
-struct TurretData {
-  // relative data as written directly in packet
-  // only one tank right now uses the Point3.z val, the Turm 3 with its 3 axis turret
-  Point3 turret_rel{};
-  // turret data normalized to world
-  Point3 turret_abs{};
-};
-
-struct CameraTime {
-  uint32_t time_ms;
-  // todo, I know the structure just have to reimplement it in cpp
-};
+#include "math/dag_mathAng.h"
 
 struct SpaceTime {
   Point3 location{};
@@ -37,9 +23,7 @@ struct SpaceTime {
 struct SpaceTimeEuler : SpaceTime {
   Point3 euler{};
 
-  bool operator==(const SpaceTimeEuler &other) const {
-    return SpaceTime::operator==(other) && euler == other.euler;
-  }
+  bool operator==(const SpaceTimeEuler &other) const { return SpaceTime::operator==(other) && euler == other.euler; }
 };
 
 struct AngularSpaceTime : SpaceTimeEuler {
@@ -126,26 +110,34 @@ namespace unit {
 
   std::vector<std::string> getUnitTagsName(std::string_view &name);
 
-  enum MessageEnum {
-    TankPosition = 0xf0a3,
-    CameraAngles = 0xf0cc,
+  struct TurretNode {
+  protected:
+    GeomNodeTree::Index16 parent_index;
+    GeomNodeTree::Index16 curr_index;
+    bool is_useful_node = false;
+
+  protected:
+    friend struct TurretTree;
+
+  public:
+    Point3 turret_rel{};
+    Point3 turret_abs{};
+    TurretNode(GeomNodeTree::Index16 idx, GeomNodeTree::Index16 parent) : curr_index(idx), parent_index(parent) {}
   };
 
-  /*class TankPositionMessage : public mpi::Message {
-    TankPositionMessage(mpi::IObject *o) : mpi::Message(o, TankPosition) {}
-    bool readPayload(ParserState *state) override;
+  struct TurretTree {
+    GeomNodeTree *tree;
+    std::vector<TurretNode> nodes;
+    // names should be stored in tree, so string_view fine
+    std::unordered_map<std::string_view, TurretNode *> name_to_idx;
+
+    TurretTree(GeomNodeTree *tree);
+
+    TurretNode *getNode(std::string_view name);
+    TurretNode *getUsefulNode(std::string_view name);
+
+    void doAbsUpdate();
   };
-
-  class UnitCameraMessage : public mpi::Message {
-    UnitCameraMessage(mpi::IObject *o) : mpi::Message(o, CameraAngles) {}
-    bool readPayload(ParserState *state) override;
-  };
-
-  class UnitReflectable : public danet::ReflectableObject {
-    mpi::Message *dispatchMpiMessage(mpi::MessageID mid) override;
-
-    void applyMpiMessage(const mpi::Message *) override;
-  };*/
 
   class Aircraft;
 
@@ -163,7 +155,26 @@ namespace unit {
   };
 
   struct TurretData {
+    Point3 rel;
+    Point3 abs;
 
+    bool operator==(const TurretData &other) const { return rel == other.rel && abs == other.abs; }
+  };
+
+  struct TurretDesc {
+    TurretNode *head;
+    TurretNode *gun;
+    ObjectRewindState<TurretData, false, false, false> turret_state{};
+
+    void setData(Point3 turret_info) {
+      head->turret_rel = {};
+      head->turret_abs = {};
+      head->turret_rel = turret_info;
+      head->turret_rel.y = 0.f;
+      gun->turret_rel.y = turret_info.y;
+    }
+
+    void push_curr_state(ParserState &state);
   };
 
   struct Weapon {
@@ -173,29 +184,36 @@ namespace unit {
     std::string blk_path{};
     std::string weapon_name{};
     std::vector<Ammunition> munitions{}; // not currently populated
+    std::unique_ptr<TurretDesc> turret_desc{};
 
     // std::string ammunition_count{};
   };
 
   class Unit {
   protected:
-    ParserState * state = nullptr;
+    ParserState *state = nullptr;
     void loadWeaponData(const std::string &path);
+    void loadTurretData(Weapon &weapon, const DataBlock *weap_blk);
 
-    GeomNodeTree *geom_tree = nullptr;
+    bool has_tree;
+    GeomNodeTree geom_tree{};
+    std::unique_ptr<TurretTree> turret_tree{};
+
 
   public:
     bool LoadFromStorage(const FieldSerializerDict &dict);
 
     virtual ~Unit() = default;
     virtual void Load();
-    virtual const char * getUnitTypeName() = 0;
+    virtual const char *getUnitTypeName() = 0;
+
+    Weapon *getWeapon(uint16_t idx);
+    void calculateTurretData();
 
     std::vector<std::string> getTags() const { return getUnitTagsBlk(unit_tags); }
 
-    Unit(ParserState * state, uint16_t uid, UnitType unit_type) : state(state), uid(uid), unitType(unit_type) {}
+    Unit(ParserState *state, uint16_t uid, UnitType unit_type) : state(state), uid(uid), unitType(unit_type) {}
 
-    // does this entity actually exist in the ECS, or has it been moved after server ordered destruction?
     BaseExtReflectable *base_data = nullptr;
     DVMReflectable *base_dvm_data = nullptr;
     uint32_t created_at_ms = 0;
@@ -221,7 +239,6 @@ namespace unit {
     std::vector<weapon_data> storage_weapons{};
     std::vector<std::string> weapon_mods{};
     std::vector<std::string> fm_mods{};
-    std::vector<CameraTime> camera_pos;
     std::vector<Weapon> weapons{};
     ObjectRewindState<SpaceTimeEuler, false, false, false> positions{};
 
@@ -245,7 +262,7 @@ namespace unit {
 
   public:
     const char *getUnitTypeName() override;
-    explicit Aircraft(ParserState * state, uint16_t uid) : Unit(state, uid, AircraftType) {
+    explicit Aircraft(ParserState *state, uint16_t uid) : Unit(state, uid, AircraftType) {
       base_data = &fmv_data;
       base_dvm_data = &fm_dvm_data;
     }
@@ -265,7 +282,7 @@ namespace unit {
     const char *getUnitTypeName() override;
     void Load() override;
 
-    explicit Tank(ParserState * state, uint16_t uid) : Unit(state, uid, TankType) {
+    explicit Tank(ParserState *state, uint16_t uid) : Unit(state, uid, TankType) {
       base_data = &gm_data;
       base_dvm_data = &gm_dvm_data;
     }
@@ -284,8 +301,8 @@ public:
   constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
   template<typename Context>
   constexpr auto format(UnitType const &val, Context &ctx) const {
-    const char * str = nullptr;
-    switch (val){
+    const char *str = nullptr;
+    switch (val) {
       case UnitType::TankType: str = "TankType"; break;
       case UnitType::AircraftType: str = "AircraftType"; break;
       default: str = "UNKNOWN"; break;

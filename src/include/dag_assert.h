@@ -51,20 +51,23 @@ public:
   if (!message.empty()) {
     LOGE("Message: {}", message);
   }
+  auto stackTracke = cpptrace::generate_trace().to_string();
+  LOGE("{}", stackTracke);
   g_log_handler->wait_until_empty();
   g_log_handler->flush_all();
-  LOGE("{}", cpptrace::generate_trace().to_string());
-  g_log_handler->wait_until_empty();
-  g_log_handler->flush_all();
+#if LDAG_DBGLEVEL == 0
   if (!message.empty()) {
     throw AssertException(fmt::format("ASSERTION FAILED:\n {}:{}\nFunction: {} \nExpression: {} \nMessage: {}\n{}",
                                       file, line, function, expression, message,
-                                      cpptrace::generate_trace().to_string()));
+                                      stackTracke));
   } else {
     throw AssertException(fmt::format("ASSERTION FAILED:\n {}:{}\nFunction: {} \nExpression: {}\n{}", file, line,
-                                      function, expression, cpptrace::generate_trace().to_string()));
+                                      function, expression, stackTracke));
   }
+#else
   std::exit(EXIT_FAILURE);
+#endif
+
 }
 
 #define assert_failed(file, line, func, expr_str, format_, ...) \

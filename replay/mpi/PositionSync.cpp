@@ -10,11 +10,11 @@ bool resyncSaclosGuidanceParams = true; // actually known to be true, hopefully
 #define RET_FAIL(op) G_ASSERT((op));
 #else
 #define RET_FAIL(op) \
-do {               \
-if (!(op)) {     \
-return false;  \
-}                \
-} while (0)
+  do {               \
+    if (!(op)) {     \
+      return false;  \
+    }                \
+  } while (0)
 #endif
 bool SensorsControlStates::deserialize(BitStream &bs) {
   first_bool = bs.ReadBit();
@@ -65,7 +65,7 @@ bool SensorsControlStates::deserialize(BitStream &bs) {
       some_data_1 = netutils::UNPACKS<int16_t>(v, PI);
       RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_2), 0x60));
       RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_5),
-                  0x60)); // ok for some fucking reason some_data_6 is a float here
+                           0x60)); // ok for some fucking reason some_data_6 is a float here
       RET_FAIL(bs.Read(field147_0xa8));
       break;
     }
@@ -216,7 +216,7 @@ bool FMSync(ParserState &state, BitStream &bs) {
             bool unk2 = bs.ReadBit();
             uint8_t count = 0;
             bs.ReadBits(&count, 4);
-            //std::vector<uint32_t>
+            // std::vector<uint32_t>
             dag::Vector<bool, StateAllocator::DagAllocType> temp_bits(state.getMem());
             temp_bits.reserve(count);
             for (int i = 0; i < count; i++) {
@@ -541,8 +541,9 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
   bool b3;
   RET_FAIL(bs.Read(b2));
   RET_FAIL(bs.Read(b3));
-    float turret_horizontal=5000;
+  float turret_horizontal = 5000;
   for (int i = 0; i < ref->turret_count; i++) {
+    auto weap = ref->ref_1->getWeapon(i);
     bool bool1, bool2, bool3, bool4;
     uint8_t val1, val2;
     RET_FAIL(bs.Read(bool1));
@@ -554,42 +555,43 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
     }
     RET_FAIL(bs.Read(bool3));
     RET_FAIL(bs.Read(bool4));
-    //if (i==0)
-    //LOGI("turret {}: bool1: {}; val1: {}; bool2: {}; val2: {}; bool3: {}; bool4: {}", i, bool1, val1, bool2, val2,
-    //     bool3, bool4);
+    // if (i==0)
+    // LOGI("turret {}: bool1: {}; val1: {}; bool2: {}; val2: {}; bool3: {}; bool4: {}", i, bool1, val1, bool2, val2,
+    //      bool3, bool4);
     if (b2) {
       if (bs.ReadBit()) {
         uint16_t tv1, tv2;
         uint8_t tv18, tv28;
-        float rot1, rot2, rot11, rot22;
+        float turret_x = 0.f, turret_y = 0.f, turret_z = 0.f;
+        float rot11, rot22;
         RET_FAIL(bs.Read(tv1));
         RET_FAIL(bs.Read(tv2));
-        rot1 = UNPACK_S16(tv1, 180.0f);
-        rot2 = UNPACK_S16(tv2, 180.0f);
+        turret_x = UNPACK_S16(tv1, 180.0f);
+        turret_y = UNPACK_S16(tv2, 180.0f);
         RET_FAIL(bs.Read(tv18));
         RET_FAIL(bs.Read(tv28));
         rot11 = UNPACK_S16(tv18, 180.0f);
         rot22 = UNPACK_S16(tv28, 180.0f);
         bool extra_stuff;
         RET_FAIL(bs.Read(extra_stuff));
-        //if (i == 0)
-        //  LOGI("{}; {} : {} ", (state.curr_time_ms/1000.0f), rot1, rot2);
-        if (i == 0)
-          turret_horizontal = rot1;
-        //LOGI("{} at {}; rot1: {}; rot2: {}", i, state.curr_time_ms/1000.f, rot1, rot2);
         if (extra_stuff) {
           uint16_t extra_val;
           RET_FAIL(bs.Read(extra_val));
+          turret_z = UNPACK_S16(extra_val, 180.0f);
           //;LOGI("extra_val: {}", extra_val);
+        }
+        if (weap && weap->turret_desc) {
+          auto turret = weap->turret_desc.get();
+          turret->setData({turret_x, turret_y, turret_z});
         }
       }
     }
   }
   if (ref->ref_1 && turret_horizontal <= 4000.f && b1) {
     auto &un_arr = ref->ref_1->positions;
-    //if (!un_arr.empty()) {
-    //  un_arr.back().turret_horizontal = turret_horizontal;
-    //}
+    // if (!un_arr.empty()) {
+    //   un_arr.back().turret_horizontal = turret_horizontal;
+    // }
   }
   uint8_t sensorsCount{};
   RET_FAIL(bs.Read(sensorsCount));
@@ -618,6 +620,23 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
   targets.resize(targetsNum);
   for (auto &t: targets) {
     RET_FAIL(t.deserialize(bs));
+  }
+  if (ref->ref_1) {
+    ref->ref_1->calculateTurretData();
+    /*LOGI("");
+    for (auto &weap: ref->ref_1->weapons) {
+      LOGI("{};{}", state.curr_time_ms / 1000.f, weap.blk_path);
+      if (weap.turret_desc) {
+        auto turret = weap.turret_desc.get();
+        LOGI("  head: ({}) ({})", turret->head->turret_rel.toString(0), turret->head->turret_abs.toString(0));
+        LOGI("  gun:  ({}) ({})", turret->gun->turret_rel.toString(0), turret->gun->turret_abs.toString(0));
+      }
+    }*/
+    for (auto &weapon: ref->ref_1->weapons) {
+      if (weapon.turret_desc) {
+        weapon.turret_desc->push_curr_state(state);
+      }
+    }
   }
   return true;
 }
@@ -742,7 +761,7 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
   ecs::EntityId eid;
   RET_FAIL(bs.Read(eid));
   Rocket *entity = cb(state, eid);
-  //RET_FAIL(entity); // this can fucking happen apparently
+  // RET_FAIL(entity); // this can fucking happen apparently
   Point3 WeaponPos{};
   bool is_not_compressed;
   RET_FAIL(bs.Read(is_not_compressed));
@@ -776,7 +795,7 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
     v3 = v3 * 15000;
     WeaponPos = {v1, v2, v3};
   }
-  SpaceTimeEuler * back = nullptr;
+  SpaceTimeEuler *back = nullptr;
   if (entity) {
     back = entity->positions.reserveOne();
     back->location = WeaponPos;

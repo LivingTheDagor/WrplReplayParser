@@ -430,7 +430,7 @@ protected:
       auto &state = this->state;
       // front is earliest point
       // back is latest point
-      auto & positions = unit.positions.history();
+      auto &positions = unit.positions.history();
       if (positions.front().time_ms > data.time_start_ms || unit.killed_at_ms < data.time_end_ms)
         return; // no points in range, skip
 
@@ -484,12 +484,22 @@ protected:
       draw_front = draw_front && front->time_ms <= data.time_start_ms && front->time_ms >= data.time_end_ms;
       if (draw_front) {
 
-        auto * camera_data = unit.base_data->camera_data.currState();
+        auto *camera_data = unit.base_data->camera_data.currState();
         // we only want to draw data if camera_data is younger than 250 ms
         if (camera_data && state.curr_time_ms - camera_data->time_ms < 1000) {
 
           DrawYawLine(camera_data->data.gun_pointer.x, front_uv, 40, IM_COL32(255, 0, 0, 255), 2.0f);
           DrawYawLine(camera_data->data.camera_euler.y, front_uv, 50, IM_COL32(255, 200, 0, 255), 2.0f);
+        }
+
+        for (auto &weapon: unit.weapons) {
+          if (weapon.turret_desc) {
+            auto desc = weapon.turret_desc.get();
+            auto curr_val = desc->turret_state.curr();
+            float yaw_rad = curr_val->abs.x;
+            yaw_rad = DegToRad(yaw_rad);
+            DrawYawLine(yaw_rad, front_uv, 30, IM_COL32(0, 255, 0, 255), 1.0f);
+          }
         }
 
         bool is_dead = unit.killed_at_ms <= data.time_start_ms && unit.killed_at_ms >= data.time_end_ms;
@@ -525,7 +535,7 @@ protected:
       const Point3 *prev = nullptr;
       constexpr int max_distance = 250;
       bool found_front = false;
-      const SpaceTimeEuler * front_val = nullptr;
+      const SpaceTimeEuler *front_val = nullptr;
       ImVec2 front = ImVec2(0.0f, 0.0f);
       // we iterate from front to back, so new points first
       for (int idx_ = (int) positions.size() - 6; idx_ >= 0; idx_--) {
@@ -1117,12 +1127,12 @@ public:
         ImGui::SameLine();
         DrawMapWrapper(tank_map, "Ground Map");
         ImGui::EndChild();
-                            }
+      }
       ImGui::EndChild();
     }
   }
 
-  void drawReflectableObject(danet::ReflectableObject *robj, const char * obj_name) {
+  void drawReflectableObject(danet::ReflectableObject *robj, const char *obj_name) {
     char name[256] = {};
     if (obj_name) {
       fmt::format_to_n(name, 256, "{}: {} ##{}", robj->getClassName(), obj_name, robj->getUID());
@@ -1159,15 +1169,15 @@ public:
     if (ImGui::TreeNode("Zones")) {
       for (auto obj: this->state.Zones) {
         if (obj->curr()) {
-          //char buff[16];
-          //fmt::format_to_n(buff, 16, "{:#x}", obj->getUID());
+          // char buff[16];
+          // fmt::format_to_n(buff, 16, "{:#x}", obj->getUID());
           drawReflectableObject(*obj->curr(), nullptr);
         }
       }
       ImGui::TreePop();
     }
     if (ImGui::TreeNode("Areas")) {
-      for (auto obj : this->state.missionAreas2) {
+      for (auto obj: this->state.missionAreas2) {
         if (obj->curr()) {
           drawReflectableObject(*obj->curr(), nullptr);
         }
@@ -1177,11 +1187,11 @@ public:
   }
 
   void drawECS() {
-    //state.g_entity_mgr
+    // state.g_entity_mgr
   }
 
-  template <typename T>
-  void drawVar(const char * varname, const T & var, bool expanded_default = true) {
+  template<typename T>
+  void drawVar(const char *varname, const T &var, bool expanded_default = true) {
     ImGui::TableNextColumn();
     ImGui::TextUnformatted(varname);
     ImGui::TableNextColumn();
@@ -1189,9 +1199,7 @@ public:
     drawStr(str, &var, varname, expanded_default);
   }
 
-  void drawUnit() {
-    
-  }
+  void drawUnit() {}
 
   void drawUnits() {
     for (auto unit: state.getUnitLookup()) {
@@ -1279,13 +1287,14 @@ public:
         ImGui::EndChild();
         ImGui::EndTabItem();
       }
-      if (ImGui::BeginTabItem("Reflectable Objects") && ImGui::BeginChild("##ReflectableObjectsArea", ImVec2(0, 0), ImGuiChildFlags_None)) {
+      if (ImGui::BeginTabItem("Reflectable Objects") &&
+          ImGui::BeginChild("##ReflectableObjectsArea", ImVec2(0, 0), ImGuiChildFlags_None)) {
         drawReflectableObjects();
         ImGui::EndChild();
         ImGui::EndTabItem();
       }
       if (ImGui::BeginTabItem("ECS") && ImGui::BeginChild("##ECSArea", ImVec2(0, 0), ImGuiChildFlags_None)) {
-        //drawECS();
+        // drawECS();
         ImGui::EndChild();
         ImGui::EndTabItem();
       }
