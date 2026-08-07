@@ -1,6 +1,5 @@
 #include "res/grpManager.h"
 
-#include "../../cmake-build-debug-visual-studio/_deps/tracy-src/public/client/TracyScoped.hpp"
 #include "res/grpLoader.h"
 #include <filesystem>
 #include <iostream>
@@ -11,8 +10,7 @@ namespace fs = std::filesystem;
 struct grpRef {
   GrpData *grp;
   FullFileLoadCB cb;
-  grpRef(const fs::path &name)
-  : grp(nullptr), cb{name.string()} {
+  grpRef(const fs::path &name) : grp(nullptr), cb{name.string()} {
     ZoneScopedN("grpRef::grpRef");
     grp = parseGrp(cb);
   }
@@ -25,24 +23,20 @@ struct grpRef {
 bool doesItemApply(std::string_view item) {
   ZoneScoped;
   // must only be 'main' skeleton
-  if (
-    item.ends_with("_skeleton") &&
-    !item.ends_with("_dm_skeleton") &&
-    !item.ends_with("_dmg_skeleton") &&
-    !item.ends_with("_xray_skeleton")
-    ) {
+  if (item.ends_with("_skeleton") && !item.ends_with("_dm_skeleton") && !item.ends_with("_dmg_skeleton") &&
+      !item.ends_with("_xray_skeleton")) {
     return true;
   }
   return false;
 }
 
-size_t getEntrySize(GrpData * data, const ResData *curr, size_t file_size) {
+size_t getEntrySize(GrpData *data, const ResData *curr, size_t file_size) {
   ZoneScoped;
   auto &entry = data->resTable[curr->resId];
-  if (curr->resId+1 == data->resTable.size()) {
+  if (curr->resId + 1 == data->resTable.size()) {
     return file_size - entry.offset;
   }
-  auto &next_entry = data->resTable[(curr->resId+1)];
+  auto &next_entry = data->resTable[(curr->resId + 1)];
   return next_entry.offset - entry.offset;
 }
 
@@ -51,7 +45,7 @@ grpManager::grpManager() {}
 void grpManager::initialize(const fs::path &fs_path) {
   ZoneScopedN("grpManager::initialize");
   fs::path dir = fs_path;
-  for (const auto& entry : fs::directory_iterator(dir)) {
+  for (const auto &entry: fs::directory_iterator(dir)) {
     if (entry.is_regular_file()) {
       const fs::path &file = entry.path();
       if (file.extension() == ".grp") {
@@ -70,10 +64,10 @@ void grpManager::initialize(const fs::path &fs_path) {
           size_t item_size = getEntrySize(grp, rd, grp_data.cb.fileHandle->length());
           void *ptr = malloc(item_size);
           grp_data.cb.seekto(entry.offset);
-          grp_data.cb.read(ptr, (int)item_size);
+          grp_data.cb.read(ptr, (int) item_size);
           this->data.push_back(ptr);
-          this->res_map[name] = {this->data.size()-1, item_size, entry.classId};
-          //LOGI("loaded skeleton: {} from grp: {}", name, file.string());
+          this->res_map[name] = {this->data.size() - 1, item_size, entry.classId};
+          // LOGI("loaded skeleton: {} from grp: {}", name, file.string());
         }
       }
     }
