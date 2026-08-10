@@ -507,7 +507,7 @@ namespace unit {
     loadWeaponData(vehicle_blk);
   }
 
-  Weapon *Aircraft::getWeapon(uint32_t ref) {
+  Weapon *Unit::getWeaponFromRef(uint32_t ref) {
     if (this->weapons.empty())
       return nullptr;
     uint32_t id = (ref >> 0x10) & 0xFFFF;

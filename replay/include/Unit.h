@@ -215,6 +215,7 @@ namespace unit {
     virtual const char *getUnitTypeName() = 0;
 
     Weapon *getWeapon(uint16_t idx);
+    Weapon *getWeaponFromRef(uint32_t ref);
     void calculateTurretData();
 
     std::vector<std::string> getTags() const { return getUnitTagsBlk(unit_tags); }
@@ -276,8 +277,6 @@ namespace unit {
 
     ~Aircraft() override = default;
     void Load() override;
-
-    Weapon *getWeapon(uint32_t ref);
   };
 
   class Tank : public Unit {
