@@ -41,7 +41,7 @@ bool SensorsControlStates::deserialize(BitStream &bs) {
       RET_FAIL(bs.Read(packed_val_3));
       some_data_2 = netutils::UNPACKS<int16_t>(packed_val_1, 1.0f);
       some_data_4 = netutils::UNPACKS<int16_t>(packed_val_2, PI);
-      some_data_5 = netutils::UNPACKS<int16_t>(packed_val_2, PI);
+      some_data_5 = netutils::UNPACKS<int16_t>(packed_val_3, PI);
       if (bit_packed < 0) {
         RET_FAIL(bs.Read(some_data_6[0]));
       }
@@ -105,7 +105,7 @@ bool TargetDesignationControlState::deserialize(BitStream &bs) {
   write_compressed = bs.ReadBit();
   if (write_compressed) {
     RET_FAIL(bs.Read(v6));
-    netutils::read_vector(bs, v9, 4000.0f);
+    RET_FAIL(netutils::read_vector(bs, v9, 4000.0f));
   } else {
     RET_FAIL(bs.Read(v7));
     RET_FAIL(bs.Read(v9));
@@ -190,7 +190,6 @@ bool FMSync(ParserState &state, BitStream &bs) {
       break;
     bool has_data = bs.ReadBit();
     if (!has_data) {
-      auto str = fmt::format("uid: {:#x}", uid);
       // LOG("yes to data");
       if (separateServerSideDetection_g == false) {
         G_ASSERT(false); // be ready for if this ever happens
@@ -223,9 +222,9 @@ bool FMSync(ParserState &state, BitStream &bs) {
               temp_bits.push_back(bs.ReadBit());
             }
           }
-          int zig_val;
-          bs.ReadZigZag(zig_val);
-          if (zig_val < 0) { // no negatives
+          int zig_val = 0;
+          RET_FAIL(bs.ReadZigZag(zig_val));
+          if (zig_val < 0 || zig_val > MAX_WEAPONS_PER_UNIT) { // no negatives
             return false;
           }
           std::pmr::vector<int32_t> vals{state.get_allocator()};
@@ -496,7 +495,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
       RET_FAIL(some_val_4[3] <= 9);
       std::vector<uint8_t> some_vals_5{};
       some_vals_5.resize(some_val_4[3]);
-      for (auto &b: some_val_4) {
+      for (auto &b: some_vals_5) {
         RET_FAIL(bs.Read(b));
       }
     }
@@ -566,8 +565,8 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
         float rot11, rot22;
         RET_FAIL(bs.Read(tv1));
         RET_FAIL(bs.Read(tv2));
-        turret_x = UNPACK_S16(tv1, 180.0f);
-        turret_y = UNPACK_S16(tv2, 180.0f);
+        turret_x = UNPACK_S16(tv1, PI);
+        turret_y = UNPACK_S16(tv2, PI);
         RET_FAIL(bs.Read(tv18));
         RET_FAIL(bs.Read(tv28));
         rot11 = UNPACK_S16(tv18, 180.0f);
@@ -577,7 +576,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
         if (extra_stuff) {
           uint16_t extra_val;
           RET_FAIL(bs.Read(extra_val));
-          turret_z = UNPACK_S16(extra_val, 180.0f);
+          turret_z = UNPACK_S16(extra_val, PI);
           //;LOGI("extra_val: {}", extra_val);
         }
         if (weap && weap->turret_desc) {

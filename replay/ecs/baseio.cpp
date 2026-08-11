@@ -102,16 +102,23 @@ namespace ecs
         memset(tempData, 0, componentTypeInfo.size);
       if (typeIO->deserialize(deserializer, tempData, componentTypeInfo.size, userType, mgr))
         return Component(tempData,userType, typeId, componentTypeInfo.size);
-      else {EXCEPTION("");}
+      else {
+        if (ctm)
+          ctm->destroy(tempData);
+        free(tempData);
+        EXCEPTION("");
+      }
     }
     else if (isPod) // pod data can be just readed as-is
     {
       if (deserializer.read(tempData, componentTypeInfo.size * CHAR_BIT, userType))
         return Component(tempData, userType, typeId, componentTypeInfo.size);
     }
-    else
+    else {
+      free(tempData);
       EXCEPTION("Attempt to deserialize type {:#x} {}<{}>, which has no typeIO and not pod", userType, typeId,
              componentTypes->getName(typeId).data());
+    }
     if (tempData)
       free(tempData);
     return {};

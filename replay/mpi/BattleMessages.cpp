@@ -26,9 +26,11 @@
     }                                                           \
     }                                                           \
     this->checkFieldSize(curr_field_index, this->payload.GetReadOffset() - start_index);
-#define RET_FAIL(op) \
-  if (!op)           \
-  return false
+#define RET_FAIL(op)      \
+  do {                    \
+    if (!(op))            \
+      return false;       \
+  } while (0)
 
 
 // if only offended uid exists, then they killed themselves

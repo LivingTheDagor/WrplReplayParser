@@ -1,6 +1,7 @@
 #include "modules/mpi/unit.h"
 #include "Unit.h"
 #include "modules/bind_readonly_vector.h"
+#include "modules/bind_rewind_state.h"
 #include "modules/mpi/codegen_objects.h"
 #include "mpi/types.h"
 #include "state/ParserState.h"
@@ -33,15 +34,28 @@ void PyUnit::include(py::module_ &m) {
     m, "SpaceTimeEulerTSList");
 
 
-  py::class_<ObjectRewindState<SpaceTimeEuler, false, false, false>>(m, "SpaceTimeEulerHistory")
-    .def_property_readonly(
-      "data", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self) { return *self.curr(); },
-      py::return_value_policy::reference_internal)
-    .def_property_readonly(
-      "time_ms", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self) { return self.currState()->time_ms; })
-    .def_property_readonly(
-      "history", [](ObjectRewindState<SpaceTimeEuler, false, false, false> &self) { return &self.history(); },
-      py::return_value_policy::reference_internal);
+  bind_rewind_state<ObjectRewindState<SpaceTimeEuler, false, false, false>>(m, "SpaceTimeEulerHistory")
+    .def("channels", [](py::object self_py) {
+      auto &self = self_py.cast<ObjectRewindState<SpaceTimeEuler, false, false, false> &>();
+      auto &v = self.history();
+      py::dict d;
+      if (v.empty())
+        return d;
+      const auto *b = v.data();
+      const size_t n = v.size();
+      d["time_ms"] = channel_view(b, &b->time_ms, n, self_py);
+      d["x"] = channel_view(b, &b->data.location.x, n, self_py);
+      d["y"] = channel_view(b, &b->data.location.y, n, self_py);
+      d["z"] = channel_view(b, &b->data.location.z, n, self_py);
+      d["yaw"] = channel_view(b, &b->data.euler.y, n, self_py);
+      d["pitch"] = channel_view(b, &b->data.euler.z, n, self_py);
+      d["roll"] = channel_view(b, &b->data.euler.x, n, self_py);
+      return d;
+    },
+         "All samples as read-only zero-copy numpy views over the history buffer.\n"
+         "Empty dict when the history is empty, otherwise every array has the same length.\n"
+         "Keys: time_ms (uint32, ms); x, y, z (float32, meters, y is altitude);\n"
+         "yaw, pitch, roll (float32, radians, hull orientation).");
 
   bind_readonly_vector<std::vector<SpaceTime>>(m, "SpaceTimeList");
   bind_readonly_vector<std::vector<SpaceTimeEuler>>(m, "SpaceTimeEulerList");
@@ -65,7 +79,9 @@ void PyUnit::include(py::module_ &m) {
 
   py::class_<unit::TurretData>(m, "TurretData")
     .def_readonly("rel", &unit::TurretData::rel)
-    .def_readonly("abs", &unit::TurretData::abs);
+    .def_readonly("abs", &unit::TurretData::abs)
+    .def_readonly("gun_rel", &unit::TurretData::gun_rel)
+    .def_readonly("gun_abs", &unit::TurretData::gun_abs);
 
   py::class_<ObjectRewindState<unit::TurretData, false, false, false>::TimeState>(m, "TurretDataTS")
     .def_readonly("time_ms", &ObjectRewindState<unit::TurretData, false, false, false>::TimeState::time_ms)
@@ -75,16 +91,41 @@ void PyUnit::include(py::module_ &m) {
     m, "TurretDataTSList");
 
 
-  py::class_<ObjectRewindState<unit::TurretData, false, false, false>>(m, "TurretDataHistory")
-    .def_property_readonly(
-      "data", [](ObjectRewindState<unit::TurretData, false, false, false> &self) { return *self.curr(); },
-      py::return_value_policy::reference_internal)
-    .def_property_readonly(
-      "time_ms",
-      [](ObjectRewindState<unit::TurretData, false, false, false> &self) { return self.currState()->time_ms; })
-    .def_property_readonly(
-      "history", [](ObjectRewindState<unit::TurretData, false, false, false> &self) { return &self.history(); },
-      py::return_value_policy::reference_internal);
+  bind_rewind_state<ObjectRewindState<unit::TurretData, false, false, false>>(m, "TurretDataHistory")
+    .def("channels", [](py::object self_py) {
+      auto &self = self_py.cast<ObjectRewindState<unit::TurretData, false, false, false> &>();
+      auto &v = self.history();
+      py::dict d;
+      if (v.empty())
+        return d;
+      const auto *b = v.data();
+      const size_t n = v.size();
+      d["time_ms"] = channel_view(b, &b->time_ms, n, self_py);
+      d["yaw"] = channel_view(b, &b->data.abs.x, n, self_py);
+      d["pitch"] = channel_view(b, &b->data.abs.y, n, self_py);
+      d["roll"] = channel_view(b, &b->data.abs.z, n, self_py);
+      d["rel_yaw"] = channel_view(b, &b->data.rel.x, n, self_py);
+      d["rel_pitch"] = channel_view(b, &b->data.rel.y, n, self_py);
+      d["rel_roll"] = channel_view(b, &b->data.rel.z, n, self_py);
+      d["gun_yaw"] = channel_view(b, &b->data.gun_abs.x, n, self_py);
+      d["gun_pitch"] = channel_view(b, &b->data.gun_abs.y, n, self_py);
+      d["gun_roll"] = channel_view(b, &b->data.gun_abs.z, n, self_py);
+      d["gun_rel_yaw"] = channel_view(b, &b->data.gun_rel.x, n, self_py);
+      d["gun_rel_pitch"] = channel_view(b, &b->data.gun_rel.y, n, self_py);
+      d["gun_rel_roll"] = channel_view(b, &b->data.gun_rel.z, n, self_py);
+      return d;
+    },
+         "All samples as read-only zero-copy numpy views over the history buffer.\n"
+         "Empty dict when the history is empty, otherwise every array has the same length.\n"
+         "Keys: time_ms (uint32, ms); then float32 radians, in yaw/pitch/roll order:\n"
+         "yaw, pitch, roll - turret node (head), absolute;\n"
+         "rel_yaw, rel_pitch, rel_roll - turret node, relative to its parent node;\n"
+         "gun_yaw, gun_pitch, gun_roll - gun node, absolute;\n"
+         "gun_rel_yaw, gun_rel_pitch, gun_rel_roll - gun node, relative to the turret.\n"
+         "Absolute values are the sum of the parent absolute and the relative one, per axis,\n"
+         "with the hull as the tree root: turret traverse = yaw - hull yaw,\n"
+         "gun elevation = gun_pitch - pitch. Only yaw, pitch and gun_pitch carry new data,\n"
+         "the rest duplicate the hull or the turret.");
 
 
   py::class_<unit::TurretDesc, std::unique_ptr<unit::TurretDesc, py::nodelete>>(unit, "TurretDesc")
@@ -106,9 +147,13 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("unitType", &unit::Unit::unitType)
     .def_readonly("uid", &unit::Unit::uid)
     .def_readonly("created_at_ms", &unit::Unit::created_at_ms)
-    .def_readonly("killed_at_ms", &unit::Unit::killed_at_ms)
+    .def_readonly("killed_at_ms", &unit::Unit::killed_at_ms,
+                  "When the vehicle was knocked out. Distinct from destroyed_at_ms and left unset\n"
+                  "for spawn choices that were cancelled in the menu.")
     .def_readonly("killed_position", &unit::Unit::killed_position)
-    .def_readonly("destroyed_at_ms", &unit::Unit::destroyed_at_ms)
+    .def_readonly("destroyed_at_ms", &unit::Unit::destroyed_at_ms,
+                  "When the entity was removed from the world, which happens minutes after the kill\n"
+                  "for wrecks and on despawn for aircraft. 0xFFFFFFFF means still present.")
     .def("AsAircraft", &unit::Unit::AsAircraft)
     .def("AsTank", &unit::Unit::AsTank)
     .def_readonly("unit_name", &unit::Unit::raw_unit_name) // mr luxman decided to be lazy
@@ -142,10 +187,16 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("positions", &Rocket::positions)
     .def_readonly("created_at_ms", &Rocket::created_at_ms)
     .def_readonly("destroyed_at_ms", &Rocket::destroyed_at_ms)
-    .def_readonly("ownerEid", &Rocket::ownerEid)
-    .def_readonly("eid2", &Rocket::eid2)
-    .def_readonly("weapon_obj", &Rocket::weapon_obj)
-    .def_readonly("owned_by", &Rocket::owned_by);
+    .def_readonly("ownerEid", &Rocket::ownerEid,
+                  "Entity id of the shooter. Resolving it through the entity manager fails once the\n"
+                  "entity is gone from the world, so prefer owned_by.")
+    .def_readonly("eid2", &Rocket::eid2, "Always 0:0 on every replay checked so far. Do not rely on it.")
+    .def_readonly("weapon_obj", &Rocket::weapon_obj,
+                  "The launcher this projectile came from, or None. Empty for aircraft twin mounts,\n"
+                  "where weapon_name is still correct.")
+    .def_readonly("owned_by", &Rocket::owned_by,
+                  "The unit that fired this projectile. Stronger than ownerEid: it resolves even when\n"
+                  "the shooter entity has already been removed from the world.");
 
   py::class_<Bomb, Rocket, std::unique_ptr<Bomb, py::nodelete>>(unit, "Bomb");
   py::class_<Torpedo, Rocket, std::unique_ptr<Torpedo, py::nodelete>>(unit, "Torpedo");

@@ -100,8 +100,13 @@ namespace ecs {
       queries(a.queries),
       lastArches0(a.lastArches0),
       lastArches1(a.lastArches1),
-      lastArch(a.lastArch),
-      allComponentsArchOffsets(a.allComponentsArchOffsets) {
+      lastArch(a.lastArch) {
+      if (a.isInplaceOffsets()) {
+        for (size_t i = 0; i < sizeof(offsets) / sizeof(offsets[0]); ++i)
+          offsets[i] = a.offsets[i];
+      } else {
+        allComponentsArchOffsets = a.allComponentsArchOffsets;
+      }
       a.queries = nullptr;
       a.queriesCount = 0;
       a.allComponentsArchOffsets = nullptr;

@@ -387,7 +387,8 @@ namespace translate {
     if (!len || !buffer)
       return -1;
 
-    if ((unsigned char) buffer[0] == 0xEF && (unsigned char) buffer[1] == 0xBB && (unsigned char) buffer[2] == 0xBF) {
+    if (len >= 3 && (unsigned char) buffer[0] == 0xEF && (unsigned char) buffer[1] == 0xBB &&
+        (unsigned char) buffer[2] == 0xBF) {
       buffer += 3;
       len -= 3;
     }

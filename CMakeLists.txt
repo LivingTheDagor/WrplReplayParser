@@ -39,15 +39,7 @@ endif()
 set(pybind11_FINDPYTHON ON CACHE BOOL "" FORCE)
 set(PYTHON_VERSION_TO_USE "3.12...3.12.11" CACHE STRING
         "Python version to use (e.g. 3.11, 3.12.13)")
-set(PYBIND11_PYTHON_VERSION ${PYTHON_VERSION_TO_USE})
 
-if(PYTHON_VERSION_TO_USE)
-    set(Python_VERSION ${PYTHON_VERSION_TO_USE})
-    set(PythonInterp_FIND_VERSION ${PYTHON_VERSION_TO_USE})
-    set(PythonLibs_FIND_VERSION ${PYTHON_VERSION_TO_USE})
-endif()
-
-option(PARSER_ENABLE_TESTS "include tests in library" OFF)
 option(PARSER_ENABLE_PYTHON_BINDINGS "include python bindings in library" OFF)
 option(PARSER_ENABLE_INSPECTOR "include replay inspector in library" OFF)
 # curl and openSSL can be a PITA to set up, and its only used for downloading replays, so not really required
@@ -63,7 +55,6 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 else ()
     set(LDAG_DBGLEVEL_TO_SET 0)
 endif ()
-option(LDAG_DBGLEVEL_TO_SET "Set the LDAG_DBGLEVEL to a specific value" LDAG_DBGLEVEL_TO_SET)
 message("LDAG_DBGLEVEL=${LDAG_DBGLEVEL_TO_SET}")
 add_compile_definitions(LDAG_DBGLEVEL=${LDAG_DBGLEVEL_TO_SET})
 
@@ -80,11 +71,6 @@ if (PARSER_MY_FLAGS)
         set(BUILD_SHARED_LIBS OFF)
     endif ()
     set_compiler_flags() # sets the flags I want, idk how to do flags laugh at me
-
-    if(MINGW) # TODO: make this a flag for my IDE instead?
-        # CMAKE_LINKER_TYPE(MOLD)
-        set(CMAKE_C_USING_LINKER_LLD "-fuse-ld=mold")
-    endif()
 endif ()
 
 add_subdirectory(3rdParty)

@@ -89,6 +89,10 @@ private:
 
 public:
 
+  bool hasData() const {
+    return state != nullptr;
+  }
+
   const T * curr() const {
     return &state->data;
   }

@@ -237,11 +237,19 @@ class log_handler {
 
   void consumer_loop() {
     while (running) {
-      if (!messages.empty()) {
+      bool has_messages;
+      {
+        std::lock_guard<std::mutex> lock2(queue_access_mtx);
+        has_messages = !messages.empty();
+      }
+      if (has_messages) {
         action();
       } else {
         std::unique_lock<std::mutex> lock(cv_mtx);
-        cv.wait_for(lock, std::chrono::milliseconds(100), [&] { return !messages.empty() || !running; });
+        cv.wait_for(lock, std::chrono::milliseconds(100), [&] {
+          std::lock_guard<std::mutex> lock2(queue_access_mtx);
+          return !messages.empty() || !running;
+        });
       }
       cv.notify_all();
     }
@@ -279,14 +287,12 @@ public:
     if (!this->thread_exists)
       return;
     std::unique_lock<std::mutex> lock(cv_mtx);
-    size_t len = 0;
-    do {
-      {
-        std::lock_guard<std::mutex> lock2(this->queue_access_mtx);
-        len = this->messages.size();
-      }
-      cv.wait(lock);
-    } while (len != 0);
+    for (int i = 0; i < 100 && this->running; i++) {
+      cv.wait_for(lock, std::chrono::milliseconds(10));
+      std::lock_guard<std::mutex> lock2(this->queue_access_mtx);
+      if (this->messages.empty())
+        return;
+    }
   }
 
 

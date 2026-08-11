@@ -33,7 +33,7 @@ void PyGState::include(py::module_ &m) {
           return std::nullopt;
         }
         return comp;
-      }, py::arg("hash"));
+      }, py::arg("hash"), py::return_value_policy::reference_internal);
 
   py::class_<ecs::DataComponents>(ecs, "DataComponents")
       .def_readonly("dataComponents", &ecs::DataComponents::components)
@@ -43,7 +43,7 @@ void PyGState::include(py::module_ &m) {
           return std::nullopt;
         }
         return comp;
-      }, py::arg("hash"));
+      }, py::arg("hash"), py::return_value_policy::reference_internal);
   py::class_<ecs::GState>(ecs, "GState")
       .def_readonly("componentTypes", &ecs::GState::componentTypes)
       .def_readonly("dataComponents", &ecs::GState::dataComponents);

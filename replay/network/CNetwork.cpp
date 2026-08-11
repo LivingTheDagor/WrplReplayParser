@@ -53,8 +53,8 @@ namespace net {
           EXCEPTION("Failed to read the server eid from a ID_ENTITY_MSG");
         }
         ecs::EntityId eid = ecs::EntityId(serverEid);
-        auto name = this->state->g_entity_mgr.getEntityTemplateName(eid);
-        CNET_LOGD3("ID_ENTITY_MSG for entity {:#x} of template {}", serverEid, name);
+        CNET_LOGD3("ID_ENTITY_MSG for entity {:#x} of template {}", serverEid,
+                   this->state->g_entity_mgr.getEntityTemplateName(eid));
         // actual code
         break;
       }
