@@ -214,8 +214,8 @@ struct WindowMgr {
         ImGui::SameLine();
         if (ImGui::Button("Open Replay")) {
           std::string_view path_view{path};
-          if (*path_view.begin() == '\"' && *(path_view.end()-1) == '\"')
-            path_view = std::string_view{path+1, path_view.size()-2};
+          if (*path_view.begin() == '\"' && *(path_view.end() - 1) == '\"')
+            path_view = std::string_view{path + 1, path_view.size() - 2};
           fs::path f_path(path_view);
           std::string s_path = f_path.string();
           if (fs::exists(f_path)) {
@@ -374,7 +374,7 @@ int main(int argc, char *argv[]) {
 
   // std::string log_file = (conf_dir / "logfile.txt").string();
   std::string log_file = "logfile.txt";
-  initialize(bin_path_str, log_file, true);
+  initialize(bin_path_str, "", log_file, true);
   g_log_handler->start_thread();
   LOG("SDL video drivers:");
   for (int i = 0; i < SDL_GetNumVideoDrivers(); i++) {
