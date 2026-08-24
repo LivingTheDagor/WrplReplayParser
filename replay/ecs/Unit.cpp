@@ -24,8 +24,8 @@ namespace unit {
     const char *name;
   };
 
-  void blkPrint(DataBlock &blk) {
-    blk.printBlock(std::cout);
+  void blkPrint(const DataBlock *blk) {
+    blk->printBlock(std::cout);
     std::cout.flush();
   }
 
@@ -211,30 +211,41 @@ namespace unit {
     turret_state.checkAndPush(&state);
   }
 
-  const char *parse_weapon_container(const DataBlock *blk) {
+  std::string parse_weapon_container(const DataBlock *blk) {
     auto blk_val = blk->getStr("blk", nullptr);
-    DG_ASSERT(blk_val);
+    if (!blk_val)
+      return "";
     if (blk->getBool("container", false)) {
       DataBlock temp_blk;
       if (dblk::load(temp_blk, blk_val)) {
-        return parse_weapon_container(&temp_blk);
+        auto ret = parse_weapon_container(&temp_blk);
+        return ret.empty() ? blk_val : ret;
       }
     }
     return blk_val;
   }
 
+  std::string getBaseWeaponBlockName(const DataBlock *blk) {
+    DG_ASSERT(strcmp(blk->getBlockName(), "Weapon") == 0);
+    DataBlock temp_blk;
+    auto blk_str = blk->getStr("blk", nullptr);
+    DG_ASSERT(dblk::load(temp_blk, blk_str));
+    auto ret = parse_weapon_container(&temp_blk);
+    return ret.empty() ? blk_str : ret;
+  }
+
   Weapon::Weapon(const DataBlock *blk, Unit *unit, std::vector<uint16_t> &weapons_count) {
     auto trigger = blk->getStr("trigger", nullptr);
     auto blk_str = blk->getStr("blk", nullptr);
-    auto emitter = blk->getStr("emitter", nullptr);
-    if (!trigger || !blk_str || !emitter) {
+    auto _emitter = blk->getStr("emitter", nullptr);
+    if (!trigger || !blk_str || !_emitter) {
       LOGE("error while making final weapon vector for unit {}", unit->unit_name);
       return;
     }
     this->weapon_id = get_weapon_id(trigger);
     this->weapon_index = weapons_count[weapon_id];
-    this->emitter = emitter;
-    this->blk_path = parse_weapon_container(blk);
+    this->emitter = _emitter;
+    this->blk_path = getBaseWeaponBlockName(blk);
     fs::path blk_fs_path = this->blk_path;
     this->weapon_name = blk_fs_path.filename().string();
     if (this->weapon_name.ends_with(".blk")) {
@@ -242,7 +253,7 @@ namespace unit {
     }
     this->name_index = translate::get_locale_index(fmt::format("weapons/{}", this->weapon_name));
     this->name_index_short = translate::get_locale_index(fmt::format("weapons/{}/short", this->weapon_name));
-    if (this->weapon_name != "dummy_weapon")
+    if (this->weapon_name != "dummy_weapon" && strcmp("boosters", trigger) != 0)
       DG_ASSERT(this->name_index != translate::INVALID_TRANSLATE_INDEX);
 
     weapons_count[weapon_id]++;
