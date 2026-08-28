@@ -146,14 +146,13 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("base_dvm_data", &unit::Unit::base_dvm_data)
     .def_readonly("unitType", &unit::Unit::unitType)
     .def_readonly("uid", &unit::Unit::uid)
-    .def_readonly("created_at_ms", &unit::Unit::created_at_ms)
+    .def_readonly("created_at_ms", &unit::Unit::created_at_ms, "When the unit was created in the ECS. does not correlate to when it actually spawned in")
     .def_readonly("killed_at_ms", &unit::Unit::killed_at_ms,
-                  "When the vehicle was knocked out. Distinct from destroyed_at_ms and left unset\n"
-                  "for spawn choices that were cancelled in the menu.")
+                  "When the vehicle was killed.\n of 0xFFFFFFFF, then the unit is still alive")
     .def_readonly("killed_position", &unit::Unit::killed_position)
     .def_readonly("destroyed_at_ms", &unit::Unit::destroyed_at_ms,
-                  "When the entity was removed from the world, which happens minutes after the kill\n"
-                  "for wrecks and on despawn for aircraft. 0xFFFFFFFF means still present.")
+                  "When the entity was destroyed in the ECS, Distinct from killed_at_ms, controlled by server\n"
+                  "if 0xFFFFFFFF, then that means the unit or its corpse exists somewhere in the world")
     .def("AsAircraft", &unit::Unit::AsAircraft)
     .def("AsTank", &unit::Unit::AsTank)
     .def_readonly("unit_name", &unit::Unit::raw_unit_name) // mr luxman decided to be lazy

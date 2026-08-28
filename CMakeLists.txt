@@ -78,6 +78,10 @@ endif ()
 set_default_flags()
 
 if (PARSER_MY_FLAGS)
+    if(LDAG_DBGLEVEL_TO_SET EQUAL 0)
+        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+        set(BUILD_SHARED_LIBS OFF)
+    endif ()
     set_compiler_flags() # sets the flags I want, idk how to do flags laugh at me
 endif ()
 add_subdirectory(3rdParty)

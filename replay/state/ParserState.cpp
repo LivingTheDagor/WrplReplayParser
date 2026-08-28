@@ -50,7 +50,7 @@ void ParserState::registerStateChange(IObjectRewindState *state) {
 class StateUpdateEvent : public IRewindEvent {
 public:
   StateUpdateEvent(ParserState *state, std::pmr::vector<RewindRef> &states) : states(state->get_allocator()) {
-    this->states.assign(states.begin(), states.end());
+    this->states = std::move(states);
   }
   ~StateUpdateEvent() override = default;
   void forward(ParserState &state) override {
