@@ -94,7 +94,7 @@ void PyReplay::include(py::module_ &m) {
             .def("getNextPacket", &IReplayReader::getNextPacket)
             .def("iterInto", [](py::object rdr, ReplayPacket &pkt) {
                 return std::make_unique<IReplayReaderIterInto>(rdr, &pkt);
-            })
+            }, py::keep_alive<0, 2>())
             .def("__iter__", [](IReplayReader &rdr) -> IReplayReader & { return rdr; })
             .def("__next__", [](IReplayReader &rdr) {
                 auto pkt = std::make_unique<ReplayPacket>();
@@ -114,13 +114,13 @@ void PyReplay::include(py::module_ &m) {
     py::class_<ServerReplayReader<false>, IReplayReader>(sub, "FullDecompressServerReplayReader");
 
     py::class_<IReplay>(sub, "IReplay")
-            .def_property_readonly("headerBlk", &IReplay::getHeaderBlk, py::return_value_policy::reference)
-            .def_property_readonly("footerBlk", &IReplay::getFooterBlk, py::return_value_policy::reference)
+            .def_property_readonly("headerBlk", &IReplay::getHeaderBlk, py::return_value_policy::reference_internal)
+            .def_property_readonly("footerBlk", &IReplay::getFooterBlk, py::return_value_policy::reference_internal)
             .def("getReplayReader", &IReplay::getReplayReader, py::return_value_policy::take_ownership,
                  py::keep_alive<0, 1>())
             .def("getCompressedReplayReader", &IReplay::getCompressedReplayReader,
                  py::return_value_policy::take_ownership, py::keep_alive<0, 1>())
-            .def_property_readonly("header", &IReplay::getHeader, py::return_value_policy::reference)
+            .def_property_readonly("header", &IReplay::getHeader, py::return_value_policy::reference_internal)
             .def_property_readonly("isValid", &IReplay::isValid);
 
     py::class_<Replay, IReplay>(sub, "Replay")

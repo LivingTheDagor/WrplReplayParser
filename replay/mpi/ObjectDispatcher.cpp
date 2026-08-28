@@ -13,19 +13,26 @@
 CREATE_HANDLE(handle_object_dispatcher, "ObjectDispatcher")
 
 namespace mpi {
+  constexpr uint32_t MAX_ZSTD_BLOCK_SIZE = 64u * 1024u * 1024u;
+
   void zstd_decompress(BitStream &in, BitStream &out) {
     ZoneScoped;
-    uint32_t comp_size;
-    uint32_t decomp_size;
-    in.ReadCompressed(comp_size);
-    in.ReadCompressed(decomp_size);
+    uint32_t comp_size = 0;
+    uint32_t decomp_size = 0;
+    if (!in.ReadCompressed(comp_size) || !in.ReadCompressed(decomp_size))
+      EXCEPTION("Failed to read zstd block sizes");
+    if (comp_size > MAX_ZSTD_BLOCK_SIZE || decomp_size > MAX_ZSTD_BLOCK_SIZE)
+      EXCEPTION("zstd block too large: {} -> {}", comp_size, decomp_size);
     out.Reset();
     out.reserveBits(BYTES_TO_BITS(decomp_size));
     out.SetWriteOffset(BYTES_TO_BITS(decomp_size));
     std::vector<char> inData{};
     inData.resize(comp_size);
-    in.ReadArray(inData.data(), comp_size);
-    ZSTD_decompress(out.GetData(), decomp_size, inData.data(), inData.size());
+    if (!in.ReadArray(inData.data(), comp_size))
+      EXCEPTION("Failed to read zstd block payload of {} bytes", comp_size);
+    auto zstd_ret = ZSTD_decompress(out.GetData(), decomp_size, inData.data(), inData.size());
+    if (ZSTD_isError(zstd_ret) || zstd_ret != decomp_size)
+      EXCEPTION("Failed to decompress zstd block: {}", ZSTD_getErrorName(zstd_ret));
   }
 
   Message *GeneralObject::dispatchMpiMessage(MessageID mid) {

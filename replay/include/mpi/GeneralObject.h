@@ -100,17 +100,17 @@ namespace mpi {
     std::string offender_vehicle; // case 2
     std::string used_weapon; // case 0xa
     std::string destroyed_weapon; // case 0xc
-    unit::Unit *offended_unit; // case 3
+    unit::Unit *offended_unit = nullptr; // case 3
     Point3 offended_unit_position{};
-    unit::Unit *offender_unit; // case 4
+    unit::Unit *offender_unit = nullptr; // case 4
     Point3 offender_unit_position{};
-    int DeathType; // case 0xb
-    int offender_pid; // case 1
-    int VictimPid; // only filled when a weapon is destroyed
-    WeaponType some_enum;
-    uint8_t unitType;
-    bool maybe_is_burav_kill; // bit
-    uint8_t some_weap_flags; // according to blk
+    int DeathType{}; // case 0xb
+    int offender_pid{}; // case 1
+    int VictimPid{}; // only filled when a weapon is destroyed
+    WeaponType some_enum{};
+    uint8_t unitType{};
+    bool maybe_is_burav_kill{}; // bit
+    uint8_t some_weap_flags{}; // according to blk
     std::string weird_str_1{};
     std::string weird_str_2{};
     uint32_t weird_val_3{};
@@ -123,12 +123,12 @@ namespace mpi {
   public:
     CriticalDamageMessage(IObject *o) : IBattleMessage(o, MPI_PACKETS::CriticalDamage) {}
 
-    unit::Unit *offended_unit;
-    int player_pid;
+    unit::Unit *offended_unit = nullptr;
+    int player_pid{};
     std::string vehicle;
-    unit::Unit *offender_unit;
+    unit::Unit *offender_unit = nullptr;
     uint8_t is_fire{}; // when doesn't equal 0, still an u8 for whatever reason
-    uint8_t unitType; // enum value
+    uint8_t unitType{}; // enum value
   };
 
   class SevereDamageMessage : public IBattleMessage {
@@ -136,11 +136,11 @@ namespace mpi {
 
   public:
     SevereDamageMessage(IObject *o) : IBattleMessage(o, MPI_PACKETS::SevereDamage) {}
-    unit::Unit *offended_unit;
-    int player_pid;
+    unit::Unit *offended_unit = nullptr;
+    int player_pid{};
     std::string vehicle;
-    unit::Unit *offender_unit;
-    uint8_t unitType; // enum value
+    unit::Unit *offender_unit = nullptr;
+    uint8_t unitType{}; // enum value
   };
 
   class AwardMessage : public IBattleMessage {
@@ -149,11 +149,11 @@ namespace mpi {
   public:
     AwardMessage(IObject *o) : IBattleMessage(o, MPI_PACKETS::Awards) {}
 
-    int player_pid;
+    int player_pid{};
     std::string award{};
-    uint32_t stage;
-    uint32_t wp;
-    uint32_t exp;
+    uint32_t stage{};
+    uint32_t wp{};
+    uint32_t exp{};
   };
 } // namespace mpi
 

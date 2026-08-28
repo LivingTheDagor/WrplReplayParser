@@ -1,6 +1,7 @@
 #include <pybind11/functional.h>
 #include "modules/State.h"
 #include "modules/bind_readonly_vector.h"
+#include "modules/bind_rewind_state.h"
 #include "modules/mpi/battle_messages.h"
 #include "state/ParserState.h"
 #include "init/initialize.h"
@@ -45,35 +46,11 @@ void PyReplayState::include(py::module_ &m) {
 
   bind_readonly_vector<dag::Vector<ObjectRewindState<MissionZone *, false, true>::TimeState>>(m, "MissionZone2TSList");
 
-  py::class_<ObjectRewindState<MissionArea *, false>>(m, "MissionAreaHistory")
-    .def_property_readonly(
-      "data", [](ObjectRewindState<MissionArea *, false> &self) { return *self.curr(); },
-      py::return_value_policy::reference_internal)
-    .def_property_readonly("time_ms",
-                           [](ObjectRewindState<MissionArea *, false> &self) { return self.currState()->time_ms; })
-    .def_property_readonly(
-      "history", [](ObjectRewindState<MissionArea *, false> &self) { return &self.history(); },
-      py::return_value_policy::reference_internal);
+  bind_rewind_state<ObjectRewindState<MissionArea *, false>>(m, "MissionAreaHistory");
 
-  py::class_<ObjectRewindState<MissionZone *, false>>(m, "MissionZoneHistory")
-    .def_property_readonly(
-      "data", [](ObjectRewindState<MissionZone *, false> &self) { return *self.curr(); },
-      py::return_value_policy::reference_internal)
-    .def_property_readonly("time_ms",
-                           [](ObjectRewindState<MissionZone *, false> &self) { return self.currState()->time_ms; })
-    .def_property_readonly(
-      "history", [](ObjectRewindState<MissionZone *, false> &self) { return &self.history(); },
-      py::return_value_policy::reference_internal);
+  bind_rewind_state<ObjectRewindState<MissionZone *, false>>(m, "MissionZoneHistory");
 
-  py::class_<ObjectRewindState<MissionZone *, false, true>>(m, "MissionZoneHistory2")
-    .def_property_readonly(
-      "data", [](ObjectRewindState<MissionZone *, false, true> &self) { return *self.curr(); },
-      py::return_value_policy::reference_internal)
-    .def_property_readonly(
-      "time_ms", [](ObjectRewindState<MissionZone *, false, true> &self) { return self.currState()->time_ms; })
-    .def_property_readonly(
-      "history", [](ObjectRewindState<MissionZone *, false, true> &self) { return &self.history(); },
-      py::return_value_policy::reference_internal);
+  bind_rewind_state<ObjectRewindState<MissionZone *, false, true>>(m, "MissionZoneHistory2");
 
   bind_readonly_vector_no_contain<dag::Vector<ObjectRewindState<MissionArea *, false>>>(m, "MissionAreaHistoryList");
   bind_readonly_vector_no_contain<dag::Vector<ObjectRewindState<MissionZone *, false>>>(m, "MissionZoneHistoryList");
@@ -113,7 +90,7 @@ void PyReplayState::include(py::module_ &m) {
     .def(py::init<ServerReplay *>())
     .def_readonly("mgr", &ParserState::g_entity_mgr)
     .def("getUnitEid", &ParserState::getUnitEid, py::arg("uid"))
-    .def("getUnitRef", &ParserState::getUnitObj, py::arg("uid"))
+    .def("getUnitRef", &ParserState::getUnitObj, py::arg("uid"), py::keep_alive<0, 1>())
     .def_readonly("players", &ParserState::players)
     .def_readonly("teams", &ParserState::teams)
     .def_readonly("gen_state", &ParserState::gen_state)

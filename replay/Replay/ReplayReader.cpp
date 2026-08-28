@@ -2,7 +2,11 @@
 #include "Replay/Replay.h"
 #include "libdeflate.h"
 #include "Replay/ReplayReader.h"
+#include "utils.h"
+#include "dag_assert.h"
 
+
+constexpr size_t MAX_REPLAY_COMPRESSION_RATIO = 64;
 
 uint32_t getPacketSize(IGenLoad &cb) {
   uint8_t first_byte;
@@ -115,32 +119,33 @@ FullDecompressReplayReader::FullDecompressReplayReader(Replay &replay, double ex
   ZoneScoped;
   auto zlib_data = replay.getData();
   auto decomp_size = (size_t) (((double) zlib_data.size()) * expected_multiply_size);
-  auto ptr = (uint8_t *) malloc(decomp_size);
-  size_t dest_len;
+  const size_t max_decomp_size = zlib_data.size() * MAX_REPLAY_COMPRESSION_RATIO;
+  size_t dest_len = 0;
   auto ctx = libdeflate_alloc_decompressor();
-  libdeflate_result ret;
-  {
-    ZoneScopedN("Replay uncompress") ret =
-      libdeflate_zlib_decompress(ctx, zlib_data.data(), zlib_data.size(), ptr, decomp_size, &dest_len);
-    // ret = uncompress(ptr, reinterpret_cast<unsigned long *>(&dest_len), zlib_data.data(), zlib_data.size());
-  }
-  if (ret == LIBDEFLATE_INSUFFICIENT_SPACE) {
-    // double it
+  libdeflate_result ret = LIBDEFLATE_INSUFFICIENT_SPACE;
+  uint8_t *ptr = nullptr;
+  while (ctx && ret == LIBDEFLATE_INSUFFICIENT_SPACE && decomp_size <= max_decomp_size) {
     ZoneScopedN("Replay uncompress");
-    libdeflate_free_decompressor(ctx); // do I need to do this? dont know
-    ctx = libdeflate_alloc_decompressor();
-    decomp_size *= 2;
     free(ptr);
     ptr = (uint8_t *) malloc(decomp_size);
+    if (!ptr)
+      break;
     ret = libdeflate_zlib_decompress(ctx, zlib_data.data(), zlib_data.size(), ptr, decomp_size, &dest_len);
+    decomp_size *= 2;
   }
-  G_ASSERT(ret == LIBDEFLATE_SUCCESS);
-  libdeflate_free_decompressor(ctx);
+  if (ctx)
+    libdeflate_free_decompressor(ctx);
+  if (ret != LIBDEFLATE_SUCCESS) {
+    free(ptr);
+    replay.Data.afterParse();
+    EXCEPTION("Failed to decompress replay {}", replay.Data.getFileName());
+  }
 
-  auto new_ptr = (uint8_t *) malloc(dest_len);
-  memcpy(new_ptr, ptr, dest_len);
-  free(ptr);
-  new (&crd) InPlaceMemLoadCB(reinterpret_cast<char *>(new_ptr), (int) dest_len);
+  if (dest_len != 0) {
+    if (auto shrunk = (uint8_t *) realloc(ptr, dest_len))
+      ptr = shrunk;
+  }
+  new (&crd) InPlaceMemLoadCB(reinterpret_cast<char *>(ptr), (int) dest_len);
 }
 
 
@@ -214,11 +219,13 @@ ServerReplayReader<streaming>::ServerReplayReader(ServerReplay &replay) : IRepla
 template<bool streaming>
 bool ServerReplayReader<streaming>::getNextPacket(ReplayPacket &packet) {
   ZoneScoped;
-  if (this->curr_reader->getNextPacket(packet))
+  if (this->curr_reader && this->curr_reader->getNextPacket(packet))
     return true;
-  if (!load_replay())
-    return false;
-  return this->curr_reader->getNextPacket(packet);
+  while (load_replay()) {
+    if (this->curr_reader->getNextPacket(packet))
+      return true;
+  }
+  return false;
 }
 
 template class ServerReplayReader<false>;

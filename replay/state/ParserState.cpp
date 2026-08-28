@@ -1,6 +1,7 @@
 #include "state/ParserState.h"
 #include "ecs/entityId.h"
 #include "mpi/PositionSync.h"
+#include "utils.h"
 
 bool ChatMessage::FromBS(BitStream &bs) {
   bool ok = true;
@@ -16,7 +17,10 @@ ParserState::ParserState(uint32_t player_count) {
   initialize(player_count);
 }
 ParserState::ParserState(IReplay *replay) {
-  initialize(replay->getHeader()->player_count);
+  auto header = replay->getHeader();
+  if (!header)
+    EXCEPTION("Invalid Replay: header is not available");
+  initialize(header->player_count);
 }
 void ParserState::initialize(uint32_t player_count) {
   DG_ASSERT(this->players.size() == 0);
@@ -80,7 +84,6 @@ void ParserState::beforePacket(ReplayPacket &pkt) {
       auto evt = this->_new<StateUpdateEvent>(this, this->curr_ms_rewind_refs);
       // just in case
       this->curr_ms_rewind_refs.resize(0);
-      this->curr_ms_rewind_refs.shrink_to_fit();
       this->rewinder.add_action(*this, evt);
     }
     state_update_start_time_ms = pkt.timestamp_ms;
@@ -160,8 +163,9 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
     }
     case ReplayPacketType::Chat: {
       this->chatMessages.resize(this->chatMessages.size() + 1);
-      this->chatMessages[this->chatMessages.size() - 1].FromBS(pkt.stream);
-      this->chatMessages[this->chatMessages.size() - 1].time_ms = this->curr_time_ms;
+      auto &chat_msg = this->chatMessages.back();
+      chat_msg.FromBS(pkt.stream);
+      chat_msg.time_ms = this->curr_time_ms;
       break;
     }
     case ReplayPacketType::MPI: {
@@ -223,6 +227,7 @@ void StateRewinder::rewind_to_ms(ParserState &parser_state, uint32_t time_ms) {
         parser_state.curr_time_ms = actions_vector[curr_index].time_ms_at;
         actions_vector[curr_index].event->backward(parser_state);
       }
+      parser_state.curr_time_ms = curr_index > 0 ? actions_vector[curr_index - 1].time_ms_at : 0;
     } else {
       while (curr_index < sz && actions_vector[curr_index].time_ms_at <= time_ms) {
         parser_state.curr_time_ms = actions_vector[curr_index].time_ms_at;

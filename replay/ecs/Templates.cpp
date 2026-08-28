@@ -182,7 +182,6 @@ namespace ecs {
         bool set = false;
         for(auto &comp : this_templ->components) {
           if(other_comp.comp_type_index == comp.comp_type_index) {
-            comp.default_component.~Component();
             comp.default_component = std::move(other_comp.default_component);
             set = true;
             break;

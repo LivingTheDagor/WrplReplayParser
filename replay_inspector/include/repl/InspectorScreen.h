@@ -431,6 +431,8 @@ protected:
       // front is earliest point
       // back is latest point
       auto &positions = unit.positions.history();
+      if (positions.empty())
+        return;
       if (positions.front().time_ms > data.time_start_ms || unit.killed_at_ms < data.time_end_ms)
         return; // no points in range, skip
 
@@ -495,9 +497,10 @@ protected:
         for (auto &weapon: unit.weapons) {
           if (weapon.turret_desc) {
             auto desc = weapon.turret_desc.get();
+            if (!desc->turret_state.hasData())
+              continue;
             auto curr_val = desc->turret_state.curr();
             float yaw_rad = curr_val->abs.x;
-            yaw_rad = DegToRad(yaw_rad);
             DrawYawLine(yaw_rad, front_uv, 30, IM_COL32(0, 255, 0, 255), 1.0f);
           }
         }

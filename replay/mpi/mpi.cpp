@@ -3,6 +3,7 @@
 
 #include <mpi/mpi.h>
 #include "math/dag_Point3.h"
+#include "state/ParserState.h"
 #include "fstream"
 
 struct ParserState;
@@ -198,13 +199,6 @@ namespace mpi {
     if (obj_dispatcher && read_object_ext_uid(bs, oid, extUid) && bs.Read(mid)) {
       // LOG("MPI Dispatch: oid: {:#x}; extUid: {:#x}; mid: {:#x};", oid, extUid, mid);
       // mpi_data[oid][mid] += 1; used for packet
-      auto name = packet_ids::get_name(mid);
-      if (name) {
-        // LOG("{}", *name);
-      } else if (mid != 0xf0cc) {
-        // LOG("NO NAME FOR {:#x}", mid);
-      }
-
       IObject *o = dispatch_object(oid, extUid, state);
       if (o) {
         Message *m = (mid != INVALID_MESSAGE_ID) ? o->dispatchMpiMessage(mid) : nullptr;
@@ -216,8 +210,8 @@ namespace mpi {
             BitStream(bs.GetData() + bytesReaded, bs.GetNumberOfBytesUsed() - bytesReaded, copy_payload);
           if (m->readPayload(state))
             return m;
-          else
-            m->destroy();
+          else if (m->delete_message)
+            state->_delete(m);
         }
       } else {
         // LOG("object doesen't exist");
