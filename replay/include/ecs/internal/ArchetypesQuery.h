@@ -101,7 +101,7 @@ namespace ecs {
       lastArches0(a.lastArches0),
       lastArches1(a.lastArches1),
       lastArch(a.lastArch),
-      allComponentsArchOffsets(a.allComponentsArchOffsets) {
+      allComponentsArchOffsets(a.allComponentsArchOffsets){
       a.queries = nullptr;
       a.queriesCount = 0;
       a.allComponentsArchOffsets = nullptr;

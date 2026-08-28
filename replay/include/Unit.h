@@ -37,6 +37,7 @@ struct AngularSpaceTime : SpaceTimeEuler {
 #define COUNTER_MEASURES_COUNT 2
 #define SENSORS_COUNT          4
 #define TARGETS_NUM            8
+#define MAX_WEAPONS_PER_UNIT   256
 
 
 struct SensorsControlStates {
@@ -128,6 +129,8 @@ namespace unit {
   struct TurretTree {
     GeomNodeTree *tree;
     std::vector<TurretNode> nodes;
+    std::vector<uint16_t> useful_order;
+    bool useful_built = false;
     // names should be stored in tree, so string_view fine
     std::unordered_map<std::string_view, TurretNode *> name_to_idx;
 
@@ -157,8 +160,12 @@ namespace unit {
   struct TurretData {
     Point3 rel;
     Point3 abs;
+    Point3 gun_rel;
+    Point3 gun_abs;
 
-    bool operator==(const TurretData &other) const { return rel == other.rel && abs == other.abs; }
+    bool operator==(const TurretData &other) const {
+      return rel == other.rel && abs == other.abs && gun_rel == other.gun_rel && gun_abs == other.gun_abs;
+    }
   };
 
   struct TurretDesc {
@@ -189,7 +196,6 @@ namespace unit {
 
     Weapon(const DataBlock *blk, Unit *unit, std::vector<uint16_t> &weapons_count);
 
-  private:
     void loadTurretData(const DataBlock *weapon_blk, TurretTree *tree);
   };
 
@@ -199,7 +205,7 @@ namespace unit {
     void loadWeaponData(const std::string &path);
     void loadTurretData(Weapon &weapon, const DataBlock *weap_blk);
 
-    bool has_tree;
+    bool has_tree = false;
     GeomNodeTree geom_tree{};
     std::unique_ptr<TurretTree> turret_tree{};
 

@@ -256,7 +256,7 @@ void ObjectRewindState<T, do_compare, take_ownership, create_default>::deleteLas
   hasReserved = false;
 #endif
   this->time_states.pop_back();
-  state = &this->time_states.back();
+  state = this->time_states.empty() ? nullptr : &this->time_states.back();
 }
 
 template<typename T, bool do_compare, bool take_ownership, bool create_default>

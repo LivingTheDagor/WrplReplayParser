@@ -87,6 +87,29 @@ void register_default_sigsev_handler() { SetUnhandledExceptionFilter(my_handler)
 #include <cstring>
 #include <signal.h>
 #include <unistd.h>
+#include <dlfcn.h>
+#include <limits.h>
+#include <stdlib.h>
+
+static char signal_tracer_path[PATH_MAX] = "signal_tracer";
+
+static void resolve_signal_tracer_path() {
+  static const char tracer_name[] = "signal_tracer";
+  Dl_info info;
+  if (dladdr(reinterpret_cast<const void *>(&resolve_signal_tracer_path), &info) == 0 || info.dli_fname == nullptr)
+    return;
+  char module_path[PATH_MAX];
+  if (realpath(info.dli_fname, module_path) == nullptr)
+    return;
+  char *slash = strrchr(module_path, '/');
+  if (slash == nullptr)
+    return;
+  const size_t dir_len = static_cast<size_t>(slash - module_path) + 1;
+  if (dir_len + sizeof(tracer_name) > sizeof(signal_tracer_path))
+    return;
+  memcpy(signal_tracer_path, module_path, dir_len);
+  memcpy(signal_tracer_path + dir_len, tracer_name, sizeof(tracer_name));
+}
 
 // from signal_demo.cpp
 // This is just a utility I like, it makes the pipe API more expressive.
@@ -114,9 +137,9 @@ void do_signal_safe_trace_local(cpptrace::frame_ptr *buffer, std::size_t count) 
     dup2(input_pipe.read_end, STDIN_FILENO);
     close(input_pipe.read_end);
     close(input_pipe.write_end);
-    execl("signal_tracer", "signal_tracer", nullptr);
-    const char *exec_failure_message = "exec(signal_tracer) failed: Make sure the signal_tracer executable is in "
-                                       "the current working directory and the binary's permissions are correct.\n";
+    execl(signal_tracer_path, "signal_tracer", nullptr);
+    const char *exec_failure_message = "exec(signal_tracer) failed: Make sure the signal_tracer executable sits next "
+                                       "to the parser module and the binary's permissions are correct.\n";
     write(STDERR_FILENO, exec_failure_message, strlen(exec_failure_message));
     _exit(1);
   }
@@ -153,6 +176,7 @@ void warmup_cpptrace() {
   cpptrace::get_safe_object_frame(buffer[0], &frame);
 }
 void register_default_sigsev_handler() {
+  resolve_signal_tracer_path();
   warmup_cpptrace();
   // Setup signal handler
   struct sigaction action = {0};

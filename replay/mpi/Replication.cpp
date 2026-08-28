@@ -4,6 +4,8 @@
 
 CREATE_HANDLE(handle_replication, "Replication")
 
+constexpr uint32_t MAX_MISSION_AREAS = 4096;
+
 void force_link_replication() { std::cout << ""; }
 
 template <typename T>
@@ -26,9 +28,9 @@ MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
   auto local_44 = bs.GetReadOffset();
   // LOGE("Creating Zone");
   uint8_t zone_id = 0;
-  uint8_t maybe_team_id;
-  uint32_t mission_area_id;
-  uint16_t some_val_2;
+  uint8_t maybe_team_id = 0;
+  uint32_t mission_area_id = 0;
+  uint16_t some_val_2 = 0;
   for (uint16_t i = 0; i < count; i++) {
     BitSize_t start_size = bs.GetReadOffset();
     switch (serializer255.getFieldId(i)) {
@@ -86,6 +88,8 @@ MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
       }
       default: EXCEPTION("Invalid Zone id: {}", zone_type);
     }
+    if (mission_area_id >= MAX_MISSION_AREAS)
+      EXCEPTION("Invalid MissionArea id: {}", mission_area_id);
     grow(state->missionAreas1, state, mission_area_id + 1);
     auto area = state->missionAreas1[mission_area_id];
     if (area->curr() == nullptr) {
@@ -102,6 +106,8 @@ MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
     state->Zones[zone_id]->checkAndPush(state);
   }
   bs.SetReadOffset(end);
+  if (zone_id >= state->Zones.size())
+    EXCEPTION("Invalid MissionZone id: {}", zone_id);
   return *state->Zones[zone_id]->curr();
 }
 
@@ -237,11 +243,11 @@ danet::ReplicatedObject *MissionArea::createReplicatedObject(BitStream &bs, Pars
   auto count = serializer255.readFieldsSizeAndCount(bs, end);
   G_ASSERT(serializer255.readFieldsIndex(bs));
   std::string v1;
-  uint32_t index;
-  uint8_t v3;
-  mpi::ObjectID index_2;
-  danet::AreaFlagsEnum areaFlags;
-  TMatrix tm;
+  uint32_t index = 0;
+  uint8_t v3 = 0;
+  mpi::ObjectID index_2 = 0;
+  danet::AreaFlagsEnum areaFlags{};
+  TMatrix tm = TMatrix::IDENT;
   uint32_t v7 = 0; // not always
 
   for (uint16_t i = 0; i < count; i++) {
@@ -292,6 +298,8 @@ danet::ReplicatedObject *MissionArea::createReplicatedObject(BitStream &bs, Pars
     // LOGE("{}; data: {}", serializer255.getFieldId(i), FormatHexToStream(data).str());
   }
 
+  if (index >= MAX_MISSION_AREAS)
+    EXCEPTION("Invalid MissionArea index: {}", index);
   auto x = state->_new<MissionArea>(state, index_2);
   *x->areaFlags.reserveOne() = areaFlags;
   x->areaFlags.checkAndPush(state);

@@ -125,7 +125,7 @@ static void on_unit_appear_mpi_es(const ecs::EventEntityCreated &evt, const ecs:
         if (m != nullptr) {
           mpi::send(m);
           if (m->delete_message)
-            delete m;
+            state._delete(m);
         }
       } else if (sz & mpi::QueuePacketTypes::REFL) {
         sz ^= mpi::QueuePacketTypes::REFL;

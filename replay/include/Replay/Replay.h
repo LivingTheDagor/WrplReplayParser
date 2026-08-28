@@ -208,8 +208,16 @@ class ServerReplay final : public IReplay {
   friend ServerReplayReader<false>;
 
 public:
-  ReplayHeader *getHeader() override { return &replay_files[0]->header; }
-  DataBlock *getHeaderBlk() override { return &replay_files[0]->header_blk; }
+  ReplayHeader *getHeader() override {
+    if (replay_files.empty())
+      return nullptr;
+    return &replay_files[0]->header;
+  }
+  DataBlock *getHeaderBlk() override {
+    if (replay_files.empty())
+      return nullptr;
+    return &replay_files[0]->header_blk;
+  }
   DataBlock *getFooterBlk() override;
 
   ServerReplay(std::vector<std::span<uint8_t>> &data, bool owns);

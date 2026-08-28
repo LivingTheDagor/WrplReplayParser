@@ -4,6 +4,7 @@
 #include "modules/ecs/EntityId.h"
 #include "mpi/types.h"
 #include "modules/bind_readonly_vector.h"
+#include "modules/bind_rewind_state.h"
 #include "Unit.h"
 #include "modules/utf8_err_ignore_string.h"
 
@@ -107,10 +108,31 @@ void PyMpiTypes::include(py::module_ &m) {
   bind_readonly_vector<dag::Vector<ObjectRewindState<danet::CameraData, false, false, false>::TimeState>>(mpi, "CameraDataTSList");
 
 
-  py::class_<ObjectRewindState<danet::CameraData, false, false, false>>(mpi, "CameraDataHistory")
-   .def_property_readonly("data", [](ObjectRewindState<danet::CameraData, false, false, false> &self){return *self.curr();}, py::return_value_policy::reference_internal)
-   .def_property_readonly("time_ms", [](ObjectRewindState<danet::CameraData, false, false, false> &self){return self.currState()->time_ms;})
-   .def_property_readonly("history", [](ObjectRewindState<danet::CameraData, false, false, false> &self){return &self.history();}, py::return_value_policy::reference_internal);
+  bind_rewind_state<ObjectRewindState<danet::CameraData, false, false, false>>(mpi, "CameraDataHistory")
+    .def("channels", [](py::object self_py) {
+      auto &self = self_py.cast<ObjectRewindState<danet::CameraData, false, false, false> &>();
+      auto &v = self.history();
+      py::dict d;
+      if (v.empty())
+        return d;
+      const auto *b = v.data();
+      const size_t n = v.size();
+      d["time_ms"] = channel_view(b, &b->time_ms, n, self_py);
+      d["cam_yaw"] = channel_view(b, &b->data.camera_euler.y, n, self_py);
+      d["cam_pitch"] = channel_view(b, &b->data.camera_euler.z, n, self_py);
+      d["cam_roll"] = channel_view(b, &b->data.camera_euler.x, n, self_py);
+      d["aim_yaw"] = channel_view(b, &b->data.gun_pointer.x, n, self_py);
+      d["aim_pitch"] = channel_view(b, &b->data.gun_pointer.y, n, self_py);
+      return d;
+    },
+         "All samples as read-only zero-copy numpy views over the history buffer.\n"
+         "Empty dict when the history is empty, otherwise every array has the same length.\n"
+         "Keys: time_ms (uint32, ms); then float32 radians:\n"
+         "cam_yaw, cam_pitch, cam_roll - where the camera looks;\n"
+         "aim_yaw, aim_pitch - the aiming reticle, where the weapons are told to converge.\n"
+         "The reticle has no roll, and both groups share this one timeline: a single sample\n"
+         "carries the camera and the reticle at once. cam_roll comes through asin and is\n"
+         "therefore bounded to +-pi/2, the rest span +-pi.");
 
 
   py_codegen_types.include(m);

@@ -976,7 +976,7 @@ namespace ecs {
       QueryId queryId = esListQueries[esIndex];
 
       // an empty query has an invalid queryId. that is the only case
-      G_ASSERTF(queryId || esList[idx]->emptyES, "Empty queries are not allowed");
+      G_ASSERTF(queryId || esList[esIndex]->emptyES, "Empty queries are not allowed");
       // invalid queryId signifies empty query, so just send it cause no data to serialize
       if (!queryId || fillEidQueryView(eid, mgr.entDescs[idx], queryId, qv, mgr.arch_data))
         callESEvent(esIndex, evt, qv, mgr);

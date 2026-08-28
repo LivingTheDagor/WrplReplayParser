@@ -118,6 +118,7 @@ namespace danet {
     WeaponMask &operator=(const WeaponMask &other) {
       this->~WeaponMask();
       this->ammo_count = other.ammo_count;
+      this->weapon_index = other.weapon_index;
       this->raw = other.raw;
       if (ammo_count > BYTES_TO_BITS(sizeof(uint64_t))) {
         ptr = (uint8_t *) malloc(BITS_TO_BYTES(ammo_count));
@@ -131,9 +132,11 @@ namespace danet {
     WeaponMask &operator=(WeaponMask &&other) noexcept {
       this->~WeaponMask();
       this->ammo_count = other.ammo_count;
+      this->weapon_index = other.weapon_index;
       this->raw = other.raw;
       other.raw = 0;
       other.ammo_count = 0;
+      other.weapon_index = 0;
       return *this;
     }
 

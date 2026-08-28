@@ -4,9 +4,6 @@ if(PYTHON_VERSION_TO_USE)
 else()
     find_package(Python 3.12...3.12.13 REQUIRED COMPONENTS Interpreter Development)
 endif()
-set(Python_LIBRARY_DIRS "${Python_LIBRARY_DIRS}")
-set(PYTHON_LIBRARIES "${Python_LIBRARIES}")
-set(PYTHON_LIBRARY "${Python_LIBRARIES}")
 # Try to find pybind11 via find_package first
 find_package(pybind11 QUIET)
 

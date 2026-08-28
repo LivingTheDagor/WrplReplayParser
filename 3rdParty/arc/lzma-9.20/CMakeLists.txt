@@ -12,6 +12,8 @@ target_include_directories(LZMA
 )
 
 
+target_compile_definitions(LZMA PRIVATE _7ZIP_ST)
+
 add_library(LZMA::LZMA ALIAS LZMA)
 
 target_compile_options(LZMA PRIVATE

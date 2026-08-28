@@ -42,11 +42,18 @@ namespace ecs {
       explicit Chunk(size_t size) : data((uint8_t *) malloc(size)) {}
       Chunk(Chunk &&ref) noexcept {
         data = ref.data;
+        used = ref.used;
         ref.data = nullptr;
+        ref.used = 0;
       }
       Chunk &operator=(Chunk &&ref) noexcept {
+        if (this == &ref)
+          return *this;
+        free(data);
         data = ref.data;
+        used = ref.used;
         ref.data = nullptr;
+        ref.used = 0;
         return *this;
       }
       // a chunk should never be copied
