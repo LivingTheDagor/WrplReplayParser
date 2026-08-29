@@ -14,7 +14,6 @@
 #include <cstdint>
 #include <sstream>
 #include <span>
-#include "Logger.h"
 #include <cpptrace/cpptrace.hpp>
 
 extern bool DO_VERBOSE;
@@ -30,29 +29,8 @@ public:
   const char *what() const noexcept override { return std::runtime_error::what(); }
 };
 
-[[noreturn]] inline void fatal(const char *file, int line, const char *function, std::string message) {
-  std::cerr << "fatal CERR\n";
-  LOGE("Fatal error at {}:{}\nFunction: {} \nMessage: {}", file, line, function, message);
-  g_log_handler->wait_until_empty();
-  g_log_handler->flush_all();
-  auto trace = cpptrace::generate_trace().to_string();
-  LOGE("{}", trace);
-  g_log_handler->wait_until_empty();
-  g_log_handler->flush_all();
-  throw ExceptionException(
-    fmt::format("Fatal error at {}:{}\nFunction: {} \nMessage: {}\n{}", file, line, function, message, trace));
-  std::exit(EXIT_FAILURE);
-}
+[[noreturn]] void fatal(const char *file, int line, const char *function, std::string message);
 
-
-// #define LOG(...) log(__VA_ARGS__)
-
-
-#define VERBOSE_LOG(...) \
-  {                      \
-    if (DO_VERBOSE)      \
-      log(__VA_ARGS__);  \
-  }
 
 #define EXCEPTION(format_, ...) fatal(__FILE__, __LINE__, __FUNCTION__, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__))
 

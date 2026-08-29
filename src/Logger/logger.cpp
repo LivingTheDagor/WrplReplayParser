@@ -45,6 +45,44 @@ void log_handler::loadSinkFromDataBlock(const DataBlock &blk) {
     *next->ptr = this->get_sink(n);
   }
 }
+void assert_failed_ext(const char *file, int line, const char *function, const char *expression, std::string message) {
+  std::cerr << "ASSERT FAILED CERR\n";
+  // std::fprintf(stderr, "ASSERTION FAILED:\n %s:%d\nFunction: %s \nExpression: %s \n", file, line, function,
+  // expression);
+  LOGE("ASSERTION FAILED:\n {}:{}\nFunction: {} \nExpression: {} \n", file, line, function, expression);
+  if (!message.empty()) {
+    LOGE("Message: {}", message);
+  }
+  auto stackTrace = cpptrace::generate_trace().to_string();
+  LOGE("{}", stackTrace);
+  g_log_handler->wait_until_empty();
+  g_log_handler->flush_all();
+#if LDAG_DBGLEVEL == 0
+  if (!message.empty()) {
+    throw AssertException(fmt::format("ASSERTION FAILED:\n {}:{}\nFunction: {} \nExpression: {} \nMessage: {}\n{}",
+                                      file, line, function, expression, message, stackTrace));
+  } else {
+    throw AssertException(fmt::format("ASSERTION FAILED:\n {}:{}\nFunction: {} \nExpression: {}\n{}", file, line,
+                                      function, expression, stackTrace));
+  }
+#else
+  std::exit(EXIT_FAILURE);
+#endif
+}
+
+void fatal(const char *file, int line, const char *function, std::string message) {
+  std::cerr << "fatal CERR\n";
+  LOGE("Fatal error at {}:{}\nFunction: {} \nMessage: {}", file, line, function, message);
+  g_log_handler->wait_until_empty();
+  g_log_handler->flush_all();
+  auto trace = cpptrace::generate_trace().to_string();
+  LOGE("{}", trace);
+  g_log_handler->wait_until_empty();
+  g_log_handler->flush_all();
+  throw ExceptionException(
+    fmt::format("Fatal error at {}:{}\nFunction: {} \nMessage: {}\n{}", file, line, function, message, trace));
+  std::exit(EXIT_FAILURE);
+}
 
 #include <cpptrace/cpptrace.hpp>
 #ifdef WIN32

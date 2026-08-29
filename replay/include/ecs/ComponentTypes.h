@@ -16,6 +16,7 @@
 
 
 #include <sstream>
+#include "Logger.h"
 #include "dag_assert.h"
 #include "EASTL/string.h"
 

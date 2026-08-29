@@ -152,7 +152,7 @@ void on_callback(ecs::GState * state) {
 void PyECSQueryES::include(py::module_ &m) {
   DO_INCLUDE()
   py_entity_manager.include(m);
-  ecs::after_comps_callbacks->push_back(on_callback);
+  ecs::after_comps_callbacks.push_back(on_callback);
   auto ecs = m.def_submodule("ecs");
   py::class_<ecs::Event>(ecs, "Event")
       .def_property_readonly("type", &ecs::Event::getType)

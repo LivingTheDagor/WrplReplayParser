@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <cpptrace/cpptrace.hpp>
 #include "utils.h"
+#include "tracy/Tracy.hpp"
 
 #ifdef __analysis_assume
 #define G_ANALYSIS_ASSUME __analysis_assume
@@ -42,33 +43,9 @@ public:
   const char *what() const noexcept override { return std::runtime_error::what(); }
 };
 
-[[noreturn]] inline void assert_failed_ext(const char *file, int line, const char *function, const char *expression,
-                                           std::string message) {
-  std::cerr << "ASSERT FAILED CERR\n";
-  // std::fprintf(stderr, "ASSERTION FAILED:\n %s:%d\nFunction: %s \nExpression: %s \n", file, line, function,
-  // expression);
-  LOGE("ASSERTION FAILED:\n {}:{}\nFunction: {} \nExpression: {} \n", file, line, function, expression);
-  if (!message.empty()) {
-    LOGE("Message: {}", message);
-  }
-  auto stackTracke = cpptrace::generate_trace().to_string();
-  LOGE("{}", stackTracke);
-  g_log_handler->wait_until_empty();
-  g_log_handler->flush_all();
-#if LDAG_DBGLEVEL == 0
-  if (!message.empty()) {
-    throw AssertException(fmt::format("ASSERTION FAILED:\n {}:{}\nFunction: {} \nExpression: {} \nMessage: {}\n{}",
-                                      file, line, function, expression, message,
-                                      stackTracke));
-  } else {
-    throw AssertException(fmt::format("ASSERTION FAILED:\n {}:{}\nFunction: {} \nExpression: {}\n{}", file, line,
-                                      function, expression, stackTracke));
-  }
-#else
-  std::exit(EXIT_FAILURE);
-#endif
+[[noreturn]] void assert_failed_ext(const char *file, int line, const char *function, const char *expression,
+                                    std::string message);
 
-}
 
 #define assert_failed(file, line, func, expr_str, format_, ...) \
   assert_failed_ext(file, line, func, expr_str, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__))
@@ -108,10 +85,9 @@ public:
 #define DG_ASSERT(expression)            G_ASSERT_EX(expression, #expression)
 #define DG_ASSERTF(expression, fmt, ...) G_ASSERTF_EX(expression, #expression, fmt __VA_OPT__(, ) __VA_ARGS__)
 #else
-#define DG_ASSERT(expression) ((void)(expression))
-#define DG_ASSERTF(expression, fmt, ...) ((void)(expression))
+#define DG_ASSERT(expression)            ((void) (expression))
+#define DG_ASSERTF(expression, fmt, ...) ((void) (expression))
 #endif
-
 
 
 // This assertion API is faster because it's won't do any function calls within, therefore not translating
@@ -239,7 +215,7 @@ public:
 
 #define G_LOGERR_AND_DO(expression, action, ...) \
   if (DAGOR_UNLIKELY(!(expression))) {           \
-    LOGE(__VA_ARGS__);                         \
+    LOGE(__VA_ARGS__);                           \
     action;                                      \
   } else
 

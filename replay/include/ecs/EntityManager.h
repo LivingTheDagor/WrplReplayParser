@@ -71,7 +71,7 @@ namespace ecs {
   class GState;
 
   typedef void (*after_components_cb)(GState *state);
-  extern OnDemandInit<std::vector<after_components_cb>> after_comps_callbacks;
+  extern std::vector<after_components_cb> after_comps_callbacks;
   class GState {
     ComponentTypes componentTypes{};
     DataComponents dataComponents{};
@@ -103,7 +103,7 @@ namespace ecs {
       this->componentTypes.initialize();
       dataComponents.initialize(componentTypes);
       parseTemplates();
-      for (auto &c: *after_comps_callbacks) {
+      for (auto &c: after_comps_callbacks) {
         c(this);
       }
       std::vector<ecs::ComponentTemplInfo> t_comps{};

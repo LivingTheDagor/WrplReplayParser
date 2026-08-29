@@ -32,14 +32,16 @@ void print_all_files_full_paths(const fs::path &root = fs::current_path()) {
 }
 static bool has_init = false;
 // runs basic init steps
-void initialize(const std::string &game_path, const std::string &grp_dir, const std::string &logfile_path, bool fonts, bool lang, bool mis) {
+void initialize(const std::string &game_path, const std::string &grp_dir, const std::string &logfile_path, bool fonts,
+                bool lang, bool mis) {
   if (has_init)
     return;
 
   has_init = true;
+  g_log_handler.initialize();
   ZoneScoped;
   if (grp_dir.empty()) {
-    g_grp_manager.initialize((fs::path)game_path / "content" / "base" / "res" / "tanks");
+    g_grp_manager.initialize((fs::path) game_path / "content" / "base" / "res" / "tanks");
   } else {
     g_grp_manager.initialize(grp_dir);
   }
@@ -79,11 +81,10 @@ void initialize(const std::string &game_path, const std::string &grp_dir, const 
   hello();
   force_link_replication();
   force_link_cnet();
-  G_UNUSED(ecs::g_ecs_data.get()); // forces initializtion
+  ecs::g_ecs_data.initialize();
   G_ASSERT(dblk::load(ecs::g_ecs_data->wp_cost, "config/wpcost.blk"));
   G_ASSERT(dblk::load(ecs::g_ecs_data->unit_tags, "config/unittags.blk"));
   // mpi::players.hello();
   size_t pull_val = framework_primary_pulls;
   G_UNUSED(pull_val);
 }
-
