@@ -222,6 +222,20 @@ void PyDataBlock::include(py::module_ &m) {
       },
       "Serialize this block to BLK text.")
     .def(
+      "toBin",
+      [](const DataBlockRO &self, bool compact) {
+        DynamicMemGeneralSaveCB cwr(0, 4 << 20);
+        if (compact) {
+          DataBlock temp{};
+          temp.setFrom(self.ptr());
+          temp.saveToStream(cwr);
+        } else
+          self->saveToStream(cwr);
+        auto view = std::string_view{reinterpret_cast<const char *>(cwr.data()), static_cast<size_t>(cwr.size())};
+        return py::bytes(view);
+      },
+      "Serialize this block to BLK binary.", py::arg("compact") = false)
+    .def(
       "toDict",
       [](DataBlockRO &self) {
         py::dict to_dict;
