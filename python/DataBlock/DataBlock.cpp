@@ -141,10 +141,46 @@ inline std::span<const char> bytes_to_span(const py::bytes &py_bytes) {
   return {reinterpret_cast<const char *>(data), static_cast<size_t>(size)};
 }
 
+struct ROBlkBlockIterator {
+  const DataBlock *block;
+  int index = 0;
+  uint32_t blockCount;
+
+  ROBlkBlockIterator &iter() { return *this; }
+
+  const DataBlockRO next() {
+    if (index < blockCount) {
+      return DataBlockRO(block->getBlock(index++));
+    }
+    throw py::stop_iteration();
+  }
+};
+
+struct RWBlkBlockIterator {
+  DataBlock *block;
+  int index = 0;
+  uint32_t blockCount;
+
+  RWBlkBlockIterator &iter() { return *this; }
+
+  const DataBlockRW next() {
+    if (index < blockCount) {
+      return DataBlockRW(block->getBlock(index++));
+    }
+    throw py::stop_iteration();
+  }
+};
+
 
 void PyDataBlock::include(py::module_ &m) {
   DO_INCLUDE()
   py_math.include(m);
+
+  auto ro_iter = py::class_<ROBlkBlockIterator>(m, "ROBlkBlockIterator");
+  auto rw_iter = py::class_<RWBlkBlockIterator>(m, "RWBlkBlockIterator");
+
+  ro_iter.def("__iter__", &ROBlkBlockIterator::iter);
+  rw_iter.def("__iter__", &RWBlkBlockIterator::iter);
 
   py::enum_<DataBlock::ParamType>(m, "DataBlockParamType")
     .value("TYPE_NONE", DataBlock::TYPE_NONE)
@@ -238,10 +274,24 @@ void PyDataBlock::include(py::module_ &m) {
     .def(
       "getBlockNameId", [](const DataBlockRO &self) { return self->getBlockNameId(); }, "Get this block's name id.")
     .def(
-      "getBlockName", [](const DataBlockRO &self) { return str_to_py_str(self->getBlockName()); },
+      "getBlockName",
+      [](const DataBlockRO &self) {
+        auto block_name = self->getBlockName();
+        if (block_name == nullptr) {
+          block_name = "root";
+        }
+        return str_to_py_str(block_name);
+      },
       "Get this block's name.")
     .def(
-      "getBlockNameView", [](const DataBlockRO &self) { return str_to_py_str(self->getBlockNameView()); },
+      "getBlockNameView",
+      [](const DataBlockRO &self) {
+        auto block_name = self->getBlockNameView();
+        if (block_name.empty()) {
+          block_name = "root";
+        }
+        return str_to_py_str(block_name);
+      },
       "Get this block's name.")
     .def(
       "getBlockCount", [](const DataBlockRO &self) { return self->blockCount(); }, "Get number of child blocks.")
@@ -486,7 +536,11 @@ void PyDataBlock::include(py::module_ &m) {
     .def(
       "getTmByNameId",
       [](const DataBlockRO &self, int name_id, const TMatrix &def) { return self->getTmByNameId(name_id, def); },
-      "Get TMatrix parameter by name id with default.");
+      "Get TMatrix parameter by name id with default.")
+    .def("iterBlocks", [](const DataBlockRO &self) {
+      ROBlkBlockIterator iter{self.ptr(), 0, self->blockCount()};
+      return iter;
+    });
 
   auto dbrw = py::class_<DataBlockRW, DataBlockRO>(m, "DataBlockRW");
   dbrw
@@ -791,7 +845,14 @@ void PyDataBlock::include(py::module_ &m) {
         InPlaceMemLoadCB rdr(const_cast<char *>(spn.data()), (int) spn.size());
         return blk->loadFromStream(rdr, nullptr);
       },
-      "Load block data from some bytes. Can be a text or bin blk");
+      "Load block data from some bytes. Can be a text or bin blk")
+    .def("iterBlocks", [](const DataBlockRW &self) {
+      RWBlkBlockIterator iter{self.ptr(), 0, self->blockCount()};
+      return iter;
+    });
+
+  ro_iter.def("__next__", &ROBlkBlockIterator::next);
+  rw_iter.def("__next__", &RWBlkBlockIterator::next);
 
 
   py::class_<DataBlockRWObj, DataBlockRW>(m, "DataBlock")
