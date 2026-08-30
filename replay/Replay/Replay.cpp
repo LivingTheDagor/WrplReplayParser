@@ -281,7 +281,7 @@ void ReplayWriter<streamWrite>::write(const void *data, size_t size, uint32_t ti
   cb.write(tmp_data.data(), tmp_cb.tell());
 }
 template<bool streamWrite>
-void ReplayWriter<streamWrite>::write2(ReplayPacket &pkt) {}
+void ReplayWriter<streamWrite>::write2(const ReplayPacket &pkt) {}
 
 template<bool streamWrite>
 std::span<uint8_t> ReplayWriter<streamWrite>::getCompressedData(std::vector<uint8_t> &storage) {

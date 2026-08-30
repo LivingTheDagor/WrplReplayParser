@@ -255,7 +255,12 @@ class owned_span {
 
 public:
   owned_span(T *ptr, size_t sz) : _data(ptr), _size(sz) {}
-  ~owned_span() { delete[] _data; }
+  owned_span() : _data(nullptr), _size(0) {}
+
+  ~owned_span() {
+    if (_data)
+      free(_data);
+  }
 
   T &operator[](size_t i) { return _data[i]; }
   T *begin() { return _data; }
@@ -263,11 +268,30 @@ public:
   size_t size() const { return _size; }
   T *data() const { return _data; }
   // disable copy, allow move
+  owned_span &operator=(const owned_span &other) = delete;
   owned_span(const owned_span &) = delete;
-  owned_span &operator=(const owned_span &) = delete;
-  owned_span(owned_span &&other) noexcept : _data(other._data), _size(other._size) {
+  owned_span &operator=(owned_span &&other) noexcept {
+    clear();
+    this->_data = other._data;
+    this->_size = other._size;
     other._data = nullptr;
     other._size = 0;
+    return *this;
+  };
+
+  owned_span(owned_span &&other) noexcept { *this = std::move(other); }
+
+  void assign(T *ptr, size_t sz) {
+    clear();
+    _data = ptr;
+    _size = sz;
+  }
+
+  void clear() {
+    if (_data)
+      free(_data);
+    _data = nullptr;
+    _size = 0;
   }
 };
 
@@ -314,8 +338,8 @@ public:
 
   void write(const void *data, size_t size, uint32_t time_ms, ReplayPacketType type);
 
-  void write2(ReplayPacket &pkt);
-  inline void write(ReplayPacket &pkt) {
+  void write2(const ReplayPacket &pkt);
+  inline void write(const ReplayPacket &pkt) {
     auto rd_offs = BITS_TO_BYTES(pkt.stream.GetReadOffset());
     write(pkt.stream.GetData() + rd_offs, BITS_TO_BYTES(pkt.stream.GetWriteOffset()) - rd_offs, pkt.timestamp_ms,
           pkt.type);

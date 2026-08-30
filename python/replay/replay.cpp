@@ -3,6 +3,7 @@
 #include "modules/BitStream.h"
 #include "Replay/Replay.h"
 #include "memory.h"
+#include "modules/bytes_to_span.h"
 using ssize_t = Py_ssize_t; // msvc doesnt think
 struct IReplayReaderIterInto {
   ReplayPacket *into;
@@ -16,6 +17,34 @@ struct IReplayReaderIterInto {
 template<size_t N>
 std::string_view getStr(const char (&arr)[N]) {
   return std::string_view(arr, strnlen(arr, N));
+}
+
+template<bool streaming>
+auto build_replay_writer(py::module_ &m, const std::string &name) {
+
+  py::class_<ReplayWriter<streaming>>(m, name.c_str())
+    .def(py::init<IReplay &>())
+    .def_readwrite("header", &ReplayWriter<streaming>::header)
+    .def_property(
+      "headerBlk", [](ReplayWriter<streaming> &self) { return DataBlockRW(&self.header_blk); },
+      [](ReplayWriter<streaming> &self, DataBlockRW &blk) { self.header_blk = *blk.ptr(); },
+      py::return_value_policy::reference_internal)
+    .def_property(
+      "footerBlk", [](ReplayWriter<streaming> &self) { return DataBlockRW(&self.footer_blk); },
+      [](ReplayWriter<streaming> &self, DataBlockRW &blk) { self.footer_blk = *blk.ptr(); },
+      py::return_value_policy::reference_internal)
+    .def("writePacket", [](ReplayWriter<streaming> &self, const ReplayPacket &pkt) { self.write(pkt); })
+    .def("write",
+         [](ReplayWriter<streaming> &self, py::bytes &data, uint32_t time_ms, ReplayPacketType type) {
+           auto spn = bytes_to_span(data);
+           self.write(spn.data(), spn.size(), time_ms, type);
+         })
+    .def("createReplay", [](ReplayWriter<streaming> &self) {
+      auto o_spn = self.createReplay();
+      auto s_view = std::string_view{(char *) o_spn.data(), o_spn.size()};
+      // one copy, not too bad
+      return py::bytes(s_view);
+    });
 }
 
 void PyReplay::include(py::module_ &m) {
@@ -126,6 +155,9 @@ void PyReplay::include(py::module_ &m) {
   py::class_<Replay, IReplay>(sub, "Replay").def(py::init<const std::string &>());
 
   py::class_<ServerReplay, IReplay>(sub, "ServerReplay").def(py::init<const std::string &>());
+
+  build_replay_writer<false>(sub, "ReplayWriter");
+  build_replay_writer<true>(sub, "StreamingReplayWriter");
 }
 
 PyReplay py_replay{};
