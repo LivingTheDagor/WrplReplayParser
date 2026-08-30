@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.22)
 set(CMAKE_CXX_STANDARD 23)
 project(WrplReplayParser LANGUAGES C CXX)
 
+if (POLICY CMP0069)
+    cmake_policy(SET CMP0069 NEW)
+endif ()
+
 # ok look I have to do this for whatever reason to make MSVC works, it generates alot of ugly cli warnings but I don't feel like fixing it
 if (MSVC)
     # Enable the CMAKE_MSVC_RUNTIME_LIBRARY variable
@@ -15,6 +19,40 @@ include(cmake/CompilerWarnings.cmake)
 set(BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
+# Enable IPO/LTO for Release builds when supported by the compiler/linker.
+# Works for single-config and multi-config generators.
+
+include(CheckIPOSupported)
+
+option(ENABLE_LTO "Enable link-time optimization (LTO/IPO) in Release builds" ON)
+
+if (ENABLE_LTO)
+    # Multi-config generators (VS, Xcode, Ninja Multi-Config)
+    get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
+    if (isMultiConfig)
+        # Check once; apply only to Release config
+        check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+        if (ipo_supported)
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+            message(STATUS "LTO enabled for Release")
+        else ()
+            message(STATUS "LTO not supported: ${ipo_error}")
+        endif ()
+    else ()
+        # Single-config generators (Unix Makefiles, Ninja)
+        if (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+            check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+            if (ipo_supported)
+                set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+                # set_property(TARGET WrplReplayParser PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+                message(STATUS "LTO enabled for Release")
+            else ()
+                message(STATUS "LTO not supported: ${ipo_error}")
+            endif ()
+        endif ()
+    endif ()
+endif ()
 
 add_compile_definitions(_TARGET_64BIT)
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -78,7 +116,7 @@ endif ()
 set_default_flags()
 
 if (PARSER_MY_FLAGS)
-    if(LDAG_DBGLEVEL_TO_SET EQUAL 0)
+    if (LDAG_DBGLEVEL_TO_SET EQUAL 0)
         set(CMAKE_POSITION_INDEPENDENT_CODE ON)
         set(BUILD_SHARED_LIBS OFF)
     endif ()
@@ -104,9 +142,9 @@ if (PARSER_INCLUDE_EXPERIMENTING_DIRS)
     add_subdirectory(debugging)
     add_subdirectory(ClogDecryptor)
     add_subdirectory(experiment)
-    if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/hidden")
+    if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/hidden")
         add_subdirectory(hidden)
     endif ()
-endif()
+endif ()
 add_subdirectory(src)
 add_subdirectory(replay)
