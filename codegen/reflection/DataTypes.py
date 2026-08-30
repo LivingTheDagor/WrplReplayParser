@@ -5,8 +5,10 @@ from io import StringIO
 from typing import TextIO, Union
 from .write_header import write_header
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .objects.obj_base import InstReflectable
+
 
 # a special type using in template args to represent that this template input is a type
 # think as in std::vector<T>, where T is an arbitrary type
@@ -130,8 +132,10 @@ class DataType(NameSpace):
         self.is_pod = data_reg.is_pod
         if data_reg.is_pod and (data_reg.custom_loader is not None or data_reg.custom_writer is not None):
             raise Exception(f"A datatype(type {name}) cant have a custom rw and be pod")
-        if not data_reg.is_pod and None in [data_reg.custom_writer, data_reg.custom_loader] and len(data_reg.members) == 0:
-            raise Exception(f"A datatype(type {name}) with custom rw must define both reader and write and not be pod (or have components)")
+        if not data_reg.is_pod and None in [data_reg.custom_writer, data_reg.custom_loader] and len(
+                data_reg.members) == 0:
+            raise Exception(
+                f"A datatype(type {name}) with custom rw must define both reader and write and not be pod (or have components)")
         if None not in [data_reg.custom_writer, data_reg.custom_loader]:
             self.has_rw_def = True
             self.Writer = data_reg.custom_writer
@@ -157,7 +161,8 @@ class DataType(NameSpace):
 
     def to_serialize(self, mgr: 'DataTypeManager') -> list[str]:
         insts = [mgr.parse_var_decl(x) for x in self.reg.members]
-        vars = [x.serialize_to_declaration() for x in insts] # we have to do this to remove some var template specifiers (std::vector ex)
+        vars = [x.serialize_to_declaration() for x in
+                insts]  # we have to do this to remove some var template specifiers (std::vector ex)
 
         return [
             f"struct {self.name} {'{'}",
@@ -176,7 +181,6 @@ class DataTypeCompiled:
 
     def __str__(self):
         return self.datatype.reg.name
-
 
 
 class DataTypeInst:
@@ -288,7 +292,7 @@ class DataTypeManager:
             if var.compiled.datatype.has_rw_def:
                 writer = var.compiled.datatype.Writer
             payload.append(writer(self, var, ctx))
-        return f'\n{" "*indent_lvl}'.join(payload)
+        return f'\n{" " * indent_lvl}'.join(payload)
 
     def get_ReflectionVar_loader(self, data_type: DataTypeInst, indent_lvl=0) -> str:
         all_to_be_serialized: list[tuple[str, DataTypeInst]] = []
@@ -299,7 +303,7 @@ class DataTypeManager:
             if var.compiled.datatype.has_rw_def:
                 loader = var.compiled.datatype.Reader
             payload.append(loader(self, var, ctx))
-        return f'\n{" "*indent_lvl}'.join(payload)
+        return f'\n{" " * indent_lvl}'.join(payload)
 
     def get_serializer_name(self, data_type: DataTypeCompiled):
         if len(data_type.template_args) > 0:
@@ -331,7 +335,6 @@ class DataTypeManager:
         data_type.serializer_build = True
         return name
 
-
     def get_ReflectionVar_serializer(self, data_type: DataTypeCompiled) -> str:
         name = self.get_serializer_name(data_type)
         datatype = data_type.datatype.reg.serialize_name(data_type)
@@ -351,7 +354,6 @@ class DataTypeManager:
     return false;
   {'}'}
 """
-
 
     def parse_var_decl(self, decl_str: str) -> DataTypeInst:
         out = decl_str.split(" ")
@@ -383,6 +385,7 @@ class DataTypeManager:
     def parse_type(self, type_str: str, name: str, is_ptr: bool, count: int) -> DataTypeInst:
         type_comp = self.get_compiled_type(type_str)
         return DataTypeInst(name, type_comp, is_ptr, count)
+
     def get_compiled_type(self, type_inst: str) -> DataTypeCompiled:
         """
         :param type_inst:
@@ -424,27 +427,27 @@ class DataTypeManager:
 
         def write_namespace(nm_: NameSpace, indent: int, io: TextIO):
             def write_indent(addon: int = 0):
-                io.write(' '*(indent+addon))
+                io.write(' ' * (indent + addon))
+
             for nm in nm_.contains.values():
                 if does_nm_contain_serialized_types(nm):
                     if isinstance(nm, DataType):
                         for line in nm.to_serialize(self):
                             write_indent()
                             io.write(f"{line}\n")
-                        io.write(f"BOOST_DESCRIBE_STRUCT({nm.name}, (), ({', '.join([x.var_name for x in nm.vars])}))\n")
+                        io.write(
+                            f"BOOST_DESCRIBE_STRUCT({nm.name}, (), ({', '.join([x.var_name for x in nm.vars])}))\n")
                     else:
                         write_indent()
                         io.write(f"namespace {nm.name} {'{'}\n")
-                        write_namespace(nm, indent+2, io)
+                        write_namespace(nm, indent + 2, io)
                         io.write('}\n')
-
 
         with open(f"{codegen_header_path}/types.h", "w") as f:
             write_header(f)
             f.write("#pragma once\n")
             f.write("#include <boost/describe.hpp>\n")
             write_namespace(self.datatypes, 0, f)
-
 
         with open(f"{codegen_header_path}/serializers.h", "w") as f:
             write_header(f)
@@ -459,7 +462,6 @@ class DataTypeManager:
             for chooser in self.EncoderChoosers:
                 f.write(chooser + "\n")
             f.write("}")
-
 
             parsed_types = set()
             with open(f"{codegen_header_path}/forwardDeclarations.h", "w") as f:
@@ -502,7 +504,6 @@ class DataTypeManager:
                 f.write(f"void danet::ReflectableObject::drawObject() const {{}}\n")
                 for obj in self.RegistredObjects:
                     f.write(f"void {obj}::drawObject() const {{}}\n")
-
 
     def compile_bindings(self, header_path: str, cpp_path: str):
         # codegen_objects.cpp is where all reflectable based objects will be created in pybind11
@@ -550,6 +551,7 @@ extern PyCodegenObjects py_codegen_objects;
                 if payload:
                     return True
             return False
+
         def write_namespace(nm_: NameSpace, io: TextIO):
             for nm in nm_.contains.values():
                 if does_nm_contain_serialized_types(nm):
@@ -578,10 +580,10 @@ extern PyCodegenObjects py_codegen_objects;
             io.write("#include \"mpi/reflection.h\"\n")
             io.write("#include \"mpi/types.h\"\n")
             io.write("#include \"modules/mpi/bind_array.h\"\n")
+            io.write("#include \"modules/mpi/bind_reflection_objects.h\"\n")
             io.write("#include \"pybind11/stl_bind.h\"\n")
-            io.write(f"void include_types_{number+1}(py::module &gen);\n")
+            io.write(f"void include_types_{number + 1}(py::module &gen);\n")
             io.write(f"void include_types_{number}(py::module &gen) {{\n")
-
 
         with open(f"{cpp_path}/codegen_types.cpp", "w") as f:
             write_header(f)
@@ -614,56 +616,48 @@ extern PyCodegenObjects py_codegen_objects;
                 print(f"serializing {full}")
                 full_substituted = full.replace("::", "_").replace("<", "_").replace(">", "_").replace(",", "_")
                 if len(data_type.datatype.vars) > 0:
-                    pass # serialized above in write_namespace
+                    pass  # serialized above in write_namespace
                 elif nm == "std::vector":
                     ...
                     f.write(f"  bind_readonly_vector<{full}>(gen, \"{full_substituted}\");\n\n")
                 elif nm == "std::array":
-                    f.write(f"  bind_array<{data_type.template_args[0].full_type_name}, {data_type.template_args[1]}>(mpi, \"{full_substituted}\");\n\n")
-                else: # all these should be types that already exist
+                    f.write(
+                        f"  bind_array<{data_type.template_args[0].full_type_name}, {data_type.template_args[1]}>(mpi, \"{full_substituted}\");\n\n")
+                else:  # all these should be types that already exist
                     ...
 
                 io = StringIO()
                 state_str = f"danet::ReflectionVar<{full}>::TimeState"
                 io.write(f"  //danet::ReflectionVar<{full}> bindings\n")
 
-                #write TimeState instance
-                io.write(f"  py::class_<{state_str}>(gen, \"{full_substituted}_ts\")\n")
-                io.write(f"  .def_readonly(\"time_ms\", &{state_str}::time_ms)\n")
-                io.write(f"  .def_readonly(\"value\", &{state_str}::data);\n\n")
+                # write TimeState instance
+                io.write(f"  bind_time_state<{full}>(gen, \"{full_substituted}_ts\");\n")
 
                 # write TimeState vector instance
                 io.write(
                     f"  bind_readonly_vector<dag::Vector<{state_str}>>(gen, \"{full_substituted}_ts_vector\");\n\n")
 
+                io.write(f"  bind_reflection_var<{full}>(gen, \"{full_substituted}_var\");\n")
 
-                io.write(f"  py::class_<danet::ReflectionVar<{full}>>(gen, \"{full_substituted}_var\")\n")
-                io.write(f"  .def_property_readonly(\"data\", [](danet::ReflectionVar<{full}> &self){{return self.curr();}}, py::return_value_policy::reference_internal)\n")
-                io.write(f"  .def_property_readonly(\"time_ms\", [](danet::ReflectionVar<{full}> &self){{return self.currState()->time_ms;}})\n")
-                io.write(
-                    f"  .def_property_readonly(\"history\", [](danet::ReflectionVar<{full}> &self){{return &self.history();}}, py::return_value_policy::reference_internal);\n\n\n")
                 all_written_objects.append(io)
 
             f.write("include_types_0(gen);\n}")
             OBJECT_COUNT = 8
-            batches = [all_written_objects[i:i+OBJECT_COUNT] for i in range(0, len(all_written_objects), OBJECT_COUNT)]
+            batches = [all_written_objects[i:i + OBJECT_COUNT] for i in
+                       range(0, len(all_written_objects), OBJECT_COUNT)]
             for index, written in enumerate(batches):
                 with open(f"{cpp_path}/codegen_types_{index}.cpp", "w") as f:
                     write_predicate(f, index)
                     for b in written:
                         txt = b.getvalue()
                         f.write(txt)
-                    f.write(f"  include_types_{index+1}(gen);\n}}")
+                    f.write(f"  include_types_{index + 1}(gen);\n}}")
 
             # index isnt destroyed outside the loop, so lets use it to easily write out last file
-            with open(f"{cpp_path}/codegen_types_{index+1}.cpp", "w") as f:
+            with open(f"{cpp_path}/codegen_types_{index + 1}.cpp", "w") as f:
                 f.write("#include \"modules/mpi/mpi.h\"\n")
-                f.write(f"void include_types_{index+1}(py::module &gen) {{}}")
-
-
+                f.write(f"void include_types_{index + 1}(py::module &gen) {{}}")
 
     def refractor_raw_name(self, raw_type: str) -> str:
         compiled = self.get_compiled_type(raw_type)
         return compiled.datatype.reg.serialize_name(compiled)
-
-

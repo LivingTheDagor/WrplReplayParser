@@ -2,6 +2,7 @@
 #include "Unit.h"
 #include "modules/bind_readonly_vector.h"
 #include "modules/bind_rewind_state.h"
+#include "modules/DataBlock/DataBlock.h"
 #include "modules/mpi/codegen_objects.h"
 #include "mpi/types.h"
 #include "state/ParserState.h"
@@ -35,27 +36,29 @@ void PyUnit::include(py::module_ &m) {
 
 
   bind_rewind_state<ObjectRewindState<SpaceTimeEuler, false, false, false>>(m, "SpaceTimeEulerHistory")
-    .def("channels", [](py::object self_py) {
-      auto &self = self_py.cast<ObjectRewindState<SpaceTimeEuler, false, false, false> &>();
-      auto &v = self.history();
-      py::dict d;
-      if (v.empty())
+    .def(
+      "channels",
+      [](py::object self_py) {
+        auto &self = self_py.cast<ObjectRewindState<SpaceTimeEuler, false, false, false> &>();
+        auto &v = self.history();
+        py::dict d;
+        if (v.empty())
+          return d;
+        const auto *b = v.data();
+        const size_t n = v.size();
+        d["time_ms"] = channel_view(b, &b->time_ms, n, self_py);
+        d["x"] = channel_view(b, &b->data.location.x, n, self_py);
+        d["y"] = channel_view(b, &b->data.location.y, n, self_py);
+        d["z"] = channel_view(b, &b->data.location.z, n, self_py);
+        d["yaw"] = channel_view(b, &b->data.euler.y, n, self_py);
+        d["pitch"] = channel_view(b, &b->data.euler.z, n, self_py);
+        d["roll"] = channel_view(b, &b->data.euler.x, n, self_py);
         return d;
-      const auto *b = v.data();
-      const size_t n = v.size();
-      d["time_ms"] = channel_view(b, &b->time_ms, n, self_py);
-      d["x"] = channel_view(b, &b->data.location.x, n, self_py);
-      d["y"] = channel_view(b, &b->data.location.y, n, self_py);
-      d["z"] = channel_view(b, &b->data.location.z, n, self_py);
-      d["yaw"] = channel_view(b, &b->data.euler.y, n, self_py);
-      d["pitch"] = channel_view(b, &b->data.euler.z, n, self_py);
-      d["roll"] = channel_view(b, &b->data.euler.x, n, self_py);
-      return d;
-    },
-         "All samples as read-only zero-copy numpy views over the history buffer.\n"
-         "Empty dict when the history is empty, otherwise every array has the same length.\n"
-         "Keys: time_ms (uint32, ms); x, y, z (float32, meters, y is altitude);\n"
-         "yaw, pitch, roll (float32, radians, hull orientation).");
+      },
+      "All samples as read-only zero-copy numpy views over the history buffer.\n"
+      "Empty dict when the history is empty, otherwise every array has the same length.\n"
+      "Keys: time_ms (uint32, ms); x, y, z (float32, meters, y is altitude);\n"
+      "yaw, pitch, roll (float32, radians, hull orientation).");
 
   bind_readonly_vector<std::vector<SpaceTime>>(m, "SpaceTimeList");
   bind_readonly_vector<std::vector<SpaceTimeEuler>>(m, "SpaceTimeEulerList");
@@ -92,40 +95,42 @@ void PyUnit::include(py::module_ &m) {
 
 
   bind_rewind_state<ObjectRewindState<unit::TurretData, false, false, false>>(m, "TurretDataHistory")
-    .def("channels", [](py::object self_py) {
-      auto &self = self_py.cast<ObjectRewindState<unit::TurretData, false, false, false> &>();
-      auto &v = self.history();
-      py::dict d;
-      if (v.empty())
+    .def(
+      "channels",
+      [](py::object self_py) {
+        auto &self = self_py.cast<ObjectRewindState<unit::TurretData, false, false, false> &>();
+        auto &v = self.history();
+        py::dict d;
+        if (v.empty())
+          return d;
+        const auto *b = v.data();
+        const size_t n = v.size();
+        d["time_ms"] = channel_view(b, &b->time_ms, n, self_py);
+        d["yaw"] = channel_view(b, &b->data.abs.x, n, self_py);
+        d["pitch"] = channel_view(b, &b->data.abs.y, n, self_py);
+        d["roll"] = channel_view(b, &b->data.abs.z, n, self_py);
+        d["rel_yaw"] = channel_view(b, &b->data.rel.x, n, self_py);
+        d["rel_pitch"] = channel_view(b, &b->data.rel.y, n, self_py);
+        d["rel_roll"] = channel_view(b, &b->data.rel.z, n, self_py);
+        d["gun_yaw"] = channel_view(b, &b->data.gun_abs.x, n, self_py);
+        d["gun_pitch"] = channel_view(b, &b->data.gun_abs.y, n, self_py);
+        d["gun_roll"] = channel_view(b, &b->data.gun_abs.z, n, self_py);
+        d["gun_rel_yaw"] = channel_view(b, &b->data.gun_rel.x, n, self_py);
+        d["gun_rel_pitch"] = channel_view(b, &b->data.gun_rel.y, n, self_py);
+        d["gun_rel_roll"] = channel_view(b, &b->data.gun_rel.z, n, self_py);
         return d;
-      const auto *b = v.data();
-      const size_t n = v.size();
-      d["time_ms"] = channel_view(b, &b->time_ms, n, self_py);
-      d["yaw"] = channel_view(b, &b->data.abs.x, n, self_py);
-      d["pitch"] = channel_view(b, &b->data.abs.y, n, self_py);
-      d["roll"] = channel_view(b, &b->data.abs.z, n, self_py);
-      d["rel_yaw"] = channel_view(b, &b->data.rel.x, n, self_py);
-      d["rel_pitch"] = channel_view(b, &b->data.rel.y, n, self_py);
-      d["rel_roll"] = channel_view(b, &b->data.rel.z, n, self_py);
-      d["gun_yaw"] = channel_view(b, &b->data.gun_abs.x, n, self_py);
-      d["gun_pitch"] = channel_view(b, &b->data.gun_abs.y, n, self_py);
-      d["gun_roll"] = channel_view(b, &b->data.gun_abs.z, n, self_py);
-      d["gun_rel_yaw"] = channel_view(b, &b->data.gun_rel.x, n, self_py);
-      d["gun_rel_pitch"] = channel_view(b, &b->data.gun_rel.y, n, self_py);
-      d["gun_rel_roll"] = channel_view(b, &b->data.gun_rel.z, n, self_py);
-      return d;
-    },
-         "All samples as read-only zero-copy numpy views over the history buffer.\n"
-         "Empty dict when the history is empty, otherwise every array has the same length.\n"
-         "Keys: time_ms (uint32, ms); then float32 radians, in yaw/pitch/roll order:\n"
-         "yaw, pitch, roll - turret node (head), absolute;\n"
-         "rel_yaw, rel_pitch, rel_roll - turret node, relative to its parent node;\n"
-         "gun_yaw, gun_pitch, gun_roll - gun node, absolute;\n"
-         "gun_rel_yaw, gun_rel_pitch, gun_rel_roll - gun node, relative to the turret.\n"
-         "Absolute values are the sum of the parent absolute and the relative one, per axis,\n"
-         "with the hull as the tree root: turret traverse = yaw - hull yaw,\n"
-         "gun elevation = gun_pitch - pitch. Only yaw, pitch and gun_pitch carry new data,\n"
-         "the rest duplicate the hull or the turret.");
+      },
+      "All samples as read-only zero-copy numpy views over the history buffer.\n"
+      "Empty dict when the history is empty, otherwise every array has the same length.\n"
+      "Keys: time_ms (uint32, ms); then float32 radians, in yaw/pitch/roll order:\n"
+      "yaw, pitch, roll - turret node (head), absolute;\n"
+      "rel_yaw, rel_pitch, rel_roll - turret node, relative to its parent node;\n"
+      "gun_yaw, gun_pitch, gun_roll - gun node, absolute;\n"
+      "gun_rel_yaw, gun_rel_pitch, gun_rel_roll - gun node, relative to the turret.\n"
+      "Absolute values are the sum of the parent absolute and the relative one, per axis,\n"
+      "with the hull as the tree root: turret traverse = yaw - hull yaw,\n"
+      "gun elevation = gun_pitch - pitch. Only yaw, pitch and gun_pitch carry new data,\n"
+      "the rest duplicate the hull or the turret.");
 
 
   py::class_<unit::TurretDesc, std::unique_ptr<unit::TurretDesc, py::nodelete>>(unit, "TurretDesc")
@@ -146,7 +151,8 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("base_dvm_data", &unit::Unit::base_dvm_data)
     .def_readonly("unitType", &unit::Unit::unitType)
     .def_readonly("uid", &unit::Unit::uid)
-    .def_readonly("created_at_ms", &unit::Unit::created_at_ms, "When the unit was created in the ECS. does not correlate to when it actually spawned in")
+    .def_readonly("created_at_ms", &unit::Unit::created_at_ms,
+                  "When the unit was created in the ECS. does not correlate to when it actually spawned in")
     .def_readonly("killed_at_ms", &unit::Unit::killed_at_ms,
                   "When the vehicle was killed.\n of 0xFFFFFFFF, then the unit is still alive")
     .def_readonly("killed_position", &unit::Unit::killed_position)
@@ -162,15 +168,19 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("spawn_position", &unit::Unit::spawn_position)
     .def_readonly("loadout_name", &unit::Unit::loadout_name)
     .def_readonly("skin_name", &unit::Unit::skin_name)
-    .def_readonly("camo_info", &unit::Unit::camo_info)
-    .def_readonly("custom_weapons_blk", &unit::Unit::custom_weapons_blk)
+    .def_property_readonly(
+      "camo_info", [](unit::Unit &self) { return DataBlockRO(&self.camo_info); },
+      py::return_value_policy::reference_internal)
+    .def_property_readonly(
+      "custom_weapons_blk", [](unit::Unit &self) { return DataBlockRO(&self.custom_weapons_blk); },
+      py::return_value_policy::reference_internal)
     .def_readonly("weapons", &unit::Unit::storage_weapons)
     .def_readonly("weapon_mods", &unit::Unit::weapon_mods)
     .def_readonly("actual_weapons", &unit::Unit::weapons)
     .def_readonly("fm_mods", &unit::Unit::fm_mods)
     .def_readonly("positions", &unit::Unit::positions)
-    .def_readonly("unit_wpcost", &unit::Unit::unit_wpcost)
-    .def_readonly("unit_tags", &unit::Unit::unit_tags)
+    .def_property_readonly("unit_wpcost", [](unit::Unit &self) { return DataBlockRO(self.unit_wpcost); })
+    .def_property_readonly("unit_tags", [](unit::Unit &self) { return DataBlockRO(self.unit_tags); })
     .def("getTags", &unit::Unit::getTags)
     .def_readonly("name_index_shop", &unit::Unit::name_index_shop)
     .def_readonly("name_index_0", &unit::Unit::name_index_0)
@@ -178,7 +188,7 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("name_index_2", &unit::Unit::name_index_2);
 
   unit.def("getUnitTagsName", &unit::getUnitTagsName, py::arg("name"));
-  unit.def("getUnitTagsBlk", &unit::getUnitTagsBlk, py::arg("blk"));
+  unit.def("getUnitTagsBlk", [](DataBlockRO &blk) { return unit::getUnitTagsBlk(blk.ptr()); }, py::arg("blk"));
 
   py::class_<unit::UnitRef>(unit, "UnitRef").def_readonly("unit", &unit::UnitRef::unit);
 
