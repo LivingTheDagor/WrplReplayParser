@@ -126,6 +126,7 @@ void ParserState::setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid)
 
 ParserState::~ParserState() {
   _in_destruction_state = this;
+  _in_destruction_allocator = &this->allocator;
   is_dtor = true;
   ZoneScoped;
   this->rewindToMs(0xFFFFFFFF);

@@ -123,3 +123,6 @@ public:
 
   DagAllocType getMem() { return &dagAlloc; }
 };
+
+/// see _in_destruction_state, represents the allocator of the currently being destroyed state
+inline thread_local StateAllocator *_in_destruction_allocator{};

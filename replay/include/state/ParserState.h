@@ -196,15 +196,7 @@ ObjectRewindState<T, do_compare, take_ownership, create_default>::ObjectRewindSt
     this->state = nullptr;
   }
 }
-template<typename T, bool do_compare, bool take_ownership, bool create_default>
-ObjectRewindState<T, do_compare, take_ownership, create_default>::~ObjectRewindState() {
-  if constexpr (take_ownership) {
-    auto g_state = _in_destruction_state;
-    for (auto &s: this->time_states) {
-      g_state->_delete(s.data);
-    }
-  }
-}
+
 
 #if LDAG_DBGLEVEL > 0
 template<typename T, bool do_compare, bool take_ownership, bool create_default>
