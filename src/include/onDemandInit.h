@@ -16,7 +16,8 @@ public:
 
   template<typename... Args>
   void initialize(Args &&...args) {
-    DG_ASSERT(initialized == false);
+    if (initialized)
+      return;
     initialized = true; // some of my objs, notably GState, needs itself during init (I know, I know)
     new (obj) T(std::forward<Args>(args)...);
   }
@@ -33,9 +34,7 @@ private:
     return (T *) &obj;
   }
   alignas(T) mutable uint8_t obj[sizeof(T)];
-#if LDAG_DBGLEVEL > 0
   mutable bool initialized = false;
-#endif
 };
 
 #endif // MYEXTENSION_ONDEMANDINIT_H

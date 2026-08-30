@@ -54,30 +54,33 @@ void writePacketSize(IGenSave &cb, uint32_t size) {
   uint8_t buff[5];
   uint8_t sz = 0;
 
-  if (size < 0x80) {
-    buff[0] = 0x80 | (size & 0x7F);
+  uint32_t num_bytes = (size + 7) >> 3; // Round up to nearest byte
+  uint8_t byte0 = (uint8_t) num_bytes;
+
+  if (size < 0x1f9) {
+    buff[0] = byte0 | 0x80;
     sz = 1;
-  } else if (size < 0x4000) {
-    uint32_t v = 0x4000 ^ size;
-    buff[0] = (v >> 8) & 0xFF;
-    buff[1] = v & 0xFF;
+  } else if (size < 0xfff9) {
+    buff[0] = ((size >> 0xb) & 0xFF) | 0x40;
+    buff[1] = byte0;
     sz = 2;
-  } else if (size < 0x200000) {
-    uint32_t v = 0x200000 ^ size;
-    buff[0] = (v >> 16) & 0xFF;
-    buff[1] = (v >> 8) & 0xFF;
-    buff[2] = v & 0xFF;
+  } else if (size < 0x7ffff9) {
+    buff[0] = ((size >> 0x13) & 0xFF) | 0x20;
+    buff[1] = (size >> 0xb) & 0xFF;
+    buff[2] = byte0;
     sz = 3;
-  } else if (size < 0x10000000) {
-    uint32_t v = 0x10000000 ^ size;
-    buff[0] = (v >> 24) & 0xFF;
-    buff[1] = (v >> 16) & 0xFF;
-    buff[2] = (v >> 8) & 0xFF;
-    buff[3] = v & 0xFF;
+  } else if (size < 0x3ffffff9) {
+    buff[0] = (((size >> 0x18) & 0xFF) >> 3) | 0x10;
+    buff[1] = (size >> 0x13) & 0xFF;
+    buff[2] = (size >> 0xb) & 0xFF;
+    buff[3] = byte0;
     sz = 4;
   } else {
-    buff[0] = 0;
-    memcpy(buff + 1, &size, 4);
+    buff[0] = 0x00;
+    buff[1] = byte0;
+    buff[2] = (size >> 0xb) & 0xFF;
+    buff[3] = (size >> 0x13) & 0xFF;
+    buff[4] = ((size >> 0x18) & 0xFF) >> 3;
     sz = 5;
   }
 
@@ -111,6 +114,8 @@ bool FullDecompressReplayReader::getNextPacket(ReplayPacket &packet) {
   }
   packet.timestamp_ms = curr_time;
   packet.type = (ReplayPacketType) type_t;
+  uint32_t offs = BITS_TO_BYTES(packet.stream.GetReadOffset());
+  packet.stream = BitStream(packet.stream.GetData() + offs, pkt_sz - offs, false);
   return true;
 }
 

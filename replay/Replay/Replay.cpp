@@ -24,16 +24,16 @@ IReplayReader *Replay::getCompressedReplayReader() {
   std::span<uint8_t> data;
   IBaseLoad *rdr = nullptr;
   {
-  ZoneScopedN("Replay::getCompressedReplayReader::data");
+    ZoneScopedN("Replay::getCompressedReplayReader::data");
     data = getData();
   }
   {
-  ZoneScopedN("Replay::getCompressedReplayReader::memCB");
-  rdr = new InPlaceMemLoadCB((char *) data.data(), (int) data.size());
+    ZoneScopedN("Replay::getCompressedReplayReader::memCB");
+    rdr = new InPlaceMemLoadCB((char *) data.data(), (int) data.size());
   }
   {
-  ZoneScopedN("Replay::getCompressedReplayReader::reader");
-  return new CompressedReplayReader{*this, rdr, data.size()};
+    ZoneScopedN("Replay::getCompressedReplayReader::reader");
+    return new CompressedReplayReader{*this, rdr, data.size()};
   }
 }
 
@@ -259,3 +259,74 @@ bool ServerReplay::isValid() {
   }
   return true;
 }
+
+template<bool streamWrite>
+void ReplayWriter<streamWrite>::write(const void *data, size_t size, uint32_t time_ms, ReplayPacketType type) {
+  // 2 is packet type, 4 is potential time_ms, and 5 is max size of packet size header
+  tmp_data.resize(size + 2 + 4 + 5);
+  ConstrainedMemSaveCB tmp_cb{tmp_data.data(), static_cast<int>(tmp_data.size())};
+  uint32_t curr_pkt_size = (uint32_t) size + 2;
+  uint16_t curr_type = (uint16_t) type;
+  bool should_write_time = (time_ms != curr_time_ms);
+  curr_pkt_size += should_write_time ? 4 : 0;
+  writePacketSize(tmp_cb, BYTES_TO_BITS(curr_pkt_size));
+  if (!should_write_time)
+    curr_type |= 0x10;
+  tmp_cb.writeObj(curr_type);
+  if (should_write_time)
+    tmp_cb.writeObj(time_ms);
+  curr_time_ms = time_ms;
+  tmp_cb.write(data, (int) size);
+  auto &cb = getWriter();
+  cb.write(tmp_data.data(), tmp_cb.tell());
+}
+template<bool streamWrite>
+void ReplayWriter<streamWrite>::write2(ReplayPacket &pkt) {}
+
+template<bool streamWrite>
+std::span<uint8_t> ReplayWriter<streamWrite>::getCompressedData(std::vector<uint8_t> &storage) {
+  if constexpr (streamWrite) {
+    zlib_cb.writer.finish();
+    return std::span<uint8_t>{(uint8_t *) base_cb.data(), (size_t) base_cb.tell()};
+  } else {
+    auto compressor = libdeflate_alloc_compressor(9);
+    size_t max_size = libdeflate_deflate_compress_bound(compressor, base_cb.tell());
+    storage.resize(max_size);
+    size_t compressed_size =
+      libdeflate_zlib_compress(compressor, base_cb.data(), base_cb.tell(), storage.data(), max_size);
+    libdeflate_free_compressor(compressor);
+    storage.resize(compressed_size);
+    storage.shrink_to_fit();
+    return storage;
+  }
+}
+
+template<bool streamWrite>
+owned_span<uint8_t> ReplayWriter<streamWrite>::createReplay() {
+  DynamicMemGeneralSaveCB final_cb{};
+  final_cb.writeObj(header); // temp write, will be written over later
+  uint32_t curr_offs, future_offs;
+  curr_offs = final_cb.tell();
+  writeBlkToStream(header_blk, final_cb);
+  future_offs = final_cb.tell();
+  header.settings_blk_size = static_cast<uint16_t>(future_offs - curr_offs);
+  header.magic = CURR_MAGIC;
+  std::vector<uint8_t> tmp_vector{};
+  auto compressed = getCompressedData(tmp_data);
+  final_cb.write(compressed.data(), (int) compressed.size());
+  if (!footer_blk.isEmpty()) {
+    header.footer_blk_offset = final_cb.tell();
+    writeBlkToStream(footer_blk, final_cb);
+  } else {
+    header.footer_blk_offset = 0;
+  }
+  auto end_offs = final_cb.tell();
+  final_cb.seekto(0);
+  final_cb.writeObj(header);
+  final_cb.seekto(end_offs);
+  auto ptr = final_cb.acquire();
+  return {ptr, (size_t) final_cb.tell()};
+}
+
+template class ReplayWriter<false>;
+template class ReplayWriter<true>;

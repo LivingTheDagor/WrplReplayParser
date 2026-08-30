@@ -16,7 +16,7 @@
 #include <csignal>
 #include <cstdlib>
 
-//#include <unistd.h>
+// #include <unistd.h>
 
 
 std::string convert_os_path_to_wsl2(std::string &str) { // this function assumes a windows os with a wsl2 linux
@@ -36,7 +36,7 @@ std::string convert_os_path_to_wsl2(const char *str) {
 
 
 int main() {
-  //std::signal(SIGSEGV, signal_handler);
+  // std::signal(SIGSEGV, signal_handler);
   fs::path conf_dir = CONFIG_DIR;
   fs::path config_file = conf_dir / "dagor_replay_test.blk";
   DataBlock conf_blk{};
@@ -46,22 +46,23 @@ int main() {
   auto replay_path = conf_blk.getStr("source", nullptr);
   bool bin_is_linux_path = conf_blk.getBool("bin_is_linux_path", false);
   auto bin_path = conf_blk.getStr("bin_path", nullptr);
+  g_log_handler.initialize();
   g_log_handler->loadSinkFromDataBlock(*conf_blk.getBlockByNameEx("logging"));
   std::string rpl_path_str = replay_path;
   std::string bin_path_str = bin_path;
   G_UNUSED(source_is_linux_path);
   G_UNUSED(bin_is_linux_path);
 #ifdef _TARGET_PC_LINUX
-  if(!source_is_linux_path) {
+  if (!source_is_linux_path) {
     rpl_path_str = convert_os_path_to_wsl2(replay_path);
   }
-  if(!bin_is_linux_path) {
+  if (!bin_is_linux_path) {
     bin_path_str = convert_os_path_to_wsl2(bin_path);
   }
 #endif
   std::string logfile_str = (conf_dir / "logfile.txt").string();
   initialize(bin_path_str, "", logfile_str);
-  //auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
+  // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
   IReplayReader *rdr = nullptr;
   IReplay *rpl = nullptr;
   if (is_server_replay) {
@@ -76,17 +77,18 @@ int main() {
   {
     ParserState state{rpl};
     ReplayPacket pkt{};
-    //std::exit(0);
+    // std::exit(0);
 
     while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
     for (auto &plr: state.players) {
       auto owned_eid = *plr.ownedUnitRef.Get();
-      std::string * vehicle = nullptr;
+      std::string *vehicle = nullptr;
       if (owned_eid != ecs::INVALID_ENTITY_ID) {
         vehicle = state.g_entity_mgr.getNullable<ecs::string>(owned_eid, ECS_HASH("unit__className"));
       }
-      if(vehicle)
-        LOGE("player_id: {}; playerName: {}; team: {}; vehicle: {}", plr.uid.Get()->account_id, plr.uid.Get()->name, *plr.team.Get(), *vehicle);
+      if (vehicle)
+        LOGE("player_id: {}; playerName: {}; team: {}; vehicle: {}", plr.uid.Get()->account_id, plr.uid.Get()->name,
+             *plr.team.Get(), *vehicle);
       else
         LOGE("Name: {}; team: {}; no_vehicle", plr.uid.Get()->name, *plr.team.Get());
     }
@@ -97,16 +99,15 @@ int main() {
     state.rewindToMs(156777);
     delete rdr;
     delete rpl;
-
   }
   auto ended = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> duration = ended - start;
   // Output the result
   LOGI("Finished loading replay in {} ms, packet count: {}", duration.count(), idx);
-  //rpl.HeaderBlk.printBlock(0, std::cout);
-  //rpl.FooterBlk.printBlock(0, std::cout);
-  //ecs::g_entity_mgr->debugPrintEntities();
-  //rpl.HeaderBlk.printBlock(0, std::cout);
-  //ecs::g_entity_mgr->getTemplateDB()->DebugPrint();
+  // rpl.HeaderBlk.printBlock(0, std::cout);
+  // rpl.FooterBlk.printBlock(0, std::cout);
+  // ecs::g_entity_mgr->debugPrintEntities();
+  // rpl.HeaderBlk.printBlock(0, std::cout);
+  // ecs::g_entity_mgr->getTemplateDB()->DebugPrint();
   return 0;
 }

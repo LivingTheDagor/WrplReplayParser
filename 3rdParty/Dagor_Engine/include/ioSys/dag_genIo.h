@@ -141,6 +141,11 @@ public:
 
   inline void writeInt64(int64_t v) { write(&v, sizeof(int64_t)); }
 
+  template<typename T>
+  inline void writeObj(const T &v) {
+    write(&v, sizeof(T));
+  }
+
   template<int BYTENUM>
   inline void writeIntP(int v) {
     G_STATIC_ASSERT(BYTENUM > 0 && BYTENUM <= 4);
