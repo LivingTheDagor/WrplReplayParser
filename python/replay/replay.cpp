@@ -47,6 +47,14 @@ auto build_replay_writer(py::module_ &m, const std::string &name) {
     });
 }
 
+template<size_t length>
+void writeInto(std::string_view data, char (&buff)[length]) {
+  G_STATIC_ASSERT(length > 0);
+  const size_t n = std::min(data.size(), length - 1);
+  std::copy_n(data.data(), n, buff);
+  buff[n] = '\0';
+}
+
 void PyReplay::include(py::module_ &m) {
   DO_INCLUDE()
   py_data_block.include(m);
@@ -73,39 +81,53 @@ void PyReplay::include(py::module_ &m) {
   py::class_<ReplayHeader>(sub, "ReplayHeader")
     .def_readonly("header", &ReplayHeader::header)
     .def_readonly("magic", &ReplayHeader::magic)
-    .def_property_readonly("level_path", [](ReplayHeader &header) { return getStr(header.level_path); })
-    .def_property_readonly("mission_file", [](ReplayHeader &header) { return getStr(header.mission_file); })
-    .def_property_readonly("mission_name", [](ReplayHeader &header) { return getStr(header.mission_name); })
-    .def_property_readonly("environment", [](ReplayHeader &header) { return getStr(header.environment); })
-    .def_property_readonly("weather", [](ReplayHeader &header) { return getStr(header.weather); })
+    .def_property(
+      "level_path", [](ReplayHeader &header) { return getStr(header.level_path); },
+      [](ReplayHeader &header, std::string_view val) { writeInto(val, header.level_path); })
+    .def_property(
+      "mission_file", [](ReplayHeader &header) { return getStr(header.mission_file); },
+      [](ReplayHeader &header, std::string_view val) { writeInto(val, header.mission_file); })
+    .def_property(
+      "mission_name", [](ReplayHeader &header) { return getStr(header.mission_name); },
+      [](ReplayHeader &header, std::string_view val) { writeInto(val, header.mission_name); })
+    .def_property(
+      "environment", [](ReplayHeader &header) { return getStr(header.environment); },
+      [](ReplayHeader &header, std::string_view val) { writeInto(val, header.environment); })
+    .def_property(
+      "weather", [](ReplayHeader &header) { return getStr(header.weather); },
+      [](ReplayHeader &header, std::string_view val) { writeInto(val, header.weather); })
     .def_readonly("footer_blk_offset", &ReplayHeader::footer_blk_offset)
-    .def_readonly("difficulty_part_1", &ReplayHeader::difficulty_part_1)
-    .def_readonly("difficulty_part_2", &ReplayHeader::difficulty_part_2)
-    .def_readonly("SessionType", &ReplayHeader::SessionType)
-    .def_readonly("player_count", &ReplayHeader::player_count)
-    .def_readonly("session_id", &ReplayHeader::session_id)
-    .def_readonly("replay_part_number", &ReplayHeader::replay_part_number)
-    .def_readonly("unk1", &ReplayHeader::unk1)
-    .def_readonly("segmentLengthSec", &ReplayHeader::segmentLengthSec)
-    .def_readonly("skiesInitialRandomSeed", &ReplayHeader::skiesInitialRandomSeed)
+    .def_readwrite("difficulty_part_1", &ReplayHeader::difficulty_part_1)
+    .def_readwrite("difficulty_part_2", &ReplayHeader::difficulty_part_2)
+    .def_readwrite("SessionType", &ReplayHeader::SessionType)
+    .def_readwrite("player_count", &ReplayHeader::player_count)
+    .def_readwrite("session_id", &ReplayHeader::session_id)
+    .def_readwrite("replay_part_number", &ReplayHeader::replay_part_number)
+    .def_readwrite("unk1", &ReplayHeader::unk1)
+    .def_readwrite("segmentLengthSec", &ReplayHeader::segmentLengthSec)
+    .def_readwrite("skiesInitialRandomSeed", &ReplayHeader::skiesInitialRandomSeed)
     .def_readonly("settings_blk_size", &ReplayHeader::settings_blk_size)
-    .def_readonly("isWorldWar", &ReplayHeader::isWorldWar)
-    .def_readonly("start_time", &ReplayHeader::start_time)
-    .def_readonly("time_limit", &ReplayHeader::time_limit)
-    .def_readonly("score_limit", &ReplayHeader::score_limit)
-    .def_readonly("killLimit", &ReplayHeader::killLimit)
-    .def_readonly("gameType", &ReplayHeader::gameType)
-    .def_readonly("restoreType", &ReplayHeader::restoreType)
-    .def_readonly("playerNo", &ReplayHeader::playerNo)
-    .def_readonly("numAttempts", &ReplayHeader::numAttempts)
-    .def_readonly("isAttempts", &ReplayHeader::isAttempts)
-    .def_readonly("isLimitedAmmo", &ReplayHeader::isLimitedAmmo)
-    .def_readonly("isLimitedFuel", &ReplayHeader::isLimitedFuel)
-    .def_readonly("gameMode", &ReplayHeader::gameMode)
-    .def_property_readonly("chapterName", [](ReplayHeader &header) { return getStr(header.chapterName); })
-    .def_property_readonly("battle_kill_streak", [](ReplayHeader &header) { return getStr(header.battle_kill_streak); })
-    .def_readonly("snapshotPeriodSec", &ReplayHeader::snapshotPeriodSec)
-    .def_readonly("gameVersion", &ReplayHeader::gameVersion);
+    .def_readwrite("isWorldWar", &ReplayHeader::isWorldWar)
+    .def_readwrite("start_time", &ReplayHeader::start_time)
+    .def_readwrite("time_limit", &ReplayHeader::time_limit)
+    .def_readwrite("score_limit", &ReplayHeader::score_limit)
+    .def_readwrite("killLimit", &ReplayHeader::killLimit)
+    .def_readwrite("gameType", &ReplayHeader::gameType)
+    .def_readwrite("restoreType", &ReplayHeader::restoreType)
+    .def_readwrite("playerNo", &ReplayHeader::playerNo)
+    .def_readwrite("numAttempts", &ReplayHeader::numAttempts)
+    .def_readwrite("isAttempts", &ReplayHeader::isAttempts)
+    .def_readwrite("isLimitedAmmo", &ReplayHeader::isLimitedAmmo)
+    .def_readwrite("isLimitedFuel", &ReplayHeader::isLimitedFuel)
+    .def_readwrite("gameMode", &ReplayHeader::gameMode)
+    .def_property(
+      "chapterName", [](ReplayHeader &header) { return getStr(header.chapterName); },
+      [](ReplayHeader &header, std::string_view val) { writeInto(val, header.chapterName); })
+    .def_property(
+      "battle_kill_streak", [](ReplayHeader &header) { return getStr(header.battle_kill_streak); },
+      [](ReplayHeader &header, std::string_view val) { writeInto(val, header.battle_kill_streak); })
+    .def_readwrite("snapshotPeriodSec", &ReplayHeader::snapshotPeriodSec)
+    .def_readwrite("gameVersion", &ReplayHeader::gameVersion);
 
   py::class_<IReplayReaderIterInto>(sub, "IReplayReaderIterInto")
     .def("__iter__", [](IReplayReaderIterInto &rdr) { return rdr; })
