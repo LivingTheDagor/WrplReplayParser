@@ -52,7 +52,7 @@ void writeInto(std::string_view data, char (&buff)[length]) {
   G_STATIC_ASSERT(length > 0);
   const size_t n = std::min(data.size(), length - 1);
   std::copy_n(data.data(), n, buff);
-  buff[n] = '\0';
+  std::memset(buff + n, 0, length - n);
 }
 
 void PyReplay::include(py::module_ &m) {
