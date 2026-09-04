@@ -253,20 +253,20 @@ IReplayReader *ServerReplay::getReplayReader() { return new ServerReplayReader<f
 IReplayReader *ServerReplay::getCompressedReplayReader() { return new ServerReplayReader<true>(*this); }
 
 bool ServerReplay::isValid() {
-  for (auto &rpl: replay_files) {
+  for (auto rpl: replay_files) {
     if (!rpl->is_valid)
       return false;
   }
   return true;
 }
-
+/*
 template<bool streamWrite>
 void ReplayWriter<streamWrite>::write(const void *data, size_t size, uint32_t time_ms, ReplayPacketType type) {
   // 2 is packet type, 4 is potential time_ms, and 5 is max size of packet size header
   tmp_data.resize(size + 2 + 4 + 5);
   ConstrainedMemSaveCB tmp_cb{tmp_data.data(), static_cast<int>(tmp_data.size())};
   uint32_t curr_pkt_size = (uint32_t) size + 2;
-  uint16_t curr_type = (uint16_t) type;
+  auto curr_type = static_cast<uint16_t>(type);
   bool should_write_time = (time_ms != curr_time_ms);
   curr_pkt_size += should_write_time ? 4 : 0;
   writePacketSize(tmp_cb, BYTES_TO_BITS(curr_pkt_size));
@@ -276,12 +276,31 @@ void ReplayWriter<streamWrite>::write(const void *data, size_t size, uint32_t ti
   if (should_write_time)
     tmp_cb.writeObj(time_ms);
   curr_time_ms = time_ms;
-  tmp_cb.write(data, (int) size);
+  tmp_cb.write(data, static_cast<int>(size));
   auto &cb = getWriter();
   cb.write(tmp_data.data(), tmp_cb.tell());
-}
+}*/
 template<bool streamWrite>
-void ReplayWriter<streamWrite>::write2(const ReplayPacket &pkt) {}
+void ReplayWriter<streamWrite>::write(const ReplayPacket &pkt) {
+  struct __attribute__((packed)) {
+    uint16_t packet_type;
+    uint32_t time_ms;
+  } temp{};
+  static_assert(sizeof(temp) == 6);
+  auto &cb = getWriter();
+  bool write_timestamp;
+  writePacketSize(cb, this->calculatePacketSize(pkt, write_timestamp));
+  temp.packet_type = static_cast<uint16_t>(pkt.type);
+  if (!write_timestamp) {
+    temp.packet_type |= 0x10;
+    cb.writeObj(temp.packet_type);
+  } else {
+    temp.time_ms = pkt.timestamp_ms;
+    cb.writeObj(temp);
+  }
+  cb.write(pkt.stream.GetData(), BITS_TO_BYTES(pkt.stream.GetWriteOffset()));
+  curr_time_ms = pkt.timestamp_ms;
+}
 
 template<bool streamWrite>
 std::span<uint8_t> ReplayWriter<streamWrite>::getCompressedData(std::vector<uint8_t> &storage) {
@@ -312,7 +331,7 @@ owned_span<uint8_t> ReplayWriter<streamWrite>::createReplay() {
   header.settings_blk_size = static_cast<uint16_t>(future_offs - curr_offs);
   header.magic = CURR_MAGIC;
   std::vector<uint8_t> tmp_vector{};
-  auto compressed = getCompressedData(tmp_data);
+  auto compressed = getCompressedData(tmp_vector);
   final_cb.write(compressed.data(), (int) compressed.size());
   if (!footer_blk.isEmpty()) {
     header.footer_blk_offset = final_cb.tell();

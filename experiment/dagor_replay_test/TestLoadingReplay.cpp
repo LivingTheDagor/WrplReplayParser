@@ -9,6 +9,8 @@
 #include "Replay/Replay.h"
 #include "mpi/ObjectDispatcher.h"
 #include "Logger.h"
+#include "mimalloc-stats.h"
+#include "mimalloc/types.h"
 
 #include "state/ParserState.h"
 #include <cctype>
@@ -34,6 +36,60 @@ std::string convert_os_path_to_wsl2(const char *str) {
   return convert_os_path_to_wsl2(t);
 }
 
+
+// Accumulator for one heap
+typedef struct heap_usage_s {
+  size_t reserved_bytes; // total block bytes owned by this heap
+  size_t committed_bytes;
+  size_t used_bytes; // live payload bytes
+  size_t blocks;
+} heap_usage_t;
+
+/*
+  dev3 callback shape may vary slightly by commit.
+  Adjust argument names/types to match your mimalloc/types.h header.
+*/
+static bool visit_block(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *arg) {
+  (void) heap;
+  (void) area;
+  (void) block;
+  heap_usage_t *u = (heap_usage_t *) arg;
+  u->blocks++;
+  u->reserved_bytes += block_size;
+
+  // In dev3, area carries page-level info; commonly includes used/committed.
+  // If your mi_heap_area_t has these fields, accumulate them once per area
+  // instead of per block to avoid double counting.
+  // (See note below.)
+  return true; // continue visiting
+}
+
+static bool visit_area(const mi_heap_t *heap, const mi_heap_area_t *area, void *arg) {
+  (void) heap;
+  heap_usage_t *u = (heap_usage_t *) arg;
+  // Field names can differ by dev3 revision; common intent:
+  // u->committed_bytes += area->committed;
+  // u->used_bytes      += area->used;
+  return true;
+}
+
+heap_usage_t get_heap_usage(mi_heap_t *h) {
+  heap_usage_t u = {0};
+
+  // Force delayed frees/retired pages to be accounted
+  mi_heap_collect(h, true);
+
+  // Visit all blocks in this heap.
+  // Depending on dev3 revision, the signature may provide:
+  //   area callback + block callback
+  // or a single callback with area metadata.
+  //
+  // Replace with your exact prototype from mimalloc.h:
+  // mi_heap_visit_blocks(h, true, visit_area, visit_block, &u);
+  mi_heap_visit_blocks(h, true, visit_block, &u);
+
+  return u;
+}
 
 int main() {
   // std::signal(SIGSEGV, signal_handler);
@@ -94,6 +150,9 @@ int main() {
     }
     iterate_all_units(state);
     idx = state.current_packet_index;
+    auto heap_ptr = state.get_allocator()->get_heap_ptr();
+    std::cout << mi_stats_as_json(&heap_ptr->stats, 0, NULL) << std::endl;
+    heap_usage_t u = get_heap_usage(heap_ptr);
     state.rewindToMs(105620);
     state.rewindToMs(157507);
     state.rewindToMs(156777);

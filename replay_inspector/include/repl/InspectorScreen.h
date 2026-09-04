@@ -694,6 +694,13 @@ public:
   MapInfo air_map{UnitType::AircraftType};
   MapInfo tank_map{UnitType::TankType};
 
+  const char *getPlayerName(const MPlayer &player) {
+    if (!player.nickLocKey.curr()->empty()) {
+      return player.nickLocKey.curr()->c_str();
+    }
+    return player.uid.curr()->name;
+  }
+
   void calculate_data() {
     longest_unit_name_size = get_longest_unit_name(state);
     int teams[3] = {0, 0, 0};
@@ -703,7 +710,7 @@ public:
       G_ASSERT(team <= 3);
       teams[team]++;
 
-      ImVec2 temp = ImGui::CalcTextSize(player.uid.curr()->name);
+      ImVec2 temp = ImGui::CalcTextSize(getPlayerName(player));
       ret = temp.x > ret.x ? temp : ret;
     }
     longest_player_name_size = ret;
@@ -940,7 +947,7 @@ public:
       ImGui::Text("%i", player_data.dummyForRoundScore.curr()->combined);
       ImGui::TableNextColumn();
 
-      ImGui::Text("%i:%s", index, player_data.uid.curr()->name);
+      ImGui::Text("%i:%s", index, getPlayerName(player_data));
       ImGui::TableNextColumn();
 
       auto owned_eid = getCurrEid(player_data);
@@ -981,7 +988,7 @@ public:
         ImGui::TextUnformatted(name);
       }
       ImGui::TableNextColumn();
-      ImGui::Text("%i:%s", index, player_data.uid.curr()->name);
+      ImGui::Text("%i:%s", index, getPlayerName(player_data));
 
       ImGui::TableNextColumn();
       ImGui::Text("%i", player_data.dummyForRoundScore.curr()->combined);
@@ -1165,7 +1172,7 @@ public:
     }
     if (ImGui::TreeNode("MPlayer Objects")) {
       for (auto &obj: this->state.players) {
-        drawReflectableObject(&obj, obj.uid.curr()->name);
+        drawReflectableObject(&obj, getPlayerName(obj));
       }
       ImGui::TreePop();
     }
@@ -1235,6 +1242,28 @@ public:
           drawVar("name_index_0: ", std::string_view(idx_0_val ? idx_0_val : "<UNKNOWN>"));
           drawVar("name_index_1: ", std::string_view(idx_1_val ? idx_1_val : "<UNKNOWN>"));
           drawVar("name_index_2: ", std::string_view(idx_2_val ? idx_2_val : "<UNKNOWN>"));
+          drawVar("player_internal_name: ", unit->player_internal_name);
+          drawVar("owner_pid: ", unit->owner_pid);
+          drawVar("loadout_name: ", unit->loadout_name);
+          drawVar("skin_name: ", unit->skin_name);
+          drawVar("loadout_name: ", unit->loadout_name);
+          if (unit->positions.hasData())
+            drawVar("curr_position", *unit->positions.curr());
+
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted("base_data");
+          ImGui::TableNextColumn();
+          drawReflectableObject(unit->base_data, nullptr);
+
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted("base_dvm_data");
+          ImGui::TableNextColumn();
+          drawReflectableObject(unit->base_dvm_data, nullptr);
+
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted("weapons_mask");
+          ImGui::TableNextColumn();
+          drawReflectableObject(&unit->weapons_mask, nullptr);
           ImGui::EndTable();
           ImGui::TreePop();
         }

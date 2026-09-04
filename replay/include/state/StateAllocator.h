@@ -122,6 +122,7 @@ public:
   ~StateAllocator() override = default;
 
   DagAllocType getMem() { return &dagAlloc; }
+  mi_heap_t *get_heap_ptr() { return dagAlloc.heap; }
 };
 
 /// see _in_destruction_state, represents the allocator of the currently being destroyed state

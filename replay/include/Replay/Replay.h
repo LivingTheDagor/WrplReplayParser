@@ -98,7 +98,7 @@ protected:
     static constexpr size_t StorageSize = std::max(sizeof(InMemoryReplayData), sizeof(FileReplayData));
     static constexpr size_t StorageAlign = std::max(alignof(InMemoryReplayData), alignof(FileReplayData));
 
-    alignas(StorageAlign) unsigned char storage_[StorageSize];
+    alignas(StorageAlign) unsigned char storage_[StorageSize]{};
     MemoryStorageType type_ = Invalid;
 
     inline IReplayData *ptr() { return (IReplayData *) &storage_; }
@@ -180,9 +180,9 @@ protected:
   friend ServerReplay;
 
 public:
-  ReplayHeader header;
-  DataBlock header_blk;
-  DataBlock footer_blk;
+  ReplayHeader header{};
+  DataBlock header_blk{};
+  DataBlock footer_blk{};
   bool is_valid = true;
 
   Replay(std::span<uint8_t> data, bool owns);
@@ -265,7 +265,7 @@ public:
   T &operator[](size_t i) { return _data[i]; }
   T *begin() { return _data; }
   T *end() { return _data + _size; }
-  size_t size() const { return _size; }
+  [[nodiscard]] size_t size() const { return _size; }
   T *data() const { return _data; }
   // disable copy, allow move
   owned_span &operator=(const owned_span &other) = delete;
@@ -298,10 +298,8 @@ public:
 template<bool streamWrite>
 class ReplayWriter {
 
-
   DynamicMemGeneralSaveCB base_cb;
   _optionalZlib<streamWrite> zlib_cb{base_cb};
-  std::vector<uint8_t> tmp_data{100};
   uint32_t curr_time_ms = 0;
 
 
@@ -320,6 +318,16 @@ class ReplayWriter {
     G_ASSERT(blkCopy.saveToStream(cwr));
   }
 
+  std::span<uint8_t> getCompressedData(std::vector<uint8_t> &storage);
+  std::span<uint8_t> getData() { return {(uint8_t *) base_cb.data(), (size_t) base_cb.size()}; }
+
+  BitStream serializePacket(const ReplayPacket &pkt);
+
+  uint32_t calculatePacketSize(const ReplayPacket &pkt, bool &write_timestamp) {
+    write_timestamp = pkt.timestamp_ms != curr_time_ms;
+    return pkt.stream.GetWriteOffset() + BYTES_TO_BITS(2 + (write_timestamp ? 4 : 0));
+  }
+
 public:
   ReplayHeader header;
   DataBlock header_blk;
@@ -334,18 +342,16 @@ public:
     if constexpr (streamWrite)
       zlib_cb.writer.finish();
   }
-  std::span<uint8_t> getData() { return {(uint8_t *) base_cb.data(), (size_t) base_cb.size()}; }
 
-  void write(const void *data, size_t size, uint32_t time_ms, ReplayPacketType type);
-
-  void write2(const ReplayPacket &pkt);
-  inline void write(const ReplayPacket &pkt) {
-    auto rd_offs = BITS_TO_BYTES(pkt.stream.GetReadOffset());
-    write(pkt.stream.GetData() + rd_offs, BITS_TO_BYTES(pkt.stream.GetWriteOffset()) - rd_offs, pkt.timestamp_ms,
-          pkt.type);
+  void write(const void *data, size_t size, uint32_t time_ms, ReplayPacketType type) {
+    ReplayPacket pkt;
+    pkt.timestamp_ms = time_ms;
+    pkt.type = type;
+    pkt.stream = BitStream{(uint8_t *) data, size, false};
+    write(pkt);
   }
 
-  std::span<uint8_t> getCompressedData(std::vector<uint8_t> &storage);
+  void write(const ReplayPacket &pkt);
 
   owned_span<uint8_t> createReplay();
 };

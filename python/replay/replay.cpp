@@ -33,7 +33,7 @@ auto build_replay_writer(py::module_ &m, const std::string &name) {
       "footerBlk", [](ReplayWriter<streaming> &self) { return DataBlockRW(&self.footer_blk); },
       [](ReplayWriter<streaming> &self, DataBlockRW &blk) { self.footer_blk = *blk.ptr(); },
       py::return_value_policy::reference_internal)
-    .def("writePacket", [](ReplayWriter<streaming> &self, const ReplayPacket &pkt) { self.write(pkt); })
+    .def("write", [](ReplayWriter<streaming> &self, const ReplayPacket &pkt) { self.write(pkt); })
     .def("write",
          [](ReplayWriter<streaming> &self, py::bytes &data, uint32_t time_ms, ReplayPacketType type) {
            auto spn = bytes_to_span(data);
@@ -141,7 +141,8 @@ void PyReplay::include(py::module_ &m) {
   py::class_<IReplayReader>(sub, "IReplayReader")
     .def("getNextPacket", &IReplayReader::getNextPacket)
     .def(
-      "iterInto", [](py::object rdr, ReplayPacket &pkt) { return std::make_unique<IReplayReaderIterInto>(rdr, &pkt); },
+      "iterInto",
+      [](const py::object &rdr, ReplayPacket &pkt) { return std::make_unique<IReplayReaderIterInto>(rdr, &pkt); },
       py::keep_alive<0, 2>())
     .def("__iter__", [](IReplayReader &rdr) -> IReplayReader & { return rdr; })
     .def("__next__", [](IReplayReader &rdr) {
@@ -153,13 +154,13 @@ void PyReplay::include(py::module_ &m) {
         throw py::stop_iteration();
       }
     });
-  py::class_<FullDecompressReplayReader, IReplayReader>(sub, "FullDecompressReplayReader");
+  py::class_<FullDecompressReplayReader, IReplayReader> _(sub, "FullDecompressReplayReader");
 
-  py::class_<CompressedReplayReader, IReplayReader>(sub, "CompressedReplayReader");
+  py::class_<CompressedReplayReader, IReplayReader> __(sub, "CompressedReplayReader");
 
-  py::class_<ServerReplayReader<true>, IReplayReader>(sub, "CompressedServerReplayReader");
+  py::class_<ServerReplayReader<true>, IReplayReader> ___(sub, "CompressedServerReplayReader");
 
-  py::class_<ServerReplayReader<false>, IReplayReader>(sub, "FullDecompressServerReplayReader");
+  py::class_<ServerReplayReader<false>, IReplayReader> ____(sub, "FullDecompressServerReplayReader");
 
   py::class_<IReplay>(sub, "IReplay")
     .def_property_readonly(

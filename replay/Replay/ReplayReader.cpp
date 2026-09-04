@@ -181,7 +181,7 @@ bool CompressedReplayReader::getNextPacket(ReplayPacket &packet) {
     type_t ^= 0x10;
   }
   auto byte_offs = BITS_TO_BYTES(packet.stream.GetReadOffset());
-  BitStream temp_bs = BitStream(packet.stream.GetData() + byte_offs, pkt_sz - byte_offs, false);
+  BitStream temp_bs = BitStream(packet.stream.GetData() + byte_offs, pkt_sz - byte_offs, true);
   packet.stream = std::move(temp_bs);
   packet.timestamp_ms = curr_time;
   packet.type = (ReplayPacketType) type_t;
