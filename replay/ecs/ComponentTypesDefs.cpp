@@ -728,6 +728,7 @@ namespace ecs {
   ECS_REGISTER_CTM_TYPE(UniqueBufWithShaderVar, nullptr);
   ECS_REGISTER_CTM_TYPE(SoundOcclusionBlob, nullptr);
   ECS_REGISTER_CTM_TYPE(aimmem::AimingMemPoints, nullptr);
+  ECS_REGISTER_CTM_TYPE(resource_slot::NodeHandleWithSlotsAccess, nullptr);
 } // namespace ecs
 
 class ErrorSerializer final : public ecs::ComponentSerializer {
@@ -901,5 +902,7 @@ ECS_AUTO_REGISTER_COMPONENT(InvalidType, "trace_mesh_faces", nullptr) // TODO
 ECS_AUTO_REGISTER_COMPONENT(InvalidType, "gun_shell_phys_ejection", nullptr) // TODO
 ECS_AUTO_REGISTER_COMPONENT(InvalidType, "player__support_units_status_notification_mgr", nullptr) // TODO
 ECS_AUTO_REGISTER_COMPONENT(InvalidType, "ik_pilot_inertia_seats__data", nullptr);
+ECS_AUTO_REGISTER_COMPONENT(InvalidType, "pickup_airdrop__controller", nullptr);
+ECS_AUTO_REGISTER_COMPONENT(InvalidType, "human_segmented_physics", nullptr);
 ECS_AUTO_REGISTER_COMPONENT(CapsulesAOHolder, "capsules_ao", nullptr);
 ECS_AUTO_REGISTER_COMPONENT(aimmem::AimingMemPoints, "player__aiming_mem_points", nullptr);

@@ -352,6 +352,7 @@ ECS_DECLARE_CREATABLE_TYPE(dm::SplashWave)
 ECS_DECLARE_CREATABLE_TYPE(UniqueBufWithShaderVar)
 ECS_DECLARE_CREATABLE_TYPE(SoundOcclusionBlob)
 ECS_DECLARE_CREATABLE_TYPE(aimmem::AimingMemPoints)
+ECS_DECLARE_CREATABLE_TYPE(resource_slot::NodeHandleWithSlotsAccess)
 
 #include "ecs/ComponentPrintingImplementations.h"
 

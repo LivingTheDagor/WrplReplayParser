@@ -638,5 +638,10 @@ namespace aimmem {
     bool operator==(const AimingMemPoints &other) const { return true; }
   };
 } // namespace aimmem
-
+namespace resource_slot {
+  struct NodeHandleWithSlotsAccess {
+    char data[8];
+    bool operator==(const NodeHandleWithSlotsAccess &other) const { return true; }
+  };
+} // namespace resource_slot
 #endif // MYEXTENSION_BASICTYPEDEFS_H
