@@ -1,3 +1,4 @@
+#pragma once
 
 #include "ecs/ComponentTypes.h"
 #include "ecs/ComponentTypes/objectType.h"
@@ -16,12 +17,9 @@
 #include "math/vecmath/dag_vecMath.h"
 #include "dag/dag_vector.h"
 
-#ifndef MYEXTENSION_COMPONENTTYPESDEFS_H
-#define MYEXTENSION_COMPONENTTYPESDEFS_H
-
 #include "BasicTypeDefs.h"
 #include <cctype>
-
+#include "ecs/baseIo.h"
 // ECS_DECLARE_POD_TYPE(ecs::EntityId) // actually uint32_t
 // ECS_DECLARE_CREATABLE_TYPE(ecs::string)
 
@@ -355,5 +353,3 @@ ECS_DECLARE_CREATABLE_TYPE(aimmem::AimingMemPoints)
 ECS_DECLARE_CREATABLE_TYPE(resource_slot::NodeHandleWithSlotsAccess)
 
 #include "ecs/ComponentPrintingImplementations.h"
-
-#endif // MYEXTENSION_COMPONENTTYPESDEFS_H

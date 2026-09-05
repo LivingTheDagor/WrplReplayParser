@@ -1,6 +1,5 @@
 
 #include "ecs/ComponentTypesDefs.h"
-#include "ecs/BitStreamDeserializer.h"
 #include "idFieldSerializer.h"
 #include "ecs/EntityManager.h"
 #include "ecs/baseIo.h"
