@@ -9,7 +9,6 @@ extern "C" {
 #include "consts.h"
 #include "ecs/typesAndLimits.h"
 #include "ecs/componentsMap.h"
-#include "ecs/BitStreamDeserializer.h"
 #include "BitVector.h"
 #include "ecs/ComponentTypesDefs.h"
 #include "ecs/ComponentPrintingImplementations.h"
@@ -28,7 +27,16 @@ DEFINE_HANDLE(handle_conn)
 struct ParserState;
 
 namespace net {
-
+  struct InternedStringsShared {
+    std::unordered_map<std::string, uint32_t> index;
+    eastl::vector<std::string> strings; // if strings[index] - "", it is not synced. strings[0] = ''
+    InternedStringsShared();
+  };
+  struct InternedStringsRepl {
+    InternedStringsShared *shared = nullptr;
+    eastl::bitvector<> serialized;
+    InternedStringsRepl(InternedStringsShared *shared);
+  };
   // DONT ASK ABOUT THE RELIABILITY SYSTEM IM NOT TELLIN YOU NOTHIN
   typedef uint32_t ack_bits_t;
   typedef uint16_t sequence_t;
@@ -85,7 +93,7 @@ namespace net {
 
   class Connection {
   public:
-    explicit Connection(ecs::EntityManager *mgr) { this->mgr = mgr; }
+    explicit Connection(ecs::EntityManager *mgr) : objectKeysRepl(&this->objectKeysLocal) { this->mgr = mgr; }
     ecs::EntityId deserializeConstruction(const BitStream &bs, ecs::entity_id_t serverId, uint32_t sz, float cratio);
     bool readConstructionPacket(const BitStream &bs, float compression_ratio);
     const char *deserializeTemplate(const BitStream &bs, ecs::template_t &templateId, bool &tpl_deserialized);
@@ -104,9 +112,12 @@ namespace net {
     void serializeConstruction(ecs::EntityId eid, BitStream &bs, bool canSkipInitial = true);
     void writeLastRecvdPacketAcks(BitStream &bs);
 
+  public:
+    mutable InternedStringsRepl objectKeysRepl;
+
   private:
+    mutable InternedStringsShared objectKeysLocal;
     std::vector<uint8_t> construct_replication_into{}; // will hold temporary replicated data
-    mutable InternedStrings objectKeys;
     std::vector<std::string> serverTemplates;
     std::vector<ecs::template_t> serverToClientTemplates;
     std::vector<std::vector<ecs::component_index_t>> clientTemplatesComponents;

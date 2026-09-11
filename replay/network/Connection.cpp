@@ -1,13 +1,203 @@
 #include "network/Connection.h"
 #include "network/eid.h"
-#include "ecs/BitStreamDeserializer.h"
 #include "ecs/EntityManager.h"
 #include "ecs/baseIo.h"
 #include "network/Object.h"
+#include "network/serialize.h"
 
 CREATE_HANDLE(handle_conn, "Connection")
 
 namespace net {
+
+
+  static int read_string(const BitStream &cb, std::string &to) {
+    char buf[1024];
+    buf[0] = 0;
+    for (char *str = buf;;) {
+      if (!cb.Read(str, 1))
+        return -1;
+      if (!*str)
+        break;
+      if (str == buf + countof(buf) - 2) {
+        str[1] = 0;
+        to += buf;
+        str = buf;
+      } else
+        str++;
+    };
+    to += buf;
+    return to.length();
+  }
+
+  InternedStringsShared::InternedStringsShared() {
+    index.emplace("", 0);
+    strings.emplace_back("");
+  }
+
+  InternedStringsRepl::InternedStringsRepl(InternedStringsShared *shared) : shared(shared) { serialized.set(0, true); }
+
+  inline bool read_string_no(const BitStream &cb, uint32_t &str, const uint32_t short_bits) {
+    // assume Little endian
+    str = 0;
+    return cb.ReadBits((uint8_t *) &str, short_bits);
+  }
+
+  inline void write_string_no(BitStream &cb, uint32_t str, const uint32_t short_bits) {
+    // assume Little endian
+    G_ASSERT(str < uint32_t(1 << short_bits));
+    cb.WriteBits((const uint8_t *) &str, short_bits);
+  }
+
+  static std::string oneString;
+  static const char *read_istring(const BitStream &cb, InternedStringsRepl *istrs, uint32_t short_bits) {
+    bool rawString = false;
+    if (!cb.Read(rawString))
+      return nullptr;
+    if (rawString) {
+      oneString.clear();
+      if (read_string(cb, oneString) < 0)
+        return nullptr;
+      return oneString.c_str();
+    }
+    if (!istrs)
+      return nullptr;
+    uint32_t str;
+    if (!read_string_no(cb, str, short_bits))
+      return nullptr;
+    InternedStringsShared &all = *istrs->shared;
+    if (str >= all.strings.size() || (all.strings[str].empty() && str != 0)) {
+      LOGE("Interned string idx {} referenced but not in pool (size={}). Missing from prefix?", str,
+           (unsigned) all.strings.size());
+      return nullptr;
+    }
+    return all.strings[str].c_str();
+  }
+
+  static void write_raw_string(BitStream &cb, const std::string &pStr) {
+    cb.Write(true);
+    cb.Write(pStr.c_str(), pStr.length() + 1);
+  }
+
+  static void write_istring(BitStream &cb, const std::string &pStr, InternedStringsShared &all, uint32_t short_bits,
+                            eastl::bitvector<eastl::allocator, uint64_t> &out_used) {
+    auto it = all.index.find(pStr);
+    if (it == all.index.end()) {
+      if (DAGOR_UNLIKELY(all.strings.size() >= uint32_t(1 << short_bits))) {
+        write_raw_string(cb, pStr);
+        return;
+      }
+      all.strings.emplace_back(pStr);
+      it = all.index.emplace(all.strings.back(), all.strings.size() - 1).first;
+    }
+    cb.Write(false);
+    write_string_no(cb, it->second, short_bits);
+    out_used.set(it->second, true);
+  }
+
+  static constexpr int OBJECT_KEY_BITS = 10;
+  bool BitstreamDeserializer::read(void *to, size_t sz_in_bits, ecs::component_type_t user_type) const {
+    if (user_type == 0)
+      return bs.ReadBits((uint8_t *) to, sz_in_bits);
+    else if (user_type == ecs::ComponentTypeInfo<ecs::EntityId>::type) {
+      G_ASSERT(sz_in_bits == sizeof(ecs::EntityId) * CHAR_BIT);
+      return read_eid(bs, *(ecs::EntityId *) to);
+    } else if (user_type == ecs::ComponentTypeInfo<bool>::type) // bool optimization. Bool is actually one bit
+    {
+      G_ASSERT(sz_in_bits == CHAR_BIT);
+      return bs.Read(*(bool *) to);
+    } else if (user_type == ecs::ComponentTypeInfo<ecs::Object>::type) // intern strings for Objects
+    {
+      ecs::Object &obj = *((ecs::Object *) to);
+      obj.clear();
+      uint32_t cnt;
+      if (!ecs::read_compressed(*this, cnt))
+        return false;
+      // Every entry consumes at least a key plus a child component, so more entries than
+      // unread bytes is impossible; reject before reserving to avoid a huge hostile alloc.
+      if (cnt > bs.GetNumberOfUnreadBits() / CHAR_BIT)
+        return false;
+      obj.reserve(cnt);
+      for (uint32_t i = 0; i < cnt; ++i) {
+        const char *str = read_istring(bs, objectKeys, OBJECT_KEY_BITS);
+        if (!str)
+          return false;
+        auto &item = obj.insert(str); // insert before deserialization since 'str' might be reused in next calls
+        if (ecs::MaybeComponent maybeComp = ecs::deserialize_child_component(*this, &mgr))
+          item = eastl::move(*maybeComp);
+        else
+          return false;
+      }
+      return true;
+    } else if (user_type == ecs::ComponentTypeInfo<ecs::string>::type) {
+      std::vector<char> tmp{};
+      tmp.resize(ecs::MAX_STRING_LENGTH);
+      if (ecs::read_string(*this, tmp.data(), ecs::MAX_STRING_LENGTH) < 0)
+        return false;
+      *((ecs::string *) to) = tmp.data();
+      return true;
+    } else
+      return bs.ReadBits((uint8_t *) to, sz_in_bits);
+  }
+  bool BitstreamDeserializer::skip(ecs::component_index_t cidx, const ecs::DataComponent &compInfo) {
+    if (compInfo.componentIndex == ecs::INVALID_COMPONENT_TYPE_INDEX)
+      return false;
+    auto componentTypes = ecs::g_ecs_data->getComponentTypes();
+    const auto componentTypeInfo = componentTypes->getComponentData(compInfo.componentIndex);
+    const bool isPod = ecs::is_pod(componentTypeInfo->flags);
+    ecs::ComponentSerializer *typeIO = nullptr;
+    if (compInfo.flags & ecs::DataComponent::HAS_SERIALIZER)
+      typeIO = ecs::g_ecs_data->getDataComponents()->getTypeIo(cidx);
+    if (!typeIO && has_io(componentTypeInfo->flags))
+      typeIO = componentTypeInfo->serializer;
+    void *tempData = alloca(componentTypeInfo->size);
+    ecs::ComponentTypeManager *ctm = nullptr;
+    if (need_constructor(componentTypeInfo->flags)) {
+      ctm = componentTypes->getCTM(compInfo.componentIndex);
+      G_ASSERTF(ctm, "type manager for type {:#x} ({}) missing", compInfo.hash, compInfo.componentIndex);
+    }
+    if (ctm)
+      ctm->create(tempData, mgr, ecs::INVALID_ENTITY_ID, compInfo.componentIndex);
+    else if (!isPod)
+      memset(tempData, 0, componentTypeInfo->size);
+    bool ret = typeIO ? typeIO->deserialize(*this, tempData, componentTypeInfo->size, compInfo.componentHash, &mgr)
+                      : read(tempData, componentTypeInfo->size * CHAR_BIT, compInfo.componentHash);
+    if (ctm)
+      ctm->destroy(tempData);
+    return ret;
+  }
+
+
+  void BitstreamSerializer::write(const void *from, size_t sz_in_bits, ecs::component_type_t user_type) {
+    if (user_type == 0)
+      bs.WriteBits((const uint8_t *) from, sz_in_bits);
+    else if (user_type == ecs::ComponentTypeInfo<ecs::EntityId>::type) {
+      G_ASSERT(sz_in_bits == sizeof(ecs::entity_id_t) * CHAR_BIT);
+      write_server_eid(*(const ecs::entity_id_t *) from, bs);
+    } else if (user_type == ecs::ComponentTypeInfo<bool>::type) // bool optimization
+    {
+      G_ASSERT(sz_in_bits == CHAR_BIT);
+      bs.Write(*(bool *) from); // optimization
+    } else if (user_type == ecs::ComponentTypeInfo<ecs::Object>::type) // intern strings for Objects
+    {
+      const ecs::Object &obj = *((const ecs::Object *) from);
+      ecs::write_compressed(*this, obj.size());
+      if (objectKeys && outObjectKeysUsed) {
+        for (auto &it: obj) {
+          write_istring(bs, ecs::get_key_string(it.first), *objectKeys->shared, OBJECT_KEY_BITS, *outObjectKeysUsed);
+          ecs::serialize_child_component(it.second, *this, &mgr);
+        }
+      } else {
+        G_ASSERT(!objectKeys && !outObjectKeysUsed);
+        for (auto &it: obj) {
+          write_raw_string(bs, ecs::get_key_string(it.first));
+          ecs::serialize_child_component(it.second, *this, &mgr);
+        }
+      }
+    } else if (user_type == ecs::ComponentTypeInfo<ecs::string>::type)
+      ecs::write_string(*this, ((const ecs::string *) from)->c_str(), ecs::MAX_STRING_LENGTH);
+    else
+      bs.WriteBits((const uint8_t *) from, sz_in_bits);
+  }
 
 #define SEQ_HISTORY_DEPTH 1024
 
@@ -138,6 +328,26 @@ namespace net {
     }
     // std::cout << "constructing entity of template: " << templName << "\n";
 
+    // read new object key strings
+    {
+      while (true) {
+        uint32_t idx = 0;
+        std::string str;
+        if (read_string(bs, str) < 0)
+          return ecs::INVALID_ENTITY_ID;
+        if (str.empty())
+          break;
+        if (!read_string_no(bs, idx, OBJECT_KEY_BITS))
+          return ecs::INVALID_ENTITY_ID;
+        InternedStringsShared &all = *objectKeysRepl.shared;
+        if (idx >= all.strings.size())
+          all.strings.resize(idx + 1);
+        G_ASSERT(all.strings.size() <= uint32_t(1 << OBJECT_KEY_BITS));
+        all.strings[idx] = eastl::move(str);
+      }
+    }
+
+
     int ncomp = 0;
     ecs::ComponentsInitializer ainit;
     ainit.reserve(clientTemplatesComponents[serverTemplate].size());
@@ -251,7 +461,7 @@ namespace net {
   }
   bool Connection::deserializeComponentConstruction(ecs::template_t server_template, const BitStream &bs,
                                                     ecs::ComponentsInitializer &init, int &out_ncomp) {
-    BitstreamDeserializer deserializer(bs, mgr, &objectKeys);
+    BitstreamDeserializer deserializer(*mgr, bs, &objectKeysRepl);
     uint16_t compCount = 0;
     const uint16_t templateComponentsCount = (uint16_t) clientTemplatesComponents[server_template].size();
     if (templateComponentsCount < 256) {
@@ -261,6 +471,7 @@ namespace net {
       compCount = compCount8;
     } else if (!bs.Read(compCount))
       return false;
+    bs.AlignReadToByteBoundary();
     for (uint16_t comp = 0, i = 0; i < compCount; ++i) {
       uint16_t ofs;
       if (templateComponentsCount < 256) {
@@ -285,6 +496,7 @@ namespace net {
       auto cmp = ecs::g_ecs_data->getDataComponents()->getDataComponent(cidx);
       ecs::component_type_t componentTypeName = cmp->componentHash;
       ecs::component_t componentNameHash = cmp->hash;
+      auto cmp_name = cmp->getName();
       // LOG("{}({})", cmp->getName(),
       // ecs::g_ecs_data->getComponentTypes()->getComponentData(cmp->componentIndex)->name); std::cout <<
       // cmp->getName().data() << "("<<
@@ -377,7 +589,9 @@ namespace net {
   }
 
   void Connection::serializeConstruction(ecs::EntityId eid, BitStream &bs, bool canSkipInitial) {
-#if NET_STAT_PROFILE_INITIAL_SIZES
+    EXCEPTION("bad bad guh");
+    /*
+    #if NET_STAT_PROFILE_INITIAL_SIZES
     BitSize_t beginWr = bs.GetWriteOffset();
 #endif
     const int componentsCount = mgr->getNumComponents(eid);
@@ -443,7 +657,7 @@ namespace net {
     //   ignoredComponentsE = ignoredComponents + nComp;
     // }
 
-    BitstreamSerializer serializer(*mgr, bs, &objectKeys);
+    BitstreamSerializer serializer(*mgr, bs, &objectKeysRepl, &);
     const BitSize_t countSizePos = bs.GetWriteOffset();
     const bool lessThan256 = serverTemplateComponentsCount[serverWrittenIdx] < 256;
     uint16_t componentsInTemplate = 0, prevComponent = 0, writtenComponents = 0;
@@ -495,7 +709,7 @@ namespace net {
 #if NET_STAT_PROFILE_INITIAL_SIZES
     if (!isBlackHole())
       templatesSize[templateId] += bs.GetWriteOffset() - beginWr;
-#endif
+#endif*/
   }
 
   typedef uint16_t sequence_t;
@@ -551,11 +765,12 @@ namespace net {
       return false;
     auto datacomp = ecs::g_ecs_data->getDataComponents()->getDataComponent(clientCidx);
     BitSize_t beforeReadPos = bs.GetReadOffset();
-    BitstreamDeserializer bsds(bs, mgr, &objectKeys);
+    BitstreamDeserializer bsds(*mgr, bs, &objectKeysRepl);
     ecs::ComponentRef cref = mgr->getComponentRefCidx(eid, clientCidx);
     auto old_ptr = cref.value;
     bool crefIsNull = cref.isNull();
-    if (!crefIsNull) { // if gaijin makes a replay (cough cough infantry) that does an invalid replication, then this code would normally throw an assert when it can just fail normally.
+    if (!crefIsNull) { // if gaijin makes a replay (cough cough infantry) that does an invalid replication, then this
+                       // code would normally throw an assert when it can just fail normally.
       this->construct_replication_into.resize(cref.getSize());
       cref.setNewValue(this->construct_replication_into.data(), *this->mgr);
     }

@@ -1,7 +1,6 @@
 #include "Replay/Replay.h"
 #include "filesystem"
 #include "dag_assert.h"
-#include "libdeflate.h"
 #include "zlib.h"
 #include "danet/daNetTypes.h"
 
@@ -308,13 +307,14 @@ std::span<uint8_t> ReplayWriter<streamWrite>::getCompressedData(std::vector<uint
     zlib_cb.writer.finish();
     return std::span<uint8_t>{(uint8_t *) base_cb.data(), (size_t) base_cb.tell()};
   } else {
+    /*
     auto compressor = libdeflate_alloc_compressor(9);
     size_t max_size = libdeflate_deflate_compress_bound(compressor, base_cb.tell());
     storage.resize(max_size);
     size_t compressed_size =
       libdeflate_zlib_compress(compressor, base_cb.data(), base_cb.tell(), storage.data(), max_size);
     libdeflate_free_compressor(compressor);
-    storage.resize(compressed_size);
+    storage.resize(compressed_size);*/
     storage.shrink_to_fit();
     return storage;
   }

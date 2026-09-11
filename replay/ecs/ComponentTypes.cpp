@@ -4,35 +4,32 @@
 #include "ecs/ComponentTypes/listType.h"
 #include "ecs/ComponentTypes.h"
 
+#include "ecs/baseIo.h"
+
 
 namespace ecs {
   CompileComponentTypeRegister *CompileComponentTypeRegister::tail = nullptr;
   ComponentSerializer default_serializer;
   size_t pull_components_type = 1;
-  //const int MAX_STRING_LENGTH = 32768; // just for safety. Keep string size reasonable please!
+  // const int MAX_STRING_LENGTH = 32768; // just for safety. Keep string size reasonable please!
   std::string Array::toString(int indent) const {
     std::ostringstream os;
-    if(this->empty())
-    {
+    if (this->empty()) {
       os << fmt::format("(0)[]");
       return os.str();
     }
     os << fmt::format("({}) [", this->size());
     auto comps = g_ecs_data->getComponentTypes();
-    for(const auto &comp : *this)
-    {
+    for (const auto &comp: *this) {
       auto ctm = comps->getCTM(comp.getTypeId());
-      os << fmt::format("{}({}): {}\n",
-                        std::string(indent, ' '),
-                        comps->getName(comp.getTypeId()),
-                        ctm->toString((void *)comp.getRawData(), indent+2));
+      os << fmt::format("{}({}): {}\n", std::string(indent, ' '), comps->getName(comp.getTypeId()),
+                        ctm->toString((void *) comp.getRawData(), indent + 2));
     }
     os << fmt::format("{}]", std::string(indent, ' '));
     return os.str();
   }
 
-  type_index_t find_component_type_index(ecs::component_type_t component_type, ecs::EntityManager *emgr)
-  {
+  type_index_t find_component_type_index(ecs::component_type_t component_type, ecs::EntityManager *emgr) {
     return g_ecs_data.get()->getComponentTypes()->findType(component_type);
   }
 }; // namespace ecs
@@ -40,16 +37,14 @@ namespace ecs {
 
 namespace ecs {
   type_index_t ComponentTypes::registerType(const char *name, ecs::component_type_t type, uint32_t data_size,
-                                            ecs::ComponentSerializer *io,
-                                            ecs::create_ctm_t ctm, ecs::destroy_ctm_t dtm, ComponentTypeFlags flags) {
+                                            ecs::ComponentSerializer *io, ecs::create_ctm_t ctm, ecs::destroy_ctm_t dtm,
+                                            ComponentTypeFlags flags) {
     const type_index_t ctypeId = findType(type);
-    if (ctypeId != INVALID_COMPONENT_TYPE_INDEX)
-    {
+    if (ctypeId != INVALID_COMPONENT_TYPE_INDEX) {
       auto cData = this->getComponentData(ctypeId);
-      if (strcmp(name, cData->name.data()) != 0)
-      {
-        EXCEPTION("component type <{}> with same hash ={:#x} as <{}> is already registered, hash collision.", cData->name.data(), type,
-                  name);
+      if (strcmp(name, cData->name.data()) != 0) {
+        EXCEPTION("component type <{}> with same hash ={:#x} as <{}> is already registered, hash collision.",
+                  cData->name.data(), type, name);
         return INVALID_COMPONENT_TYPE_INDEX;
       }
       // This is not severe error per se but without logger developers are not noticing it during development
@@ -60,18 +55,13 @@ namespace ecs {
 
     typesIndex.emplace(type, getTypeCount());
     types.push_back({io, data_size, type, std::string_view(name), nullptr, ctm, dtm, flags});
-    ECS_LOGD2("created component {} that is '{}{}' type <{}> hash<{:#x}> of size {}",
-        getTypeCount()-1,
-        need_constructor(flags) ? "creatable" : "pod",
-        io ? " io" : "",
-        name,
-        type,
-        data_size);
-    return (type_index_t)getTypeCount() - 1;
+    ECS_LOGD2("created component {} that is '{}{}' type <{}> hash<{:#x}> of size {}", getTypeCount() - 1,
+              need_constructor(flags) ? "creatable" : "pod", io ? " io" : "", name, type, data_size);
+    return (type_index_t) getTypeCount() - 1;
   }
 
   void ComponentTypes::initialize() {
-    //clear();
+    // clear();
     ECS_LOGD1("ecs: initialize component Types");
     // initialize eid and tag first, for debugging purposes?
     for (CompileComponentTypeRegister *start = CompileComponentTypeRegister::tail; start; start = start->next) {
@@ -80,18 +70,16 @@ namespace ecs {
   }
 
   ComponentTypes::~ComponentTypes() {
-    for(auto &x : this->types)
-    {
-      if(x.ctm)
-      {
+    for (auto &x: this->types) {
+      if (x.ctm) {
         x.destroy(x.ctm);
         x.ctm = nullptr;
       }
     }
   }
 
-  ecs::Component &
-  ecs::Object::insertWithCollision(hash_container_t::const_iterator hashIt, const HashedConstString str) {
+  ecs::Component &ecs::Object::insertWithCollision(hash_container_t::const_iterator hashIt,
+                                                   const HashedConstString str) {
     G_ASSERT(!noCollisions);
     if (hashIt != hashContainer.end() && *hashIt == str.hash) {
       auto it = container.begin() + (hashIt - hashContainer.begin());
@@ -165,17 +153,14 @@ namespace ecs {
     std::ostringstream oss;
     oss << " {\n";
     auto comps = g_ecs_data->getComponentTypes();
-    for(const auto &s : this->container)
-    {
+    for (const auto &s: this->container) {
       auto ctm = comps->getCTM(s.second.getTypeId());
-      oss << fmt::format("{}'{}'({}): {}\n",
-                         std::string(indent+2, ' '),
-                         s.first,
+      oss << fmt::format("{}'{}'({}): {}\n", std::string(indent + 2, ' '), s.first,
                          comps->getName(s.second.getTypeId()),
-                         ctm->toString((void *)s.second.getRawData(), indent+2));
+                         ctm->toString((void *) s.second.getRawData(), indent + 2));
     }
     oss << fmt::format("{}}}", std::string(indent, ' '));
     return oss.str();
   }
 
-} // ecs
+} // namespace ecs

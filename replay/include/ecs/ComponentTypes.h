@@ -111,60 +111,6 @@ namespace ecs {
   typedef void (*destroy_ctm_t)(pComponentTypeManager);
 
 
-  class SerializerCb {
-  public:
-    virtual void write(const void *, size_t sz_in_bits, component_type_t hint) = 0;
-  };
-
-  class DeserializerCb {
-  public:
-    virtual bool read(void *, size_t sz_in_bits, component_type_t hint) const = 0;
-  };
-
-  inline void write_compressed(SerializerCb &cb, uint32_t v) {
-    uint8_t data[sizeof(v) + 1];
-    int i = 0;
-    for (; i < (int) sizeof(data); ++i) {
-      data[i] = uint8_t(v) | (v >= (1 << 7) ? (1 << 7) : 0);
-      v >>= 7;
-      if (!v) {
-        ++i;
-        break;
-      }
-    }
-    cb.write(data, (size_t) i * CHAR_BIT, 0);
-  }
-
-  inline bool read_compressed(const DeserializerCb &cb, uint32_t &v) {
-    v = 0;
-    for (int i = 0; i < (int) (sizeof(v) + 1); ++i) {
-      uint8_t byte = 0;
-      if (!cb.read(&byte, CHAR_BIT, 0))
-        return false;
-      v |= uint32_t(byte & ~(1 << 7)) << (i * 7);
-      if ((byte & (1 << 7)) == 0)
-        break;
-    }
-    return true;
-  }
-
-  // default serializer is just call as-is.
-  // if we want we can register different serializer, with quantization and stuff
-
-  class ComponentSerializer {
-  public:
-    virtual void serialize(SerializerCb &cb, const void *data, size_t sz, component_type_t hint,
-                           ecs::EntityManager *mgr) {
-      cb.write(data, sz * CHAR_BIT, hint);
-    }
-
-    virtual bool deserialize(const DeserializerCb &cb, void *data, size_t sz, component_type_t hint,
-                             ecs::EntityManager *mgr) {
-      return cb.read(data, sz * CHAR_BIT, hint);
-    }
-  };
-
-
   enum ComponentTypeFlags : uint16_t {
     // COMPONENT_TYPE_TRIVIAL = 0, // basically it is pod
     COMPONENT_TYPE_NON_TRIVIAL_CREATE = 1,
@@ -180,7 +126,7 @@ namespace ecs {
     COMPONENT_TYPE_LAST_PLUS_1,
 
   };
-
+  class ComponentSerializer;
   struct CompileComponentTypeRegister {
     CompileComponentTypeRegister(const char *name_, uint32_t name_hash_, uint32_t size_, ComponentSerializer *io_,
                                  create_ctm_t ctm_, destroy_ctm_t dtm_, ComponentTypeFlags flags_) :

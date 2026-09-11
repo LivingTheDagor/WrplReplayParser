@@ -3,7 +3,7 @@
 #include "string"
 #include "danet/BitStream.h"
 
-constexpr uint32_t CURR_MAGIC = 0x00018c0b; // devserver version 0x00018c0a
+constexpr uint32_t CURR_MAGIC = 0x00018c1c; // devserver version 0x00018c0a
 #pragma pack(push, 1)
 struct ReplayHeader {
   uint32_t header;

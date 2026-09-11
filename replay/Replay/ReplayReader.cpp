@@ -1,9 +1,10 @@
 #include <danet/daNetTypes.h>
 #include "Replay/Replay.h"
-#include "libdeflate.h"
 #include "Replay/ReplayReader.h"
 #include "utils.h"
 #include "dag_assert.h"
+#include "zstd.h"
+#include "zstd_errors.h"
 
 
 constexpr size_t MAX_REPLAY_COMPRESSION_RATIO = 64;
@@ -122,25 +123,31 @@ bool FullDecompressReplayReader::getNextPacket(ReplayPacket &packet) {
 FullDecompressReplayReader::FullDecompressReplayReader(Replay &replay, double expected_multiply_size) :
   IReplayReader(replay) {
   ZoneScoped;
-  auto zlib_data = replay.getData();
-  auto decomp_size = (size_t) (((double) zlib_data.size()) * expected_multiply_size);
-  const size_t max_decomp_size = zlib_data.size() * MAX_REPLAY_COMPRESSION_RATIO;
+  auto zstd_data = replay.getData();
+  auto decomp_size = (size_t) (((double) zstd_data.size()) * expected_multiply_size);
+  const size_t max_decomp_size = zstd_data.size() * MAX_REPLAY_COMPRESSION_RATIO;
   size_t dest_len = 0;
-  auto ctx = libdeflate_alloc_decompressor();
-  libdeflate_result ret = LIBDEFLATE_INSUFFICIENT_SPACE;
   uint8_t *ptr = nullptr;
-  while (ctx && ret == LIBDEFLATE_INSUFFICIENT_SPACE && decomp_size <= max_decomp_size) {
+  ZSTD_ErrorCode zstd_err = ZSTD_error_dstSize_tooSmall;
+  while (zstd_err == ZSTD_error_dstSize_tooSmall && decomp_size <= max_decomp_size) {
     ZoneScopedN("Replay uncompress");
-    free(ptr);
+    if (ptr)
+      free(ptr);
     ptr = (uint8_t *) malloc(decomp_size);
     if (!ptr)
       break;
-    ret = libdeflate_zlib_decompress(ctx, zlib_data.data(), zlib_data.size(), ptr, decomp_size, &dest_len);
+    auto zstd_ret = ZSTD_decompress(ptr, decomp_size, zstd_data.data(), zstd_data.size());
+    if (ZSTD_isError(zstd_ret))
+      zstd_err = ZSTD_getErrorCode(zstd_ret);
+    else {
+      dest_len = zstd_ret;
+      zstd_err = ZSTD_error_no_error;
+    }
+    if (zstd_err != ZSTD_error_no_error && zstd_err != ZSTD_error_dstSize_tooSmall)
+      EXCEPTION("Failed to decompress zstd block: {}", ZSTD_getErrorName(zstd_err));
     decomp_size *= 2;
   }
-  if (ctx)
-    libdeflate_free_decompressor(ctx);
-  if (ret != LIBDEFLATE_SUCCESS) {
+  if (zstd_err != ZSTD_error_no_error) {
     free(ptr);
     replay.Data.afterParse();
     EXCEPTION("Failed to decompress replay {}", replay.Data.getFileName());
