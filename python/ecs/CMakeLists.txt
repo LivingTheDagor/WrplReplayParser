@@ -5,7 +5,7 @@ add_library(pyECS
         ECSTypes.cpp
         ECSArrayTypes.cpp
         GState.cpp
-        ECSQueryES.cpp
+        # ECSQueryES.cpp
 )
 
 target_link_libraries(pyECS
