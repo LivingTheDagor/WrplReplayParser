@@ -55,7 +55,7 @@ namespace net {
       G_ASSERT(msg);
       Evt evt(typename Evt::TupleType(*static_cast<const typename Msg::Tuple *>(msg)));
       G_FAST_ASSERT(((EvtRt == net::Er::Unicast) && eid) || ((EvtRt != net::Er::Unicast) && !eid));
-      mgr.sendEventImmediate(eid, eastl::move(evt));
+      mgr.dispatchEventImmediate(eid, eastl::move(evt));
     }
     EventRegRecordT(const MessageClass &mcls) : EventRegRecord(Evt::staticType(), mcls, EvtRt, event2msg, msg2event) {}
   };

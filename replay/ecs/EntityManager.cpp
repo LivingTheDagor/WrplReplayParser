@@ -13,7 +13,7 @@ namespace ecs {
 
 
   void EntityCreatedAction::forward(EntityManager &mgr) {
-    //LOGI("EntityCreatedAction::forward: {}", *mgr.curr_time_ms);
+    // LOGI("EntityCreatedAction::forward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Rewind);
     mgr.swap_desc(before, after);
     auto ptr = mgr.getNullable<ecs::EntityId>(after, ECS_HASH("eid"));
@@ -24,7 +24,7 @@ namespace ecs {
   }
 
   void EntityCreatedAction::backward(EntityManager &mgr) {
-    //LOGI("EntityCreatedAction::backward: {}", *mgr.curr_time_ms);
+    // LOGI("EntityCreatedAction::backward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Fastforward);
     auto ptr = mgr.getNullable<ecs::EntityId>(after, ECS_HASH("eid"));
     G_ASSERT(ptr);
@@ -35,7 +35,7 @@ namespace ecs {
   }
 
   void EntityDestroyedAction::forward(EntityManager &mgr) {
-    //LOGI("EntityDestroyedAction::forward: {}", *mgr.curr_time_ms);
+    // LOGI("EntityDestroyedAction::forward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Rewind);
     auto ptr = mgr.getNullable<ecs::EntityId>(after, ECS_HASH("eid"));
     G_ASSERT(ptr);
@@ -46,7 +46,7 @@ namespace ecs {
   }
 
   void EntityDestroyedAction::backward(EntityManager &mgr) {
-    //LOGI("EntityDestroyedAction::backward: {}", *mgr.curr_time_ms);
+    // LOGI("EntityDestroyedAction::backward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Fastforward);
     mgr.swap_desc(before, after);
     auto ptr = mgr.getNullable<ecs::EntityId>(after, ECS_HASH("eid"));
@@ -71,7 +71,7 @@ namespace ecs {
 
   // swap is inherently reversible, so the only difference between these is the assert
   void ComponentUpdateAction::forward(EntityManager &mgr) {
-    //LOGI("ComponentUpdateAction::forward: {}", *mgr.curr_time_ms);
+    // LOGI("ComponentUpdateAction::forward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Rewind);
     auto ref = mgr.getComponentRefCidx(eid, cidx);
     G_ASSERT(!ref.isNull());
@@ -80,7 +80,7 @@ namespace ecs {
   }
 
   void ComponentUpdateAction::backward(EntityManager &mgr) {
-    //LOGI("ComponentUpdateAction::backward: {}", *mgr.curr_time_ms);
+    // LOGI("ComponentUpdateAction::backward: {}", *mgr.curr_time_ms);
     G_ASSERT(this->last_direction == DIRECTION::Fastforward);
     auto ref = mgr.getComponentRefCidx(eid, cidx);
     G_ASSERT(!ref.isNull());
@@ -121,7 +121,7 @@ namespace ecs {
     std::swap(destroyed_desc, created_desc);
   }
 
-  EntityManager::EntityManager(ParserState*owned_by) {
+  EntityManager::EntityManager(ParserState *owned_by) {
     this->owned_by = owned_by;
     this->curr_time_ms = &owned_by->curr_time_ms;
     // componentTypes and dataComponents initalzied in initialize() in /init/initialze.h
@@ -191,22 +191,24 @@ namespace ecs {
       G_ASSERT(t);
       auto archInfo = &info->INFO;
       auto ComponentInfo = info->components.data();
-      if(isRecreating) {
+      if (isRecreating) {
         auto &old_desc = this->entDescs[eid];
         archetype_t new_arch_id = archetype_id;
         archetype_t old_arch_id = old_desc.archetype_id;
         auto &new_ARCHETYPE = *this->arch_data.getArch(new_arch_id);
         auto &new_info = *this->arch_data.getStorageArch(new_arch_id);
         auto &new_archInfo = *archInfo;
-        //auto &new_ComponentInfo = data_state->archetypes.archetypeComponents[new_info.COMPONENT_OFS];
+        // auto &new_ComponentInfo = data_state->archetypes.archetypeComponents[new_info.COMPONENT_OFS];
 
         auto &old_ARCHETYPE = *this->arch_data.getArch(old_arch_id);
         auto &old_info = *this->arch_data.getStorageArch(old_arch_id);
-        //auto &old_archInfo = old_info.INFO;
+        // auto &old_archInfo = old_info.INFO;
         auto &old_ComponentInfo = old_info.components.front();
 
-        for (auto comp_info = &old_ComponentInfo; comp_info != &old_ComponentInfo + old_info.COMPONENT_COUNT; comp_info++) {
-          auto old_data = old_ARCHETYPE.getCompDataUnsafe(comp_info->DATA_OFFSET, old_desc.chunk_id, comp_info->DATA_SIZE);
+        for (auto comp_info = &old_ComponentInfo; comp_info != &old_ComponentInfo + old_info.COMPONENT_COUNT;
+             comp_info++) {
+          auto old_data =
+            old_ARCHETYPE.getCompDataUnsafe(comp_info->DATA_OFFSET, old_desc.chunk_id, comp_info->DATA_SIZE);
           auto old_data_comp = data_state->dataComponents.getDataComponent(comp_info->INDEX);
           auto old_comp = data_state->componentTypes.getComponentData(old_data_comp->componentIndex);
 
@@ -243,9 +245,9 @@ namespace ecs {
       // now setup any remaining components with default data
       for (auto &comp: instTempl->components) {
 
-        //LOG("instTempl trying id %i\n", comp.comp_type_index);
+        // LOG("instTempl trying id %i\n", comp.comp_type_index);
         if (!this->wasInit.test(comp.comp_type_index, false)) {
-          //LOG("succeeded\n");
+          // LOG("succeeded\n");
           archetype_component_id id = archInfo->getComponentId(comp.comp_type_index);
 
           auto curr_info = ComponentInfo[id];
@@ -263,7 +265,7 @@ namespace ecs {
     this->entDescs.Allocate(eid);
     this->entDescs[eid.index()] = {templId, archetype_id, eid.generation(), chunk_id};
     this->wasInit.clear();
-    if(!isRecreating) {
+    if (!isRecreating) {
       this->sendEventImmediate(eid, ecs::EventEntityCreated{});
       this->sendEventImmediate(eid, ecs::EventEntityCreatedBasic{});
     }
@@ -279,7 +281,7 @@ namespace ecs {
         G_ASSERT(data_state->dataComponents.getDataComponent(initializerIndex)->componentHash ==
                  initIt.second.getUserType());
         if (DAGOR_UNLIKELY(initializerIndex == INVALID_COMPONENT_INDEX))
-        EXCEPTION("Invalid component of name {:#x}", initIt.name);
+          EXCEPTION("Invalid component of name {:#x}", initIt.name);
         initIt.cIndex = initializerIndex;
       }
     }
@@ -290,9 +292,7 @@ namespace ecs {
     return this->data_state->templates.buildTemplateIdByName(templ_name);
   }
 
-  void EntityManager::instantiateTemplate(template_t t) {
-    this->data_state->templates.instantiateTemplate(t);
-  }
+  void EntityManager::instantiateTemplate(template_t t) { this->data_state->templates.instantiateTemplate(t); }
 
   bool EntityManager::destroyEntity(EntityId eid, bool is_dtor, bool force_destroy) {
     if (!this->doesEntityExist(eid))
@@ -300,10 +300,10 @@ namespace ecs {
 
     auto desc = this->entDescs.getEntityDesc(eid);
 
-    if (!force_destroy && !is_dtor && !eidsReservationMode && MoveServerDestroyedEntities && eid.index() <=
-        RESERVED_EID_RANGE) {
+    if (!force_destroy && !is_dtor && !eidsReservationMode && MoveServerDestroyedEntities &&
+        eid.index() <= RESERVED_EID_RANGE) {
       G_ASSERT(!this->entDescs.basic_destroyed.test(eid.index(), false));
-      //auto new_eid = this->allocateOneEid();
+      // auto new_eid = this->allocateOneEid();
       auto new_eid = eidToEventCreationMap[eid];
       G_ASSERT(new_eid);
       eidToEventCreationMap.erase(eid);
@@ -312,68 +312,68 @@ namespace ecs {
       ENTITY_LOGD2("Moving eid: {} of template {} to {}", eid, this->data_state->getTemplateName(desc->templ_id),
                    new_eid);
       swap_desc(eid, new_eid);
-      //add_sub_template(new_eid, "dagor_destroyed_t");
+      // add_sub_template(new_eid, "dagor_destroyed_t");
       this->entDescs.basic_destroyed.set(new_eid.index(), true);
       this->curr_event->createDestroyAction(new_eid, eid);
       return true;
     }
 
-    if(!this->entDescs.basic_destroyed.test(eid.index(), false))
+    if (!this->entDescs.basic_destroyed.test(eid.index(), false))
       sendEventImmediate(eid, EventEntityDestroyedBasic{ecs::INVALID_ENTITY_ID, true});
 
     sendEventImmediate(eid, EventEntityDestroyed{});
     if (is_dtor) {
       ENTITY_LOGD3("Destroying entity {} of template {}", eid,
-            data_state->templates.getTemplate(desc->templ_id)->getName());
+                   data_state->templates.getTemplate(desc->templ_id)->getName());
     } else {
       ENTITY_LOGD2("Destroying entity {} of template {}", eid,
                    data_state->templates.getTemplate(desc->templ_id)->getName());
     }
 
-    //const InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(desc->templ_id);
+    // const InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(desc->templ_id);
     archetype_t archetype_id = desc->archetype_id;
     auto ARCHETYPE = this->arch_data.getArch(archetype_id);
     auto info = this->arch_data.getStorageArch(archetype_id);
     auto ComponentInfo = info->components.data();
-    //auto archInfo = &info->INFO;
-    //if (eid.handle == 0x4008a3) {
-    //  LOG("WOMP");
-    //  g_log_handler.wait_until_empty();
-    //  g_log_handler.flush_all();
-    //  this->debugPrintEntity(desc->eid);
-    //}
-    //this->debugPrintEntity(desc->eid);
-    //LOG("archetype datacomponents:");
-    //for(auto comp_info = ComponentInfo; comp_info != ComponentInfo+info->COMPONENT_COUNT; comp_info++)
+    // auto archInfo = &info->INFO;
+    // if (eid.handle == 0x4008a3) {
+    //   LOG("WOMP");
+    //   g_log_handler.wait_until_empty();
+    //   g_log_handler.flush_all();
+    //   this->debugPrintEntity(desc->eid);
+    // }
+    // this->debugPrintEntity(desc->eid);
+    // LOG("archetype datacomponents:");
+    // for(auto comp_info = ComponentInfo; comp_info != ComponentInfo+info->COMPONENT_COUNT; comp_info++)
     //{
-    //  LOG("%i ", comp_info->INDEX);
-    //}
-    //LOG("\n");
+    //   LOG("%i ", comp_info->INDEX);
+    // }
+    // LOG("\n");
     for (auto comp_info = ComponentInfo; comp_info != ComponentInfo + info->COMPONENT_COUNT; comp_info++) {
       auto data = ARCHETYPE->getCompDataUnsafe(comp_info->DATA_OFFSET, desc->chunk_id, comp_info->DATA_SIZE);
       auto dataComp = data_state->dataComponents.getDataComponent(comp_info->INDEX);
       auto comp = data_state->componentTypes.getComponentData(dataComp->componentIndex);
-      //LOG("Destroying component {}({})(compid: {}) of entity {:#x} of template '{}' at address {} in chunk {}",
-      //    dataComp->getName(),
-      //    comp->name,
-      //    comp_info->INDEX,
-      //    desc->eid.handle,
-      //    g_ecs_data->templates.getTemplate(desc->templ_id)->name.data(), fmt::ptr(data), desc->chunk_id);
-      //LOG("\nRaw Data: 0x");
-      //auto charPtr = (const char *)data;
-      //for(int i = 0; i < comp->size; i++)
+      // LOG("Destroying component {}({})(compid: {}) of entity {:#x} of template '{}' at address {} in chunk {}",
+      //     dataComp->getName(),
+      //     comp->name,
+      //     comp_info->INDEX,
+      //     desc->eid.handle,
+      //     g_ecs_data->templates.getTemplate(desc->templ_id)->name.data(), fmt::ptr(data), desc->chunk_id);
+      // LOG("\nRaw Data: 0x");
+      // auto charPtr = (const char *)data;
+      // for(int i = 0; i < comp->size; i++)
       //{
-      //  LOG("%02X", charPtr[i]);
-      //}
-      //LOG("\n");
-      //std::cout.flush();
+      //   LOG("%02X", charPtr[i]);
+      // }
+      // LOG("\n");
+      // std::cout.flush();
       ComponentRef ref{data, comp->hash, dataComp->componentIndex, comp->size};
-      //if(eid.handle == 0x4008a3 && strcmp(dataComp->getName().data(), "skeleton_attach__remapParentSlots") == 0) {
-      //  ref.print(nullptr);
-      //  g_log_handler.wait_until_empty();
-      //  g_log_handler.flush_all();
-      //  LOG("");
-      //}
+      // if(eid.handle == 0x4008a3 && strcmp(dataComp->getName().data(), "skeleton_attach__remapParentSlots") == 0) {
+      //   ref.print(nullptr);
+      //   g_log_handler.wait_until_empty();
+      //   g_log_handler.flush_all();
+      //   LOG("");
+      // }
 
       ref.destructCopy(data);
       if (dataComp->hash == ECS_HASH("eid").hash)
@@ -398,11 +398,12 @@ namespace ecs {
     desc->archetype_id = INVALID_ARCHETYPE;
     desc->chunk_id = INVALID_CHUNK_INDEX_T;
     desc->generation++;
-    if(!is_dtor) {
-      auto findices = (eid.index() <= RESERVED_EID_RANGE) ? ((eid.index() < nextReservedIndex) ? &freeIndicesReserved : nullptr)
-                                                                  : &freeIndices;
-      if(findices)
-        findices->push_back((entity_id_t)eid);
+    if (!is_dtor) {
+      auto findices = (eid.index() <= RESERVED_EID_RANGE)
+                        ? ((eid.index() < nextReservedIndex) ? &freeIndicesReserved : nullptr)
+                        : &freeIndices;
+      if (findices)
+        findices->push_back((entity_id_t) eid);
     }
 
     return true;
@@ -418,8 +419,8 @@ namespace ecs {
       destroyEntity(EntityId(make_eid(i, desc.generation)), true); //
     }
     ECS_LOGD3("finished EntityManager Destruction");
-    //g_log_handler.wait_until_empty();
-    //g_log_handler.flush_all();
+    // g_log_handler.wait_until_empty();
+    // g_log_handler.flush_all();
   }
 
   void EntityManager::debugPrintEntities() {
@@ -435,7 +436,7 @@ namespace ecs {
   void EntityManager::debugPrintEntity(EntityId eid) {
     if (this->doesEntityExist(eid)) {
       auto desc = this->entDescs.getEntityDesc(eid);
-      //const InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(desc->templ_id);
+      // const InstantiatedTemplate *instTempl = data_state->templates.getInstTemplate(desc->templ_id);
 
       archetype_t archetype_id = desc->archetype_id;
       auto ARCHETYPE = this->arch_data.getArch(archetype_id);
@@ -448,8 +449,8 @@ namespace ecs {
         //     ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint16_t size);
         auto data = ARCHETYPE->getCompDataUnsafe(comp_info->DATA_OFFSET, desc->chunk_id, comp_info->DATA_SIZE);
         auto dataComp = data_state->dataComponents.getDataComponent(comp_info->INDEX);
-        //if(strcmp(dataComp->getName().data(), "skeleton_attach__remapParentSlots") == 0 && eid.handle == 0x4008a3)
-        //  LOG("WOMP");
+        // if(strcmp(dataComp->getName().data(), "skeleton_attach__remapParentSlots") == 0 && eid.handle == 0x4008a3)
+        //   LOG("WOMP");
         auto comp = data_state->componentTypes.getComponentData(dataComp->componentIndex);
         ComponentRef ref{data, comp->hash, dataComp->componentIndex, comp->size};
         LOG("  ArchData: idx: {}; data_off: {}; chunk_id: {}; data_size: {}; ptr: {}", comp_info->INDEX,
@@ -488,7 +489,7 @@ namespace ecs {
     auto desc = this->entDescs[eid.index()];
     archetype_t archetype = desc.archetype_id; // should always be valid
     G_ASSERT(archetype != INVALID_ARCHETYPE);
-    //G_ASSERT(data_state->archetypes.archetypes[archetype].INFO.getComponentId(index) != INVALID_COMPONENT_INDEX);
+    // G_ASSERT(data_state->archetypes.archetypes[archetype].INFO.getComponentId(index) != INVALID_COMPONENT_INDEX);
     if (this->arch_data.archetypeStorages[archetype]->INFO.getComponentId(index) == INVALID_COMPONENT_INDEX)
       return false;
     return true;
@@ -497,7 +498,7 @@ namespace ecs {
   __forceinline bool EntityManager::getEntityArchetype(EntityId eid, int &idx, archetype_t &archetype) const {
     const bool ret = entDescs.getEntityArchetypeId(eid, archetype);
     if (ret) {
-      //DAECS_VALIDATE_ARCHETYPE(archetype);
+      // DAECS_VALIDATE_ARCHETYPE(archetype);
     }
     return ret;
   }
@@ -507,7 +508,7 @@ namespace ecs {
     archetype_t archetype = INVALID_ARCHETYPE;
     if (!getEntityArchetype(eid, idx, archetype))
       return -1;
-    return this->arch_data.archetypeStorages[archetype]->COMPONENT_COUNT-1;
+    return this->arch_data.archetypeStorages[archetype]->COMPONENT_COUNT - 1;
   }
 
   ComponentRef EntityManager::getComponentRef(EntityId eid, archetype_component_id cid) const {
@@ -515,12 +516,11 @@ namespace ecs {
     auto desc = this->entDescs.getEntityDesc(eid);
     if (!desc)
       return {};
-    auto data = this->arch_data.getComponentDataIdUnsafe(desc->archetype_id, cid,
-                                                                desc->chunk_id);
+    auto data = this->arch_data.getComponentDataIdUnsafe(desc->archetype_id, cid, desc->chunk_id);
     if (!data)
       return {};
     auto cidx = this->arch_data.getComponentUnsafe(desc->archetype_id, cid);
-    //ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint16_t size);
+    // ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint16_t size);
     auto datacomp_data = data_state->dataComponents.getDataComponent(cidx);
     if (!datacomp_data)
       return {};
@@ -535,13 +535,11 @@ namespace ecs {
     if (!desc)
       return {};
     void *data;
-    {
-      data = this->arch_data.getComponentDataUnsafe(desc->archetype_id, cidx, desc->chunk_id);
-    }
+    { data = this->arch_data.getComponentDataUnsafe(desc->archetype_id, cidx, desc->chunk_id); }
     if (!data)
       return {};
-    //auto cidx = this->archetypes.getComponentUnsafe(desc->archetype_id, cid);
-    //ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint16_t size);
+    // auto cidx = this->archetypes.getComponentUnsafe(desc->archetype_id, cid);
+    // ComponentRef(void *data, component_type_t type, type_index_t compIndex, uint16_t size);
     auto datacomp_data = data_state->dataComponents.getDataComponent(cidx);
     if (!datacomp_data)
       return {};
@@ -553,7 +551,7 @@ namespace ecs {
   void EntityManager::sendEventImmediate(EntityId eid, Event &evt) {
     ZoneScoped;
     if (!this->entDescs.doesEntityExist(eid))
-    EXCEPTION("tried to send a query to an entity that doesnt exist");
+      EXCEPTION("tried to send a query to an entity that doesnt exist");
     this->data_state->sendEventImmediate(eid, evt, *this);
   }
 
@@ -562,26 +560,32 @@ namespace ecs {
     this->data_state->broadcastEventImmediate(evt, *this);
   }
 
-  void EntityManager::sendEventImmediate(EntityId eid, Event &&evt) {
-    return sendEventImmediate(eid, evt);
-  }
+  void EntityManager::sendEventImmediate(EntityId eid, Event &&evt) { return sendEventImmediate(eid, evt); }
 
-  void EntityManager::broadcastEventImmediate(Event &&evt) {
-    return broadcastEventImmediate(evt);
+  void EntityManager::broadcastEventImmediate(Event &&evt) { return broadcastEventImmediate(evt); }
+  void EntityManager::dispatchEventImmediate(EntityId eid, Event &evt) {
+    G_ASSERTF(bool(eid) == bool(evt.getFlags() & EVCAST_UNICAST), "event {} has {} flags but sent as {}", evt.getName(),
+              (evt.getFlags() & EVCAST_UNICAST) ? "unicast" : "broadcast", bool(eid) ? "unicast" : "broadcast");
+    if (bool(eid)) {
+      sendEventImmediate(eid, evt);
+    } else {
+      broadcastEventImmediate(evt);
+    }
   }
+  void EntityManager::dispatchEventImmediate(EntityId eid, Event &&evt) { dispatchEventImmediate(eid, evt); }
 
-  void
-  EntityManager::collectComponentInfo(EntityId eid, std::vector<std::pair<ComponentInfo *, DataComponent *>> &comps) {
+  void EntityManager::collectComponentInfo(EntityId eid,
+                                           std::vector<std::pair<ComponentInfo *, DataComponent *>> &comps) {
     int num_components = this->getNumComponents(eid);
     if (num_components == -1) {
       comps.resize(0);
       return;
     }
     template_t t = this->getEntityTemplateId(eid);
-    G_ASSERT(t!=INVALID_TEMPLATE_INDEX);
+    G_ASSERT(t != INVALID_TEMPLATE_INDEX);
     std::shared_lock arch_lock(this->data_state->templates.template_mtx);
     auto inst = this->data_state->templates.getInstTemplate(t);
-    for(auto &comp : inst->components) {
+    for (auto &comp: inst->components) {
       auto d = this->data_state->dataComponents.getDataComponent(comp.comp_type_index); // datacomponent
       auto c = this->data_state->componentTypes.getComponentData(d->componentIndex); // component
       comps.emplace_back(c, d);
@@ -593,16 +597,16 @@ namespace ecs {
     bool reserved = eidsReservationMode;
     auto &freed_deque = reserved ? freeIndicesReserved : freeIndices;
     unsigned idx;
-    if(!freed_deque.empty()) {
-      alloc_idx:
+    if (!freed_deque.empty()) {
+    alloc_idx:
       idx = freed_deque.front();
       G_ASSERT(idx < entDescs.size());
       freed_deque.pop_front();
-    } {
-      if(!reserved) {
+    }
+    {
+      if (!reserved) {
         idx = entDescs.push_back();
-      }
-      else if(DAGOR_LIKELY(nextReservedIndex <= RESERVED_EID_RANGE))
+      } else if (DAGOR_LIKELY(nextReservedIndex <= RESERVED_EID_RANGE))
         idx = nextReservedIndex++;
       else {
         goto alloc_idx;
@@ -623,7 +627,7 @@ namespace ecs {
     auto &desc = this->entDescs[eid];
     auto templ = g_ecs_data->getTemplateDB()->getTemplate(desc.templ_id);
     // entity already has this sub template
-    if(std::find(templ->getParents().begin(), templ->getParents().end(), sub_templ) != templ->getParents().end())
+    if (std::find(templ->getParents().begin(), templ->getParents().end(), sub_templ) != templ->getParents().end())
       return;
     // entity doesn't have it, lets get our new template and recreate entity
     std::string combined_template = fmt::format("{}+{}", templ->getName(), sub_template);
@@ -632,5 +636,4 @@ namespace ecs {
     g_ecs_data->getTemplateDB()->instantiateTemplate(new_templ);
     this->createEntity(eid, new_templ, {});
   }
-}
-
+} // namespace ecs

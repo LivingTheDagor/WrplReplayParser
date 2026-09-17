@@ -21,8 +21,9 @@ namespace danet // To consider: move declaration (but not definition) of these f
 } // namespace danet
 
 namespace net {
-
-  typedef uint32_t compressed_uint32_t;
+  struct compressed_uint32_t {
+    uint32_t value;
+  };
 
   namespace detail {
     template<typename T>
@@ -35,11 +36,11 @@ namespace net {
     }
     template<>
     inline void write_value(BitStream &bs, const compressed_uint32_t &val) {
-      bs.WriteCompressed(val);
+      bs.WriteCompressed(val.value);
     }
     template<>
     inline bool read_value(const BitStream &bs, compressed_uint32_t &val, const Connection &) {
-      return bs.ReadCompressed(val);
+      return bs.ReadCompressed(val.value);
     }
 
     // Special meaning: ConnectionId is "virtual" member - no data is written, but on read it's

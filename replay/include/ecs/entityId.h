@@ -25,7 +25,6 @@ namespace ecs {
 
   class GState;
 
-  // currently, I dont actually care about the Generation as I still have no idea what it 'means'
   class EntityId {
   public:
     EntityId() = default;
@@ -44,7 +43,9 @@ namespace ecs {
 
     [[nodiscard]] inline uint32_t get_handle() const { return handle; }
 
-    [[nodiscard]] inline std::string toString(int indent = 0) const { return fmt::format("ecs::EntityId{{{}:{}}}", this->index(), this->generation()); }
+    [[nodiscard]] inline std::string toString(int indent = 0) const {
+      return fmt::format("ecs::EntityId{{{}:{}}}", this->index(), this->generation());
+    }
 
   private:
     friend class ecs::EntityManager;

@@ -66,6 +66,16 @@ namespace net {
                                                     MessageDeleter(/*heap*/ false, manager.owned_by->get_allocator()));
     if (check_routing(*msg, cnet, toEid, &robj, /*send*/ false)) {
       if (msg->unpack(data, from)) {
+        if (data.GetNumberOfUnreadBits() > 7) { // anymore than a byte is worrying
+          std::vector<uint8_t> tmp_buff{};
+          tmp_buff.resize(BITS_TO_BYTES(data.GetNumberOfUnreadBits()));
+          auto unread_count = data.GetNumberOfUnreadBits();
+          data.ReadBits(tmp_buff.data(), unread_count);
+          auto ret = FormatHexToStream(tmp_buff);
+          LOGI("network message {}/{}/{:#x} to {}<{}> has {} unread bits after unpacking; contents: {}",
+               msgCls->classId, msgCls->debugClassName ? msgCls->debugClassName : "<STRIPPED>", msgCls->classHash,
+               toEid, manager.getEntityTemplateName(toEid), unread_count, ret.str());
+        }
         if (msgCls->flags & MF_TIMED)
           static_cast<IMessageTimed *>(msg.get())->rcvTime = rcvTime;
         msg->connection = &from;
@@ -135,6 +145,21 @@ namespace net {
     return conn->send(cur_time, bsToSend, pprio, mdsc.reliability, mdsc.channel, mdsc.dupDelay);
   }*/
 
+  void CNetwork::flushClientWaitMsgs(ecs::entity_id_t serverEid) {
+    G_ASSERT(isClient());
+    // G_ASSERT(serverConnection);
+    auto it = clientWaitMsgs.find(ClientWaitMsg{serverEid});
+    if (it == clientWaitMsgs.end())
+      return;
+    if (const Object *robj = Object::getByEid(ecs::EntityId(serverEid), &this->getEntityManager())) {
+      G_ASSERT(!it->msgs.empty());
+      for (auto &msg: it->msgs)
+        msg.apply(*robj, conn, *this, msg.bs);
+    } else
+      G_ASSERTF(0, "Failed to resolve serverEid %d or replication component", serverEid);
+    clientWaitMsgs.erase(it);
+  }
+
   void CNetwork::onPacket(ReplayPacket *pkt, int cur_time_ms) {
     BitStream &bs = pkt->stream;
     BitStream bsTemp = BitStream();
@@ -175,10 +200,11 @@ namespace net {
         }
         if (!MessageClass::validateIncomingMessage(msgId, 0))
           break;
-        CNET_LOGI("ID_ENTITY_MSG: msgId {} for eid {} with hash", msgId, eid);
         const MessageClass *msgCls = MessageClass::getById(msgId);
-        if (!msgCls)
+        if (!msgCls) {
+          CNET_LOGI("ID_ENTITY_MSG: msgId {} for eid {}", msgId, eid);
           break;
+        }
         bs.AlignReadToByteBoundary();
         const BitStream *bsToRead = readCompressedIfPacketType(ID_ENTITY_MSG_COMPRESSED);
         if (!bsToRead)
@@ -194,7 +220,6 @@ namespace net {
           if ((msgCls->flags & MF_DISCARD_IF_NO_ENTITY) != 0)
             ; // do nothing (i.e. discard)
           else {
-            LOG("PUSH BACK NAWUH");
             auto it = clientWaitMsgs.insert(ClientWaitMsg{serverEid}).first;
             it->msgs.push_back(eastl::move(omsg));
             it->msgs.back().bs = *bsToRead; // copy
@@ -282,10 +307,17 @@ namespace net {
         const BitStream *bsToRead = readCompressedIfPacketType(ID_ENTITY_CREATION_COMPRESSED);
         if (!bsToRead)
           break;
-
+        auto constructCb = [this](Connection &conn, ecs::entity_id_t serverEid) {
+          // if (&conn != serverConnection.get()) // Note: in theory different instance might get reallocated to the
+          // same exact address as
+          //   // old one
+          //     return;
+          // conn.applyDelayedAttrsUpdate(serverEid);
+          flushClientWaitMsgs(serverEid);
+        };
         // std::cout << "ID_ENTITY_CREATION\n";
         float cratio = 0;
-        bool r = conn.readConstructionPacket(*bsToRead, cratio);
+        bool r = conn.readConstructionPacket(*bsToRead, cratio, constructCb);
         if (!r)
           EXCEPTION("Failed to read {} construction packet of {} bytes",
                     ptype == ID_ENTITY_CREATION_COMPRESSED ? "compresssed " : "", bsToRead->GetNumberOfBytesUsed());

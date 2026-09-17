@@ -437,6 +437,9 @@ namespace ecs {
     std::vector<ACTION_ARRAY_CONTAINER> events;
   };
 
+
+  typedef eastl::function<void(EntityId /*created_entity*/)> create_entity_async_cb_t;
+
   class EntityManager {
     // max of range reserved for replicated entities
     // all ids below this (basically 0 to USHRT_MAX) are for server to do stuff
@@ -544,6 +547,10 @@ namespace ecs {
     void sendEventImmediate(EntityId eid, Event &&evt);
 
     void broadcastEventImmediate(Event &&evt);
+
+    void dispatchEventImmediate(EntityId eid, Event &evt);
+
+    void dispatchEventImmediate(EntityId eid, Event &&evt);
 
     void add_sub_template(ecs::EntityId eid, const std::string &sub_template);
 

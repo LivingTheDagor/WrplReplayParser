@@ -251,7 +251,8 @@ namespace net {
     }
   }
 
-  bool Connection::readConstructionPacket(const BitStream &bs, float compression_ratio) {
+  bool Connection::readConstructionPacket(const BitStream &bs, float compression_ratio,
+                                          const on_object_constructed_cb_t &obj_constructed_cb) {
     auto failRet = false;
 
     uint8_t written = 0;
@@ -265,7 +266,10 @@ namespace net {
       G_ASSERT(blockSizeBytes > 0);
       BitSize_t startPos = bs.GetReadOffset();
       if (DAGOR_LIKELY(mgr->getEntityTemplateId(resolvedEid) == ecs::INVALID_TEMPLATE_INDEX)) {
-        ecs::EntityId eid = deserializeConstruction(bs, serverEid, blockSizeBytes, compression_ratio);
+
+        ecs::EntityId eid = deserializeConstruction(
+          bs, serverEid, blockSizeBytes, compression_ratio,
+          [this, obj_constructed_cb, serverEid](ecs::EntityId) { obj_constructed_cb(*this, serverEid); });
 
         if (!eid)
           EXCEPTION("Construction of entity of eid {:#x} failed", serverEid);
@@ -315,7 +319,7 @@ namespace net {
   }
 
   ecs::EntityId Connection::deserializeConstruction(const BitStream &bs, ecs::entity_id_t serverId, uint32_t sz,
-                                                    float cratio) {
+                                                    float cratio, ecs::create_entity_async_cb_t &&cb) {
     G_ASSERT(serverId != ecs::ECS_INVALID_ENTITY_ID_VAL);
     G_UNUSED(sz);
     G_UNUSED(cratio);
@@ -360,6 +364,7 @@ namespace net {
     // ecs::ComponentTypeInfo<ecs::EntityId>::typed
     ainit[ECS_HASH("eid")] = ecs::Component(srvEid);
     mgr->createEntity(srvEid, this->serverToClientTemplates[serverTemplate], std::move(ainit));
+    cb(srvEid); // I dont give a shit that this is for 'async' calls, fuck you
     return srvEid;
   }
 

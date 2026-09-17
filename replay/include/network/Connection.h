@@ -93,9 +93,13 @@ namespace net {
 
   class Connection {
   public:
+    typedef eastl::fixed_function<sizeof(void *) * 2, void(Connection &conn, ecs::entity_id_t serverEid)>
+      on_object_constructed_cb_t;
     explicit Connection(ecs::EntityManager *mgr) : objectKeysRepl(&this->objectKeysLocal) { this->mgr = mgr; }
-    ecs::EntityId deserializeConstruction(const BitStream &bs, ecs::entity_id_t serverId, uint32_t sz, float cratio);
-    bool readConstructionPacket(const BitStream &bs, float compression_ratio);
+    ecs::EntityId deserializeConstruction(const BitStream &bs, ecs::entity_id_t serverId, uint32_t sz, float cratio,
+                                          ecs::create_entity_async_cb_t &&cb);
+    bool readConstructionPacket(const BitStream &bs, float compression_ratio,
+                                const on_object_constructed_cb_t &obj_constructed_cb);
     const char *deserializeTemplate(const BitStream &bs, ecs::template_t &templateId, bool &tpl_deserialized);
     bool syncReadTemplate(const BitStream &bs, ecs::template_t templateId);
     bool syncReadComponent(ecs::component_index_t serverCidx, const BitStream &bs, ecs::template_t templateId,

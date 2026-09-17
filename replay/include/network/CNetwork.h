@@ -75,6 +75,7 @@ namespace net {
       bool operator<(const ClientWaitMsg &rhs) const { return server_id < rhs.server_id; }
     };
     eastl::vector_set<ClientWaitMsg> clientWaitMsgs;
+    void flushClientWaitMsgs(ecs::entity_id_t serverEid);
   };
 } // namespace net
 
