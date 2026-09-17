@@ -6,6 +6,7 @@
 namespace net {
   class Object {
   public:
+    ecs::EntityId getEid() const { return eid; }
     explicit Object(ecs::EntityId eid_);
     static Object *getByEid(ecs::EntityId, ecs::EntityManager *);
     bool deserializeComps(const BitStream &bs, Connection *conn);

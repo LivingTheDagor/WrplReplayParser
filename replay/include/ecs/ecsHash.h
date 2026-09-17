@@ -7,6 +7,7 @@
 #include <util/dag_hash.h>
 #include <type_traits>
 #include "string_view"
+#include "string"
 
 namespace ecs {
   typedef uint32_t hash_str_t;
@@ -26,7 +27,7 @@ namespace ecs {
 #define ECS_HASH(a)      (ecs::HashedConstString{a, std::integral_constant<ecs::hash_str_t, ecs_str_hash(a)>::value})
 #define ECS_HASH_SLOW(a) (ecs::HashedConstString{a, ecs_str_hash(a)})
 
-  inline hash_str_t ecs_hash(std::string_view str) { return ecs_mem_hash(str.data(), str.length()); }
+  inline hash_str_t ecs_hash(const std::string_view str) { return ecs_mem_hash(str.data(), str.length()); }
 
   struct EcsHasher {
     size_t operator()(const std::string &str) const { return ecs_hash(str); }

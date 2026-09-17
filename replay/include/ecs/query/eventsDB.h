@@ -9,7 +9,11 @@ namespace ecs {
   // mind you, the EventsDB cannot create an event, it merely stores information about an event
   class EventsDB {
     typedef uint32_t event_id_t;
+
+  public:
     static constexpr event_id_t invalid_event_id = std::numeric_limits<event_id_t>::max();
+
+  private:
     std::unordered_map<event_type_t, event_id_t> eventsMap; // look up an events index from its hash
     std::unordered_map<event_type_t, destroy_event *> eventsDestroyMap; // contains a references to dtors.
     // I have no idea why this exists and isnt instead just a virtual dtor, maybe the weird class def plays into it?

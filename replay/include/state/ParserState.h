@@ -45,6 +45,10 @@ enum ChatType : uint8_t {
   Direct = 3, // exists, but is currently unused from what I can tell
 };
 
+namespace net {
+  struct MsgSinkAccess;
+};
+
 struct ChatMessage {
   uint32_t time_ms;
   std::string player_name; // player name
@@ -79,6 +83,7 @@ struct ParserState {
   explicit ParserState(IReplay *replay);
 
 protected:
+  ecs::EntityId msg_sink_eid;
   void initialize(uint32_t player_couunt);
   bool is_dtor{false};
   StateAllocator allocator{};
@@ -87,6 +92,7 @@ protected:
 
   friend mpi::IObject *mpi::ObjectDispatcher(mpi::ObjectID oid, mpi::ObjectExtUID extUid, ParserState *state);
   friend StateRewinder;
+  friend net::MsgSinkAccess;
 
 
   // could replace with a tuple vector, basically the same thing with less space

@@ -15,6 +15,7 @@ add_library(dagECS
         EntityManagerQuery.cpp
         Unit.cpp
         shared_mutex.cpp
+        SchemelessEvent.cpp
 )
 
 

@@ -51,6 +51,12 @@ namespace ecs {
     serialize_entity_component_ref_typeless(comp.getRawData(), comp.getComponentId(), comp.getUserType(),
                                             comp.getTypeId(), serializer, mgr);
   }
+  void serialize_entity_component_ref_typeless(const void *comp_data, component_type_t type_name,
+                                               SerializerCb &serializer, ecs::EntityManager *mgr) {
+
+    serialize_entity_component_ref_typeless(comp_data, ecs::INVALID_COMPONENT_INDEX, type_name,
+                                            g_ecs_data->getComponentTypes()->findType(type_name), serializer, mgr);
+  }
 
   void serialize_child_component(const Component &comp, SerializerCb &serializer, ecs::EntityManager *mgr) {
     component_type_t userType = comp.getUserType();

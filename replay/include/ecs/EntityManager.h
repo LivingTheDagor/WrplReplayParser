@@ -191,6 +191,7 @@ namespace ecs {
     void sendEventImmediate(EntityId eid, Event &evt, EntityManager &mgr);
 
     void broadcastEventImmediate(Event &evt, EntityManager &mgr);
+    EventsDB &getEventsDb() { return this->eventsDb; }
 
     friend Component;
     friend InstantiatedTemplate;
@@ -361,8 +362,7 @@ namespace ecs {
     friend EntityManager;
 
   public:
-    EntityCreatedAction(const EntityId before, const EntityId after) :
-      RewindAction(), before(before), after(after) {}
+    EntityCreatedAction(const EntityId before, const EntityId after) : RewindAction(), before(before), after(after) {}
     ~EntityCreatedAction() override = default;
     void forward(EntityManager &mgr) override;
     void backward(EntityManager &mgr) override;
@@ -374,8 +374,7 @@ namespace ecs {
     friend EntityManager;
 
   public:
-    EntityDestroyedAction(const EntityId before, const EntityId after) :
-      RewindAction(), before(before), after(after) {}
+    EntityDestroyedAction(const EntityId before, const EntityId after) : RewindAction(), before(before), after(after) {}
     ~EntityDestroyedAction() override = default;
     void forward(EntityManager &mgr) override;
     void backward(EntityManager &mgr) override;
@@ -570,7 +569,7 @@ namespace ecs {
     BitVector wasInit{false}; // used during entity creation
     MgrArchetypeStorage arch_data; // EntityManager now only owns raw entity storage
     uint32_t last_time_modified = 0;
-    EcsRewindEvent * curr_event;
+    EcsRewindEvent *curr_event;
   };
 } // namespace ecs
 

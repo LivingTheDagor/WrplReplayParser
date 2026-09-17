@@ -1,21 +1,27 @@
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 
+// #include <memory/dag_framemem.h>
 // #include <generic/dag_sort.h>
+#include "util/dag_stlqsort.h"
 #include <network/message.h>
-// #include <network/netEvent.h>
-#include <daNet/bitStream.h>
+#include <network/netEvent.h>
+#include <ecs/entityManager.h>
+#include <danet/bitStream.h>
 #include <EASTL/functional.h>
 #include <EASTL/vector_map.h>
 #include <math/dag_adjpow2.h>
-#include <network/msgSink.h>
-#include "consts.h"
+// #include <startup/dag_globalSettings.h>
+#include <ioSys/dag_dataBlock.h>
+#include <network/msgDispatch.h>
+#include <util/dag_globDef.h>
 
 namespace net {
 
-  extern void clear_net_msg_handlers();
-  extern void register_net_msg_handler(const net::MessageClass &klass, net::msg_handler_t handler);
-
   MessageClass *MessageClass::classLinkList = NULL;
+  struct MessageClassData {
+  private:
+    friend class MessageClass;
+  };
   int MessageClass::numClassIdBits = -1;
 
   enum class MessageSysSyncState : uint8_t {
@@ -29,29 +35,40 @@ namespace net {
   static MessageSysSyncState msgSysSyncState = MessageSysSyncState::NOT_SYNCED;
   static uint64_t allMessagesHash = 0u;
 
-  static std::vector<const MessageClass *> incomingMessageById;
+  static dag::Vector<const MessageClass *> incomingMessageById;
 
   // client-to-server message hashes, then server-to-client message hashes
-  static std::vector<uint32_t> syncedServerMessageHashes;
+  static dag::Vector<uint32_t> syncedServerMessageHashes;
   static uint16_t syncedClientToServerMsgCount = 0u;
 
-  std::span<net::IConnection *> broadcast_rcptf(std::vector<net::IConnection *> &, ecs::EntityId, const IMessage &) {
+  dag::Span<net::Connection *> broadcast_rcptf(Tab<net::Connection *> &, ecs::EntityId, const IMessage &) {
     // no body, since it's never actually called (only address of this function is used)
-    return std::span<net::IConnection *>();
+    return dag::Span<net::Connection *>();
   }
 
-  std::span<net::IConnection *> direct_connection_rcptf(std::vector<net::IConnection *> &, ecs::EntityId,
-                                                        const IMessage &msg) {
+  dag::Span<net::Connection *> direct_connection_rcptf(Tab<net::Connection *> &, ecs::EntityId, const IMessage &msg) {
     if (msg.connection)
-      return std::span((net::IConnection **) &msg.connection, 1);
+      return make_span((net::Connection **) &msg.connection, 1);
     else
-      return std::span<net::IConnection *>();
+      return dag::Span<net::Connection *>();
+  }
+
+  eastl::string MessageClass::defaultFormatMsgStr(const IMessage *msg) {
+    const MessageClass &msgCls = msg->getMsgClass();
+    eastl::string result;
+    result.sprintf("#{}/{}/{:#x}", msgCls.classId, msgCls.debugClassName, msgCls.classHash);
+    return result;
   }
 
   MessageClass::MessageClass(const char *class_name, uint32_t class_hash, uint32_t class_sz, MessageRouting rout,
                              bool timed, recipient_filter_t rcptf, PacketReliability rlb, uint8_t chn, uint32_t flags_,
-                             int dup_delay_ms, void (*msg_sink_handler)(const IMessage *)) :
-    msgSinkHandler(msg_sink_handler), debugClassName(class_name), classHash(class_hash), memSize(class_sz) {
+                             int dup_delay_ms, msg_handler_t msg_handler,
+                             eastl::string (*format_msg_str)(const IMessage *)) :
+    handler(msg_handler),
+    formatMsgStr(format_msg_str),
+    debugClassName(class_name),
+    classHash(class_hash),
+    memSize(class_sz) {
     routing = rout, reliability = rlb;
     channel = chn;
     flags = flags_ | (timed ? MF_TIMED : 0);
@@ -67,8 +84,8 @@ namespace net {
   uint32_t MessageClass::initImpl(bool server, bool dbg_output_table) {
     allMessagesHash = calcAllMessagesHash();
 
-    if (!classLinkList)
-      return 0;
+    // if (!classLinkList)
+    //   return 0;
     auto is_outgoing = [server](const MessageClass *cls) {
       MessageRouting rout = cls->routing;
       return server ? (rout == ROUTING_SERVER_TO_CLIENT)
@@ -80,7 +97,7 @@ namespace net {
     using MessageByHashMap = eastl::vector_map<uint32_t, MessageClass *, eastl::less<uint32_t>>;
     MessageByHashMap outgoingMessagesMap;
     MessageByHashMap incomingMessagesMap;
-    std::vector<MessageClass *> skippedMsgClasses;
+    dag::Vector<MessageClass *> skippedMsgClasses;
     outgoingMessagesMap.reserve(64);
     incomingMessagesMap.reserve(64);
     G_ASSERT(
@@ -95,8 +112,8 @@ namespace net {
     for (MessageClass *cls = classLinkList; cls; cls = cls->next) {
       MessageRouting rout = cls->routing;
       if (rout == ROUTING_SERVER_TO_CLIENT && !cls->rcptFilter) {
-        EXCEPTION("Server to client message '%s'(%x) must have recipientFilter. Check message registration options.",
-                  cls->debugClassName, cls->classHash);
+        LOGE("Server to client message '{}'({:#x}) must have recipientFilter. Check message registration options.",
+             cls->debugClassName, cls->classHash);
         continue;
       }
       const bool outgoing = is_outgoing(cls);
@@ -114,32 +131,34 @@ namespace net {
       }
       // put message in appropriate map, and check for hash collision
       MessageClass *&msgClsSlot = messageMap[cls->classHash];
-      G_ASSERTF(msgClsSlot == nullptr, "Net messages hash collision %x for %s/%s!", cls->classHash,
+      G_ASSERTF(msgClsSlot == nullptr, "Net messages hash collision {:#x} for {}/{}!", cls->classHash,
                 msgClsSlot->debugClassName, cls->debugClassName);
       msgClsSlot = cls;
       ++netMessagesCount;
-      if (cls->msgSinkHandler && !outgoing)
-        register_net_msg_handler(*cls, cls->msgSinkHandler);
+      if (!outgoing && cls->handler)
+        register_net_msg_handler(*cls, cls->handler);
       if (cls->debugClassName)
         maxMessageClassLen = eastl::max(maxMessageClassLen, uint32_t(strlen(cls->debugClassName)));
     }
 
-    std::vector<const MessageClass *> outgoingMessagesList;
-    std::vector<const MessageClass *> incomingMessagesList;
-    outgoingMessagesList.resize(uint32_t(outgoingMessagesMap.size()));
-    incomingMessagesList.resize(uint32_t(incomingMessagesMap.size()));
+    dag::Vector<const MessageClass *> outgoingMessagesList;
+    dag::Vector<const MessageClass *> incomingMessagesList;
+    outgoingMessagesList.resize_noinit(uint32_t(outgoingMessagesMap.size()));
+    incomingMessagesList.resize_noinit(uint32_t(incomingMessagesMap.size()));
     {
       for (int i = 0; i < int(incomingMessagesMap.size()); ++i) {
         MessageClass *cls = incomingMessagesMap.data()[i].second;
         incomingMessagesList[i] = cls;
         if (cls != nullptr)
           cls->classId = int16_t(i); // for receival (getById)
+        LOGI("incoming hash {:#x} has id {}", incomingMessagesMap.data()[i].first, i);
       }
       for (int i = 0; i < int(outgoingMessagesMap.size()); ++i) {
         MessageClass *cls = outgoingMessagesMap.data()[i].second;
         outgoingMessagesList[i] = cls;
         if (cls != nullptr)
           cls->classId = int16_t(i); // for sending
+        LOGI("outgoing hash {:#x} has id {}", outgoingMessagesMap.data()[i].first, i);
       }
       G_ASSERT(syncedServerMessageHashes.empty() || outgoingMessagesList.size() == syncedClientToServerMsgCount);
       // sort and add skipped messages
@@ -148,7 +167,7 @@ namespace net {
         [&](const MessageClass *a, const MessageClass *b) { return a->classHash < b->classHash; });
       for (MessageClass *cls: skippedMsgClasses) {
         const bool outgoing = is_outgoing(cls);
-        std::vector<const MessageClass *> &list = outgoing ? outgoingMessagesList : incomingMessagesList;
+        dag::Vector<const MessageClass *> &list = outgoing ? outgoingMessagesList : incomingMessagesList;
         cls->classId = int16_t(list.size());
         list.push_back(cls);
       }
@@ -156,17 +175,19 @@ namespace net {
     const int numMessageClasses = int(eastl::max(incomingMessagesList.size(), outgoingMessagesList.size()));
 
     G_ASSERT(numMessageClasses >= 1);
-#if DAGOR_DBGLEVEL > 0
-    if (dbg_output_table && maxMessageClassLen &&
-        dgs_get_settings()->getBlockByNameEx("net")->getBool("debugDumpMessageClasses", true)) {
-      debug("%3s %*s/hash     %*s/hash     (all msg hash %016llx)", "#", maxMessageClassLen, "incoming_msg",
-            maxMessageClassLen, "outgoing_msg", allMessagesHash);
+#if LDAG_DBGLEVEL > 0
+    if (dbg_output_table) {
+
+      LOGI("{:>3} {:>{}}/hash     {:>{}}/hash     (all msg hash {:016x})", "#", "incoming_msg", maxMessageClassLen,
+           "outgoing_msg", maxMessageClassLen, allMessagesHash);
+
       for (int j = 0; j < numMessageClasses; j++) {
         const MessageClass *ic = j < incomingMessagesList.size() ? incomingMessagesList[j] : nullptr;
         const MessageClass *oc = j < outgoingMessagesList.size() ? outgoingMessagesList[j] : nullptr;
-        debug("%3d %*s/%08x %*s/%08x%s", j, maxMessageClassLen, ic ? ic->debugClassName : nullptr,
-              ic ? ic->classHash : 0, maxMessageClassLen, oc ? oc->debugClassName : nullptr, oc ? oc->classHash : 0,
-              j == syncedClientToServerMsgCount - 1 && !syncedServerMessageHashes.empty() ? " < last outgoing" : "");
+
+        LOGI("{:>3} {:>{}}/{:08x} {:>{}}/{:08x}{}", j, ic ? ic->debugClassName : "", maxMessageClassLen,
+             ic ? ic->classHash : 0, oc ? oc->debugClassName : "", maxMessageClassLen, oc ? oc->classHash : 0,
+             j == syncedClientToServerMsgCount - 1 && !syncedServerMessageHashes.empty() ? " < last outgoing" : "");
       }
     }
 #else
@@ -180,12 +201,6 @@ namespace net {
     // To consider: use different  number bits for incoming outgoing messages
     numClassIdBits = int((numMessageClasses == 1) ? 1 : (get_log2i(numMessageClasses) + 1));
 
-    // when message ids change, we always want to re-init net events too, as they are
-    // directly linked to message ids, and may crash, if they are not re-inited
-    if (server)
-      net::event::init_server(g_entity_mgr.get());
-    else
-      net::event::init_client(g_entity_mgr.get());
 
     return netMessagesCount;
   }
@@ -195,7 +210,8 @@ namespace net {
     syncedClientToServerMsgCount = 0u;
   }
 
-  uint32_t MessageClass::init(bool server) {
+  uint32_t MessageClass::init(bool server, ecs::EntityManager *mgr) {
+    LOGD1("[MessageClass::init] server={} mgr={} numClassIdBits={}", server ? 1 : 0, fmt::ptr(mgr), numClassIdBits);
     if (server) {
       msgSysSyncState = MessageSysSyncState::SERVER;
       reset_message_ids_sync_impl();
@@ -205,7 +221,16 @@ namespace net {
       reset_message_ids_sync_impl();
       msgSysSyncState = MessageSysSyncState::NOT_SYNCED;
     }
-    return initImpl(server, /* debug output */ numClassIdBits < 0);
+    const uint32_t numClasses = initImpl(server, /* debug output */ numClassIdBits < 0);
+
+    if (server)
+      net::event::init_server(mgr);
+    else
+      net::event::init_client(mgr);
+
+    LOGI("[MessageClass::init] DONE server={} mgr={} numClasses={} numClassIdBits={}", server ? 1 : 0, fmt::ptr(mgr),
+         numClasses, numClassIdBits);
+    return numClasses;
   }
 
   void MessageClass::startWaitingForMessageIdsSync() {
@@ -217,7 +242,7 @@ namespace net {
 
   void MessageClass::resetMessageIdsSync() {
     if (!syncedServerMessageHashes.empty())
-      debug("resetting synced ECS messages ids");
+      LOGI("resetting synced ECS messages ids");
     reset_message_ids_sync_impl();
     msgSysSyncState = MessageSysSyncState::NOT_SYNCED;
   }
@@ -260,11 +285,11 @@ namespace net {
     } else {
       bs.Write(uint16_t(0));
       bs.Write(uint16_t(0));
-      G_ASSERT_LOG(0, "writing message ids sync on client in invalid state %i", int(msgSysSyncState));
+      G_ASSERT_LOG(0, "writing message ids sync on client in invalid state {}", int(msgSysSyncState));
     }
   }
 
-  bool MessageClass::applyMessageIdsSync(const BitStream &bs) {
+  bool MessageClass::applyMessageIdsSync(const BitStream &bs, ecs::EntityManager *mgr) {
     G_ASSERT_RETURN(msgSysSyncState == MessageSysSyncState::WAITING_SYNC, false);
     reset_message_ids_sync_impl();
     bool ok = true;
@@ -285,17 +310,19 @@ namespace net {
       ok &= syncedClientToServerMsgCount <= syncedServerMessageHashes.size();
     }
     if (!ok) {
-      LOG("message sync read failed");
+      LOGI("message sync read failed");
       msgSysSyncState = MessageSysSyncState::SYNC_FAILED;
       reset_message_ids_sync_impl();
     } else {
       msgSysSyncState = isMatched ? MessageSysSyncState::SYNCED_MATCHED : MessageSysSyncState::SYNCED_FULL;
       if (isMatched)
-        LOG("server and client messages match, no syncing will be done");
+        LOGI("server and client messages match, no syncing will be done");
       else
-        LOG("server and client messages successfully synced");
+        LOGI("server and client messages successfully synced");
     }
-    initImpl(/* server */ false, /* debug output */ !isMatched);
+    // Full client init: rebuilds the message-class table (classId renumber on the synced hashes)
+    // AND the net-event rx_msg_bitmap/rx_msg_index that depends on those classIds.
+    init(/* server */ false, mgr);
     return ok;
   }
 
@@ -303,9 +330,9 @@ namespace net {
     // we don't allow to send messages from client while it is waiting for sync,
     // no sending/receiving messages is done at this point
     if (msgSysSyncState == MessageSysSyncState::WAITING_SYNC || msgSysSyncState == MessageSysSyncState::SYNC_FAILED) {
-      logerr("Sending net message with id %d, %s", msg_class_id,
-             msgSysSyncState == MessageSysSyncState::SYNC_FAILED ? "after sync has failed"
-                                                                 : "while still waiting for sync");
+      LOGE("Sending net message with id {}, {}", msg_class_id,
+           msgSysSyncState == MessageSysSyncState::SYNC_FAILED ? "after sync has failed"
+                                                               : "while still waiting for sync");
       return true;
     }
     if (msgSysSyncState == MessageSysSyncState::SYNCED_FULL) {
@@ -322,19 +349,19 @@ namespace net {
       return true;
 
     if (msgSysSyncState == MessageSysSyncState::SYNC_FAILED) {
-      logerr("Net message received with id %d from conn #%d, after sync has failed", msg_class_id, dbg_conn_id);
+      LOGE("Net message received with id {} from conn {}, after sync has failed", msg_class_id, dbg_conn_id);
       return false;
     }
     if (msgSysSyncState == MessageSysSyncState::SYNCED_FULL && unsigned(msg_class_id) >= incomingMessageById.size()) {
-      logerr("Failed to resolve net message with id %d from conn #%d (out of range), incompatible network protocol?",
-             msg_class_id, dbg_conn_id);
+      LOGE("Failed to resolve net message with id {} from conn {} (out of range), incompatible network protocol?",
+           msg_class_id, dbg_conn_id);
       return false;
     }
     if (unsigned(msg_class_id) >= incomingMessageById.size() ||
         (msgSysSyncState != MessageSysSyncState::SYNCED_FULL &&
          incomingMessageById[unsigned(msg_class_id)] == nullptr)) {
-      logerr("Failed to resolve net message with id %d from conn #%d, incompatible network protocol?", msg_class_id,
-             dbg_conn_id);
+      LOGE("Failed to resolve net message with id {} from conn {}, incompatible network protocol?", msg_class_id,
+           dbg_conn_id);
       return false;
     }
     return true;

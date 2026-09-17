@@ -1,0 +1,32 @@
+#pragma once //
+// Dagor Engine 6.5
+// Copyright (C) Gaijin Games KFT.  All rights reserved.
+//
+#pragma once
+
+#include <ecs/query/event.h>
+#include <ecs/ComponentTypes/objectType.h>
+
+namespace ecs {
+  struct SchemelessEvent;
+
+  struct SchemelessEvent : public ecs::Event {
+  protected:
+    ecs::Object data; // actual payload (might be empty, thus not requiring destructor)
+  public:
+    const ecs::Object &getData() const { return data; }
+    ecs::Object &getRWData() { return data; }
+    SchemelessEvent(ecs::event_type_t tp, ecs::Object &&data_);
+    // TODO: set correct cast flag instead of EVCAST_BOTH
+    SchemelessEvent(ecs::event_type_t tp) : SchemelessEvent(tp, EVFLG_SERIALIZE | EVFLG_SCHEMELESS | EVCAST_BOTH) {}
+    SchemelessEvent(ecs::event_type_t tp, ecs::event_flags_t flags);
+
+    static void destroy(ecs::EntityManager &mgr, Event &e);
+    static void move_out(ecs::EntityManager &mgr, void *__restrict allocateAt, Event &&from);
+    static const char *staticName() { return nullptr; }
+    static constexpr event_flags_t staticFlags() { return EVFLG_SCHEMELESS | EVFLG_DESTROY; }
+  };
+
+  inline bool is_schemeless_event(const Event &evt) { return (evt.getFlags() & EVFLG_SCHEMELESS) ? true : false; }
+
+} // namespace ecs

@@ -8,13 +8,11 @@
 
 
 #include <ecs/baseIo.h>
+#include "eastl/bitvector.h"
 
-class framemem_allocator;
 namespace eastl {
   template<typename T, typename A>
   class vector;
-  template<typename A, typename T, typename C>
-  class bitvector;
 } // namespace eastl
 
 class BitStream;
@@ -27,7 +25,6 @@ namespace net {
 
   struct InternedStringsBase;
   struct InternedStringsRepl;
-  class IConnection;
 
   struct BitstreamDeserializer final : public ecs::DeserializerCb {
     const BitStream &bs;

@@ -1,0 +1,171 @@
+//
+// Dagor Engine 6.5
+// Copyright (C) Gaijin Games KFT.  All rights reserved.
+//
+#pragma once
+
+#include <ecs/entityId.h>
+#include <ecs/component.h>
+// #include "connid.h"
+// #include "scope_query_cb.h"
+// #include <daNet/daNetEchoManager.h> // for EchoResponse
+#include <daNet/packetPriority.h>
+#include <daNet/daNetTypes.h>
+// #include <daNet/disconnectionCause.h>
+#include <generic/dag_tab.h>
+// #include <generic/dag_enumBitMask.h>
+
+
+struct Packet;
+namespace ecs {
+  class EntityComponentRef;
+  class EntityManager;
+} // namespace ecs
+
+namespace net {
+
+#define ECS_NET_CONNERRS                                                                                        \
+  CONNERR_VAL(CONNECTION_CLOSED) /* Normal disconnect */                                                        \
+  CONNERR_VAL(CONNECTION_LOST) /* Connection was lost/timeouted (abnormal disconnect) */                        \
+  CONNERR_VAL(CONNECT_FAILED) /* Connect to server failed (client-only) */                                      \
+  CONNERR_VAL(                                                                                                  \
+    CONNECT_FAILED_PROTO_MISMATCH) /* Connection was rejected by server because of incompatible net protocol */ \
+  CONNERR_VAL(SERVER_FULL) /* Server is full (no free incoming connections) */                                  \
+  CONNERR_VAL(WAS_KICKED_OUT) /* Client was kicked by server */                                                 \
+  CONNERR_VAL(KICK_AFK) /* Kicked for being AFK */                                                              \
+  CONNERR_VAL(KICK_EAC) /* Kicked by EAC */
+
+  enum class ConnErr {
+#define CONNERR_VAL(x) x,
+    ECS_NET_CONNERRS
+#undef CONNERR_VAL
+  };
+
+  class Object;
+  class IMessage;
+  class Connection;
+  struct MessageNetDesc;
+
+  enum class EncryptionKeyBits : uint32_t { None = 0, Encryption = 1, Decryption = 2 };
+  // DAGOR_ENABLE_ENUM_BITMASK(EncryptionKeyBits);
+  // extern const uint32_t MIN_ENCRYPTION_KEY_LENGTH;
+
+  /*class IConnection
+  {
+  public:
+    IConnection() = default;
+    IConnection(const IConnection &) = default;
+    IConnection(IConnection &&) = default;
+    IConnection &operator=(const IConnection &) = default;
+    IConnection &operator=(IConnection &&) = default;
+    virtual ~IConnection() {}
+
+    virtual ConnectionId getId() const = 0;
+
+    virtual bool isEntityInScope(ecs::EntityId eid) const = 0;
+    virtual bool setEntityInScopeAlways(ecs::EntityId eid) = 0;
+
+    virtual danet::PeerQoSStat getPeerQoSStat() const = 0;
+    virtual void disconnect(DisconnectionCause cause = DC_CONNECTION_CLOSED) = 0;
+
+    virtual void setUserPtr(void *ptr) = 0;
+    virtual void *getUserPtr() const = 0;
+
+    virtual uint32_t getConnFlags() const = 0;
+    virtual uint32_t &getConnFlagsRW() = 0;
+
+    virtual void sendEcho(const char *, uint32_t) {}
+    virtual bool send(int cur_time, const danet::BitStream &bs, PacketPriority prio, PacketReliability rel, uint8_t chn,
+      int dup_delay_ms = 0) = 0;
+    virtual bool isBlackHole() const = 0; // if this is true than this connection won't ack or reply to anything
+
+    virtual void setEncryptionKey(dag::ConstSpan<uint8_t> key, EncryptionKeyBits ebits) = 0;
+
+    virtual bool changeSendAddress(const char * *new_host*) { return false; }
+
+    virtual void allowReceivePlaintext(bool *allow*) {}
+
+    virtual int getMTU() const = 0;
+    virtual SystemAddress getIP() const = 0;
+    virtual const char *getIPStr() const = 0;
+    virtual bool isResponsive() const = 0;
+
+    virtual ecs::EntityManager &getEntityManager() = 0;
+  };
+
+  class ConnectionsIterator
+  {
+    int i = 0;
+    // Resolved once by the constructor. The iterator must not outlive the net session, and the
+    // connection set must not change under it (single-frame send loops; mutating it would be UB).
+    union
+    {
+      Connection *const *clientConns; // server: getClientConnections() storage, valid over [0, clientConnCount)
+      Connection *serverConn;         // client: getServerConnection() (may be null)
+    };
+    int clientConnCount = 0; // server only
+    bool cachedIsServer = false;
+    void advance();
+
+  public:
+    ConnectionsIterator(); // outlined: resolves the net once, so the hot loop dereferences a cached target directly
+    explicit operator bool() const { return i >= 0; }
+    IConnection &operator*() const;
+    void operator++()
+    {
+      ++i;
+      advance();
+    }
+  };
+
+  class INetDriver
+  {
+  public:
+    virtual ~INetDriver() {}
+    virtual void destroy() { delete this; }
+    virtual bool connect(const char * *connecturl*, uint16_t *protov*, bool *is_relay_connection* = false) { return
+  false; } virtual void disconnect_relay() {} virtual bool establishedRelayConnection() { return false; } virtual void
+  setRelayConnectionHandler(void (*)(bool)) {} virtual eastl::optional<danet::EchoResponse> receiveEchoResponse() {
+  return eastl::nullopt; } virtual Packet *receive(int cur_time_ms) = 0; virtual void free(Packet *pkt) = 0; virtual
+  void shutdown(int wait_time_ms) = 0; virtual void stopAll(DisconnectionCause cause) = 0; // disconnect all with
+  special error code virtual void *getControlIface() const = 0; virtual bool isServer() const = 0; virtual DaNetTime
+  getLastReceivedPacketTime(ConnectionId) const { return 0; }
+  };
+
+  INetDriver *create_net_driver_listen(const char *listenurl, int max_connections, uint16_t *out_port = NULL); // server
+  driver INetDriver *create_net_driver_listen(const SocketDescriptor &sd, int max_connections);                       //
+  server driver INetDriver *create_net_driver_connect(const char *connecturl, uint16_t protov = 0); // client driver
+  INetDriver *create_net_driver_startup(); // client driver: binds socket, defers connect
+  Connection *create_net_connection(ecs::EntityManager &mgr, INetDriver *drv, ConnectionId id, scope_query_cb_t
+  &&scope_query = {});
+
+  INetDriver *create_stub_net_driver();
+  Connection *create_stub_connection(ecs::EntityManager &mgr);
+  */
+  // serialization
+  void serialize_comp_nameless(ecs::EntityManager &mgr, ecs::component_t name, const ecs::EntityComponentRef &cref,
+                               BitStream &bs);
+  ecs::MaybeComponent deserialize_comp_nameless(ecs::EntityManager &mgr, ecs::component_t &name, const BitStream &bs);
+
+  void write_eid(BitStream &bs, ecs::EntityId eid);
+  bool read_eid(const BitStream &bs, ecs::EntityId &eid); // return false if read from stream failed
+
+}; // namespace net
+
+#ifndef NET_SEND_NET_MSG_DECLARED
+#define NET_SEND_NET_MSG_DECLARED
+// Dst connection is deduced automatically (based of routing & recipient filter of message)
+// Return number of successfull sends
+int send_net_msg(ecs::EntityManager &mgr, ecs::EntityId to_eid, net::IMessage &&msg,
+                 const net::MessageNetDesc *msg_net_desc = nullptr);
+int send_net_msg(ecs::EntityId eid, net::IMessage &&msg, const net::MessageNetDesc *msg_net_desc = nullptr);
+// Untargeted send: no EntityManager parameter -- routing is per-NetContext (GET_NET_CTX is thread-aware).
+int send_net_msg(net::IMessage &&msg, ecs::EntityManager &mgr, const net::MessageNetDesc *msg_net_desc = nullptr);
+#endif
+// Returns true if app is running in server environment.
+// Offline (no network mode) is also assumed to be "server".
+bool is_server();
+bool is_true_net_server();
+bool has_network();
+net::Connection *get_client_connection(int id);
+dag::Span<net::Connection *> get_client_connections(); // Note: might contain NULLs

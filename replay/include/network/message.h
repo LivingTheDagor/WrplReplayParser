@@ -1,36 +1,41 @@
 //
-// Dagor Engine 6.5 - Game Libraries
+// Dagor Engine 6.5
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 //
 #pragma once
+
+#include "state/StateAllocator.h"
+
 
 #include <EASTL/type_traits.h>
 #include <EASTL/numeric_limits.h>
 #include <EASTL/unique_ptr.h>
 #include <EASTL/functional.h>
 #include <EASTL/memory.h>
+#include <EASTL/string.h>
 #include <daNet/packetPriority.h>
 #include <daNet/daNetTypes.h> // DaNetTime
-#include <utils.h>
+#include <dag_assert.h>
 #include <ecs/query/event.h>
-// #include <util/dag_hash.h>
-#include "dag_assert.h"
+#include <generic/dag_tab.h>
+#include <util/dag_hash.h>
 
-class BitStream;
 
+namespace ecs {
+  class EntityManager;
+}
 
 namespace net {
 
   class Object;
   class MessageClass;
-  class IConnection;
+  class Connection;
 
   enum MessageRouting : uint8_t {
     ROUTING_CLIENT_TO_SERVER,
     ROUTING_SERVER_TO_CLIENT,
     ROUTING_CLIENT_CONTROLLED_ENTITY_TO_SERVER // Only entity whose 'replication' component is marked via
-                                               // 'setControlledBy()' will get
-    // this kind of messages
+                                               // 'setControlledBy()' will get this kind of messages
   };
 
   enum MessageFlags : uint8_t {
@@ -48,9 +53,8 @@ namespace net {
   public:
     // On receive - which connection this message is received from (can't be null in network)
     // On send (for some rcptf) - which connection this message need to be sent to
-    IConnection
-      *connection; // Note: intentionally not inited by default (to save CPU, since in most cases it's not used/always
-    // overwritten)
+    Connection *connection; // Note: intentionally not inited by default (to save CPU, since in most cases it's not
+                            // used/always overwritten)
 
     IMessage() = default;
     IMessage(const IMessage &) = default;
@@ -59,7 +63,7 @@ namespace net {
     virtual const MessageClass &getMsgClass() const = 0;
 
     virtual void pack(BitStream &bs) const = 0;
-    virtual bool unpack(const BitStream &bs, const net::IConnection &conn) = 0;
+    virtual bool unpack(const BitStream &bs, const net::Connection &conn) = 0;
 
     virtual IMessage *moveHeap() && = 0;
 
@@ -76,36 +80,36 @@ namespace net {
   };
 
   class MessageDeleter {
+    StateAllocator *allocator = nullptr;
     bool heapAllocated;
 
   public:
-    MessageDeleter(bool heap) : heapAllocated(heap) {}
+    MessageDeleter(bool heap, StateAllocator *alloc) : allocator(alloc), heapAllocated(heap) {}
     void operator()(IMessage *ptr) {
       if (!ptr)
         return;
       if (heapAllocated)
-        delete ptr;
+        allocator->_delete(ptr);
       else
         eastl::destroy_at(ptr);
     }
   };
 
-  typedef std::span<net::IConnection *> (*recipient_filter_t)(std::vector<net::IConnection *> &out_conns,
-                                                              ecs::EntityId to_eid, const net::IMessage &);
+  typedef dag::Span<net::Connection *> (*recipient_filter_t)(Tab<net::Connection *> &out_conns, ecs::EntityId to_eid,
+                                                             const net::IMessage &);
 
 // 'rcptf' is abbreviation of 'recipient filter'
 #ifdef _MSC_VER
   __declspec(noinline)
 #endif
   // aka no filter (do not inline it to force compiler generate distinct address for this function)
-  std::span<net::IConnection *> broadcast_rcptf(std::vector<net::IConnection *> &out_conns, ecs::EntityId,
-                                                const IMessage &)
+  dag::Span<net::Connection *> broadcast_rcptf(Tab<net::Connection *> &out_conns, ecs::EntityId, const IMessage &)
 #ifdef __GNUC__ /* including clang */
     __attribute__((noinline))
 #endif
     ;
-  std::span<net::IConnection *> direct_connection_rcptf(std::vector<net::IConnection *> &out_conns, ecs::EntityId,
-                                                        const IMessage &);
+  dag::Span<net::Connection *> direct_connection_rcptf(Tab<net::Connection *> &out_conns, ecs::EntityId,
+                                                       const IMessage &);
 
 #define ECS_NET_NO_RCPTF nullptr
 #define ECS_NET_NO_DUP   0
@@ -119,34 +123,42 @@ namespace net {
     recipient_filter_t rcptFilter;
   };
 
+  typedef void (*msg_handler_t)(const IMessage *msg);
+
   class MessageClass : public MessageNetDesc {
     MessageClass *next;
     static MessageClass *classLinkList;
     static int numClassIdBits;
 
   public:
-    void (*msgSinkHandler)(
-      const IMessage *msg); // If not null then this handler will be called on msgSink messages receival
+    // single recv-side handler; whether it is invoked via the sink path or the untargeted path
+    // is determined by how the sender routed the packet, not by which slot it lives in
+    msg_handler_t handler;
+    eastl::string (*formatMsgStr)(
+      const IMessage *msg); // called with the unpacked message on routing failure for logging
     const char *debugClassName = nullptr; // null in release (see ECS_NET_MSG_CLASS_NAME)
     uint32_t classHash;
     int16_t classId = -1;
     uint16_t memSize;
 
+    static eastl::string defaultFormatMsgStr(const IMessage *msg);
+
     MessageClass(const char *class_name, uint32_t class_hash, uint32_t class_sz, MessageRouting rout, bool timed,
                  recipient_filter_t rcptf = ECS_NET_NO_RCPTF, PacketReliability rlb = RELIABLE_ORDERED, uint8_t chn = 0,
                  uint32_t flags_ = MF_DEFAULT_FLAGS, int dup_delay_ms = ECS_NET_NO_DUP,
-                 void (*msg_sink_handler)(const IMessage *) = nullptr);
+                 msg_handler_t msg_handler = nullptr,
+                 eastl::string (*format_msg_str)(const IMessage *) = &MessageClass::defaultFormatMsgStr);
 
   private:
     static uint32_t initImpl(bool server, bool dbg_output_table);
 
   public:
-    static uint32_t init(bool server);
+    static uint32_t init(bool server, ecs::EntityManager *mgr);
 
     static void startWaitingForMessageIdsSync();
     static void resetMessageIdsSync();
     static void writeMessageIdsSync(BitStream &bs, uint64_t client_hash = 0u);
-    static bool applyMessageIdsSync(const BitStream &bs);
+    static bool applyMessageIdsSync(const BitStream &bs, ecs::EntityManager *mgr);
 
     static const MessageClass *getById(int msg_class_id);
     static int getNumClassIdBits();
@@ -168,7 +180,7 @@ namespace net {
   };
 
 
-#if DAGOR_DBGLEVEL > 0
+#if LDAG_DBGLEVEL > 0
 #define ECS_NET_MSG_CLASS_NAME(x) #x
 #else
 #define ECS_NET_MSG_CLASS_NAME(x) \
@@ -183,10 +195,20 @@ namespace net {
 
 #define ECS_NET_DECL_MSG_CLASS(class_name) ECS_NET_DECL_MSG_CLASS_BASE(class_name, net::IMessage)
 
-#define ECS_NET_IMPL_MSG(class_name, rout, ...)                                                       \
-  net::MessageClassInst<class_name> class_name::messageClass(                                         \
-    ECS_NET_MSG_CLASS_NAME(class_name), ECS_NET_MSG_CLASS_HASH(class_name), sizeof(class_name), rout, \
+#define ECS_NET_IMPL_MSG_HASH(class_name, rout, hash, ...)              \
+  net::MessageClassInst<class_name> class_name::messageClass(           \
+    ECS_NET_MSG_CLASS_NAME(class_name), hash, sizeof(class_name), rout, \
     (eastl::is_base_of<net::IMessageTimed, class_name>::value), ##__VA_ARGS__)
+
+#define ECS_NET_IMPL_MSG(class_name, rout, ...) \
+  ECS_NET_IMPL_MSG_HASH(class_name, rout, ECS_NET_MSG_CLASS_HASH(class_name), ##__VA_ARGS__)
+
+#define ECS_NET_IMPL_UNTARGETED_MSG(class_name, rout, rcptf, rlb, chn, flags_, dup_delay_ms, untargeted_handler) \
+  net::MessageClassInst<class_name> class_name::messageClass(                                                    \
+    ECS_NET_MSG_CLASS_NAME(class_name), ECS_NET_MSG_CLASS_HASH(class_name), sizeof(class_name), rout,            \
+    (eastl::is_base_of<net::IMessageTimed, class_name>::value), rcptf, rlb, chn, flags_, dup_delay_ms,           \
+    untargeted_handler)
+
 }; // namespace net
 
 namespace ecs {

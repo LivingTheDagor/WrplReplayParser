@@ -115,6 +115,8 @@ namespace net {
   public:
     mutable InternedStringsRepl objectKeysRepl;
 
+    ecs::EntityManager *getEntityManager() const { return this->mgr; }
+
   private:
     mutable InternedStringsShared objectKeysLocal;
     std::vector<uint8_t> construct_replication_into{}; // will hold temporary replicated data
