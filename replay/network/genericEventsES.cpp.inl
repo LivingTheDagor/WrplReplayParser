@@ -402,3 +402,11 @@ static inline void event_do_ammo_explode_es_event_handler(const EventDoAmmoExplo
   LOGI("entity {}<{}> got EventDoAmmoExplode with value: {}", eid, manager.getEntityTemplateName(eid),
        toStringImplTyped(&evt.get<0>(), 0));
 }
+ECS_BROADCAST_EVENT_TYPE(EventSpawnBullet, bool, bool, bool, uint8_t, uint8_t, uint8_t, uint16_t, uint16_t,
+                         net::compressed_uint32_t, net::compressed_uint32_t, net::compressed_uint32_t, Point3, Point3,
+                         uint32_t, net::compressed_uint32_t, uint8_t)
+ECS_REGISTER_EVENT(EventSpawnBullet)
+ECS_REGISTER_NET_EVENT(EventSpawnBullet, net::Er::Broadcast, net::ROUTING_SERVER_TO_CLIENT, &net::broadcast_rcptf);
+static inline void event_spawn_bullet_es_event_handler(const EventSpawnBullet &evt) {
+  LOGI("EventSpawnBullet arrived with value: {}", toStringImplTyped(&evt.get<0>(), 0));
+}
