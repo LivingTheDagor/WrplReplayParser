@@ -1,7 +1,6 @@
 #include "Replay/Replay.h"
 #include "filesystem"
 #include "dag_assert.h"
-#include "zlib.h"
 #include "danet/daNetTypes.h"
 
 std::string packet_names[]{"End", "Start", "Aircraft", "Chat", "MPI", "NextSegment", "ECS", "Snapshot", "ECS_Msg_Sync"};
@@ -39,13 +38,13 @@ IReplayReader *Replay::getCompressedReplayReader() {
 std::span<uint8_t> Replay::FileReplayData::getData(Replay *rpl) {
   ZoneScopedN("FileReplayData::getData");
   this->ref_count++;
-  if (!this->zlib_data.empty()) {
-    return this->zlib_data;
+  if (!this->zstd_data.empty()) {
+    return this->zstd_data;
   }
-  this->reader.seekto(rpl->zlib_offs);
-  this->zlib_data.resize(rpl->zlib_size);
-  this->reader.read(this->zlib_data.data(), rpl->zlib_size);
-  return this->zlib_data;
+  this->reader.seekto(rpl->zstd_offs);
+  this->zstd_data.resize(rpl->zstd_size);
+  this->reader.read(this->zstd_data.data(), rpl->zstd_size);
+  return this->zstd_data;
 }
 
 void Replay::FileReplayData::afterParse() {
@@ -54,8 +53,8 @@ void Replay::FileReplayData::afterParse() {
   ref_count--;
   if (ref_count == 0) // we don't want to hold onto data for any longer than needed, lots of memory, esp for big replays
   {
-    zlib_data.clear();
-    zlib_data.shrink_to_fit();
+    zstd_data.clear();
+    zstd_data.shrink_to_fit();
   }
 }
 
@@ -85,9 +84,9 @@ bool Replay::InMemoryReplayData::ReadInto(uint8_t *ptr, size_t count, size_t off
 }
 
 std::span<uint8_t> Replay::InMemoryReplayData::getData(Replay *rpl) {
-  if (this->data.size() < rpl->zlib_offs + rpl->zlib_size)
+  if (this->data.size() < rpl->zstd_offs + rpl->zstd_size)
     return {};
-  return {this->data.data() + rpl->zlib_offs, rpl->zlib_size};
+  return {this->data.data() + rpl->zstd_offs, rpl->zstd_size};
 }
 
 int Replay::InMemoryReplayData::getRemainingSize(size_t from_offs) {
@@ -141,7 +140,7 @@ void Replay::load() {
   BAD_REPLAY(this->Data.ReadInto(this->header, 0));
   BAD_REPLAY(this->header.header == 0x1000ace5);
   BAD_REPLAY(this->header.magic == CURR_MAGIC);
-  zlib_offs = sizeof(ReplayHeader) + this->header.settings_blk_size;
+  zstd_offs = sizeof(ReplayHeader) + this->header.settings_blk_size;
 
   if (this->header.settings_blk_size) {
     std::vector<uint8_t> header_bytes{};
@@ -155,7 +154,7 @@ void Replay::load() {
     std::vector<uint8_t> footer_bytes{};
     auto remainingSize = this->Data.getRemainingSize(this->header.footer_blk_offset);
 
-    zlib_size = header.footer_blk_offset - zlib_offs;
+    zstd_size = header.footer_blk_offset - zstd_offs;
     BAD_REPLAY(remainingSize != -1);
     footer_bytes.resize(remainingSize);
 
@@ -163,20 +162,9 @@ void Replay::load() {
     InPlaceMemLoadCB rdr{(char *) footer_bytes.data(), (int) footer_bytes.size()};
     BAD_REPLAY(this->footer_blk.loadFromStream(rdr, nullptr));
   } else {
-    zlib_size = file_size - zlib_offs;
+    zstd_size = file_size - zstd_offs;
   }
 }
-
-// IReplayReader *Replay::getStreamingReplayReader(uint32_t time_wait) {
-//   if (!this->isValid())
-//     EXCEPTION("Invalid Replay: {}", this->Data.getFileName());
-//   G_ASSERT(Data.type() == File);
-//   auto d = Data.asType<FileReplayData>();
-
-//  auto *rdr = new FileStreamReader(d->reader.getFName(), time_wait);
-//  rdr->seekto(this->zlib_offs);
-//  return new CompressedReplayReader{*this, rdr, 0x7FFFFFFF, false};
-//}
 
 ServerReplay::ServerReplay(std::vector<std::span<uint8_t>> &data, bool owns) {
   for (auto &d: data) {
@@ -304,18 +292,12 @@ void ReplayWriter<streamWrite>::write(const ReplayPacket &pkt) {
 template<bool streamWrite>
 std::span<uint8_t> ReplayWriter<streamWrite>::getCompressedData(std::vector<uint8_t> &storage) {
   if constexpr (streamWrite) {
-    zlib_cb.writer.finish();
+    zstd_cb.writer.finish();
     return std::span<uint8_t>{(uint8_t *) base_cb.data(), (size_t) base_cb.tell()};
   } else {
-    /*
-    auto compressor = libdeflate_alloc_compressor(9);
-    size_t max_size = libdeflate_deflate_compress_bound(compressor, base_cb.tell());
-    storage.resize(max_size);
-    size_t compressed_size =
-      libdeflate_zlib_compress(compressor, base_cb.data(), base_cb.tell(), storage.data(), max_size);
-    libdeflate_free_compressor(compressor);
-    storage.resize(compressed_size);*/
-    storage.shrink_to_fit();
+    storage.resize(zstd_compress_bound(base_cb.tell()));
+    auto compressed_size = zstd_compress(storage.data(), storage.size(), base_cb.data(), base_cb.tell(), 18);
+    storage.resize(compressed_size);
     return storage;
   }
 }

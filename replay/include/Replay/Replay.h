@@ -76,7 +76,7 @@ protected:
   class FileReplayData : public IReplayData {
   public:
     FullFileLoadCB reader;
-    std::vector<uint8_t> zlib_data{};
+    std::vector<uint8_t> zstd_data{};
     uint32_t ref_count = 0; // how many readers are using this data?
 
     explicit FileReplayData(const std::string &path) : reader(path) {}
@@ -171,8 +171,8 @@ protected:
   auto getData() { return Data.getData(this); }
   void load();
 
-  uint32_t zlib_offs = 0xFFFFFFFF;
-  uint32_t zlib_size = 0;
+  uint32_t zstd_offs = 0xFFFFFFFF;
+  uint32_t zstd_size = 0;
 
   friend FullDecompressReplayReader;
   friend CompressedReplayReader;
@@ -198,7 +198,6 @@ public:
   IReplayReader *getReplayReader() override;
   IReplayReader *getCompressedReplayReader() override;
   bool isValid() override { return is_valid; }
-  // IReplayReader * getStreamingReplayReader(uint32_t time_wait=10);
 };
 
 class ServerReplay final : public IReplay {
@@ -234,18 +233,18 @@ public:
 };
 
 template<bool doExist>
-struct _optionalZlib;
+struct _optionalZstd;
 
 template<>
-struct _optionalZlib<true> {
-  ZlibSaveCB writer;
+struct _optionalZstd<true> {
+  ZstdSaveCB writer;
 
-  _optionalZlib(IGenSave &save) : writer(save, 9) {}
+  _optionalZstd(IGenSave &save) : writer(save, 9) {}
 };
 
 template<>
-struct _optionalZlib<false> {
-  _optionalZlib(IGenSave &save) {}
+struct _optionalZstd<false> {
+  _optionalZstd(IGenSave &save) {}
 };
 
 template<typename T>
@@ -299,13 +298,13 @@ template<bool streamWrite>
 class ReplayWriter {
 
   DynamicMemGeneralSaveCB base_cb;
-  _optionalZlib<streamWrite> zlib_cb{base_cb};
+  _optionalZstd<streamWrite> zstd_cb{base_cb};
   uint32_t curr_time_ms = 0;
 
 
   auto &getWriter() {
     if constexpr (streamWrite) {
-      return zlib_cb.writer;
+      return zstd_cb.writer;
     } else {
       return base_cb;
     }
@@ -340,7 +339,7 @@ public:
   }
   ~ReplayWriter() {
     if constexpr (streamWrite)
-      zlib_cb.writer.finish();
+      zstd_cb.writer.finish();
   }
 
   void write(const void *data, size_t size, uint32_t time_ms, ReplayPacketType type) {
