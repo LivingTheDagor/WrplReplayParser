@@ -322,6 +322,9 @@ inline int ZstdLoadFromMemCB::tryReadImpl(void *ptr, int size) {
         if (outBuf.pos == outBuf.size)
             break;
         if (inBuf.pos == inBuf.size) {
+            // Sync before asking for more: on a source cut mid-frame (a replay still being
+            // written) a stale encDataPos re-feeds the consumed chunk and zstd reports corruption.
+            encDataPos = inBuf.pos;
             if (supplyMoreData()) {
                 inBuf.src = encDataBuf.data();
                 inBuf.size = encDataBuf.size();

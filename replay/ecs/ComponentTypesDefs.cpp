@@ -521,7 +521,7 @@ namespace ecs {
     ok &= cb.read(&Rocket_data.weapon_ref, sizeof(Rocket_data.weapon_ref) * 8, 0);
     ok &= cb.read(&Rocket_data.starting_pos, sizeof(Rocket_data.starting_pos) * 8, 0);
     ok &= cb.read(&Rocket_data.u16_1, sizeof(Rocket_data.u16_1) * 8, 0); // 432
-    ok &= cb.read(&Rocket_data.u12_2, sizeof(Rocket_data.u12_2) * 8, 0);
+    ok &= cb.read(&Rocket_data.starting_vel, sizeof(Rocket_data.starting_vel) * 8, 0);
     ok &= cb.read(&Rocket_data.u12_3, sizeof(Rocket_data.u12_3) * 8, 0);
     ok &= cb.read(&Rocket_data.u1_2, sizeof(Rocket_data.u1_2) * 8, 0);
     ok &= cb.read(&Rocket_data.shell_type, sizeof(Rocket_data.shell_type) * 8, 0);

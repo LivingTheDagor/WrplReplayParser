@@ -575,7 +575,14 @@ void PyDataBlock::include(py::module_ &m) {
       "shrink", [](DataBlockRW &self) { self->shrink(); }, "Shrink internal storage.")
     .def(
       "load", [](DataBlockRW &self, const std::string &filename) { return self->load(filename.c_str()); },
-      "Load block data from file.")
+      "Load block data from file. Raises on a missing or broken file; use tryLoad to get false instead.")
+    .def(
+      "tryLoad",
+      [](DataBlockRW &self, const std::string &filename) {
+        // ROBUST silences the error path entirely, RESTORE_FLAGS keeps it from sticking to the block.
+        return dblk::load(*self, filename.c_str(), dblk::ReadFlag::ROBUST | dblk::ReadFlag::RESTORE_FLAGS);
+      },
+      "Load block data from file, returning false when the file is missing or unreadable.")
     .def(
       "loadText",
       [](DataBlockRW &self, const std::string &text, const std::string &fname) {

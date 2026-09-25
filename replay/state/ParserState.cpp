@@ -2,6 +2,30 @@
 #include "ecs/entityId.h"
 #include "mpi/PositionSync.h"
 #include "utils.h"
+#include "ioSys/dag_dataBlock.h"
+
+namespace {
+  // water_level of the level file is the zero of the altitude packing, and the level
+  // files ship in aces.vromfs, which the parser mounts anyway. Everything that reasons
+  // about height above the sea - the atmosphere the ballistics integrate through, for
+  // one - needs it: on Pradesh the sea sits at +920, so a y of 1300 is 380 m up, not
+  // 1300. ROBUST because a level file may be missing.
+  float read_sea_level(const char *level_path) {
+    if (!level_path || !*level_path)
+      return 0.f;
+    std::string stem = level_path;
+    const size_t slash = stem.find_last_of("/\\");
+    if (slash != std::string::npos)
+      stem = stem.substr(slash + 1);
+    const size_t dot = stem.find_last_of('.');
+    if (dot != std::string::npos)
+      stem = stem.substr(0, dot);
+    DataBlock blk;
+    if (!dblk::load(blk, fmt::format("levels/{}.blk", stem), dblk::ReadFlag::ROBUST))
+      return 0.f;
+    return blk.getReal("water_level", 0.f);
+  }
+} // namespace
 
 bool ChatMessage::FromBS(BitStream &bs) {
   bool ok = true;
@@ -21,6 +45,7 @@ ParserState::ParserState(IReplay *replay) {
   if (!header)
     EXCEPTION("Invalid Replay: header is not available");
   initialize(header->player_count);
+  this->sea_level = read_sea_level(header->level_path);
 }
 void ParserState::initialize(uint32_t player_count) {
   G_ASSERT(this->players.size() == 0);

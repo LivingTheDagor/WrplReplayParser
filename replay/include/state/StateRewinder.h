@@ -99,6 +99,12 @@ public:
 
   uint32_t getCurrIndex() const { return curr_index; }
 
+  /// Append a sample with an explicit time, bypassing the rewind machinery. Only for
+  /// histories built after the replay has been read, which are never rewound: unlike
+  /// checkAndPush it does not register a state change, so rewinding past it is not
+  /// possible and not needed.
+  void pushAt(uint32_t time_ms, const T &value);
+
   explicit ObjectRewindState(); // ParserState *state
   ~ObjectRewindState() override;
 

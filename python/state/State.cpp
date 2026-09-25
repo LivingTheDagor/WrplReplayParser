@@ -14,6 +14,9 @@ std::vector<unit::Unit *> collect_all_units(ParserState &state);
 std::vector<Rocket *> collect_all_rockets(ParserState &state);
 
 std::vector<Bomb *> collect_all_bombs(ParserState &state);
+std::vector<Payload *> collect_all_payloads(ParserState &state);
+std::vector<Torpedo *> collect_all_torpedoes(ParserState &state);
+std::vector<Jettisoned *> collect_all_jettisoned(ParserState &state);
 
 void initialize_wrapper(const std::string &VromfsPath, const std::string &grp_path, const std::string &logfile_path,
                         bool fonts = false, bool lang = true, bool mis = true) {
@@ -97,6 +100,10 @@ void PyReplayState::include(py::module_ &m) {
     .def_readonly("glob_elo", &ParserState::glob_elo)
     .def_readonly("zones", &ParserState::Zones)
     .def_readonly("areas", &ParserState::missionAreas2)
+    .def_readonly("sea_level", &ParserState::sea_level,
+                  "Sea level of the map, metres, out of levels/<stem>.blk of aces.vromfs. Altitude is "
+                  "packed relative to it, so a ground vehicle's y sits this far below the frame "
+                  "aircraft and projectiles are in. Zero when the level file does not say.")
     .def_readonly("replay_length_ms", &ParserState::replay_length_ms)
     .def_readonly("curr_time_ms", &ParserState::curr_time_ms)
     .def("rewind_to", &ParserState::rewindToMs,
@@ -104,6 +111,24 @@ void PyReplayState::include(py::module_ &m) {
     .def_readonly("current_packet_index", &ParserState::current_packet_index)
     .def_readonly("chat_messages", &ParserState::chatMessages)
     .def_readonly("battle_messages", &ParserState::BattleMessages)
+    .def_readonly("hit_effects", &ParserState::HitEffects,
+                  "0xF0E9, one record per hit including harmless ones")
+    .def_readonly("hit_analysis", &ParserState::HitAnalyses,
+                  "0xF15F, hit camera record; sent twice per hit and not for every hit")
+    .def_readonly("hit_damage", &ParserState::HitDamages,
+                  "UnitOnEffectiveHit / UnitOnEffectiveCritHit; join to hit_effects by projectile")
+    .def_readonly("hit_directions", &ParserState::HitDirections,
+                  "0xF144, world travel direction; join by victim and time")
+    .def_readonly("hit_explosions", &ParserState::HitExplosions,
+                  "0xF133, a projectile went off next to the unit; joins by projectile")
+    .def_readonly("hit_outcomes", &ParserState::HitOutcomes,
+                  "0xF0C2, what the hit did: penetration, ricochet, fire, damaged parts")
+    .def_readonly("ammo_events", &ParserState::AmmoEvents,
+                  "Rounds left in a barrel: 0xF0BD for a ground vehicle, the aircraft sync for a plane. "
+                  "A step down is that many rounds fired. The aircraft one rides every update, so values "
+                  "repeat; a ground vehicle only sends it on a change.")
+    .def_readonly("shots", &ParserState::ShotEvents,
+                  "0xF0B1 single shot, 0xF01B / 0xF01C trigger down and up")
     .def(
       "LoadFromReader",
       [](ParserState &state, IReplayReader &rdr, const std::function<void(ReplayPacket *)> &func) {
@@ -155,7 +180,11 @@ void PyReplayState::include(py::module_ &m) {
       py::arg("reader"), py::arg("callback") = nullptr)
     .def("collect_all_units", [](ParserState &state) { return collect_all_units(state); })
     .def("collect_all_rockets", [](ParserState &state) { return collect_all_rockets(state); })
-    .def("collect_all_bombs", [](ParserState &state) { return collect_all_bombs(state); });
+    .def("collect_all_bombs", [](ParserState &state) { return collect_all_bombs(state); })
+    .def("collect_all_payloads", [](ParserState &state) { return collect_all_payloads(state); })
+    .def("collect_all_torpedoes", [](ParserState &state) { return collect_all_torpedoes(state); })
+    .def("collect_all_jettisoned",
+         [](ParserState &state) { return collect_all_jettisoned(state); });
 }
 
 PyReplayState py_replay_state{};

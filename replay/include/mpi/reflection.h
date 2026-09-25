@@ -94,6 +94,10 @@ public:
   virtual void onEnd() = 0;
 };
 
+namespace unit {
+  class Unit;
+}
+
 namespace danet {
   class ReflectionVarMeta;
 
@@ -265,6 +269,9 @@ namespace danet {
     };
     List<ReflectionVarMeta, false> varList;
     uint32_t debugWatermark;
+    /// Owning unit, set by the Tank / Aircraft constructor. Hit messages arrive on
+    /// the reflectable and need the victim without another ECS lookup.
+    unit::Unit *owner_unit = nullptr;
 
     ReflectableObject *prevChanged, *nextChanged; // for changed_reflectables list
     ReflectableObject *prev, *next; // for all_reflectables list

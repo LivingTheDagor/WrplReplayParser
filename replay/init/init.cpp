@@ -73,9 +73,22 @@ void initialize(const std::string &game_path, const std::string &grp_dir, const 
     translate::load_csv("lang/units_modifications.csv");
     translate::load_csv("lang/units.csv");
     translate::load_csv("lang/units_weaponry.csv");
+    // Damage model parts are named here, under armor_class/<part>: driver, engine,
+    // transmission, ammo, fuel_tank, cannon_breech and the rest of what a hit breaks.
+    translate::load_csv("lang/menu.csv");
+    // Awards, under streaks/<award>: the battle feed names them by id alone.
+    translate::load_csv("lang/unlocks_streaks.csv");
+    // The belt a gun comes with carries no block of its own and so no name of its own,
+    // but the game does name it: modification/default_bullets, which it shows as
+    // Default. That key lives here and nowhere else.
+    translate::load_csv("lang/menu_options.csv");
     translate::load_csv("lang/missions_locations.csv");
     translate::load_csv("lang/missions_dynamic.csv");
     translate::load_csv("lang/missions_versus.csv");
+    // Death reasons live here, under death/<reason>. KillMessage carries an index into
+    // this list rather than a name, so the list is read in file order as well.
+    translate::load_csv("lang/ui.csv");
+    mpi::loadDeathReasons();
     file_mgr.unmountVromfs("lang.vromfs.bin");
   }
   hello();

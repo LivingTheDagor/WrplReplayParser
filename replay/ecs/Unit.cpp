@@ -5,6 +5,9 @@
 #include "FileSystem.h"
 #include "math/dag_mathAng.h"
 #include "res/grpManager.h"
+
+#include <algorithm>
+#include <unordered_map>
 #include "state/ParserState.h"
 
 namespace unit {
@@ -132,6 +135,19 @@ namespace unit {
                                            {0xf, "special gun"},
                                            {0x10, "smoke"}}};
 
+  constexpr int GUNNER_WEAPON_ID_BASE = 0x13;
+
+  std::string get_weapon_class(int weapon_id) {
+    // 0x12 is targetingPod; the game's ground-weapon range starts after it.
+    if (weapon_id >= GUNNER_WEAPON_ID_BASE)
+      return fmt::format("gunner{}", weapon_id - GUNNER_WEAPON_ID_BASE);
+    for (auto &[id, name]: weapon_id_match) {
+      if (id == weapon_id)
+        return name;
+    }
+    return {};
+  }
+
   int get_weapon_id(std::string_view weapon_name) {
     for (auto &[id, name]: weapon_id_match) {
       if (strcmp(weapon_name.data(), name) == 0)
@@ -142,7 +158,7 @@ namespace unit {
     } else if (weapon_name == "torpedoes") {
       return 6;
     } else if (strncmp(weapon_name.data(), "gunner", 6) == 0 && weapon_name.length() >= 7) {
-      return atoi(weapon_name.data() + 6) + 0x11;
+      return atoi(weapon_name.data() + 6) + GUNNER_WEAPON_ID_BASE;
     }
     return -1;
   }
@@ -222,23 +238,35 @@ namespace unit {
     auto blk_val = blk->getStr("blk", nullptr);
     if (!blk_val)
       return {};
-    if (blk->getBool("container", false)) {
-      DataBlock temp_blk;
-      if (dblk::load(temp_blk, blk_val)) {
-        auto ret = parse_weapon_container(&temp_blk);
-        return ret.empty() ? blk_val : ret;
-      }
-    }
-    return blk_val;
-  }
+    // container:b=true sits inside the file being pointed at, not in the block doing
+    // the pointing, so the flag has to be read after loading it. Checking the outer
+    // block only unwraps a container that is already nested inside another one, and
+    // leaves the first level as the container itself: the Pantsir's TKB-1055 stayed
+    // 170mm_tkb_1055_container, which has no name of its own and no turret.
+    //
+    // Every weapon of every unit comes through here, so the resolved path is cached:
+    // without it the same blk is loaded once per weapon, and twice for a pilon slot,
+    // which is read once for the dedup and again by the Weapon ctor.
+    static std::unordered_map<std::string, std::string> resolved;
+    const auto hit = resolved.find(blk_val);
+    if (hit != resolved.end())
+      return hit->second;
 
-  std::string getBaseWeaponBlockName(const DataBlock *blk) {
-    G_ASSERT(strcmp(blk->getBlockName(), "Weapon") == 0);
-    DataBlock temp_blk;
-    auto blk_str = blk->getStr("blk", nullptr);
-    G_ASSERT(dblk::load(temp_blk, blk_str));
-    auto ret = parse_weapon_container(&temp_blk);
-    return ret.empty() ? blk_str : ret;
+    std::string out = blk_val;
+    // A container pointing at itself would recurse forever, and nothing in the game
+    // files rules that out.
+    for (int depth = 0; depth < 8; ++depth) {
+      DataBlock inner{};
+      if (!dblk::load(inner, out, dblk::ReadFlags(dblk::ReadFlag::ROBUST)) ||
+          !inner.getBool("container", false))
+        break;
+      auto next = inner.getStr("blk", nullptr);
+      if (!next || out == next)
+        break;
+      out = next;
+    }
+    resolved.emplace(blk_val, out);
+    return out;
   }
 
   Weapon::Weapon(const DataBlock *blk, Unit *unit, std::vector<uint16_t> &weapons_count) {
@@ -257,7 +285,7 @@ namespace unit {
     }
     this->weapon_index = weapons_count[weapon_id];
     this->emitter = _emitter;
-    this->blk_path = getBaseWeaponBlockName(blk);
+    this->blk_path = parse_weapon_container(blk);
     fs::path blk_fs_path = this->blk_path;
     this->weapon_name = blk_fs_path.filename().string();
     if (this->weapon_name.ends_with(".blk")) {
@@ -304,6 +332,29 @@ namespace unit {
     has_tree = g_grp_manager.getTree(skel_name, geom_tree);
     if (has_tree) {
       this->turret_tree = std::make_unique<unit::TurretTree>(&geom_tree);
+    }
+    // The damage model is a skeleton of its own, next to the visual one in the same
+    // pack. Its _dm nodes are what the hit packets number, but the two counts agree on
+    // a minority of vehicles - 10 of the 42 measured on one battle - so the list goes
+    // out whole and the caller decides what to count.
+    // The tree is read for its node names and dropped: keeping it would hold the node
+    // matrices of every damaged vehicle for the whole parse, and nothing reads them.
+    GeomNodeTree damage_tree{};
+    if (g_grp_manager.getTree(fmt::format("{}_dm_skeleton", model_name), damage_tree)) {
+      damage_parts.reserve(damage_tree.nodeCount());
+      for (GeomNodeTree::Index16 i(0), ie(damage_tree.nodeCount()); i != ie; ++i) {
+        // The super root of every skeleton has no name. Four names in the whole game
+        // carry a stray high byte - composite_armor_turret_03_dm1û of the cn_vt_4b
+        // among them - which is not valid UTF-8 and would throw on the way into python.
+        // Dropping the byte keeps the name readable; dropping the name would lose a
+        // part the hit packets do number.
+        const char *name = damage_tree.getNodeName(i);
+        std::string out{};
+        for (const char ch: std::string_view(name ? name : ""))
+          if (ch >= 0x20 && ch < 0x7f)
+            out.push_back(ch);
+        damage_parts.emplace_back(std::move(out));
+      }
     }
     // if (this->AsTank())
     //   G_ASSERT(geom_tree.nodeCount() > 0);
@@ -422,6 +473,51 @@ namespace unit {
         }
       }
     }
+    // WeaponPilons is a third place a weapon can hide, next to commonWeapons and the
+    // preset. Only one vehicle in the game uses it, the Pantsir SM-SV: its launcher
+    // is not a weapon of the hull but a slot per missile type, and the three types
+    // are modifications the crew mounts. Without this pass the vehicle has cannons
+    // and a smoke launcher and nothing to fire its missiles from, and every missile
+    // it launches fails to resolve its launcher.
+    if (auto pilons = blk.getBlockByName("WeaponPilons")) {
+      const int WeaponSlotNid = pilons->getNameId("WeaponSlot");
+      const int WeaponPresetNid = pilons->getNameId("WeaponPreset");
+      const int WeaponNid = pilons->getNameId("Weapon"), weaponNid = pilons->getNameId("weapon");
+      for (int i = 0; i < pilons->blockCount(); i++) {
+        auto slot = pilons->getBlock(i);
+        if (slot->getBlockNameId() != WeaponSlotNid)
+          continue;
+        for (int j = 0; j < slot->blockCount(); j++) {
+          auto preset = slot->getBlock(j);
+          if (preset->getBlockNameId() != WeaponPresetNid)
+            continue;
+          for (int k = 0; k < preset->blockCount(); k++) {
+            auto weap = preset->getBlock(k);
+            if (weap->getBlockNameId() != WeaponNid && weap->getBlockNameId() != weaponNid)
+              continue;
+            // One slot per munition, not per launcher: the Pantsir's three slots all
+            // resolve to the same launcher blk and the same emitter, and differ only
+            // in which missile the crew mounted. Keeping all three would put three
+            // identical barrels on the vehicle, so slots are taken once per launcher.
+            const std::string path = parse_weapon_container(weap);
+            bool seen = false;
+            for (auto &w: this->weapons)
+              seen |= w.from_pilon && w.blk_path == path;
+            if (seen)
+              continue;
+            this->weapons.emplace_back(weap, this, weapons_count);
+            // The ctor can bail out and still leave the object in the vector. Marking
+            // such a weapon as a pilon one would make it the fallback of
+            // getWeaponFromRef for every unresolved ref of this vehicle, handing out a
+            // weapon with no blk, no name and no turret.
+            if (this->weapons.back().weapon_id < 0)
+              this->weapons.pop_back();
+            else
+              this->weapons.back().from_pilon = true;
+          }
+        }
+      }
+    }
     std::sort(this->weapons.begin(), this->weapons.end(), [](const Weapon &f, const Weapon &s) {
       if (f.weapon_id == s.weapon_id)
         return f.weapon_index < s.weapon_index;
@@ -534,6 +630,22 @@ namespace unit {
         return &w;
       }
     }
+    // A pilon slot does not keep the id its blk declares: on the Pantsir SM-SV all
+    // three slots say trigger gunner1, id 18, while the server refers to them as 22
+    // and 23. The id it does use is not derivable from the game files, so the exact
+    // slot cannot be picked. It does not have to be: every slot of that block points
+    // at the same launcher blk, the container of the third redirecting to it, so the
+    // launcher, its emitter and its turret are the same whichever slot fired. What
+    // differs is the munition, and that is named by the battle report, not here.
+    // Only for the ids the server actually uses for such a slot: those are gunner
+    // mounts, 0x13 and up. A miss on a lower id is a miss on a hull weapon and gets
+    // no answer rather than a wrong one.
+    if (id >= GUNNER_WEAPON_ID_BASE) {
+      for (auto &w: this->weapons) {
+        if (w.from_pilon)
+          return &w;
+      }
+    }
     return nullptr;
   }
 
@@ -604,6 +716,33 @@ mpi::Message *BaseExtReflectable::dispatchMpiMessage(mpi::MessageID mid) {
     case MPI_PACKETS::UnitCamera: {
       return state->_new<mpi::CameraStateMessage>(this);
     }
+    case MPI_PACKETS::UnitHitEffects: {
+      return state->_new<mpi::UnitHitEffectsMessage>(this);
+    }
+    case MPI_PACKETS::UnitHitAnalysis: {
+      return state->_new<mpi::UnitHitAnalysisMessage>(this);
+    }
+    case MPI_PACKETS::UnitOnEffectiveHit:
+    case MPI_PACKETS::UnitOnEffectiveCritHit: {
+      return state->_new<mpi::UnitOnEffectiveHitMessage>(this, mid);
+    }
+    case MPI_PACKETS::UnitOnHit: {
+      return state->_new<mpi::UnitOnHitMessage>(this);
+    }
+    case MPI_PACKETS::UnitOnExplosion: {
+      return state->_new<mpi::UnitOnExplosionMessage>(this);
+    }
+    case MPI_PACKETS::UnitLastEffectiveHit: {
+      return state->_new<mpi::UnitLastEffectiveHitMessage>(this);
+    }
+    case MPI_PACKETS::UnitBulletRearm: {
+      return state->_new<mpi::UnitBulletRearmMessage>(this);
+    }
+    case MPI_PACKETS::UnitSingleShot:
+    case MPI_PACKETS::GmDoStartFire:
+    case MPI_PACKETS::GmDoStopFire: {
+      return state->_new<mpi::UnitShotMessage>(this, mid);
+    }
     default: break;
   }
   return nullptr;
@@ -623,6 +762,52 @@ void BaseExtReflectable::applyMpiMessage(const mpi::Message *m) {
       camera_euler.y = norm_s_ang(camera_euler.y - PI / 2);
       *camera_data.reserveOne() = {camera_euler, gun_pointer};
       camera_data.checkAndPush(state);
+      break;
+    }
+    // Hit packets are stored as they came. Joining them by projectile id is left
+    // to the consumer; only the offender lookup has to happen here, while the
+    // uid still maps to the unit that owns it.
+    case MPI_PACKETS::UnitHitEffects: {
+      auto &rec = state->HitEffects.emplace_back(((const mpi::UnitHitEffectsMessage *) m)->hit);
+      rec.offended_unit = owner_unit;
+      break;
+    }
+    case MPI_PACKETS::UnitHitAnalysis: {
+      auto &rec = state->HitAnalyses.emplace_back(((const mpi::UnitHitAnalysisMessage *) m)->analysis);
+      rec.offended_unit = owner_unit;
+      break;
+    }
+    case MPI_PACKETS::UnitOnEffectiveHit:
+    case MPI_PACKETS::UnitOnEffectiveCritHit: {
+      auto &rec = state->HitDamages.emplace_back(((const mpi::UnitOnEffectiveHitMessage *) m)->damage);
+      rec.offended_unit = owner_unit;
+      break;
+    }
+    case MPI_PACKETS::UnitOnHit: {
+      auto &rec = state->HitDirections.emplace_back(((const mpi::UnitOnHitMessage *) m)->direction);
+      rec.offended_unit = owner_unit;
+      break;
+    }
+    case MPI_PACKETS::UnitOnExplosion: {
+      auto &rec = state->HitExplosions.emplace_back(((const mpi::UnitOnExplosionMessage *) m)->explosion);
+      rec.offended_unit = owner_unit;
+      break;
+    }
+    case MPI_PACKETS::UnitLastEffectiveHit: {
+      auto &rec = state->HitOutcomes.emplace_back(((const mpi::UnitLastEffectiveHitMessage *) m)->outcome);
+      rec.offended_unit = owner_unit;
+      break;
+    }
+    case MPI_PACKETS::UnitBulletRearm: {
+      auto &rec = state->AmmoEvents.emplace_back(((const mpi::UnitBulletRearmMessage *) m)->ammo);
+      rec.unit = owner_unit;
+      break;
+    }
+    case MPI_PACKETS::UnitSingleShot:
+    case MPI_PACKETS::GmDoStartFire:
+    case MPI_PACKETS::GmDoStopFire: {
+      auto &rec = state->ShotEvents.emplace_back(((const mpi::UnitShotMessage *) m)->shot);
+      rec.unit = owner_unit;
       break;
     }
     default: break;

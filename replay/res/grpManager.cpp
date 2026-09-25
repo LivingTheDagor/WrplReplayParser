@@ -22,12 +22,12 @@ struct grpRef {
 
 bool doesItemApply(std::string_view item) {
   ZoneScoped;
-  // must only be 'main' skeleton
-  if (item.ends_with("_skeleton") && !item.ends_with("_dm_skeleton") && !item.ends_with("_dmg_skeleton") &&
-      !item.ends_with("_xray_skeleton")) {
-    return true;
-  }
-  return false;
+  // The visual skeleton, which carries the turret nodes, and the damage one, whose
+  // nodes are what the hit packets number by index. The wreck and the x ray skeletons
+  // are of no use here.
+  if (!item.ends_with("_skeleton") || item.ends_with("_dmg_skeleton") || item.ends_with("_xray_skeleton"))
+    return false;
+  return true;
 }
 
 size_t getEntrySize(GrpData *data, const ResData *curr, size_t file_size) {

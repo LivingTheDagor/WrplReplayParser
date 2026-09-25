@@ -3,6 +3,7 @@ add_library(WTEvents
         BaseEntityES.gen.es.cpp
         UpdateMPlayerES.gen.es.cpp
         RocketryES.gen.es.cpp
+        Ballistics.cpp
         ecsPull.cpp
 )
 

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "math/dag_TMatrix.h"
 #include "state/ParserState.h"
 
@@ -35,6 +36,44 @@
 
 // if only offended uid exists, then they killed themselves
 namespace mpi {
+  // The game's own list of death reasons, in the order lang/ui.csv gives them.
+  static std::vector<std::string> death_reasons;
+  // Where DeathType 9 lands in that list. DeathType indexes the list shifted by a
+  // constant, so one known pair pins the whole table. The anchor sits in the middle of
+  // the used range (-12..30) on purpose: a reason added at either end of the list then
+  // shifts nothing, and only one inserted between the anchor and the value does.
+  static constexpr int ANCHOR_VALUE = 9;
+  static constexpr const char *ANCHOR_KEY = "death/exploded";
+  static int anchor_index = -1;
+
+  void loadDeathReasons() {
+    // The list is split over two files and inf.csv comes first: 9 infantry reasons
+    // there, 43 vehicle ones in ui.csv. Only the second is loaded for its text, but
+    // both are read for their order, or DeathType below -12 would index nothing.
+    death_reasons = translate::collect_keys("lang/inf.csv", "death/");
+    const auto rest = translate::collect_keys("lang/ui.csv", "death/");
+    death_reasons.insert(death_reasons.end(), rest.begin(), rest.end());
+    auto it = std::find(death_reasons.begin(), death_reasons.end(), ANCHOR_KEY);
+    // No anchor means the list is not the one this offset was measured against.
+    // Reporting nothing beats reporting the neighbouring reason.
+    anchor_index = it == death_reasons.end() ? -1 : int(it - death_reasons.begin());
+    if (anchor_index < 0)
+      LOGE("death reason list has no {}, kills will carry no reason", ANCHOR_KEY);
+  }
+
+  std::string_view deathReasonKey(int death_type) {
+    // 0 says nothing. The field is written on every kill message of four replays,
+    // interceptions included, where no vehicle dies at all, so a zero is the value a
+    // zeroed field carries rather than a reason. It costs the list its index 0,
+    // death/byShip, which cannot be told apart from an unfilled field.
+    if (anchor_index < 0 || death_type == 0)
+      return {};
+    int index = anchor_index + death_type - ANCHOR_VALUE;
+    if (index < 0 || index >= int(death_reasons.size()))
+      return {};
+    return std::string_view(death_reasons[index]).substr(sizeof("death/") - 1);
+  }
+
   bool KillMessage::readPayload(ParserState *state) {
     IBattleMessage::readPayload(state);
     uint16_t killer_uid, victim_uid;

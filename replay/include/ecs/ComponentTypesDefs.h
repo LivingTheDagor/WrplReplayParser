@@ -102,8 +102,27 @@ struct HeavyVehicleModelStorageComponent : FieldSerializerDict {};
 struct FlightModelWrapStorageComponent : FieldSerializerDict {};
 
 
+/// What a store is. The ECS keeps each kind in its own component, so this is known
+/// the moment the entity appears and is stamped there; see RocketryES.
+enum class StoreType : uint8_t { Rocket, Bomb, Payload, Jettisoned, Torpedo };
+
+inline const char *storeTypeName(StoreType kind) {
+  switch (kind) {
+    case StoreType::Bomb: return "bomb";
+    case StoreType::Payload: return "payload";
+    case StoreType::Jettisoned: return "jettisoned";
+    case StoreType::Torpedo: return "torpedo";
+    default: return "rocket";
+  }
+}
+
 struct Rocket {
   ObjectRewindState<SpaceTimeEuler, false, false, false> positions{};
+  /// Flight rebuilt from the release state, for stores the server never streamed.
+  /// Empty when positions is filled, and never mixed with it: this is a computation,
+  /// not a recording. See Ballistics.cpp.
+  ObjectRewindState<SpaceTimeEuler, false, false, false> ballistic_positions{};
+  StoreType type = StoreType::Rocket;
   uint32_t created_at_ms = 0xFFFFFFFF;
   uint32_t destroyed_at_ms = 0xFFFFFFFF; // when a rocket 'dies / explodes'
 
@@ -111,17 +130,23 @@ struct Rocket {
   uint32_t uleb_1;
   ecs::EntityId ownerEid;
   ecs::EntityId eid2;
+  /// Own entity id, stamped on appear. Hit packets name a projectile by (offender uid,
+  /// entity index, generation), so this joins them to the store. eid2 is not it: that
+  /// one comes over the wire and is always 0:0.
+  ecs::EntityId eid;
   uint8_t u1_1;
   uint32_t u4_1;
   uint32_t weapon_ref;
   unit::Weapon *weapon_obj = nullptr;
+  /// State the projectile leaves the pylon with, matching the body of its entity
+  /// creation event to the last printed digit.
   Point3 starting_pos;
   Point4 u16_1;
-  Point3 u12_2;
+  Point3 starting_vel;
   Point3 u12_3;
   uint8_t u1_2;
   uint8_t shell_type;
-  float creation_time;
+  float creation_time; ///< Release time in seconds, finer than the packet time.
   uint32_t u4_4;
   Point3 u12_4;
   Point3 u12_5;
@@ -144,7 +169,7 @@ struct Rocket {
                        " u4_2: {:#x};"
                        " starting_pos: {};"
                        " u16_1: {};"
-                       " u12_2: {};"
+                       " starting_vel: {};"
                        " u12_3: {};"
                        " u1_2: {};"
                        " shell_type: {};"
@@ -158,7 +183,7 @@ struct Rocket {
                        " u1_6: {};"
                        " u8_1: {};",
                        ownerEid.get_handle(), eid2.get_handle(), u1_1, u4_1, weapon_ref, starting_pos.toString(0),
-                       u16_1.toString(0), u12_2.toString(0), u12_3.toString(0), u1_2, shell_type, u4_4,
+                       u16_1.toString(0), starting_vel.toString(0), u12_3.toString(0), u1_2, shell_type, u4_4,
                        u12_4.toString(0), u12_5.toString(0), u1_4, u4_5, u1_5, u4_6, u1_6, u8_1.toString(0));
     return oss.str();
   }

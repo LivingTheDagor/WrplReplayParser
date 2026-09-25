@@ -111,6 +111,13 @@ namespace unit {
 
   std::vector<std::string> getUnitTagsName(std::string_view &name);
 
+  /// Name of a weapon class the way a vehicle blk spells it in `trigger`. Not a strict
+  /// reverse of get_weapon_id: 0x12 is spelled both targetingPod and gunner1, and this
+  /// answers gunner1, as every id above 0x10 seen in a replay has been a gunner mount.
+  /// Ground weapons are therefore always gunnerN; class names proper - cannon, atgm,
+  /// countermeasures - show up on aircraft. Empty for an id that names no class.
+  std::string get_weapon_class(int weapon_id);
+
   struct TurretNode {
   protected:
     GeomNodeTree::Index16 parent_index;
@@ -146,11 +153,25 @@ namespace unit {
 
   class Tank;
 
+  /// One line of the loadout the player took into the battle: which gun, which bullet
+  /// set of it, and how much of it was taken. \see Weapon::bulletSets
   struct weapon_data {
-    std::string launcher{};
-    std::string bullet{};
+    std::string launcher{}; ///< gun this line is for, by weapon_name; empty on ground, where the gun is the only one
+    std::string bullet{}; ///< BulletSet::name of the shell or belt taken
     uint16_t count;
     uint8_t unk;
+  };
+
+  /// One thing a loadout can put in a gun: a shell, or a belt of them.
+  struct BulletSet {
+    std::string name{}; ///< block of the gun blk, as weapon_data::bullet names it; empty for the gun's stock load
+    std::string shell{}; ///< the round in it; empty for a belt, which mixes several
+    /// Every round the set holds, in blk order: one for a shell, the whole mix for a
+    /// belt. A belt is never broken up when fired, so no round of it stands for the
+    /// set - but the battle report does name single rounds, and this is what maps
+    /// such a name back onto the belt it came out of.
+    std::vector<std::string> rounds{};
+    translate::translate_index_t name_index{}; ///< what the game calls it, invalid when it names it nowhere
   };
 
   struct Ammunition {
@@ -193,9 +214,17 @@ namespace unit {
     translate::translate_index_t name_index{}; // weapon name translate index
     translate::translate_index_t name_index_short{};
     std::vector<Ammunition> munitions{}; // not currently populated
+    /// Came from the WeaponPilons block rather than from commonWeapons or a preset.
+    /// See Unit::Load for what that block is and why it needs its own pass.
+    bool from_pilon = false;
     std::unique_ptr<TurretDesc> turret_desc{};
 
     Weapon(const DataBlock *blk, Unit *unit, std::vector<uint16_t> &weapons_count);
+
+    /// What a loadout can put in this gun: the stock load first, then the named sets in
+    /// blk order. The pick itself is not here:
+    /// it is the Unit::storage_weapons line naming one of these by BulletSet::name.
+    const std::vector<BulletSet> &bulletSets() const;
 
     void loadTurretData(const DataBlock *weapon_blk, TurretTree *tree);
   };
@@ -213,6 +242,11 @@ namespace unit {
     friend Weapon;
 
   public:
+    /// Every node of the <model>_dm_skeleton, in tree order. The part ids of HitOutcome
+    /// number the damage model parts, which live in here; which nodes of the tree the
+    /// server counts is for the caller to decide, so the list goes out as it is.
+    std::vector<std::string> damage_parts{};
+
     bool hasTree() const { return has_tree; }
 
     bool LoadFromStorage(const FieldSerializerDict &dict);
@@ -280,6 +314,7 @@ namespace unit {
     explicit Aircraft(ParserState *state, uint16_t uid) : Unit(state, uid, AircraftType) {
       base_data = &fmv_data;
       base_dvm_data = &fm_dvm_data;
+      fmv_data.owner_unit = this;
     }
 
     ~Aircraft() override = default;
@@ -298,6 +333,7 @@ namespace unit {
     explicit Tank(ParserState *state, uint16_t uid) : Unit(state, uid, TankType) {
       base_data = &gm_data;
       base_dvm_data = &gm_dvm_data;
+      gm_data.owner_unit = this;
     }
 
     ~Tank() override = default;
