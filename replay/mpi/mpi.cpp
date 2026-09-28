@@ -62,6 +62,7 @@ namespace packet_ids {
       case 0xF017: return "GmGroundExplosionFireEffect";
       case 0xF018: return "GmDoInactive";
       case 0xF01A: return "GmDoSingleShotReliable";
+      case 0xF01B: return "GmDoStartFire";
       case 0xF01C: return "GmDoStopFire";
       case 0xF026: return "TurretYawImmobile";
       case 0xF027: return "TurretPitchImmobile";
@@ -140,6 +141,7 @@ namespace packet_ids {
       case 0xF10A: return "UnitChangeNightVision";
       case 0xF10C: return "RecreateTorpedoes";
       case 0xF10F: return "SquadTargetDesignationRequest";
+      case 0xF117: return "UnitOnEffectiveHit";
       case 0xF118: return "UnitDamagePartKill";
       case 0xF119: return "GmToggleOptics";
       case 0xF11A: return "ShellsDataServerReplay";
@@ -165,6 +167,7 @@ namespace packet_ids {
       case 0xF134: return "UnitRequestChangeSupportPlane";
       case 0xF135: return "UnitSupportPlaneAttackCommand";
       case 0xF13B: return "DvmDamageDataForReplay";
+      case 0xF13C: return "UnitOnEffectiveCritHit";
       case 0xF13D: return "GmCutAllWreckedParts";
       case 0xF140: return "UnitRequestUnlimitedControl";
       case 0xF142: return "TargetDesignationMark";

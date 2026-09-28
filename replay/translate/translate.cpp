@@ -195,6 +195,60 @@ namespace translate {
 #define MAX_KEY_LEN 256
 
 
+  std::vector<std::string> collect_keys(std::string_view filename, std::string_view prefix) {
+    ZoneScoped
+    std::vector<std::string> out;
+    FullFileLoadCB cb{filename};
+    if (!cb.fileHandle)
+      return out;
+    auto len = cb.fileHandle->length();
+    if (len <= 0)
+      return out;
+    std::vector<char> buffer((size_t) len + 2);
+    if (cb.tryRead(buffer.data(), len) != len)
+      return out;
+    buffer[(size_t) len] = '\n';
+    buffer[(size_t) len + 1] = '\0';
+
+    const char *ptr = buffer.data();
+    if (len >= 3 && (unsigned char) ptr[0] == 0xEF && (unsigned char) ptr[1] == 0xBB && (unsigned char) ptr[2] == 0xBF)
+      ptr += 3;
+
+    lastFileNameForDebug = filename;
+    char key_buffer[MAX_KEY_LEN];
+    bool header = true;
+    while (*ptr) {
+      const char *row = ptr;
+      if (parseCsvString(row, nullptr, true) < MAX_KEY_LEN) {
+        const char *p = ptr;
+        parseCsvString(p, key_buffer, true);
+        if (!header && std::string_view(key_buffer).starts_with(prefix))
+          out.emplace_back(key_buffer);
+      }
+      header = false;
+
+      // to the end of the row, minding that a value may hold quoted line breaks.
+      // A doubled quote is an escaped one and must not toggle the state, so the quote
+      // is stepped over without restarting the loop.
+      bool quoted = false;
+      while (*ptr) {
+        if (*ptr == '"') {
+          ++ptr;
+          if (*ptr != '"')
+            quoted = !quoted;
+        }
+        if ((*ptr == '\r' || *ptr == '\n') && !quoted)
+          break;
+        ++ptr;
+      }
+      if (*ptr == '\r')
+        ++ptr;
+      if (*ptr == '\n')
+        ++ptr;
+    }
+    return out;
+  }
+
   translate_index_t translate_table_t::addKey(std::string_view key) {
     auto hash = hash_method(key);
     auto idx = INVALID_TRANSLATE_INDEX;

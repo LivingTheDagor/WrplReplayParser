@@ -6,6 +6,7 @@ add_library(MPI STATIC
         serializers.cpp
         Replication.cpp
         BattleMessages.cpp
+        HitMessages.cpp
         PositionSync.cpp
         MpiPull.cpp
 )

@@ -68,9 +68,26 @@ void PyUnit::include(py::module_ &m) {
     .value("AircraftType", UnitType::AircraftType);
 
   py::class_<unit::weapon_data>(unit, "WeaponData")
-    .def_readonly("launcher", &unit::weapon_data::launcher)
-    .def_readonly("bullet", &unit::weapon_data::bullet)
+    .def_readonly("launcher", &unit::weapon_data::launcher,
+                  "Gun this line is for, by Weapon.weapon_name. Empty on ground vehicles, where the line is "
+                  "picked by AmmoEvent.slot among the lines of that gun instead.")
+    .def_readonly("bullet", &unit::weapon_data::bullet,
+                  "BulletSet.name of the shell or belt taken: a block of the gun blk, not the round itself.")
     .def_readonly("count", &unit::weapon_data::count);
+
+  py::class_<unit::BulletSet>(unit, "BulletSet")
+    .def_readonly("name", &unit::BulletSet::name,
+                  "Block of the gun blk, as WeaponData.bullet names it. Empty for the gun's stock load, "
+                  "which no block names and which a loadout line answers to with an empty bullet.")
+    .def_readonly("shell", &unit::BulletSet::shell,
+                  "The round in it, for a gun loaded one shell at a time. Empty for a belt, which is a fixed "
+                  "mix no round can be singled out of.")
+    .def_readonly("rounds", &unit::BulletSet::rounds,
+                  "Every round the set holds, in blk order: one for a shell, the whole mix for a belt. "
+                  "A belt is never broken up when fired, so no round of it stands for the set - but the "
+                  "battle report does name single rounds, and this maps such a name back onto its belt.")
+    .def_readonly("name_index", &unit::BulletSet::name_index,
+                  "What the game calls this set, for localize_index. Invalid when the game names it nowhere.");
   py::class_<unit::Unit, std::unique_ptr<unit::Unit, py::nodelete>> un(unit, "Unit");
 
 
@@ -138,12 +155,22 @@ void PyUnit::include(py::module_ &m) {
 
   py::class_<unit::Weapon>(unit, "Weapon")
     .def_readonly("weapon_id", &unit::Weapon::weapon_id)
+    .def_property_readonly(
+      "weapon_class", [](const unit::Weapon &self) { return unit::get_weapon_class(self.weapon_id); },
+      "Weapon class the way the vehicle blk spells it in `trigger`: machine gun, cannon, rockets, "
+      "bombs, atgm, countermeasures, smoke, gunnerN and the rest. Empty when the id names no class.")
     .def_readonly("weapon_index", &unit::Weapon::weapon_index)
     .def_readonly("emitter", &unit::Weapon::emitter)
     .def_readonly("blk_path", &unit::Weapon::blk_path)
     .def_readonly("weapon_name", &unit::Weapon::weapon_name)
     .def_readonly("name_index", &unit::Weapon::name_index)
     .def_readonly("name_index_short", &unit::Weapon::name_index_short)
+    .def_property_readonly("bullet_sets", &unit::Weapon::bulletSets,
+                           "What a loadout can put in this gun: the stock load first, then the named sets in blk "
+                           "order. Which one was actually taken "
+                           "is not here: it is the Unit.weapons line naming one of these by BulletSet.name.")
+    .def_readonly("from_pilon", &unit::Weapon::from_pilon,
+                  "Came from the WeaponPilons block: a launcher the crew mounts a munition into, not a gun of the hull. The trigger packet names such a weapon by an id that is not in weapon_id.")
     .def_property_readonly(
       "turret", [](unit::Weapon &self) { return self.turret_desc.get(); }, py::return_value_policy::reference_internal);
 
@@ -179,6 +206,11 @@ void PyUnit::include(py::module_ &m) {
     .def_readonly("actual_weapons", &unit::Unit::weapons)
     .def_readonly("fm_mods", &unit::Unit::fm_mods)
     .def_readonly("positions", &unit::Unit::positions)
+    .def_readonly("damage_parts", &unit::Unit::damage_parts,
+                  "Every node of the vehicle damage skeleton, in tree order and as they are. The parts "
+                  "the hit packets number are the ones whose name ends in _dm; the rest of the tree is "
+                  "roots, emitters and bones, and which of them the server counts is the caller's call. "
+                  "Empty when the grp pack holds no damage skeleton for the model, which is every aircraft.")
     .def_property_readonly("unit_wpcost", [](unit::Unit &self) { return DataBlockRO(self.unit_wpcost); })
     .def_property_readonly("unit_tags", [](unit::Unit &self) { return DataBlockRO(self.unit_tags); })
     .def("getTags", &unit::Unit::getTags)
@@ -193,19 +225,36 @@ void PyUnit::include(py::module_ &m) {
   py::class_<unit::UnitRef>(unit, "UnitRef").def_readonly("unit", &unit::UnitRef::unit);
 
   py::class_<Rocket, std::unique_ptr<Rocket, py::nodelete>>(unit, "Rocket")
+    .def_property_readonly("type", [](const Rocket &r) { return storeTypeName(r.type); },
+                           "What the store is: rocket | bomb | payload | jettisoned | torpedo. "
+                           "jettisoned is ordnance let go without being fired, payload an external tank.")
     .def_readonly("positions", &Rocket::positions)
+    .def_readonly("weapon_ref", &Rocket::weapon_ref,
+                  "Reference to the launcher: high word is the weapon id, low word its index within that id.")
+    .def_readonly("ballistic_positions", &Rocket::ballistic_positions,
+                  "Flight rebuilt from the release state for a store the server never streamed, sampled every 100 ms plus the end point. Empty when positions is filled. Roll is always zero here: a reconstruction cannot know it.")
     .def_readonly("created_at_ms", &Rocket::created_at_ms)
     .def_readonly("destroyed_at_ms", &Rocket::destroyed_at_ms)
     .def_readonly("ownerEid", &Rocket::ownerEid,
                   "Entity id of the shooter. Resolving it through the entity manager fails once the\n"
                   "entity is gone from the world, so prefer owned_by.")
     .def_readonly("eid2", &Rocket::eid2, "Always 0:0 on every replay checked so far. Do not rely on it.")
+    .def_readonly("eid", &Rocket::eid,
+                  "Own entity id. Hit packets name a projectile by (offender uid, entity "
+                  "index, generation), so eid.index() and eid.get_generation() join them "
+                  "to this store.")
     .def_readonly("weapon_obj", &Rocket::weapon_obj,
                   "The launcher this projectile came from, or None. Empty for aircraft twin mounts,\n"
                   "where weapon_name is still correct.")
     .def_readonly("owned_by", &Rocket::owned_by,
                   "The unit that fired this projectile. Stronger than ownerEid: it resolves even when\n"
-                  "the shooter entity has already been removed from the world.");
+                  "the shooter entity has already been removed from the world.")
+    .def_readonly("starting_pos", &Rocket::starting_pos,
+                  "Where the projectile left the pylon. Unguided stores are never streamed, so for them this and starting_vel are the whole trajectory input.")
+    .def_readonly("starting_vel", &Rocket::starting_vel,
+                  "Velocity at release, m/s. Not the carrier velocity: a rocket adds its motor thrust, up to 60 m/s apart on the replays checked.")
+    .def_readonly("creation_time", &Rocket::creation_time,
+                  "Release time in seconds. Finer than created_at_ms, which is the packet time.");
 
   py::class_<Bomb, Rocket, std::unique_ptr<Bomb, py::nodelete>>(unit, "Bomb");
   py::class_<Torpedo, Rocket, std::unique_ptr<Torpedo, py::nodelete>>(unit, "Torpedo");

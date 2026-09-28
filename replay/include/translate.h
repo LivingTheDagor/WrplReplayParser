@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
+#include <string>
 #include <string_view>
+#include <vector>
 #include "array"
 #include <limits>
 
@@ -91,4 +93,12 @@ namespace translate {
   void set_default_language(Languages lang);
 
   void load_csv(std::string_view path);
+
+  /// collects the keys of a csv in file order, keeping the ones that start with prefix.
+  /// the table itself stores keys by hash and cannot be walked in order, so anything
+  /// that needs the game's own ordering of a key family has to read the file again.
+  /// @param filename the csv to read, mounted path
+  /// @param prefix the key prefix to keep, e.g. "death/"
+  /// @return the matching keys in the order the file lists them
+  std::vector<std::string> collect_keys(std::string_view filename, std::string_view prefix);
 } // namespace translate
