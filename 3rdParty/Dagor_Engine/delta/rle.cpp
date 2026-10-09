@@ -1,9 +1,9 @@
 
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 
-#include <daNet/delta/rle.h>
+#include <danet/delta/rle.h>
 #include <dag_assert.h>
-#include <daNet/daNetTypes.h>
+#include <danet/daNetTypes.h>
 #include "Logger.h"
 
 

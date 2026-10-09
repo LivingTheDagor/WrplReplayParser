@@ -4,7 +4,7 @@
 #include <danet/dag_netUtils.h>
 
 
-#include <danet/bitStream.h>
+#include <danet/BitStream.h>
 #include "danet/daNetTypes.h"
 #include <ioSys/dag_dataBlock.h>
 #include "consts.h"

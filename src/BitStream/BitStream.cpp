@@ -1,4 +1,4 @@
-#include "danet/Bitstream.h"
+#include "danet/BitStream.h"
 #include "ioSys/dag_dataBlock.h"
 #include "ioSys/dag_memIo.h"
 

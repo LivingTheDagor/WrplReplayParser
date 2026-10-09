@@ -3,6 +3,7 @@
 #include "Unit.h"
 #include "danet/dag_netUtils.h"
 #include "math/dag_mathAng.h"
+#include <cstring>
 
 bool separateServerSideDetection_g = true;
 bool resyncSaclosGuidanceParams = true; // actually known to be true, hopefully
@@ -16,8 +17,8 @@ bool SensorsControlStates::deserialize(BitStream &bs) {
   sensor_type >>= 4;
   switch (sensor_type) {
     case 1: {
-      bool bool_2 = bs.ReadBit();
-      if (!bool_2)
+      has_state = bs.ReadBit();
+      if (!has_state)
         return true;
       int16_t bit_packed;
       int16_t packed_val_1;
@@ -155,16 +156,87 @@ std::vector<std::string> unit::getUnitTagsName(std::string_view &name) {
 G_STATIC_ASSERT(sizeof(TargetDesignationControlState) == 0x50);
 
 
-void DeserializeSeekerData(BitStream &bs) {
-  // this will probably never be implemented unless if I actually go through and try to understand what this complex
-  // bullshit is
+// Keeps the block when all of it is there. A block cut short is skipped, so the reads
+// after it stay at the correct offset.
+static void ReadSeekerBits(ParserState &state, const BitStream &bs, uint32_t bits, mpi::SeekerEvent &ev) {
+  ev.bits = bits;
+  ev.data.resize(BITS_TO_BYTES(bits));
+  if (bs.ReadBits(ev.data.data(), bits))
+    state.SeekerEvents.push_back(std::move(ev));
+  else
+    bs.IgnoreBits(bits);
+}
+
+// Seeker fields are read MSB first in each byte; a multi-byte number is little-endian
+// from its bit offset. The last partial byte of the block is right-aligned.
+static uint8_t SeekerByte(const mpi::SeekerEvent &ev, uint32_t at) {
+  const uint32_t full = ev.bits / 8 * 8, rem = ev.bits % 8;
+  uint8_t out = 0;
+  for (uint32_t i = at; i < at + 8; i++) {
+    uint8_t bit = i < full ? (ev.data[i / 8] >> (7 - i % 8)) & 1 : (ev.data[i / 8] >> (rem - 1 - (i - full))) & 1;
+    out = (uint8_t) (out << 1 | bit);
+  }
+  return out;
+}
+
+template <typename T>
+static T SeekerValue(const mpi::SeekerEvent &ev, uint32_t at) {
+  uint8_t raw[sizeof(T)];
+  for (uint32_t i = 0; i < sizeof(T); i++)
+    raw[i] = SeekerByte(ev, at + 8 * i);
+  T out;
+  memcpy(&out, raw, sizeof(T));
+  return out;
+}
+
+mpi::SeekerState mpi::DecodeSeeker(const SeekerEvent &ev) {
+  SeekerState st{};
+  if (ev.data.size() < BITS_TO_BYTES(ev.bits))
+    return st;
+  if (ev.source == SeekerAircraft) {
+    if (ev.bits == 518) {
+      st.ir_state = (SeekerByte(ev, 43) >> 5) & 7;
+      // -FLT_MAX until the seeker first locks
+      float t = SeekerValue<float>(ev, 50);
+      if (t > -1e30f)
+        st.lock_time = t;
+    } else if (ev.bits == 895) {
+      st.target_pos = Point3(SeekerValue<float>(ev, 83), SeekerValue<float>(ev, 115), SeekerValue<float>(ev, 147));
+    }
+    return st;
+  }
+  if (ev.source != SeekerWeapon)
+    return st;
+  uint32_t los_at, extra = 0;
+  // Bits 8-10: 111 track, 001 search; 100 in the 639-bit block, sent once as the seeker
+  // goes to track, which then has 32 bits of unknown meaning before the 607-bit layout.
+  uint8_t mode = (SeekerByte(ev, 8) >> 5) & 7;
+  if (ev.bits == 607 || ev.bits == 639) {
+    extra = ev.bits == 639 ? 32 : 0;
+    if (ev.bits == 607 && (mode == 7 || mode == 1))
+      st.tracking = mode == 7;
+    else if (ev.bits == 639 && mode == 4)
+      st.tracking = true;
+    st.target_pos = Point3(SeekerValue<float>(ev, 11), SeekerValue<float>(ev, 43), SeekerValue<float>(ev, 75));
+    st.range = (float) SeekerValue<uint16_t>(ev, 454 + extra);
+    los_at = 340 + extra;
+  } else if (ev.bits == 283) {
+    los_at = 58;
+  } else {
+    return st;
+  }
+  st.los = Point3(SeekerValue<int16_t>(ev, los_at), SeekerValue<int16_t>(ev, los_at + 16),
+                  SeekerValue<int16_t>(ev, los_at + 32)) / 32767.f;
+  st.decoded = true;
+  return st;
+}
+
+void DeserializeSeekerData(ParserState &state, BitStream &bs, mpi::SeekerSource source, unit::Unit *unit) {
   uint32_t val;
   bs.Read(val);
-  auto read_offs = bs.GetReadOffset();
-  bs.SetReadOffset(read_offs + val);
-  // bool does_read_call_one = bs.ReadBit();
-
-  return;
+  mpi::SeekerEvent ev{state.curr_time_ms, source};
+  ev.unit = unit;
+  ReadSeekerBits(state, bs, val, ev);
 }
 
 bool FMSync(ParserState &state, BitStream &bs) {
@@ -196,7 +268,8 @@ bool FMSync(ParserState &state, BitStream &bs) {
           auto unit = ref->AsAircraft();
           if (!unit)
             return false;
-          bool fVar41LessThan0p5 = bs.ReadBit();
+          mpi::ControlEvent control{state.curr_time_ms, unit};
+          control.on_ground = bs.ReadBit();
           uint32_t some_uint;
           bs.Read(some_uint);
           bool _0x7330_val = bs.ReadBit();
@@ -259,40 +332,29 @@ bool FMSync(ParserState &state, BitStream &bs) {
           bs.Read(vals_4);
           Point3 vel;
           netutils::unpack_velocity(vals_4, vel, 500);
-          uint64_t
-            val_5; // holds lots of important data, more like a char[7] instead of a uint64_t, data is read as bytes
           bs.AlignReadToByteBoundary();
-          bs.ReadBits(reinterpret_cast<uint8_t *>(&val_5), 0x38);
+          bs.ReadBits(control.controls, 0x38);
           uint8_t number_of_engines;
           bs.Read(number_of_engines);
           if (number_of_engines > 0xf)
             return false; // "FMsync: numEngines >= MAX_AIRCRAFT_MOTORS"
-          for (int i = 0; i < number_of_engines; i++) {
-            bool is_some_data_serialized = bs.ReadBit();
-            uint8_t v;
-            bs.Read(v);
-            float probably_engine_power = -1;
-            float packed_v_2 = -1;
-            if (is_some_data_serialized) {
-              int16_t temp_packed;
-              bs.Read(temp_packed);
-              probably_engine_power = netutils::UNPACKS<int16_t>(temp_packed, 1.1f);
+          control.engines.resize(number_of_engines);
+          for (auto &engine: control.engines) {
+            bool has_afterburner = bs.ReadBit();
+            RET_FAIL(bs.Read(engine.state));
+            if (has_afterburner) {
+              int16_t packed;
+              RET_FAIL(bs.Read(packed));
+              engine.afterburner = netutils::UNPACKS<int16_t>(packed, 1.1f);
             }
-
-            auto is_some_packed_2 = bs.ReadBit();
-            if (is_some_packed_2) {
-              int8_t v_;
-              bs.Read(v_);
-              packed_v_2 = netutils::UNPACKS<int8_t>(v_, 1.0);
+            if (bs.ReadBit()) {
+              int8_t packed;
+              RET_FAIL(bs.Read(packed));
+              engine.health = netutils::UNPACKS<int8_t>(packed, 1.0);
             }
-
-            uint8_t v10;
-            uint8_t v11;
-            bs.Read(v10);
-            bs.Read(v11);
-            float v10f = netutils::UNPACK<uint8_t>(v10, 1.0);
-            float v11f = netutils::UNPACK<uint8_t>(v11, 1.0);
+            RET_FAIL(bs.Read(engine.radiators));
           }
+          state.ControlEvents.push_back(std::move(control));
           uint8_t sensorsCount;
           bs.Read(sensorsCount);
           RET_FAIL(sensorsCount <= SENSORS_COUNT);
@@ -300,10 +362,12 @@ bool FMSync(ParserState &state, BitStream &bs) {
           for (auto &s: sensors) {
             RET_FAIL(s.deserialize(bs));
           }
-          uint8_t v;
+          uint8_t v = 0;
           if (sensorsCount != 0) {
             bs.Read(v);
           }
+          for (uint8_t i = 0; i < sensorsCount; i++)
+            state.SensorEvents.push_back({state.curr_time_ms, unit, i, v, sensors[i]});
 
           uint8_t counterMeasuresCount;
           bs.Read(counterMeasuresCount);
@@ -319,8 +383,9 @@ bool FMSync(ParserState &state, BitStream &bs) {
           bs.ReadBits(&targetsNum, 4);
           RET_FAIL(targetsNum <= TARGETS_NUM);
           std::pmr::vector<TargetDesignationControlState> targets{targetsNum, state.get_allocator()};
-          for (auto &t: targets) {
-            RET_FAIL(t.deserialize(bs));
+          for (uint8_t i = 0; i < targetsNum; i++) {
+            RET_FAIL(targets[i].deserialize(bs));
+            state.DesignationEvents.push_back({state.curr_time_ms, unit, i, targets[i]});
           }
           bool bit_thing;
           bs.Read(bit_thing);
@@ -333,7 +398,7 @@ bool FMSync(ParserState &state, BitStream &bs) {
           bool bit_thing_2;
           bs.Read(bit_thing_2);
           if (bit_thing_2) {
-            DeserializeSeekerData(bs);
+            DeserializeSeekerData(state, bs, mpi::SeekerAircraft, unit);
           }
         }
       }
@@ -610,10 +675,13 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
   for (auto &sensor: states) {
     RET_FAIL(sensor.deserialize(bs));
   }
+  uint8_t some_weird_val = 0;
   if (sensorsCount > 0) {
-    uint8_t some_weird_val;
     RET_FAIL(bs.Read(some_weird_val));
   }
+  if (ref->ref_1)
+    for (uint8_t i = 0; i < sensorsCount; i++)
+      state.SensorEvents.push_back({state.curr_time_ms, ref->ref_1, i, some_weird_val, states[i]});
   uint8_t counterMeasuresCount;
   RET_FAIL(bs.Read(counterMeasuresCount));
   RET_FAIL(counterMeasuresCount <= COUNTER_MEASURES_COUNT);
@@ -627,8 +695,10 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
   RET_FAIL(targetsNum <= 8);
   thread_local std::vector<TargetDesignationControlState> targets{};
   targets.resize(targetsNum);
-  for (auto &t: targets) {
-    RET_FAIL(t.deserialize(bs));
+  for (uint8_t i = 0; i < targetsNum; i++) {
+    RET_FAIL(targets[i].deserialize(bs));
+    if (ref->ref_1)
+      state.DesignationEvents.push_back({state.curr_time_ms, ref->ref_1, i, targets[i]});
   }
   if (ref->ref_1) {
     ref->ref_1->calculateTurretData();
@@ -737,7 +807,7 @@ bool GMSync(ParserState &state, BitStream &bs) {
         if (has_sensor_info) {
           bs.Read(has_sensor_info_2);
           if (has_sensor_info_2) {
-            DeserializeSeekerData(bs);
+            DeserializeSeekerData(state, bs, mpi::SeekerGround, ref.ref_1);
           }
         }
         bs.AlignReadToByteBoundary();
@@ -902,7 +972,12 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
       RET_FAIL(bs.Read(vv2));
       uint16_t sz;
       RET_FAIL(bs.Read(sz));
-      bs.IgnoreBits(sz); // most likely seeker information
+      mpi::SeekerEvent ev{state.curr_time_ms, mpi::SeekerWeapon, eid};
+      ev.lost_for = vv;
+      if (flags & 1)
+        ev.flight_time = sf1;
+      ev.head_b = vv2;
+      ReadSeekerBits(state, bs, sz, ev);
     } else if (resyncSaclosGuidanceParams) {
       bool do_stuff;
       RET_FAIL(bs.Read(do_stuff));

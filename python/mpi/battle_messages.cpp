@@ -2,6 +2,7 @@
 #include "Unit.h"
 #include "modules/ecs/EntityId.h"
 #include "mpi/GeneralObject.h"
+#include "mpi/SensorStates.h"
 #include "modules/bind_readonly_vector.h"
 PyBattleMessages py_battle_messages;
 void PyBattleMessages::include(py::module_ &m) {
@@ -161,11 +162,160 @@ void PyBattleMessages::include(py::module_ &m) {
       .value("FireStart", mpi::ShotFireStart)
       .value("FireStop", mpi::ShotFireStop);
 
+  py::class_<mpi::CockpitEvent>(mpi, "CockpitEvent")
+      .def_readonly("time_ms", &mpi::CockpitEvent::time_ms)
+      .def_property_readonly("params", [](const mpi::CockpitEvent &e) {
+        py::dict d;
+        for (auto &[id, v]: e.params)
+          d[py::int_(id)] = v;
+        return d;
+      }, "{id: value}; see CockpitEvent in GeneralObject.h for the ids that are known");
+
+  py::class_<mpi::SpotEvent>(mpi, "SpotEvent")
+      .def_readonly("time_ms", &mpi::SpotEvent::time_ms)
+      .def_readonly("spotter_id", &mpi::SpotEvent::spotter_id, "uid of an aircraft, or 0x800 | uid of a ground vehicle")
+      .def_readonly("spotted_id", &mpi::SpotEvent::spotted_id, "uid of an aircraft, or 0x800 | uid of a ground vehicle")
+      .def_readonly("spotter", &mpi::SpotEvent::spotter)
+      .def_readonly("spotted", &mpi::SpotEvent::spotted);
+
   py::class_<mpi::ShotEvent>(mpi, "ShotEvent")
       .def_readonly("time_ms", &mpi::ShotEvent::time_ms)
       .def_readonly("unit", &mpi::ShotEvent::unit)
       .def_readonly("kind", &mpi::ShotEvent::kind)
       .def_readonly("weapon_id", &mpi::ShotEvent::weapon_id);
+
+  // The named fields are the ones whose meaning was checked (see SensorStates.h); the
+  // rest go out raw, under the names of SensorsControlStates, so they can be studied.
+  py::class_<mpi::SensorEvent>(mpi, "SensorEvent")
+      .def_readonly("time_ms", &mpi::SensorEvent::time_ms)
+      .def_readonly("unit", &mpi::SensorEvent::unit)
+      .def_readonly("index", &mpi::SensorEvent::index)
+      .def_readonly("list_tail", &mpi::SensorEvent::list_tail)
+      .def_property_readonly("kind", [](const mpi::SensorEvent &e) { return e.state.kind(); },
+                             "1 radar, IRST or optical tracker (the transceiver tells which), 2 laser")
+      .def_property_readonly("slot", [](const mpi::SensorEvent &e) { return e.state.slot(); },
+                             "Index of the sensor in the vehicle blk's sensors list")
+      .def_property_readonly("on", [](const mpi::SensorEvent &e) { return e.state.on(); })
+      .def_property_readonly("transceiver", [](const mpi::SensorEvent &e) { return e.state.transceiver(); },
+                             "Index into the sensor blk's transivers, in key order; None if none")
+      .def_property_readonly("scan_pattern", [](const mpi::SensorEvent &e) { return e.state.scan_pattern(); },
+                             "Index into the sensor blk's scanPatterns, in key order; None if none")
+      .def_property_readonly("signal", [](const mpi::SensorEvent &e) { return e.state.signal(); },
+                             "Index into the sensor blk's signals, in key order; None if none")
+      .def_property_readonly("mode_time", [](const mpi::SensorEvent &e) { return e.state.mode_time(); },
+                             "Battle time in seconds of the last mode change")
+      .def_property_readonly("scan_az", [](const mpi::SensorEvent &e) { return e.state.scan_az(); },
+                             "Scan centre azimuth in radians, relative to the vehicle")
+      .def_property_readonly("scan_el", [](const mpi::SensorEvent &e) { return e.state.scan_el(); },
+                             "Scan centre elevation in radians, relative to the vehicle")
+      .def_property_readonly("f2", [](const mpi::SensorEvent &e) { return e.state.some_data_2; })
+      .def_property_readonly("f3", [](const mpi::SensorEvent &e) { return e.state.some_data_3; })
+      .def_property_readonly("f147", [](const mpi::SensorEvent &e) { return e.state.field147_0xa8; })
+      .def_property_readonly("b6", [](const mpi::SensorEvent &e) {
+        return py::bytes(e.state.some_data_6, sizeof(e.state.some_data_6));
+      })
+      .def_property_readonly("i149", [](const mpi::SensorEvent &e) { return e.state.field149_0xa4; })
+      .def_property_readonly("i150", [](const mpi::SensorEvent &e) { return e.state.field150_0xa8; })
+      .def_property_readonly("contacts",
+                             [](const mpi::SensorEvent &e) {
+                               py::list out;
+                               for (uint32_t c: e.state.field4_0x4)
+                                 out.append(c);
+                               return out;
+                             })
+      .def_property_readonly("contacts_tail", [](const mpi::SensorEvent &e) { return e.state.field133_0x85; })
+      .def_property_readonly("contact_uids", [](const mpi::SensorEvent &e) { return e.state.contact_uids(); },
+                             "Unit uids of the targets the sensor detects at this sync");
+
+  py::class_<mpi::DesignationEvent>(mpi, "DesignationEvent")
+      .def_readonly("time_ms", &mpi::DesignationEvent::time_ms)
+      .def_readonly("unit", &mpi::DesignationEvent::unit)
+      .def_readonly("index", &mpi::DesignationEvent::index)
+      .def_property_readonly("v1", [](const mpi::DesignationEvent &e) { return e.state.v1; })
+      .def_property_readonly("v2", [](const mpi::DesignationEvent &e) { return e.state.v2; })
+      .def_property_readonly("v3", [](const mpi::DesignationEvent &e) { return e.state.v3; })
+      .def_property_readonly("v4", [](const mpi::DesignationEvent &e) { return e.state.v4; })
+      .def_property_readonly("compressed", [](const mpi::DesignationEvent &e) { return e.state.write_compressed; })
+      .def_property_readonly("v5", [](const mpi::DesignationEvent &e) { return e.state.v5; })
+      .def_property_readonly("v6", [](const mpi::DesignationEvent &e) { return e.state.v6; })
+      .def_property_readonly("v7", [](const mpi::DesignationEvent &e) { return e.state.v7; })
+      .def_property_readonly("v8", [](const mpi::DesignationEvent &e) { return e.state.v8; })
+      .def_property_readonly("v9", [](const mpi::DesignationEvent &e) { return e.state.v9; })
+      .def_property_readonly("v10", [](const mpi::DesignationEvent &e) { return e.state.v10; })
+      .def_property_readonly("v11", [](const mpi::DesignationEvent &e) { return e.state.v11; })
+      .def_property_readonly("v12", [](const mpi::DesignationEvent &e) { return e.state.v12; })
+      .def_property_readonly("v13", [](const mpi::DesignationEvent &e) { return e.state.v13; })
+      .def_property_readonly("v14", [](const mpi::DesignationEvent &e) { return e.state.v14; })
+      .def_property_readonly("v15", [](const mpi::DesignationEvent &e) { return e.state.v15; })
+      .def_property_readonly("target_uid", [](const mpi::DesignationEvent &e) { return e.state.target_uid(); },
+                             "Unit uid of the designated target, or None");
+
+  py::class_<mpi::EngineSync>(mpi, "EngineSync")
+      .def_readonly("state", &mpi::EngineSync::state, "7 while the engine runs, 8 once it has stopped")
+      .def_readonly("afterburner", &mpi::EngineSync::afterburner,
+                    "Afterburner throttle of a jet, 1.0 to 1.1; None at or below 100%, and always on a prop")
+      .def_readonly("health", &mpi::EngineSync::health, "Engine health below 1.0, else None; 0 once stopped")
+      .def_property_readonly(
+        "radiators", [](const mpi::EngineSync &e) { return py::make_tuple(e.radiators[0], e.radiators[1]); },
+        "Radiator flaps of a prop, 0 to 255 each; 0 on a jet");
+
+  py::class_<mpi::ControlEvent>(mpi, "ControlEvent")
+      .def_readonly("time_ms", &mpi::ControlEvent::time_ms)
+      .def_readonly("unit", &mpi::ControlEvent::unit)
+      .def_readonly("on_ground", &mpi::ControlEvent::on_ground)
+      .def_property_readonly("pitch", &mpi::ControlEvent::pitch, "Pitch stick, -1 to 1, positive for a pull")
+      .def_property_readonly("roll", &mpi::ControlEvent::roll, "Roll stick, -1 to 1")
+      .def_property_readonly("rudder", &mpi::ControlEvent::rudder, "Rudder pedals, -1 to 1")
+      .def_property_readonly("flaps", &mpi::ControlEvent::flaps, "0 to 1")
+      .def_property_readonly("airbrake", &mpi::ControlEvent::airbrake, "0 to 1")
+      .def_property_readonly("wheel_brake", &mpi::ControlEvent::wheel_brake, "0 to 1")
+      .def_property_readonly("throttle", &mpi::ControlEvent::throttle,
+                             "Throttle lever, 0 to 1; 1 also above 100%, see EngineSync.afterburner")
+      .def_property_readonly("controls", [](const mpi::ControlEvent &e) {
+        return py::bytes(reinterpret_cast<const char *>(e.controls), sizeof(e.controls));
+      }, "The seven control bytes as sent")
+      .def_readonly("engines", &mpi::ControlEvent::engines);
+
+  py::enum_<mpi::SeekerSource>(mpi, "SeekerSource")
+      .value("Weapon", mpi::SeekerWeapon)
+      .value("Aircraft", mpi::SeekerAircraft)
+      .value("Ground", mpi::SeekerGround);
+
+  py::class_<mpi::SeekerEvent>(mpi, "SeekerEvent")
+      .def_readonly("time_ms", &mpi::SeekerEvent::time_ms)
+      .def_readonly("source", &mpi::SeekerEvent::source)
+      .def_readonly("eid", &mpi::SeekerEvent::eid)
+      .def_readonly("unit", &mpi::SeekerEvent::unit)
+      .def_readonly("lost_for", &mpi::SeekerEvent::lost_for,
+                    "Weapon only: seconds since the seeker lost its target; 0 while locked and before the first lock")
+      .def_readonly("flight_time", &mpi::SeekerEvent::flight_time, "Weapon only: seconds since launch")
+      .def_readonly("head_b", &mpi::SeekerEvent::head_b)
+      .def_readonly("bits", &mpi::SeekerEvent::bits)
+      .def_property_readonly("data", [](const mpi::SeekerEvent &e) {
+        return py::bytes(reinterpret_cast<const char *>(e.data.data()), e.data.size());
+      })
+      .def_property_readonly("decoded", [](const mpi::SeekerEvent &e) { return mpi::DecodeSeeker(e).decoded; },
+                             "True for the seeker blocks of a store in flight whose layout is known")
+      .def_property_readonly("tracking", [](const mpi::SeekerEvent &e) { return mpi::DecodeSeeker(e).tracking; },
+                             "True in track, False in search; None for an IR seeker or an unknown block")
+      .def_property_readonly("los", [](const mpi::SeekerEvent &e) -> std::optional<Point3> {
+        auto st = mpi::DecodeSeeker(e);
+        return st.decoded ? std::optional<Point3>(st.los) : std::nullopt;
+      }, "Unit line of sight from the missile, world axes")
+      .def_property_readonly("range", [](const mpi::SeekerEvent &e) { return mpi::DecodeSeeker(e).range; },
+                             "Radar seeker range in metres (0 to 15% above the true distance)")
+      .def_property_readonly("target_pos", [](const mpi::SeekerEvent &e) { return mpi::DecodeSeeker(e).target_pos; },
+                             "Radar seeker's estimate of the target position, world axes; for the 895-bit block "
+                             "of an aircraft, the target the missile gets at launch")
+      .def_property_readonly("ir_state", [](const mpi::SeekerEvent &e) { return mpi::DecodeSeeker(e).ir_state; },
+                             "518-bit aircraft block: 0 no lock, 2 a new lock, 3 and 4 lock held")
+      .def_property_readonly("lock_time", [](const mpi::SeekerEvent &e) { return mpi::DecodeSeeker(e).lock_time; },
+                             "518-bit aircraft block: battle time in seconds of the last lock, None before the first");
+
+  bind_readonly_vector_no_contain<std::pmr::vector<mpi::SeekerEvent>>(m, "SeekerEventList");
+  bind_readonly_vector_no_contain<std::pmr::vector<mpi::ControlEvent>>(m, "ControlEventList");
+  bind_readonly_vector_no_contain<std::pmr::vector<mpi::SensorEvent>>(m, "SensorEventList");
+  bind_readonly_vector_no_contain<std::pmr::vector<mpi::DesignationEvent>>(m, "DesignationEventList");
 
   bind_readonly_vector_no_contain<std::pmr::vector<mpi::HitEffect>>(m, "HitEffectList");
   bind_readonly_vector_no_contain<std::pmr::vector<mpi::HitAnalysis>>(m, "HitAnalysisList");
@@ -173,6 +323,8 @@ void PyBattleMessages::include(py::module_ &m) {
   bind_readonly_vector_no_contain<std::pmr::vector<mpi::HitDirection>>(m, "HitDirectionList");
   bind_readonly_vector_no_contain<std::pmr::vector<mpi::HitExplosion>>(m, "HitExplosionList");
   bind_readonly_vector_no_contain<std::pmr::vector<mpi::ShotEvent>>(m, "ShotEventList");
+  bind_readonly_vector_no_contain<std::pmr::vector<mpi::SpotEvent>>(m, "SpotEventList");
+  bind_readonly_vector_no_contain<std::pmr::vector<mpi::CockpitEvent>>(m, "CockpitEventList");
 
   py::class_<mpi::AwardMessage, mpi::IBattleMessage, std::unique_ptr<mpi::AwardMessage, py::nodelete>>(mpi,
                                                                                                        "AwardMessage")

@@ -7,7 +7,7 @@
 #include <vector>
 #include <cstdint>
 #include <math/dag_adjpow2.h>
-#include <daNet/bitStream.h>
+#include <danet/BitStream.h>
 
 namespace net
 {

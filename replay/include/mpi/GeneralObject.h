@@ -37,7 +37,9 @@ namespace MPI_PACKETS {
 
     UnitOnExplosion = 0xf133,
     UnitLastEffectiveHit = 0xf0c2,
-    UnitBulletRearm = 0xf0bd
+    UnitBulletRearm = 0xf0bd,
+    UnitDetected = 0xf037,
+    ReplayCockpitParams = 0xd04a
   };
 }
 namespace mpi {
@@ -393,6 +395,55 @@ namespace mpi {
   public:
     UnitLastEffectiveHitMessage(IObject *o) : Message(o, MPI_PACKETS::UnitLastEffectiveHit) {}
     HitOutcome outcome{};
+  };
+
+  /// A spot (0xF037): the spotter can now see the spotted unit, which gets its red mark on the
+  /// spotter's screen. Sent again when a lost spot comes back; nothing marks the loss. A unit
+  /// id is the uid of an aircraft, or 0x800 | uid of a ground vehicle.
+  struct SpotEvent {
+    uint32_t time_ms = 0;
+    uint16_t spotter_id = 0;
+    uint16_t spotted_id = 0;
+    /// Resolved when the message arrives. Null for a unit the parser does not track (the
+    /// ground targets of an air map) or when the uid's unit is of the other kind.
+    unit::Unit *spotter = nullptr;
+    unit::Unit *spotted = nullptr;
+  };
+
+  class UnitDetectedMessage : public Message {
+    bool readPayload(ParserState *state) override;
+
+  public:
+    UnitDetectedMessage(IObject *o) : Message(o, MPI_PACKETS::UnitDetected) {}
+    SpotEvent spot{};
+  };
+
+  /// The cockpit instruments of the replay author's aircraft (0xD04A), once per flight-model
+  /// sync; only client replays have them. Pairs of a parameter id and its value; the set of ids
+  /// changes with the aircraft. Ids checked against the author's track: 0 airspeed m/s,
+  /// 39 vertical speed, 40 altitude (in feet on aircraft with imperial instruments), 41 the
+  /// same modulo 1000, 52 roll degrees, 53 pitch degrees with the sign reversed, 81 engine
+  /// RPM, 240 / 247 / 248 throttle of each engine 0 to 1.1 (1.1 is WEP or full afterburner,
+  /// -1 once the engine is lost).
+  struct CockpitEvent {
+    uint32_t time_ms = 0;
+    std::vector<std::pair<uint16_t, float>> params{};
+  };
+
+  class CockpitMessage : public Message {
+    bool readPayload(ParserState *state) override;
+
+  public:
+    CockpitMessage(IObject *o) : Message(o, MPI_PACKETS::ReplayCockpitParams) {}
+    CockpitEvent cockpit{};
+  };
+
+  /// Object 0xb/3: messages about the replay author's own client.
+  struct LocalClientObject : public IObject {
+    LocalClientObject(ParserState *state) : IObject(state, 0x5803) {}
+    Message *dispatchMpiMessage(MessageID mid) override;
+    void applyMpiMessage(const Message *m) override;
+    ~LocalClientObject() override = default;
   };
 
   class UnitBulletRearmMessage : public Message {

@@ -1,6 +1,6 @@
 // Built with ECS codegen version 1.0
     #include <ecs/query/entitySystem.h>
-    #include <ecs/componentTypes.h>
+    #include <ecs/ComponentTypes.h>
     #include <ecs/ComponentTypesDefs.h>
     #include <Pull.h>
     #include "BaseEntityES.cpp.inl"

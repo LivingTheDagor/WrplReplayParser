@@ -6,7 +6,7 @@
 
 #include <ecs/ecsHash.h>
 #include "ecs/ComponentTypes.h"
-#include "ecs/Component.h"
+#include "ecs/component.h"
 #include "dag_assert.h"
 #include "utils.h"
 #ifndef __forceinline

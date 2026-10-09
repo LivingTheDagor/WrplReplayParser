@@ -1,10 +1,10 @@
 
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 
-#include <daNet/delta/history.h>
+#include <danet/delta/history.h>
 
 #include "diff_impl.h"
-#include <daNet/delta/rle.h>
+#include <danet/delta/rle.h>
 
 namespace net
 {

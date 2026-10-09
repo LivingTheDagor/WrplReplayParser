@@ -1,6 +1,6 @@
 #ifndef MYEXTENSION_ENTITYCOMPONENTS_H
 #define MYEXTENSION_ENTITYCOMPONENTS_H
-#include "ecs/Component.h"
+#include "ecs/component.h"
 
 
 namespace net {

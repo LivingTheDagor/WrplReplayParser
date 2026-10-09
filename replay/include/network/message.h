@@ -9,8 +9,8 @@
 #include <EASTL/unique_ptr.h>
 #include <EASTL/functional.h>
 #include <EASTL/memory.h>
-#include <daNet/packetPriority.h>
-#include <daNet/daNetTypes.h> // DaNetTime
+#include <danet/packetPriority.h>
+#include <danet/daNetTypes.h> // DaNetTime
 #include <utils.h>
 #include <ecs/query/event.h>
 // #include <util/dag_hash.h>

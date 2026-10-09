@@ -1,8 +1,8 @@
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 #pragma once
 
-#include <daNet/bitStream.h>
-#include <daNet/daNetTypes.h>
+#include <danet/BitStream.h>
+#include <danet/daNetTypes.h>
 
 
 namespace net

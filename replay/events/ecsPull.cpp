@@ -2,9 +2,9 @@
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 
 #include <ecs/query/entitySystem.h>
-#include <ecs/Component.h>
+#include <ecs/component.h>
 #include <ecs/componentsMap.h>
-#include <ecs/componentTypes.h>
+#include <ecs/ComponentTypes.h>
 #include <ecs/EntityManager.h>
 #include "Pull.h"
 

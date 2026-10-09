@@ -4,7 +4,7 @@
 //
 #pragma once
 
-#include <daNet/bitStream.h>
+#include <danet/BitStream.h>
 #include <dag_assert.h>
 
 namespace net

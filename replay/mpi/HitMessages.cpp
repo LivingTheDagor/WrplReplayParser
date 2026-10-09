@@ -372,6 +372,33 @@ namespace mpi {
     return valid && got == 3;
   }
 
+  // 0xF037 UnitDetected
+
+  bool UnitDetectedMessage::readPayload(ParserState *state) {
+    uint8_t field_no = 0;
+    spot.time_ms = state->curr_time_ms;
+    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+      const uint8_t idx = field_no++;
+      switch (field_id) {
+        case 1: return bs->Read(spot.spotter_id);
+        case 2: return bs->Read(spot.spotted_id);
+        default: break;
+      }
+      this->skipReadingField(idx);
+      return true;
+    });
+    // A uid is unique only per unit kind, so keep a unit only if its kind matches the id.
+    auto resolve = [&](uint16_t id) -> unit::Unit * {
+      unit::Unit *u = state->getUnitObj(id);
+      if (!u)
+        return nullptr;
+      return (id & 0x800) ? (u->AsTank() ? u : nullptr) : (u->AsAircraft() ? u : nullptr);
+    };
+    spot.spotter = resolve(spot.spotter_id);
+    spot.spotted = resolve(spot.spotted_id);
+    return valid;
+  }
+
   // 0xF0BD UnitBulletRearm
 
   bool UnitBulletRearmMessage::readPayload(ParserState *state) {

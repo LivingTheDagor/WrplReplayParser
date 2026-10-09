@@ -1,11 +1,11 @@
 
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 
-#include <daNet/delta/deltaCompression.h>
+#include <danet/delta/deltaCompression.h>
 
-#include <daNet/daNetTypes.h>
-#include <daNet/delta/rle.h>
-#include <daNet/delta/history.h>
+#include <danet/daNetTypes.h>
+#include <danet/delta/rle.h>
+#include <danet/delta/history.h>
 
 
 #define VALIDATE_COMPRESSION_HASH 0 // NOTE: used for debug only, changing this changes protocol

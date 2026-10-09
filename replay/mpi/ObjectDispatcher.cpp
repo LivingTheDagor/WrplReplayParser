@@ -81,6 +81,9 @@ namespace mpi {
         return state->_new<BSMessage>(this, mid);
         //return new BSMessage(this, mid);
       }
+      case MPI_PACKETS::UnitDetected: {
+        return state->_new<UnitDetectedMessage>(this);
+      }
     }
     // No dispatcher for this id. Measured on a full battle: 31 such ids arrive, and not
     // one of them is addressed to a ground vehicle - everything the server sends about a
@@ -94,6 +97,10 @@ namespace mpi {
     auto bs = (BitStream *) &m->payload;
     // LOG("Deserialzing for Reflection type: %0x\n", mid);
     switch (mid) {
+      case MPI_PACKETS::UnitDetected: {
+        this->state->SpotEvents.push_back(((const UnitDetectedMessage *) m)->spot);
+        break;
+      }
       case MPI_PACKETS::Kill: {
         const KillMessage *kill_m = dynamic_cast<const KillMessage *>(m);
         if (kill_m->offended_unit) {
@@ -315,7 +322,7 @@ namespace mpi {
             return &state->main_dispatch;
           }
           case 0x3: {
-            return nullptr; // want to silence the "unable to dispatch with this"
+            return &state->local_client;
           }
           case 0x4: {
             return &state->gen_state;
@@ -353,6 +360,33 @@ namespace mpi {
     }
     // LOG("unable to dispatch to oid: {:#x}; type: {}; index: {}", oid, obj, count);
     return nullptr;
+  }
+
+  Message *LocalClientObject::dispatchMpiMessage(MessageID mid) {
+    if (mid == MPI_PACKETS::ReplayCockpitParams)
+      return state->_new<CockpitMessage>(this);
+    return nullptr;
+  }
+
+  void LocalClientObject::applyMpiMessage(const Message *m) {
+    if (m->id == MPI_PACKETS::ReplayCockpitParams)
+      state->CockpitEvents.push_back(((const CockpitMessage *) m)->cockpit);
+  }
+
+  bool CockpitMessage::readPayload(ParserState *state) {
+    cockpit.time_ms = state->curr_time_ms;
+    uint16_t head = 0, count = 0;
+    if (!payload.Read(head) || !payload.Read(count))
+      return false;
+    cockpit.params.reserve(count);
+    for (uint16_t i = 0; i < count; i++) {
+      uint16_t id = 0;
+      float value = 0;
+      if (!payload.Read(id) || !payload.Read(value))
+        return false;
+      cockpit.params.emplace_back(id, value);
+    }
+    return true;
   }
 
   bool TankMessage::readPayload(ParserState *state) { return this->payload.Read(this->data); }
