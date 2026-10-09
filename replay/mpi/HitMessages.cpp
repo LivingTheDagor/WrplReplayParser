@@ -118,6 +118,7 @@ namespace mpi {
       int16_t i16 = 0;
       int8_t i8 = 0;
       ok &= body.Read(i16); // netutils::UNPACKS<int16_t>(i16, 20.f);
+      ok &= body.Read(i16); // netutils::UNPACKS<int16_t>(i16, 20.f);
       ok &= body.Read(i16); // netutils::UNPACKS<int16_t>(i16, 1.f);
       ok &= body.Read(i16); // netutils::UNPACKS<int16_t>(i16, 100.f);
       ok &= body.ReadZigZag(skip_i);

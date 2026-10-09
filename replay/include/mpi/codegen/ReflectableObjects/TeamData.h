@@ -3,6 +3,8 @@
 
 class TeamData : public danet::ReflectableObject {
 public:
+  uint8_t spawn_side{};
+public:
   DECL_REFLECTION(TeamData, danet::ReflectableObject)
   void drawObject() const override;
   danet::ReflectionVar<uint16_t> score{"score", &tickets, 2};

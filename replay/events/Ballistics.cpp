@@ -42,7 +42,7 @@ namespace unit {
       return false;
     const float mass_ = body->getReal("mass", 0.f);
     const float caliber = body->getReal("caliber", 0.f);
-    if (mass <= 0.f || caliber <= 0.f)
+    if (mass_ <= 0.f || caliber <= 0.f)
       return false;
     this->mass = mass_;
     area = float(M_PI) * caliber * caliber * 0.25f;

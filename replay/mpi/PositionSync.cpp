@@ -765,11 +765,10 @@ static Rocket *getAnyStoreImpl(ParserState &state, ecs::EntityId eid) {
   return state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("torpedo_component"));
 }
 
-static Rocket * getAnyStore(ParserState &state, ecs::EntityId eid, StoreType actual) {
-  auto ret = getAnyStoreImpl(state, eid);
-  if (ret) {
-    LOGE("entity '{}' has rocket of type {} but we tried to get {}", eid, ret->type, actual);
-  }
+static Rocket *getAnyStore(ParserState &state, ecs::EntityId eid, StoreType actual) {
+  auto *ret = getAnyStoreImpl(state, eid);
+  if (ret)
+    LOGD3("entity '{}' has store of type {} but the position packet requested {}", eid, ret->type, actual);
   return ret;
 }
 

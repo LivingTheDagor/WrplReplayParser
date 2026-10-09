@@ -60,6 +60,9 @@ class MPlayer(ReflectableObject):
 
 
 class TeamData(ReflectableObject):
+    public = [
+        SVar("uint8_t", "spawn_side"),
+    ]
     score = Var("uint16_t", 2)
     tickets = Var("uint16_t", 3)
     orderCooldownTotal = Var("uint32_t", 4)

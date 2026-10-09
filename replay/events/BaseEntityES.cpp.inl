@@ -4,6 +4,10 @@
 #include "ecs/query/coreEvents.h"
 #include "ecs/ecsCodegen.h"
 
+static void team_spawn_side_es(const ecs::EventEntityCreated &, const ecs::string &unit__missionName,
+                               const int &team, ecs::EntityManager &manager) {
+  manager.owned_by->recordTeamSpawnSide(team, unit__missionName);
+}
 
 static void on_tank_appear_es(const ecs::EventEntityCreated &evt,
                               const HeavyVehicleModelStorageComponent &unit_storage__tank, const int &uid,

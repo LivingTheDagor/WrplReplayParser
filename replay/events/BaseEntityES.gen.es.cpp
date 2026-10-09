@@ -6,6 +6,34 @@
     #include "BaseEntityES.cpp.inl"
 DEF_PULL_VAR(BaseEntity);
 #include <ecs/query/performQuery.h>
+static constexpr ecs::ComponentDesc team_spawn_side_es_comps[] =
+{
+//start of 2 ro components at [0]
+  {ECS_HASH("unit__missionName"), ecs::ComponentTypeInfo<ecs::string>()},
+  {ECS_HASH("team"), ecs::ComponentTypeInfo<int>()}
+};
+static void team_spawn_side_es_all_events(ecs::EntityManager &mgr, const ecs::Event &__restrict evt, const ecs::QueryView &__restrict components)
+{
+  G_FAST_ASSERT(evt.is<ecs::EventEntityCreated>());
+  auto comp = components.begin(), compE = components.end(); G_ASSERT(comp!=compE); do if (components.eid_refs[comp] != ecs::INVALID_ENTITY_ID) {
+    team_spawn_side_es(static_cast<const ecs::EventEntityCreated&>(evt)
+        , ECS_RO_COMP(team_spawn_side_es_comps, "unit__missionName", ecs::string)
+    , ECS_RO_COMP(team_spawn_side_es_comps, "team", int)
+    , mgr
+    );
+  } while (++comp != compE);
+}
+static ecs::EntitySystemDesc team_spawn_side_es_es_desc
+(
+  "team_spawn_side_es",
+  "replay/events/BaseEntityES.cpp.inl",
+  ecs::EntitySystemOps(team_spawn_side_es_all_events),
+  ecs::empty_span(),
+  ecs::make_span(team_spawn_side_es_comps+0, 2)/*ro*/,
+  ecs::empty_span(),
+  ecs::empty_span(),
+  ecs::EventSetBuilder<ecs::EventEntityCreated>::build()
+);
 static constexpr ecs::ComponentDesc on_tank_appear_es_comps[] =
 {
 //start of 1 rw components at [0]

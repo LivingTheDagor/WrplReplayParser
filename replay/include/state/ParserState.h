@@ -176,6 +176,8 @@ public:
 
   void setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid);
 
+  void recordTeamSpawnSide(int team, const std::string &mission_name);
+
   ~ParserState();
 
   bool ParsePacket(ReplayPacket &pkt);
@@ -186,6 +188,7 @@ public:
 
 private:
   StateRewinder rewinder{this};
+  std::array<uint8_t, 3> team_spawn_side_masks{};
 };
 
 template<typename T, bool do_compare, bool take_ownership, bool create_default>

@@ -74,8 +74,8 @@ static void on_jettisoned_appear_es(const ecs::EventEntityCreated &evt, const ec
 static void on_jettisoned_disappear_es(const ecs::EventEntityDestroyedBasic &evt, Jettisoned &jettisoned_component,
                                        ecs::EntityManager &manager) {
   if (evt.get<1>()) {
-    unit::buildBallisticArc(*manager.owned_by, jettisoned_component, /*powered*/ false, manager.owned_by->sea_level);
     jettisoned_component.destroyed_at_ms = *manager.curr_time_ms;
+    unit::buildBallisticArc(*manager.owned_by, jettisoned_component, /*powered*/ false, manager.owned_by->sea_level);
   }
 }
 

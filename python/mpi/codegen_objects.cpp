@@ -63,6 +63,7 @@ void PyCodegenObjects::include(py::module_ &m) {
     .def_readonly("numFreeSpareUsed", &MPlayer::numFreeSpareUsed)
   ;
   py::class_<TeamData, danet::ReflectableObject, std::unique_ptr<TeamData, py::nodelete>>(mpi, "TeamData")
+    .def_readonly("spawn_side", &TeamData::spawn_side)
     .def_readonly("score", &TeamData::score)
     .def_readonly("tickets", &TeamData::tickets)
     .def_readonly("orderCooldownTotal", &TeamData::orderCooldownTotal)

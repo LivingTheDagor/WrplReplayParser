@@ -145,6 +145,23 @@ void ParserState::setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid)
   this->uid_unit_lookup[uid] = unit;
 }
 
+void ParserState::recordTeamSpawnSide(int team, const std::string &mission_name) {
+  if (team < 1 || team > 2)
+    return;
+
+  const uint8_t spawn_side = mission_name.starts_with("t1_") ? 1 : mission_name.starts_with("t2_") ? 2 : 0;
+  if (spawn_side == 0 || mission_name.find("player") != std::string::npos)
+    return;
+
+  auto &observed_sides = team_spawn_side_masks[team];
+  const uint8_t spawn_side_mask = static_cast<uint8_t>(1U << (spawn_side - 1));
+  if ((observed_sides & spawn_side_mask) != 0)
+    return;
+
+  observed_sides |= spawn_side_mask;
+  teams[team].spawn_side = observed_sides == spawn_side_mask ? spawn_side : 0;
+}
+
 ParserState::~ParserState() {
   _in_destruction_state = this;
   _in_destruction_allocator = &this->allocator;
