@@ -5,7 +5,7 @@
 #pragma once
 #include "cstdint"
 #include "generic/dag_span.h"
-#include <ecs/ComponentTypes.h>
+#include <ecs/componentTypes.h>
 #include "ecs/entityId.h"
 #include "ecs/query/event.h"
 #include "ecsQuery.h"

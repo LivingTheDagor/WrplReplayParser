@@ -4,7 +4,7 @@
 class BaseExtReflectable : public danet::ReflectableObject {
 protected:
   mpi::Message * dispatchMpiMessage(mpi::MessageID mid) override;
-  void applyMpiMessage(const mpi::Message *m) override;
+  bool applyMpiMessage(const mpi::Message *m) override;
 public:
   ObjectRewindState<danet::CameraData, false, false, false> camera_data{};
   unit::Unit* owner_unit{};

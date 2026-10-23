@@ -3,6 +3,7 @@
 #include "mpi/PositionSync.h"
 #include "utils.h"
 #include "ioSys/dag_dataBlock.h"
+#include "Unit.h"
 
 namespace {
   // warthunder offsets all y offsets by the sea level. on most maps, this is 0, but some, like Pradesh, have a difference (last seen as 920)
@@ -35,6 +36,42 @@ bool ChatMessage::FromBS(BitStream &bs) {
 }
 ParserState::ParserState(uint32_t player_count) {
   initialize(player_count);
+}
+void ParserState::ownUnit(unit::Unit *unit) {
+  owned_units.emplace_back(unit);
+}
+unit::Aircraft *ParserState::getPendingAircraft(uint16_t uid) const {
+  auto it = pending_aircraft.find(uid & 0x7FF);
+  return it == pending_aircraft.end() || isStale(it->second) ? nullptr : it->second;
+}
+void ParserState::addPendingAircraft(std::unique_ptr<unit::Aircraft> unit) {
+  auto *ptr = unit.get();
+  owned_units.emplace_back(std::move(unit));
+  auto [it, added] = pending_aircraft.emplace(ptr->uid & 0x7FF, ptr);
+  if (!added) {
+    unresolved_aircraft.push_back(it->second);
+    it->second = ptr;
+  }
+}
+unit::Aircraft *ParserState::takePendingAircraft(uint16_t uid) {
+  auto it = pending_aircraft.find(uid & 0x7FF);
+  if (it == pending_aircraft.end())
+    return nullptr;
+  auto *unit = it->second;
+  pending_aircraft.erase(it);
+  if (isStale(unit)) {
+    unresolved_aircraft.push_back(unit);
+    return nullptr;
+  }
+  unit->provisional = false;
+  return unit;
+}
+std::vector<unit::Aircraft *> ParserState::getPendingAircraft() const {
+  std::vector<unit::Aircraft *> result(unresolved_aircraft);
+  result.reserve(unresolved_aircraft.size() + pending_aircraft.size());
+  for (auto &[uid, aircraft] : pending_aircraft)
+    result.push_back(aircraft);
+  return result;
 }
 ParserState::ParserState(IReplay *replay) {
   auto header = replay->getHeader();
@@ -197,7 +234,11 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       break;
     }
     case ReplayPacketType::AircraftSmall: {
-      FMSync(*this, pkt.stream);
+      if (!FMSync(*this, pkt.stream)) {
+        LOGE("Failed to parse aircraft packet at {} ms ({} bits unread)", pkt.timestamp_ms,
+             pkt.stream.GetNumberOfUnreadBits());
+        return false;
+      }
       break;
     }
     case ReplayPacketType::Chat: {
@@ -211,9 +252,13 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       ZoneScopedN("MPI Dispatch");
       auto m = mpi::dispatch(pkt.stream, this, false);
       if (m != nullptr) {
-        mpi::send(m);
+        const bool ok = mpi::send(m);
         if (m->delete_message)
           this->allocator._delete(m);
+        if (!ok) {
+          LOGE("Failed to parse MPI packet at {} ms", pkt.timestamp_ms);
+          return false;
+        }
       }
       break;
     }
@@ -228,6 +273,11 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
     }
     case ReplayPacketType::Snapshot: break;
     case ReplayPacketType::ReplayHeaderInfo: break;
+  }
+  if (queued_message_failed) {
+    queued_message_failed = false;
+    LOGE("Failed to apply a queued MPI message at {} ms", pkt.timestamp_ms);
+    return false;
   }
   return true;
 }

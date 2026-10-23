@@ -4,7 +4,7 @@
 //
 #pragma once
 #include <string.h>
-#include "danet/bitStream.h"
+#include "daNet/bitStream.h"
 #include <cstddef> // for offsetof macros
 #include "fmt/base.h"
 #include "fmt/format.h"
@@ -296,7 +296,7 @@ namespace danet {
     // dummy mpi implementation
     virtual mpi::Message *dispatchMpiMessage(mpi::MessageID /*mid*/) override { return nullptr; }
 
-    virtual void applyMpiMessage(const mpi::Message * /*m*/) override {}
+    virtual bool applyMpiMessage(const mpi::Message * /*m*/) override { return true; }
 
     ReflectableObject(ParserState * state, mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) :
       mpi::IObject(state, uid),

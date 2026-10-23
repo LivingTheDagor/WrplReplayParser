@@ -48,7 +48,7 @@ namespace net {
     cb.WriteBits((const uint8_t *) &str, short_bits);
   }
 
-  static std::string oneString;
+  static thread_local std::string oneString; // one per thread: parses on other threads use it too
   static const char *read_istring(const BitStream &cb, InternedStringsRepl *istrs, uint32_t short_bits) {
     bool rawString = false;
     if (!cb.Read(rawString))

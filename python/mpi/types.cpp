@@ -98,7 +98,18 @@ void PyMpiTypes::include(py::module_ &m) {
 
   py::class_<danet::CameraData>(mpi, "CameraData")
     .def_readonly("camera_euler", &danet::CameraData::camera_euler)
-    .def_readonly("gun_pointer", &danet::CameraData::gun_pointer);
+    .def_readonly("gun_pointer", &danet::CameraData::gun_pointer, "Spherical angles of gun_dir")
+    .def_readonly("quat", &danet::CameraData::quat, "Camera rotation as sent, (x, y, z, w)")
+    .def_property_readonly("view_dir", &danet::CameraData::view_dir,
+                           "Where the camera looks: (0, 0, 1) rotated by quat, world axes. In a gunner sight it "
+                           "is 0.26 deg (median) from gun_dir; in third person it is free")
+    .def_readonly("offset", &danet::CameraData::offset, "Camera position minus the unit position, world axes, m")
+    .def_readonly("gun_dir", &danet::CameraData::gun_dir,
+                  "Unit vector of the gun barrel, world axes. Its yaw minus the hull heading is the turret yaw "
+                  "of the ground sync (median 0.31 deg)")
+    .def_readonly("kind", &danet::CameraData::kind,
+                  "Camera kind, probable: 29 third person, 39 gunner sight, 35 a fixed 9.28x sight")
+    .def_readonly("zoom", &danet::CameraData::zoom, "1.192 in the normal view, 5 to 25 in a sight");
 
 
   py::class_<ObjectRewindState<danet::CameraData, false, false, false>::TimeState>(mpi, "CameradataTS")
@@ -123,16 +134,19 @@ void PyMpiTypes::include(py::module_ &m) {
       d["cam_roll"] = channel_view(b, &b->data.camera_euler.x, n, self_py);
       d["aim_yaw"] = channel_view(b, &b->data.gun_pointer.x, n, self_py);
       d["aim_pitch"] = channel_view(b, &b->data.gun_pointer.y, n, self_py);
+      d["zoom"] = channel_view(b, &b->data.zoom, n, self_py);
+      d["kind"] = channel_view(b, &b->data.kind, n, self_py);
       return d;
     },
          "All samples as read-only zero-copy numpy views over the history buffer.\n"
          "Empty dict when the history is empty, otherwise every array has the same length.\n"
          "Keys: time_ms (uint32, ms); then float32 radians:\n"
          "cam_yaw, cam_pitch, cam_roll - where the camera looks;\n"
-         "aim_yaw, aim_pitch - the aiming reticle, where the weapons are told to converge.\n"
-         "The reticle has no roll, and both groups share this one timeline: a single sample\n"
-         "carries the camera and the reticle at once. cam_roll comes through asin and is\n"
-         "therefore bounded to +-pi/2, the rest span +-pi.");
+         "aim_yaw, aim_pitch - the gun barrel (gun_dir); where the gun points, not the camera.\n"
+         "The gun has no roll, and both groups share this one timeline: a single sample\n"
+         "carries the camera and the gun at once. cam_roll comes through asin and is\n"
+         "therefore bounded to +-pi/2, the rest span +-pi.\n"
+         "zoom (float32): 1.192 normal view, 5 to 25 in a sight; kind (uint16): camera kind.");
 
 
   py_codegen_types.include(m);

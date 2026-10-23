@@ -244,8 +244,9 @@ namespace ecs {
       return data.ctm;
     }
 
+    // find, not operator[]: that inserts on a missing hash, into a map parse threads read at the same time
     inline ComponentTypeManager *getCTM(component_type_t hash) {
-      auto idx = typesIndex[hash];
+      auto idx = findOr(hash, 0);
       if (idx) {
         return getCTM(idx);
       }
@@ -266,7 +267,7 @@ namespace ecs {
     }
 
     inline std::string_view getName(component_t hash) {
-      auto idx = typesIndex[hash];
+      auto idx = findOr(hash, 0);
       if (idx) {
         return getName(idx);
       }
@@ -285,7 +286,7 @@ namespace ecs {
     }
 
     inline ComponentInfo *getComponentData(component_type_t hash) {
-      auto idx = typesIndex[hash];
+      auto idx = findOr(hash, 0);
       if (idx) {
         return getComponentData(idx);
       }

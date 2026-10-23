@@ -66,6 +66,31 @@ uint32_t readSize(const BitStream &from) {
   return ok ? sizeInBits : 0;
 }
 
+static bool readCompressed32Checked(const BitStream &from, uint32_t &value) {
+  value = 0;
+  for (unsigned i = 0; i < 5; ++i) {
+    uint8_t byte = 0;
+    if (!from.Read(byte) || (i == 4 && (byte & 0xf0)))
+      return false;
+    value |= uint32_t(byte & 0x7f) << (i * 7);
+    if (!(byte & 0x80))
+      return true;
+  }
+  return false;
+}
+
+static bool readSizeChecked(const BitStream &from, uint32_t &size) {
+  uint8_t hdr = 0;
+  if (!from.ReadBits(&hdr, 3))
+    return false;
+  static constexpr uint32_t fixed_sizes[] = {0, 1, 8, 16, 32, 64, 96, 128};
+  if (hdr)
+    size = fixed_sizes[hdr];
+  else if (!readCompressed32Checked(from, size))
+    return false;
+  return size != 0;
+}
+
 IdFieldSerializer32::IdFieldSerializer32() : currWrSz(0), currRdSz(0) { mem_set_0(sizes); }
 
 IdFieldSerializer32::IdFieldSerializer32(const IdFieldSerializer32 &other) :
@@ -125,6 +150,28 @@ uint32_t IdFieldSerializer32::readFieldsSizeAndFlag(const BitStream &from) {
   }
   from.SetReadOffset(startBody);
   return fields;
+}
+
+bool IdFieldSerializer32::readFieldsSizeAndFlagChecked(const BitStream &from, uint32_t &fields) {
+  const BitSize_t start = from.GetReadOffset();
+  uint16_t offset = 0;
+  fields = 0;
+  currRdSz = 0;
+  if ((start & 7) || !from.Read(offset) || !readCompressed32Checked(from, fields) || !fields)
+    return false;
+  const BitSize_t body = from.GetReadOffset();
+  const uint64_t table = uint64_t(start) + uint64_t(offset) * 8;
+  if (table < body || table > from.GetNumberOfBitsUsed())
+    return false;
+  from.SetReadOffset(static_cast<BitSize_t>(table));
+  currRdSz = static_cast<uint8_t>(__popcount(fields));
+  uint64_t body_bits = 0;
+  for (uint8_t j = 0; j < currRdSz; ++j) {
+    if (!readSizeChecked(from, sizes[j]) || (body_bits += sizes[j]) > table - body)
+      return false;
+  }
+  from.SetReadOffset(body);
+  return true;
 }
 
 void IdFieldSerializer32::skipReadingField(uint8_t index, const BitStream &from) const {

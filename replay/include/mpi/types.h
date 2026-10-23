@@ -13,9 +13,10 @@ namespace unit {
 #include "dag_assert.h"
 #include "vector"
 #include "array"
-#include "danet/daNetTypes.h"
+#include "daNet/daNetTypes.h"
 #include "ecs/entityId.h"
 #include "math/dag_Point3.h"
+#include "math/dag_Point4.h"
 #include "reflection.h"
 
 namespace danet {
@@ -175,13 +176,28 @@ namespace danet {
     SWEDEN = 9,
     ISRAEL = 10
   };
+  /// One 0xF0CC message: the player's camera and the gun of the unit.
   struct CameraData {
     friend bool operator==(const CameraData &lhs, const CameraData &rhs) {
-      return lhs.camera_euler == rhs.camera_euler && lhs.gun_pointer == rhs.gun_pointer;
+      return lhs.camera_euler == rhs.camera_euler && lhs.gun_pointer == rhs.gun_pointer && lhs.quat == rhs.quat &&
+             lhs.offset == rhs.offset && lhs.gun_dir == rhs.gun_dir && lhs.kind == rhs.kind && lhs.zoom == rhs.zoom;
     }
 
     Point3 camera_euler;
     Point2 gun_pointer; // x is horizontal, y vertical. no rotation component
+    /// Camera rotation as sent (x, y, z, w). The view direction is (0, 0, 1) rotated by it: in a gunner
+    /// sight that is 0.26 deg (median) from the gun, in third person the player can look anywhere.
+    Point4 quat;
+    Point3 offset; ///< camera position minus the unit position, world axes, m
+    Point3 gun_dir; ///< unit vector of the gun barrel, world axes
+    uint16_t kind = 0; ///< camera kind: 29 third person, 39 gunner sight, 35 a fixed 9.28x sight
+    float zoom = 0; ///< 1.192 in the normal view, 5 to 25 in a sight
+
+    Point3 view_dir() const {
+      const Point3 u{quat.x, quat.y, quat.z};
+      const Point3 v{0, 0, 1};
+      return 2.f * (u * v) * u + (quat.w * quat.w - u * u) * v + 2.f * quat.w * (u % v);
+    }
   };
 } // namespace danet
 template<>

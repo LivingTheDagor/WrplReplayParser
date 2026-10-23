@@ -53,6 +53,8 @@ class file_sink {
   friend log_handler;
   std::string file_sink_path;
   std::ofstream out;
+  // the logger thread writes while a failing parse thread flushes
+  std::mutex out_mtx;
 
 public:
   ~file_sink();
@@ -63,9 +65,15 @@ public:
     }
   }
 
-  void onMessage(const std::string_view msg) { out << msg; }
+  void onMessage(const std::string_view msg) {
+    std::lock_guard<std::mutex> lock(out_mtx);
+    out << msg;
+  }
 
-  inline void flush() { out.flush(); }
+  inline void flush() {
+    std::lock_guard<std::mutex> lock(out_mtx);
+    out.flush();
+  }
 };
 
 
