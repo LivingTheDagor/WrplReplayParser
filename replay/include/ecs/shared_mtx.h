@@ -82,4 +82,33 @@ namespace dagor {
     _Smtx_t _Myhandle = nullptr;
   };
 #endif
+
+  // Archetype event handlers can perform another query on the same thread. Keep
+  // the outer shared lock until all nested scopes leave, without recursively
+  // acquiring the underlying non-recursive shared_mutex.
+  class archetype_read_lock {
+    inline static thread_local archetype_read_lock *current_ = nullptr;
+    shared_mutex &mutex_;
+    archetype_read_lock *previous_;
+    bool owns_ = true;
+
+  public:
+    explicit archetype_read_lock(shared_mutex &mutex) : mutex_(mutex), previous_(current_) {
+      for (auto *scope = previous_; scope; scope = scope->previous_)
+        if (&scope->mutex_ == &mutex_) {
+          owns_ = false;
+          break;
+        }
+      if (owns_)
+        mutex_.lock_shared();
+      current_ = this;
+    }
+    ~archetype_read_lock() {
+      current_ = previous_;
+      if (owns_)
+        mutex_.unlock_shared();
+    }
+    archetype_read_lock(const archetype_read_lock &) = delete;
+    archetype_read_lock &operator=(const archetype_read_lock &) = delete;
+  };
 }

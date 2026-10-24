@@ -22,6 +22,12 @@ namespace unit {
       return (Aircraft *) this;
     return nullptr;
   }
+
+  Ship *Unit::AsShip() {
+    if (unitType == ShipType)
+      return (Ship *) this;
+    return nullptr;
+  }
   struct weap {
     int id;
     const char *name;
@@ -287,7 +293,8 @@ namespace unit {
     }
     this->name_index = translate::get_locale_index(fmt::format("weapons/{}", this->weapon_name));
     this->name_index_short = translate::get_locale_index(fmt::format("weapons/{}/short", this->weapon_name));
-    if (this->weapon_name != "dummy_weapon" && strcmp("boosters", trigger) != 0)
+    // A naval gun (ships/*, also the AI ships of air maps) can have no weapons/<name> line in the lang files.
+    if (this->weapon_name != "dummy_weapon" && strcmp("boosters", trigger) != 0 && unit->unitType != ShipType)
       G_ASSERT(this->name_index != translate::INVALID_TRANSLATE_INDEX);
 
     weapons_count[weapon_id]++;
@@ -662,6 +669,16 @@ namespace unit {
     loadWeaponData(vehicle_blk);
   }
 
+  const char *Ship::getUnitTypeName() { return "Ship"; }
+
+  // The ECS names a ship ships/<name>; its blk is gamedata/units/ships/<name>.blk.
+  void Ship::Load() {
+    std::string_view raw{raw_unit_name};
+    unit_name = raw.starts_with("ships/") ? raw.substr(6) : raw;
+    Unit::Load();
+    loadWeaponData(fmt::format("gamedata/units/{}.blk", this->raw_unit_name));
+  }
+
 
   void unit::Unit::Load() {
     this->unit_wpcost = ecs::g_ecs_data->wp_cost.getBlockByNameEx(this->unit_name);
@@ -699,19 +716,22 @@ mpi::Message *GMReflectable::dispatchMpiMessage(mpi::MessageID mid) {
   return BaseExtReflectable::dispatchMpiMessage(mid);
 }
 
-void GMReflectable::applyMpiMessage(const mpi::Message *m) { BaseExtReflectable::applyMpiMessage(m); }
+bool GMReflectable::applyMpiMessage(const mpi::Message *m) { return BaseExtReflectable::applyMpiMessage(m); }
 
 mpi::Message *FMWReflectable::dispatchMpiMessage(mpi::MessageID mid) {
   return BaseExtReflectable::dispatchMpiMessage(mid);
 }
 
-void FMWReflectable::applyMpiMessage(const mpi::Message *m) { BaseExtReflectable::applyMpiMessage(m); }
+bool FMWReflectable::applyMpiMessage(const mpi::Message *m) { return BaseExtReflectable::applyMpiMessage(m); }
 
 mpi::Message *BaseExtReflectable::dispatchMpiMessage(mpi::MessageID mid) {
   ZoneScoped;
   switch (mid) {
     case MPI_PACKETS::UnitCamera: {
       return state->_new<mpi::CameraStateMessage>(this);
+    }
+    case MPI_PACKETS::FmwRpm: {
+      return state->_new<mpi::RpmMessage>(this);
     }
     case MPI_PACKETS::UnitHitEffects: {
       return state->_new<mpi::UnitHitEffectsMessage>(this);
@@ -745,9 +765,16 @@ mpi::Message *BaseExtReflectable::dispatchMpiMessage(mpi::MessageID mid) {
   return nullptr;
 }
 
-void BaseExtReflectable::applyMpiMessage(const mpi::Message *m) {
+bool BaseExtReflectable::applyMpiMessage(const mpi::Message *m) {
   ZoneScoped;
   switch (m->id) {
+    case MPI_PACKETS::FmwRpm: {
+      if (state->keep.rpms) {
+        auto &e = state->RpmEvents.emplace_back(((const mpi::RpmMessage *) m)->rpm);
+        e.unit = owner_unit;
+      }
+      break;
+    }
     case MPI_PACKETS::UnitCamera: {
       auto camera_m = (mpi::CameraStateMessage *) m;
 
@@ -757,7 +784,14 @@ void BaseExtReflectable::applyMpiMessage(const mpi::Message *m) {
       Point2 gun_pointer = dir_to_sph_ang(camera_m->gun_circle_norm_vector);
       gun_pointer.x -= PI / 2;
       camera_euler.y = norm_s_ang(camera_euler.y - PI / 2);
-      *camera_data.reserveOne() = {camera_euler, gun_pointer};
+      const Quat &q = camera_m->camera_circle_quat;
+      *camera_data.reserveOne() = {camera_euler,
+                                   gun_pointer,
+                                   {q.x, q.y, q.z, q.w},
+                                   camera_m->camera_offset,
+                                   camera_m->gun_circle_norm_vector,
+                                   camera_m->camera_kind,
+                                   camera_m->zoom};
       camera_data.checkAndPush(state);
       break;
     }
@@ -809,4 +843,5 @@ void BaseExtReflectable::applyMpiMessage(const mpi::Message *m) {
     }
     default: break;
   }
+  return true;
 }

@@ -62,6 +62,8 @@ namespace translate {
     return allocator[(size_t) lang - 1].getDataRawUnsafe(offs);
   }
 
+  // The table keeps only the 64-bit FNV-1 hash of each key, not the key. Two keys with the same hash give the same
+  // index.
   translate_index_t translate_table_t::get_key(std::string_view string) {
     if (string.empty())
       return INVALID_TRANSLATE_INDEX;
@@ -72,6 +74,7 @@ namespace translate {
   }
 
 
+  // With ReturnKey, a missing key returns value.data(), so value must end with a null char.
   const char *localize(std::string_view value, Languages lang, ReturnPolicy return_policy) {
     // does key exist?
     auto key = TranslatorTable.get_key(value);

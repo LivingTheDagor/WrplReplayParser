@@ -2,7 +2,7 @@ add_library(PyMath Math.cpp)
 
 target_link_libraries(PyMath
         pybind11::module
-        Python::Python
+        Python::Module
         DAG_MATH::DAG_MATH
 )
 

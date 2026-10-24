@@ -1,8 +1,8 @@
 # Find the specified Python version, or use any found by default
 if(PYTHON_VERSION_TO_USE)
-    find_package(Python ${PYTHON_VERSION_TO_USE} REQUIRED COMPONENTS Interpreter Development)
+    find_package(Python ${PYTHON_VERSION_TO_USE} REQUIRED COMPONENTS Interpreter Development.Module)
 else()
-    find_package(Python 3.12...3.12.13 REQUIRED COMPONENTS Interpreter Development)
+    find_package(Python 3.12...3.12.13 REQUIRED COMPONENTS Interpreter Development.Module)
 endif()
 # Try to find pybind11 via find_package first
 find_package(pybind11 QUIET)

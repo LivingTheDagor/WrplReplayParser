@@ -119,6 +119,7 @@ namespace danet {
       REPL_VER(net::read_eid(*bs, data->eid1));
       {uint32_t sz;
       REPL_VER(bs->ReadCompressed(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->eid1_list.resize(sz);
       for(auto & v : data->eid1_list) {
         REPL_VER(net::read_eid(*bs, v));
@@ -126,6 +127,7 @@ namespace danet {
       REPL_VER(net::read_eid(*bs, data->eid2));
       {uint32_t sz;
       REPL_VER(bs->ReadCompressed(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->eid2_list.resize(sz);
       for(auto & v : data->eid2_list) {
         REPL_VER(net::read_eid(*bs, v));
@@ -133,6 +135,7 @@ namespace danet {
       REPL_VER(net::read_eid(*bs, data->eid3));
       {uint32_t sz;
       REPL_VER(bs->ReadCompressed(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->eid3_list.resize(sz);
       for(auto & v : data->eid3_list) {
         REPL_VER(net::read_eid(*bs, v));
@@ -140,6 +143,7 @@ namespace danet {
       REPL_VER(net::read_eid(*bs, data->eid4));
       {uint32_t sz;
       REPL_VER(bs->ReadCompressed(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->eid4_list.resize(sz);
       for(auto & v : data->eid4_list) {
         REPL_VER(net::read_eid(*bs, v));
@@ -165,6 +169,7 @@ namespace danet {
     else if (op == DANET_REFLECTION_OP_DECODE) {
       {uint8_t sz;
       REPL_VER(bs->Read(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->crew.resize(sz);
       for(auto & v : data->crew) {
         REPL_VER(net::read_eid(*bs, v.e1));
@@ -232,6 +237,7 @@ namespace danet {
     else if (op == DANET_REFLECTION_OP_DECODE) {
       {uint8_t sz;
       REPL_VER(bs->Read(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->resize(sz);
       for(auto & v : *(data)) {
         REPL_VER(bs->Read(v));
@@ -254,6 +260,7 @@ namespace danet {
     else if (op == DANET_REFLECTION_OP_DECODE) {
       {uint8_t sz;
       REPL_VER(bs->Read(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->resize(sz);
       for(auto & v : *(data)) {
         REPL_VER(bs->Read(v));
@@ -276,6 +283,7 @@ namespace danet {
     else if (op == DANET_REFLECTION_OP_DECODE) {
       {uint8_t sz;
       REPL_VER(bs->Read(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->resize(sz);
       for(auto & v : *(data)) {
         REPL_VER(bs->Read(v));
@@ -300,6 +308,7 @@ namespace danet {
     else if (op == DANET_REFLECTION_OP_DECODE) {
       {uint8_t sz;
       REPL_VER(bs->Read(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->vals.resize(sz);
       for(auto & v : data->vals) {
         REPL_VER(bs->Read(v.v1));
@@ -326,6 +335,7 @@ namespace danet {
       REPL_VER(bs->Read(data->combined));
       {uint8_t sz;
       REPL_VER(bs->Read(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->scores.resize(sz);
       for(auto & v : data->scores) {
         REPL_VER(bs->Read(v));
@@ -442,6 +452,7 @@ namespace danet {
       int sz;
       REPL_VER(bs->ReadZigZag(sz));
       if(sz > 0) {
+        REPL_VER(uint32_t(sz) <= bs->GetNumberOfUnreadBits());
         data->vals.resize(sz);
         for(auto & v : data->vals) {
           REPL_VER(bs->ReadZigZag(v.v1));
@@ -481,6 +492,7 @@ namespace danet {
     else if (op == DANET_REFLECTION_OP_DECODE) {
       {uint32_t sz;
       REPL_VER(bs->Read(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->effects.resize(sz);
       for(auto & v : data->effects) {
         REPL_VER(bs->Read(v.name));
@@ -546,6 +558,7 @@ namespace danet {
     else if (op == DANET_REFLECTION_OP_DECODE) {
       {uint8_t sz;
       REPL_VER(bs->Read(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->resize(sz);
       for(auto & v : *(data)) {
         REPL_VER(bs->ReadBits((uint8_t*)&v, 0xb));
@@ -569,6 +582,7 @@ namespace danet {
     else if (op == DANET_REFLECTION_OP_DECODE) {
       {uint8_t sz;
       REPL_VER(bs->Read(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       data->resize(sz);
       for(auto & v : *(data)) {
         REPL_VER(bs->ReadBits((uint8_t*)&v.uid, 0xb));

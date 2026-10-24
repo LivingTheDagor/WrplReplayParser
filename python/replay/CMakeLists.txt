@@ -2,7 +2,7 @@ add_library(PyReplay replay.cpp)
 
 target_link_libraries(PyReplay
         pybind11::module
-        Python::Python
+        Python::Module
         Replay::Replay
         PyDataBlock::PyDataBlock
         PyBitStream::PyBitStream

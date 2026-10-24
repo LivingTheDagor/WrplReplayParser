@@ -8,6 +8,7 @@ target_link_libraries(Replay
         BS::BS
         ZSTD::ZSTD
         dagIoSys::dagIoSys
+        LOGGER::LOGGER
 )
 add_library(Replay::Replay ALIAS Replay)
 

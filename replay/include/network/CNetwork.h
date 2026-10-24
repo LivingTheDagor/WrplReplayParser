@@ -22,6 +22,7 @@ DEFINE_HANDLE(handle_cnet)
 #define CNET_LOGE(format_, ...)  ELOGE(handle_cnet, format_, __VA_ARGS__)
 
 namespace net {
+  // The first byte of an ECS packet. After it, a _COMPRESSED type has an LZ4 body.
   enum {
     ID_ENTITY_MSG = 32,
     ID_ENTITY_MSG_COMPRESSED,

@@ -10,7 +10,7 @@ add_library(pyECS
 
 target_link_libraries(pyECS
         pybind11::module
-        Python::Python
+        Python::Module
         dagECS::dagECS
         PyMath::PyMath
 )

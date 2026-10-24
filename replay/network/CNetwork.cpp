@@ -32,8 +32,9 @@ namespace net {
   void CNetwork::onPacket(ReplayPacket *pkt, int cur_time_ms) {
     BitStream &bs = pkt->stream;
     BitStream bsTemp = BitStream();
-    uint8_t ptype;
-    pkt->stream.Read(ptype);
+    uint8_t ptype = 0;
+    if (!pkt->stream.Read(ptype))
+      EXCEPTION("Empty network packet");
     auto readCompressedIfPacketType = [&bs, &bsTemp, ptype, pkt](uint8_t ctype) -> const BitStream * {
       if (ptype != ctype)
         return &bs;
@@ -56,6 +57,7 @@ namespace net {
         CNET_LOGD3("ID_ENTITY_MSG for entity {:#x} of template {}", serverEid,
                    this->state->g_entity_mgr.getEntityTemplateName(eid));
         // actual code
+        // The parser reads only the target entity of an ECS message, not the message body.
         break;
       }
       case ID_ENTITY_REPLICATION:

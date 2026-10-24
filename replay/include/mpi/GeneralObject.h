@@ -25,6 +25,7 @@ namespace MPI_PACKETS {
     Rocket1 = 0xf11a,
     Rocket2 = 0xf0db,
     UnitCamera = 0xf0cc,
+    FmwRpm = 0xd047,
     // shots and hits
     GmDoStartFire = 0xf01b,
     GmDoStopFire = 0xf01c,
@@ -37,17 +38,20 @@ namespace MPI_PACKETS {
 
     UnitOnExplosion = 0xf133,
     UnitLastEffectiveHit = 0xf0c2,
-    UnitBulletRearm = 0xf0bd
+    UnitBulletRearm = 0xf0bd,
+    UnitDetected = 0xf037,
+    ReplayCockpitParams = 0xd04a
   };
 }
 namespace mpi {
 
+  /// Object 0xb/2: the battle messages (kills, damage, awards) and the hit and shot messages.
   struct GeneralObject : public IObject {
     GeneralObject(ParserState *state) : IObject(state, 0x5802) {}
 
 
     Message *dispatchMpiMessage(MessageID mid) override;
-    void applyMpiMessage(const Message *m) override;
+    bool applyMpiMessage(const Message *m) override;
     ~GeneralObject() override = default;
   };
 
@@ -70,11 +74,11 @@ namespace mpi {
 
   class CameraStateMessage : public Message {
   public:
-    Quat camera_circle_quat{}; // where camera is pointing
-    Point3 camera_offset{}; // camera offset from commander hatch or smg
-    Point3 gun_circle_norm_vector{}; // normalized vector of where the gun circle is pointing
-    uint8_t some_val{};
-    float some_magnitude{};
+    Quat camera_circle_quat{}; // camera rotation; the view direction is (0, 0, 1) rotated by it
+    Point3 camera_offset{}; // camera position minus the unit position, world axes
+    Point3 gun_circle_norm_vector{}; // unit vector of the gun barrel, world axes (not the camera)
+    uint16_t camera_kind{}; // 29 third person, 39 gunner sight, 35 a fixed 9.28x sight
+    float zoom{}; // 1.192 in the normal view, 5 to 25 in a sight
     bool tracking_weapon{};
     ecs::EntityId weapon_eid{};
     CameraStateMessage(IObject * o) : Message(o, MPI_PACKETS::UnitCamera) {}
@@ -393,6 +397,97 @@ namespace mpi {
   public:
     UnitLastEffectiveHitMessage(IObject *o) : Message(o, MPI_PACKETS::UnitLastEffectiveHit) {}
     HitOutcome outcome{};
+  };
+
+  /// A spot (0xF037): the spotter can now see the spotted unit, which gets its red mark on the
+  /// spotter's screen. Sent again when a lost spot comes back; nothing marks the loss. A unit
+  /// id is the uid of an aircraft, or 0x800 | uid of a ground vehicle.
+  struct SpotEvent {
+    uint32_t time_ms = 0;
+    uint16_t spotter_id = 0;
+    uint16_t spotted_id = 0;
+    /// Resolved when the message arrives. Null for a unit the parser does not track (the
+    /// ground targets of an air map) or when the uid's unit is of the other kind.
+    unit::Unit *spotter = nullptr;
+    unit::Unit *spotted = nullptr;
+  };
+
+  /// A unit entity created by the type 6 ECS creation. A player's spawn shows up here; the 0xD039
+  /// (class 5 or 6) that comes about 40 ms before it has no body. Also made: the dummy_plane each
+  /// player slot gets at battle start, and AI and support units (player -1).
+  struct SpawnEvent {
+    uint32_t time_ms = 0;
+    /// The unit id (low 11 bits). A later vehicle of the same player may keep it or get a new one.
+    uint16_t uid = 0;
+    /// unit__className: the vehicle, as the kill record names it, with the ECS prefix
+    /// (tankModels/, ships/, structures/) where the vehicle has one.
+    std::string vehicle{};
+    /// unit__playerId: the player slot, an index into the players; -1 for a unit with no player.
+    int player = -1;
+    int team = 0;
+    /// unitType of the ECS: 0 aircraft, 3 tank, 5 ship, 8 fortification.
+    int unit_type = 0;
+    /// unit__missionName: the mission slot, for example t1_player05_0.
+    std::string mission_name{};
+    /// Loadout name of the storage component (field 8); empty when the unit has no unit object.
+    std::string loadout{};
+    /// The dummy_plane a player slot gets at battle start; not a real vehicle.
+    bool dummy = false;
+    /// The unit object of an aircraft, tank or ship; null for a fortification.
+    unit::Unit *unit = nullptr;
+  };
+
+  class UnitDetectedMessage : public Message {
+    bool readPayload(ParserState *state) override;
+
+  public:
+    UnitDetectedMessage(IObject *o) : Message(o, MPI_PACKETS::UnitDetected) {}
+    SpotEvent spot{};
+  };
+
+  /// The cockpit instruments of the replay author's aircraft (0xD04A), once per flight-model
+  /// sync; only client replays have them. Pairs of a parameter id and its value; the set of ids
+  /// changes with the aircraft. Ids checked against the author's track: 0 airspeed m/s,
+  /// 39 vertical speed, 40 altitude (in feet on aircraft with imperial instruments), 41 the
+  /// same modulo 1000, 52 roll degrees, 53 pitch degrees with the sign reversed, 81 engine
+  /// RPM, 240 / 247 / 248 throttle of each engine 0 to 1.1 (1.1 is WEP or full afterburner,
+  /// -1 once the engine is lost).
+  struct CockpitEvent {
+    uint32_t time_ms = 0;
+    std::vector<std::pair<uint16_t, float>> params{};
+  };
+
+  class CockpitMessage : public Message {
+    bool readPayload(ParserState *state) override;
+
+  public:
+    CockpitMessage(IObject *o) : Message(o, MPI_PACKETS::ReplayCockpitParams) {}
+    CockpitEvent cockpit{};
+  };
+
+  /// 0xD047 to an aircraft: the RPM of each engine. Every 3.1 s per aircraft in a server replay, every
+  /// 0.11 s for the author of a client replay. It follows cockpit id 81 with r = 0.97 to 1.00.
+  struct RpmEvent {
+    uint32_t time_ms = 0;
+    unit::Unit *unit = nullptr;
+    /// One per engine, in steps of about 9.55 (1 rad/s); a stopped jet engine reads 2000.
+    std::vector<uint16_t> rpm{};
+  };
+
+  class RpmMessage : public Message {
+    bool readPayload(ParserState *state) override;
+
+  public:
+    RpmMessage(IObject *o) : Message(o, MPI_PACKETS::FmwRpm) {}
+    RpmEvent rpm{};
+  };
+
+  /// Object 0xb/3: messages about the replay author's own client.
+  struct LocalClientObject : public IObject {
+    LocalClientObject(ParserState *state) : IObject(state, 0x5803) {}
+    Message *dispatchMpiMessage(MessageID mid) override;
+    bool applyMpiMessage(const Message *m) override;
+    ~LocalClientObject() override = default;
   };
 
   class UnitBulletRearmMessage : public Message {

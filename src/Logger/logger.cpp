@@ -31,7 +31,20 @@ uint64_t get_current_time_ms() {
 }
 
 void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL level, std::string &&message) {
-  g_log_handler->add_logmessage(fmt::format("{}({}): {}", func, line, message), level, sink);
+  auto line_msg = fmt::format("{}({}): {}", func, line, message);
+  if (!g_log_handler.init_state()) {
+    std::cerr << line_msg << '\n';
+    return;
+  }
+  g_log_handler->add_logmessage(std::move(line_msg), level, sink);
+}
+
+static void flush_log_handler() {
+  if (g_log_handler.init_state()) {
+    g_log_handler->wait_until_empty();
+    g_log_handler->flush_all();
+  }
+  std::cerr.flush();
 }
 
 void log_handler::loadSinkFromDataBlock(const DataBlock &blk) {
@@ -58,8 +71,7 @@ void assert_failed_ext(const char *file, int line, const char *function, const c
   }
   auto stackTrace = cpptrace::generate_trace().to_string();
   LOGE("{}", stackTrace);
-  g_log_handler->wait_until_empty();
-  g_log_handler->flush_all();
+  flush_log_handler();
 #if defined(__EMSCRIPTEN__)
   emscripten_force_exit(EXIT_FAILURE);
 #endif
@@ -79,12 +91,10 @@ void assert_failed_ext(const char *file, int line, const char *function, const c
 void fatal(const char *file, int line, const char *function, std::string message) {
   std::cerr << "fatal CERR\n";
   LOGE("Fatal error at {}:{}\nFunction: {} \nMessage: {}", file, line, function, message);
-  g_log_handler->wait_until_empty();
-  g_log_handler->flush_all();
+  flush_log_handler();
   auto trace = cpptrace::generate_trace().to_string();
   LOGE("{}", trace);
-  g_log_handler->wait_until_empty();
-  g_log_handler->flush_all();
+  flush_log_handler();
   #if defined(__EMSCRIPTEN__)
      emscripten_force_exit(EXIT_FAILURE);
    #endif
@@ -142,6 +152,7 @@ void register_default_sigsev_handler() { SetUnhandledExceptionFilter(my_handler)
 
 static char signal_tracer_path[PATH_MAX] = "signal_tracer";
 
+// signal_tracer sits next to the module that holds this code (for Python, the .so), not next to the executable.
 static void resolve_signal_tracer_path() {
   static const char tracer_name[] = "signal_tracer";
   Dl_info info;
@@ -172,6 +183,8 @@ struct pipe_t {
   };
 };
 
+// A signal handler can use only async-signal-safe calls, and symbol lookup is not one. So the handler sends the
+// raw frames through a pipe to the signal_tracer program, which finds the names and prints them.
 void do_signal_safe_trace_local(cpptrace::frame_ptr *buffer, std::size_t count) {
   // Setup pipe and spawn child
   pipe_t input_pipe;

@@ -59,6 +59,7 @@ FileManager::~FileManager() {
   this->loaded_vromfs.clear();
 }
 
+// The first mounted vromfs that has the path wins.
 SmartFSHandle FileManager::getObject(const fs::path &path) {
   for (auto vromfs: this->loaded_vromfs) {
     SmartFSHandle curr_ptr;
@@ -97,6 +98,7 @@ std::unique_ptr<File> FileManager::loadRealFsFile(const fs::path &path) {
       index = std::make_shared<HostFileIndex>(path);
     }
   }
+  // The loop does not stop at a match, so the last mount that has the file wins.
   if (!index)
     for (auto &mount: this->real_fs_mounts) {
       fs::path p = mount / path;
@@ -125,6 +127,7 @@ std::unique_ptr<File> FileManager::loadVromfsFile(const fs::path &path) {
   return f->getFile(f);
 }
 
+// Lists only the files in the mounted vromfs. file_suffix_to_match, vromfs, realfs and subdirs are not used.
 int FileManager::find_files_in_folder(std::vector<std::string> &out_list, std::string &dir_path,
                                       const char *file_suffix_to_match, bool vromfs, bool realfs, bool subdirs) {
   std::vector<fs::path> paths{};

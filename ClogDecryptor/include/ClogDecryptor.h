@@ -10,6 +10,7 @@
 
 #include "dag_assert.h"
 
+// A .clog file is XOR'ed with this key. Byte n of the file uses key byte n % xor_key_len.
 constexpr unsigned char xor_key[] = {
     130, 135, 151, 64, 141, 139, 70, 11, 187, 115, 148, 3, 229, 179, 131, 83,
     105, 107, 131, 218, 149, 175, 74, 35, 135, 229, 151, 172, 36, 88, 175, 54,
@@ -32,6 +33,8 @@ public:
   ~Decryptor();
 
 
+  // Call it with the file bytes in order: the key position continues from the last call. Returns false when the
+  // text holds "flush_all_std_and_debug", and the continuous mode then stops.
   bool decrypt(const std::span<unsigned char> &data);
 };
 

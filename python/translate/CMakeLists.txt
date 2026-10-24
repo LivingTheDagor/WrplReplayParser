@@ -2,7 +2,7 @@ add_library(PyTranslate Translate.cpp)
 
 target_link_libraries(PyTranslate
         pybind11::module
-        Python::Python
+        Python::Module
         Translate::Translate
 )
 

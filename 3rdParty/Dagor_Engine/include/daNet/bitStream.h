@@ -69,7 +69,7 @@ public:
 
   void SetReadOffset(uint32_t newReadOffset) const { readOffset = newReadOffset; }
 
-  uint32_t GetNumberOfUnreadBits() const { return bitsUsed - readOffset; }
+  uint32_t GetNumberOfUnreadBits() const { return readOffset < bitsUsed ? bitsUsed - readOffset : 0; }
 
   uint32_t GetNumberOfAllocatedBits() const { return bitsAllocated; }
 
@@ -80,7 +80,7 @@ public:
 
   const uint8_t *GetDataOffset() { return data + bits2bytes(readOffset); }
 
-  void IgnoreBits(uint32_t bits) const { readOffset += std::min(bits, bitsUsed - readOffset); }
+  void IgnoreBits(uint32_t bits) const { readOffset += std::min(bits, GetNumberOfUnreadBits()); }
 
   void IgnoreBytes(uint32_t bytes) const { IgnoreBits(bytes2bits(bytes)); }
 
@@ -152,7 +152,7 @@ public:
   bool ReadBits(uint8_t *output, uint32_t bits) const {
     if (!bits)
       return true;
-    else if ((readOffset + bits) > bitsUsed) {
+    else if (bits > GetNumberOfUnreadBits()) {
       return false;
     }
 
@@ -161,6 +161,35 @@ public:
     if (readmod8 == 0 && (bits & 7) == 0) // fast path - everything byte aligned
     {
       memcpy(output, dataPtr + bits2bytes(readOffset), bits2bytes(bits));
+      readOffset += bits;
+      return true;
+    }
+
+    // Fast path for short unaligned reads: one 8-byte big-endian window, when the buffer holds
+    // 8 bytes from the read position. Whole bytes come out in order and a last partial byte is
+    // right-aligned, as in the loop below.
+    const uint32_t byteOffs = readOffset >> 3;
+    if (bits <= 56 && byteOffs + 8 <= (bitsAllocated >> 3)) {
+      const uint8_t *src = dataPtr + byteOffs;
+      uint64_t w = 0;
+      for (int i = 0; i < 8; i++)
+        w = (w << 8) | src[i];
+      w <<= readmod8;
+      const uint32_t full = bits >> 3, rem = bits & 7;
+      for (uint32_t i = 0; i < full; i++) {
+        output[i] = uint8_t(w >> 56);
+        w <<= 8;
+      }
+      if (rem)
+        output[full] = uint8_t(w >> (64 - rem));
+      readOffset += bits;
+      return true;
+    }
+    if ((bits & 7) == 0) { // whole bytes from an unaligned offset: each takes the next byte's top bits
+      const uint8_t *src = dataPtr + byteOffs;
+      const uint32_t n = bits >> 3;
+      for (uint32_t i = 0; i < n; i++)
+        output[i] = uint8_t((src[i] << readmod8) | (src[i + 1] >> (8 - readmod8)));
       readOffset += bits;
       return true;
     }
@@ -271,7 +300,7 @@ public:
 
   bool Read(std::string &str) const {
     uint32_t sz;
-    if (!ReadCompressed(sz))
+    if (!ReadCompressed(sz) || sz > GetNumberOfUnreadBits() / 8)
       return false;
     str.resize(sz);
     if (!Read(str.data(), sz))
@@ -286,12 +315,19 @@ public:
     if (!ReadCompressed(numberOfBitsUsed))
       return false;
     AlignReadToByteBoundary();
-    if (readOffset + numberOfBitsUsed > bitsUsed)
+    if (readOffset > bitsUsed || numberOfBitsUsed > bitsUsed - readOffset)
       return false;
-    bs.bitsUsed = numberOfBitsUsed;
-    uint32_t bytesToCopy = bits2bytes(numberOfBitsUsed);
+    uint32_t bytesToCopy = numberOfBitsUsed / 8 + (numberOfBitsUsed % 8 != 0);
+    // The nested stream is byte-aligned and the final partial byte is stored
+    // in full. Validate those padding bits as well as the logical bit count.
+    if (uint64_t(bytesToCopy) * 8 > bitsUsed - readOffset)
+      return false;
+    bs.bitsUsed = 0;
+    bs.readOffset = 0;
     bs.reserveBits(bytes2bits(bytesToCopy));
-    memcpy(bs.GetData(), GetData() + bits2bytes(GetReadOffset()), bytesToCopy);
+    bs.bitsUsed = numberOfBitsUsed;
+    if (bytesToCopy)
+      memcpy(bs.GetData(), GetData() + bits2bytes(GetReadOffset()), bytesToCopy);
     SetReadOffset(GetReadOffset() + bytes2bits(bytesToCopy));
     return true;
   }

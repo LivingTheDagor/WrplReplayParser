@@ -119,6 +119,7 @@ public:
   ~StateAllocator() override = default;
 
   DagAllocType getMem() { return &dagAlloc; }
+  // MI_USE_HEAP is not defined (the other checks use USE_MI_HEAP), so get_heap_ptr() does not exist (fixed in #16).
 #if MI_USE_HEAP == 1
   mi_heap_t *get_heap_ptr() { return dagAlloc.heap; }
 #endif

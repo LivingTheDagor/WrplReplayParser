@@ -19,6 +19,8 @@ protected:
   }
 };
 
+// Each binding module calls include() of the modules it uses. DO_INCLUDE makes each later call return at once,
+// so pybind11 binds each type one time.
 #define DO_INCLUDE()   if(!this->onModuleLoaded()) return;
 
 #endif //WTFILEUTILS_MODULE_H

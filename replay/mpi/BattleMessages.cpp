@@ -2,6 +2,9 @@
 #include "math/dag_TMatrix.h"
 #include "state/ParserState.h"
 
+// MESSAGE_SWITCH_HEADER and MESSAGE_SWITCH_FOOTER are not used. Message::parse() does the same loop: it takes the
+// lowest set bit of the mask as the field id and then clears it. The size table has one entry for each set bit, in
+// bit order, so curr_field_index counts the fields that were read.
 #define MESSAGE_SWITCH_HEADER                                                                                      \
   uint32_t fields = this->readFieldsSizeAndFlag();                                                                 \
   if (fields == 0) /* no data was serialized in a message that expects data*/                                      \
@@ -267,23 +270,23 @@ namespace mpi {
     bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
       switch (field_id) {
         case 1: {
-          bs->Read(this->player_pid);
+          RET_FAIL(bs->Read(this->player_pid));
           break;
         }
         case 2: {
-          bs->Read(this->award);
+          RET_FAIL(bs->Read(this->award));
           break;
         }
         case 3: {
-          bs->Read(this->stage);
+          RET_FAIL(bs->Read(this->stage));
           break;
         }
         case 4: {
-          bs->Read(this->wp);
+          RET_FAIL(bs->Read(this->wp));
           break;
         }
         case 5: {
-          bs->Read(this->exp);
+          RET_FAIL(bs->Read(this->exp));
           break;
         }
           MPI_SERIALIZER_DEFAULT

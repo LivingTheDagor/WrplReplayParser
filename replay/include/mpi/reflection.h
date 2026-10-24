@@ -4,7 +4,7 @@
 //
 #pragma once
 #include <string.h>
-#include "danet/bitStream.h"
+#include "daNet/bitStream.h"
 #include <cstddef> // for offsetof macros
 #include "fmt/base.h"
 #include "fmt/format.h"
@@ -108,6 +108,8 @@ namespace danet {
 #define DANET_ENCODER_SIGNATURE \
   int op, ReflectionVarMeta *meta, const ReflectableObject *ro, BitStream *bs, ParserState *state
 
+  // Return 0 when the read fails: the value is removed and the field is skipped. Return 1 on success. Return 2 to
+  // skip the field, with no log, when the read size is not the field size.
   typedef int (*reflection_var_encoder)(DANET_ENCODER_SIGNATURE);
 
   template<typename T, bool mt_safe>
@@ -296,7 +298,7 @@ namespace danet {
     // dummy mpi implementation
     virtual mpi::Message *dispatchMpiMessage(mpi::MessageID /*mid*/) override { return nullptr; }
 
-    virtual void applyMpiMessage(const mpi::Message * /*m*/) override {}
+    virtual bool applyMpiMessage(const mpi::Message * /*m*/) override { return true; }
 
     ReflectableObject(ParserState * state, mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) :
       mpi::IObject(state, uid),

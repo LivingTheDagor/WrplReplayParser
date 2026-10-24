@@ -85,7 +85,7 @@ if (PYTHON_VERSION_TO_USE)
     set(PythonLibs_FIND_VERSION ${PYTHON_VERSION_TO_USE})
 endif ()
 
-option(PARSER_ENABLE_TESTS "include tests in library" OFF) # currently no tests, is a TODO
+option(PARSER_ENABLE_TESTS "build parser regression tests" OFF)
 option(PARSER_ENABLE_PYTHON_BINDINGS "include python bindings in library" OFF)
 option(PARSER_ENABLE_INSPECTOR "include replay inspector in library" OFF)
 # curl and openSSL can be a PITA to set up, and its only used for downloading replays, so not really required
@@ -122,6 +122,10 @@ if (PARSER_MY_FLAGS)
     endif ()
     set_compiler_flags() # sets the flags I want, idk how to do flags laugh at me
 endif ()
+# The Python module is a shared object, so each static library linked into it must be position independent.
+if (PARSER_ENABLE_PYTHON_BINDINGS)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif ()
 add_subdirectory(3rdParty)
 
 if (PARSER_ENABLE_PYTHON_BINDINGS)
@@ -148,3 +152,7 @@ if (PARSER_INCLUDE_EXPERIMENTING_DIRS)
 endif ()
 add_subdirectory(src)
 add_subdirectory(replay)
+if (PARSER_ENABLE_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif ()

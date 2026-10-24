@@ -48,7 +48,9 @@ namespace net {
     cb.WriteBits((const uint8_t *) &str, short_bits);
   }
 
-  static std::string oneString;
+  static thread_local std::string oneString; // one per thread: parses on other threads use it too
+  // One bit: 1 means a NUL-terminated string follows. 0 means the index (short_bits bits) of a string that the
+  // stream sent before.
   static const char *read_istring(const BitStream &cb, InternedStringsRepl *istrs, uint32_t short_bits) {
     bool rawString = false;
     if (!cb.Read(rawString))
@@ -251,6 +253,7 @@ namespace net {
     }
   }
 
+  // uint8 entity count minus one. For each entity: server eid, compressed byte size, construction data.
   bool Connection::readConstructionPacket(const BitStream &bs, float compression_ratio) {
     auto failRet = false;
 
@@ -385,7 +388,8 @@ namespace net {
   }
 
   bool Connection::syncReadTemplate(const BitStream &bs, ecs::template_t templateId) {
-    G_ASSERT(templateId == serverTemplates.size()); // We rely on templateId being monotonically increased counter here
+    if (templateId != serverTemplates.size()) // We rely on templateId being monotonically increased counter here
+      return false;
 
     serverTemplates.resize(templateId + 1);
     serverToClientTemplates.resize(templateId + 1);
@@ -459,6 +463,9 @@ namespace net {
     componentsSynced.set(serverCidx, true);
     return true;
   }
+  // Only the components that differ from the template are sent. Their positions in the template are delta coded:
+  // the first is its position, each next one is the position before plus ofs plus 1. When the template has fewer
+  // than 256 components, the count and each ofs are uint8.
   bool Connection::deserializeComponentConstruction(ecs::template_t server_template, const BitStream &bs,
                                                     ecs::ComponentsInitializer &init, int &out_ncomp) {
     BitstreamDeserializer deserializer(*mgr, bs, &objectKeysRepl);
@@ -588,6 +595,7 @@ namespace net {
     return true;
   }
 
+  // Not in use: the parser does not write construction packets, so this always throws.
   void Connection::serializeConstruction(ecs::EntityId eid, BitStream &bs, bool canSkipInitial) {
     EXCEPTION("bad bad guh");
     /*
@@ -713,6 +721,8 @@ namespace net {
   }
 
   typedef uint16_t sequence_t;
+  // uint16 sequence. Then for each entity: one bit (0 ends the list), server eid, compressed byte size, and the
+  // component updates.
   bool Connection::readReplicationPacket(const BitStream &bs) {
 
     constexpr bool failRet = false;

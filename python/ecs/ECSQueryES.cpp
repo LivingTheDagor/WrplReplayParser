@@ -35,6 +35,8 @@ public:
 bool has_initialized = false;
 
 std::vector<std::unique_ptr<PythonEsSystem>> registered_systems{};
+// The parameter names of method, after the first, are the RO component names. The first parameter gets the event.
+// Call it before the ECS init: on_callback makes the systems one time, when the component types are loaded.
 void registerEsSystem(const py::function& method,
                       const std::string& es_name,
                       const std::vector<std::string>& rq_components,
@@ -130,6 +132,7 @@ void on_callback(ecs::GState * state) {
                     tup[i+1] = castData(c->ro_descs[i].type, ((uint8_t*)components.componentData[i])+compBegin*c->component_sizes[i]); // pass incoming component data
                     // we can do this because our EsSystem is made from the function parameters
                   }
+                  // Write the queued log lines first, so they come before the output of the callback.
                   g_log_handler->wait_until_empty();
                   g_log_handler->flush_all();
                   c->cb(*tup);

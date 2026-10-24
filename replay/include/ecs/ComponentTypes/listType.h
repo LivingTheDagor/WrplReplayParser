@@ -2,7 +2,8 @@
 
 #ifndef WTFILEUTILS_LISTTYPE_H
 #define WTFILEUTILS_LISTTYPE_H
-#include "eastl/vector.h"
+#include "EASTL/vector.h"
+#include <atomic>
 
 namespace ecs {
   class EntityComponentRef;
@@ -248,7 +249,8 @@ namespace ecs {
     }
 
   protected:
-    static type_index_t componentTypeIndex;
+    // filled by the first List made, which can be on any parse thread
+    static std::atomic<type_index_t> componentTypeIndex;
 
     void changeGen() { gen++; }
 
@@ -258,6 +260,6 @@ namespace ecs {
   };
 
   template<typename T>
-  type_index_t List<T>::componentTypeIndex = INVALID_COMPONENT_TYPE_INDEX;
+  std::atomic<type_index_t> List<T>::componentTypeIndex = INVALID_COMPONENT_TYPE_INDEX;
 } // namespace ecs
 #endif // WTFILEUTILS_LISTTYPE_H

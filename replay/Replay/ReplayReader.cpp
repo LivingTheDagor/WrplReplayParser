@@ -1,4 +1,4 @@
-#include <danet/daNetTypes.h>
+#include <daNet/daNetTypes.h>
 #include "Replay/Replay.h"
 #include "Replay/ReplayReader.h"
 #include "utils.h"
@@ -9,6 +9,12 @@
 
 constexpr size_t MAX_REPLAY_COMPRESSION_RATIO = 64;
 
+// The packet size is in bytes. The high bits of the first byte give the length of the size field:
+//   1xxxxxxx  7 bits in 1 byte
+//   01xxxxxx  14 bits in 2 bytes, big-endian
+//   001xxxxx  21 bits in 3 bytes, big-endian
+//   0001xxxx  28 bits in 4 bytes, big-endian
+//   0000xxxx  the next 4 bytes hold the size, little-endian
 uint32_t getPacketSize(IGenLoad &cb) {
   uint8_t first_byte;
   if (!cb.readInto(first_byte))
@@ -51,6 +57,7 @@ uint32_t getPacketSize(IGenLoad &cb) {
   }
 }
 
+// size is in bits. The field holds the size in bytes, rounded up.
 void writePacketSize(IGenSave &cb, uint32_t size) {
   uint8_t buff[5];
   uint8_t sz = 0;

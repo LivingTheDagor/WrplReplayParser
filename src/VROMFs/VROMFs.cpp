@@ -121,6 +121,8 @@ load_fail:
   return false;
 }
 
+// Body layout: the offset and count of the file name table, 8 bytes, the offset and count of the file data
+// table, 8 bytes. All offsets start at the body. Each file data record is 16 bytes: offset, size, 8 bytes.
 bool VROMFs::parse_raw_vromfs_data(IGenLoad &reader) {
   ZoneScoped;
   int names_header = reader.readInt();
@@ -157,6 +159,8 @@ bool VROMFs::parse_raw_vromfs_data(IGenLoad &reader) {
     if (!foundNM && file_name == "\xFF\x3Fnm") {
       ZoneScopedN("VROMFs::NMParse");
       foundNM = true;
+      // The shared name map of the binary BLKs: an 8-byte names digest, the 32-byte SHA-256 of the .dict file,
+      // then a zstd stream that uses no dictionary.
       auto data = std::span<char>(raw_data_ptr + fileOffset + 40, (size_t) fileSize - 40);
       ZstdLoadFromMemCB zReader(data);
       nm = std::make_shared<DBNameMap>();
@@ -166,6 +170,7 @@ bool VROMFs::parse_raw_vromfs_data(IGenLoad &reader) {
     if (!foundDict && file_name.ends_with(".dict")) {
       ZoneScopedN("VROMFs::ZSTD_Dict");
       foundDict = true;
+      // The zstd dictionary of the packed BLKs in this vromfs.
       auto data = std::span<char>(raw_data_ptr + fileOffset, (size_t) fileSize);
       dict = ZSTD_createDDict(data.data(), data.size());
       continue;

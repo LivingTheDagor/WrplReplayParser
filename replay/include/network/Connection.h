@@ -4,7 +4,7 @@ extern "C" {
 #include "lz4.h"
 }
 #include "ecs/EntityManager.h"
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include "utils.h"
 #include "consts.h"
 #include "ecs/typesAndLimits.h"
@@ -118,6 +118,8 @@ namespace net {
   private:
     mutable InternedStringsShared objectKeysLocal;
     std::vector<uint8_t> construct_replication_into{}; // will hold temporary replicated data
+    // The server sends a template and a component by name the first time that it uses them. These tables map the
+    // server indices to the local ones.
     std::vector<std::string> serverTemplates;
     std::vector<ecs::template_t> serverToClientTemplates;
     std::vector<std::vector<ecs::component_index_t>> clientTemplatesComponents;

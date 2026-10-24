@@ -81,6 +81,9 @@ namespace mpi {
         return state->_new<BSMessage>(this, mid);
         //return new BSMessage(this, mid);
       }
+      case MPI_PACKETS::UnitDetected: {
+        return state->_new<UnitDetectedMessage>(this);
+      }
     }
     // No dispatcher for this id. Measured on a full battle: 31 such ids arrive, and not
     // one of them is addressed to a ground vehicle - everything the server sends about a
@@ -88,12 +91,17 @@ namespace mpi {
     return nullptr;
   }
 
-  void GeneralObject::applyMpiMessage(const Message *m) {
+  bool GeneralObject::applyMpiMessage(const Message *m) {
     ZoneScoped;
     auto mid = m->id;
     auto bs = (BitStream *) &m->payload;
     // LOG("Deserialzing for Reflection type: %0x\n", mid);
     switch (mid) {
+      case MPI_PACKETS::UnitDetected: {
+        if (this->state->keep.spots)
+          this->state->SpotEvents.push_back(((const UnitDetectedMessage *) m)->spot);
+        break;
+      }
       case MPI_PACKETS::Kill: {
         const KillMessage *kill_m = dynamic_cast<const KillMessage *>(m);
         if (kill_m->offended_unit) {
@@ -110,13 +118,15 @@ namespace mpi {
         break;
       }
       case MPI_PACKETS::ReflectionNoDecompress: {
-        danet::deserializeReflectables(*bs, obj_dispatcher, this->state);
+        if (danet::deserializeReflectables(*bs, obj_dispatcher, this->state) < 0)
+          return false;
         break;
       }
       case MPI_PACKETS::Reflection1:
       case  MPI_PACKETS::Reflection2: {
         uint8_t tmp = 0;
-        bs->Read(tmp);
+        if (!bs->Read(tmp))
+          return false;
         bool isCompressed = tmp == 1;
         BitStream *outBs;
         BitStream t{};
@@ -126,14 +136,15 @@ namespace mpi {
         } else {
           outBs = bs;
         }
-        danet::deserializeReflectables(*outBs, obj_dispatcher, this->state);
+        if (danet::deserializeReflectables(*outBs, obj_dispatcher, this->state) < 0)
+          return false;
         break;
       }
       case MPI_PACKETS::Replication: {
-        uint8_t do_weird_check;
-        bs->Read(do_weird_check);
-        int16_t sorta_confirms_is_compressed;
-        bs->Read(sorta_confirms_is_compressed);
+        uint8_t do_weird_check = 0;
+        int16_t sorta_confirms_is_compressed = 0;
+        if (!bs->Read(do_weird_check) || !bs->Read(sorta_confirms_is_compressed))
+          return false;
         if (sorta_confirms_is_compressed > -1) {
           danet::ReplicatedObject::onRecvReplicationEvent(*bs, this->state);
         } else {
@@ -146,22 +157,25 @@ namespace mpi {
       case MPI_PACKETS::Tank1:
       case MPI_PACKETS::Tank2: {
         auto tankM = (TankMessage *) m;
-        auto ret = GMSync(*state, tankM->data);
-        if (!ret) {
+        // The record's remaining fields cannot be located after a short state, so a failure has
+        // to fail the packet instead of leaving a half-applied vehicle behind.
+        if (!GMSync(*state, tankM->data)) {
           LOGE("Failed to read TankMessage payload");
+          return false;
         }
-        return;
+        return true;
       }
       case MPI_PACKETS::Rocket1:
       case MPI_PACKETS::Rocket2: {
         auto bsM = (BSMessage *) m;
-        bool ret = WeaponSync(*state, bsM->data);
-        if (!ret) {
-          LOGE("Failed to read We payload");
+        if (!WeaponSync(*state, bsM->data)) {
+          LOGE("Failed to read WeaponSync payload");
+          return false;
         }
-        return;
+        return true;
       }
     }
+    return true;
   }
 
   ecs::EntityId eid_from_ext_uid(uint32_t ext_uid) { return ecs::EntityId((ext_uid & 0xFF) << 0x16 | ext_uid >> 0x8); }
@@ -225,7 +239,7 @@ namespace mpi {
       return unit->base_data;
     }
     // should also later include fortifications?
-    if (obj_type == GM && unit->unitType == UnitType::TankType) {
+    if (obj_type == GM && unit->isGround()) {
       return unit->base_data;
     }
     if (obj_type == WEAP) {
@@ -238,7 +252,7 @@ namespace mpi {
     return nullptr; // don't have any unit message parsing setup for now
   }
 
-  void MpiQueueObject::applyMpiMessage(const Message *m) {
+  bool MpiQueueObject::applyMpiMessage(const Message *m) {
     ZoneScopedN("MpiQueueObject::applyMpiMessage");
     if (m) {
       auto eid = eid_from_ext_uid(this->mpiObjectExtUID);
@@ -260,6 +274,7 @@ namespace mpi {
       bs.Write(write_offs);
       bs.SetWriteOffset(after_all_write);
     }
+    return true;
   }
 
   bool MpiQueueObject::deserialize(BitStream &other_bs, int data_size, ParserState *state) {
@@ -279,6 +294,8 @@ namespace mpi {
     return true;
   }
 
+  // oid >> 11 is the object kind and the low 11 bits are the index in that kind. The unit kinds (ExtMpiTypes)
+  // find their unit through the ECS entity in extUid.
   IObject *ObjectDispatcher(ObjectID oid, ObjectExtUID extUid, ParserState *state) {
     ZoneScoped;
     uint16_t count = oid & 0x7ff;
@@ -315,7 +332,7 @@ namespace mpi {
             return &state->main_dispatch;
           }
           case 0x3: {
-            return nullptr; // want to silence the "unable to dispatch with this"
+            return &state->local_client;
           }
           case 0x4: {
             return &state->gen_state;
@@ -355,6 +372,49 @@ namespace mpi {
     return nullptr;
   }
 
+  Message *LocalClientObject::dispatchMpiMessage(MessageID mid) {
+    if (mid == MPI_PACKETS::ReplayCockpitParams)
+      return state->_new<CockpitMessage>(this);
+    return nullptr;
+  }
+
+  bool LocalClientObject::applyMpiMessage(const Message *m) {
+    if (m->id == MPI_PACKETS::ReplayCockpitParams)
+      if (state->keep.cockpit)
+        state->CockpitEvents.push_back(((const CockpitMessage *) m)->cockpit);
+    return true;
+  }
+
+  bool CockpitMessage::readPayload(ParserState *state) {
+    cockpit.time_ms = state->curr_time_ms;
+    BitStream nested;
+    uint16_t count = 0;
+    if (!payload.Read(nested) || !nested.Read(count) ||
+        count > nested.GetNumberOfUnreadBits() / (8 * (sizeof(uint16_t) + sizeof(float))))
+      return false;
+    cockpit.params.reserve(count);
+    for (uint16_t i = 0; i < count; i++) {
+      uint16_t id = 0;
+      float value = 0;
+      if (!nested.Read(id) || !nested.Read(value))
+        return false;
+      cockpit.params.emplace_back(id, value);
+    }
+    return true;
+  }
+
+  bool RpmMessage::readPayload(ParserState *state) {
+    rpm.time_ms = state->curr_time_ms;
+    BitStream nested;
+    if (!payload.Read(nested) || nested.GetNumberOfUnreadBits() % 16 != 0)
+      return false;
+    rpm.rpm.resize(nested.GetNumberOfUnreadBits() / 16);
+    for (auto &r: rpm.rpm)
+      if (!nested.Read(r))
+        return false;
+    return true;
+  }
+
   bool TankMessage::readPayload(ParserState *state) { return this->payload.Read(this->data); }
 
   void TankMessage::writePayload() { this->payload.Write(this->data); }
@@ -380,11 +440,11 @@ namespace mpi {
           break;
         }
         case 4: {
-          RET_FAIL(bs->Read(this->some_val));
+          RET_FAIL(bs->Read(this->camera_kind));
           break;
         }
         case 5: {
-          RET_FAIL(bs->Read(this->some_magnitude));
+          RET_FAIL(bs->Read(this->zoom));
           break;
         }
         case 6: {

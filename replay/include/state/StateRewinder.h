@@ -47,6 +47,8 @@ public:
   virtual void checkAndPushV(ParserState *state) = 0;
 
 protected:
+// StateAllocator.h brings in dag_assert.h, which undefines LDAG_DBGLEVEL. So the "> 0" branches in this file are
+// not compiled in any build, also when LDAG_DBGLEVEL=1 (fixed in #16).
 #if LDAG_DBGLEVEL > 0
   void pushBackState(ParserState *state, uint32_t prev, uint32_t curr);
   virtual void rewindForward(uint32_t expected_idx) = 0;

@@ -6,6 +6,8 @@
 #include <cstring>
 #include "Unit.h"
 
+// Most structs below are placeholders for game types that the parser does not read. Each one only gives the ECS a
+// type to register. The parser does not fill the bytes, and two values always compare equal.
 
 struct LootModelRes {
   char data[8] = {0};

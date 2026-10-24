@@ -5,7 +5,7 @@ pybind11_add_module(PyReplayParser
 )
 target_link_libraries(PyReplayParser PRIVATE
         ZLIB::ZLIB
-        Python::Python
+        Python::Module
         PyReplay::PyReplay
         PyState::PyState
         PyECS::PyECS
@@ -27,31 +27,39 @@ if (LDAG_DBGLEVEL_TO_SET EQUAL 0)
     )
 endif ()
 
+# A pip build puts the module at the top of the wheel, so that "import PyReplayParser" finds it.
+if (SKBUILD)
+    set(PY_INSTALL_DIR ".")
+else ()
+    set(PY_INSTALL_DIR "PyReplayParser")
+endif ()
+
 install(TARGETS PyReplayParser
         LIBRARY
-        DESTINATION "PyReplayParser"
+        DESTINATION "${PY_INSTALL_DIR}"
         COMPONENT PyReplayParser
         RUNTIME
-        DESTINATION "PyReplayParser"
+        DESTINATION "${PY_INSTALL_DIR}"
         COMPONENT PyReplayParser
 )
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     install(TARGETS signal_tracer
             LIBRARY
-            DESTINATION "PyReplayParser"
+            DESTINATION "${PY_INSTALL_DIR}"
             COMPONENT PyReplayParser
             RUNTIME
-            DESTINATION "PyReplayParser"
+            DESTINATION "${PY_INSTALL_DIR}"
             COMPONENT PyReplayParser
             ARCHIVE
-            DESTINATION "PyReplayParser"
+            DESTINATION "${PY_INSTALL_DIR}"
             COMPONENT PyReplayParser
     )
 endif ()
 
 # strips most debug symbols
 # dunno a better way to do this
-install(CODE [[    set(_installed_file "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/PyReplayParser/$<TARGET_FILE_NAME:PyReplayParser>")
+install(CODE "set(PY_INSTALL_DIR \"${PY_INSTALL_DIR}\")" COMPONENT PyReplayParser)
+install(CODE [[    set(_installed_file "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/${PY_INSTALL_DIR}/$<TARGET_FILE_NAME:PyReplayParser>")
     if(EXISTS "${_installed_file}")
         execute_process(
             COMMAND "strip" --strip-debug "${_installed_file}"

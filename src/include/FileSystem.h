@@ -63,9 +63,9 @@ class FSObject {
 public:
   /// returns the name of this FSObject, will include extension if it exists
   /// \return
-  std::string getName() const { return name.filename().string(); }
+  std::string getName() const { return fs::path(name).filename().string(); }
 
-  const fs::path &getPath() const { return name; }
+  fs::path getPath() const { return name; }
 
 
   FsObjectTypes getFSObjectType() const { return obj_type; }
@@ -105,7 +105,9 @@ public:
   }
 
 protected:
-  fs::path name;
+  // A string, not an fs::path: in libstdc++ an fs::path also keeps one more path object for each part, and a
+  // vromfs has many files (aces.vromfs.bin: 26096).
+  std::string name;
   Directory *owner = nullptr;
   FsObjectTypes obj_type = isNone;
   friend FileIndex;
@@ -122,12 +124,12 @@ public:
   ~FileIndex() override = default;
 
   FileIndex(const fs::path &path) {
-    name = path;
+    name = path.string();
     obj_type = isFile;
   }
 
   FileIndex(const std::string &name_) {
-    name = fs::path(name_);
+    name = name_;
     obj_type = isFile;
   }
 
@@ -156,7 +158,7 @@ public:
     f_length = -1;
   }
 
-  std::string getExtension() { return index->name.extension().string(); }
+  std::string getExtension() { return fs::path(index->name).extension().string(); }
 
 
   fs::path getFullFilePath() { return index->name; }
@@ -229,9 +231,8 @@ protected:
 public:
   explicit HostFile(std::shared_ptr<FileIndex> index) : File(std::move(index)) { init_hf(); }
 
-  /// A implementation for reading a file from the OS, will cache data on first read
-  /// will only reread if the file data has changed
-  /// after calling this, assume old span
+  /// A implementation for reading a file from the OS. Each call reads the full file again into the same buffer,
+  /// so a span from an earlier call is not valid after this call.
   /// \return a std::span<char> pointing to the container for the file data
   std::span<char> readRaw() override;
 
@@ -303,7 +304,7 @@ public:
   }
 
   explicit Directory(fs::path &path) {
-    this->name = path.filename();
+    this->name = path.filename().string();
     this->obj_type = isDirectory;
   }
 

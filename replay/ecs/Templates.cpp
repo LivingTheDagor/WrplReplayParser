@@ -85,6 +85,8 @@ namespace ecs {
     output.push_back(input.substr(start));
   }
 
+  // A name such as "a+b" is a compound template. The parts become its parents, in name order, and the new template
+  // is added to the database under the full name.
   template_t TemplateDB::buildTemplateIdByName(const char *templ_name) {
     {
       std::shared_lock lk(this->template_mtx);
@@ -166,6 +168,8 @@ namespace ecs {
     return this->templates;
   }
 
+  // For a template that is in this database already, the parents of db are added after its parents, and a component
+  // of db replaces the default value of the same component.
   void TemplateDB::applyFrom(TemplateDB &&db) {
     //std::unique_lock lk(this->mtx); // lock not needed as only called during init
     for(auto &&templ : db.templates) {
@@ -215,6 +219,8 @@ namespace ecs {
     this->parent = p;
   }
 
+  // The first value of a component wins. The components of a template come before the components of its parents,
+  // and the parents are read in order, depth first.
   void InstantiatedTemplate::RecurseTemplates(template_t p, TemplateDB &db) {
 
     auto tmpl = db.getTemplateNoLock(p);

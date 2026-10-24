@@ -15,6 +15,8 @@
 extern bool DO_VERBOSE;
 
 #define MAKE4C(a, b, c, d) ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
+// A multichar literal has its first char in the high byte. _MAKE4C('VRFs') gives the uint32 that the 4 bytes
+// "VRFs" make when you read them little-endian from a file.
 #define _MAKE4C(x)         MAKE4C((int(x) >> 24) & 0xFF, (int(x) >> 16) & 0xFF, (int(x) >> 8) & 0xFF, int(x) & 0xFF)
 
 

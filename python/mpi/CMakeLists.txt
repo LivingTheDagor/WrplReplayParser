@@ -18,7 +18,7 @@ add_library(PyMpi
 
 target_link_libraries(PyMpi
         pybind11::module
-        Python::Python
+        Python::Module
         MPI::MPI
         PyECS::PyECS
 )

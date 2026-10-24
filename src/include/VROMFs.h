@@ -25,6 +25,8 @@ static inline bool checkTargetCode(unsigned code) {
 }
 
 
+// XORs the first 16 bytes with the key and a 16-byte block at the end with the reversed key. The middle stays
+// the same. A second call gives the original data again.
 static inline void obfusc_vrom_data(void *data, unsigned data_sz) {
   static const unsigned zstd_xor_p[4] = {0xAA55AA55, 0xF00FF00F, 0xAA55AA55, 0x12481248};
 

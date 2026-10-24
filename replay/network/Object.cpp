@@ -10,6 +10,7 @@ namespace net {
   if (!bs.Read(x))     \
     return failRet;
 
+  // Each component update starts with one bit. 0 ends the list.
   bool Object::deserializeComps(const BitStream &bs, Connection *conn) {
     // G_ASSERTF(isReplica(), "%d", (ecs::entity_id_t)eid);
 
