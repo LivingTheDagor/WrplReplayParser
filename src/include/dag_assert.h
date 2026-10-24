@@ -196,8 +196,6 @@ public:
 #define G_DEBUG_BREAK ((void) 0)
 #endif
 
-#undef LDAG_DBGLEVEL
-
 #define G_LOGERR_AND_DO(expression, action, ...) \
   if (DAGOR_UNLIKELY(!(expression))) {           \
     LOGE(__VA_ARGS__);                           \

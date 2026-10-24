@@ -119,7 +119,7 @@ public:
   ~StateAllocator() override = default;
 
   DagAllocType getMem() { return &dagAlloc; }
-#if MI_USE_HEAP == 1
+#if USE_MI_HEAP == 1
   mi_heap_t *get_heap_ptr() { return dagAlloc.heap; }
 #endif
 };
