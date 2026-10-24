@@ -6,7 +6,7 @@
 #include "ioSys/dag_fileIo.h"
 #include "ioSys/dag_memIo.h"
 #include "ReplayReader.h"
-#include "danet/daNetTypes.h"
+#include "daNet/daNetTypes.h"
 
 
 class IReplay {

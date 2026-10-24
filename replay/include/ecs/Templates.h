@@ -3,10 +3,11 @@
 #define MYEXTENSION_TEMPLATES_H
 
 #include <thread>
+#include <deque>
 #include <set>
 #include <mutex>
 
-#include "ecs/ComponentTypes.h"
+#include "ecs/componentTypes.h"
 #include "ecs/typesAndLimits.h"
 #include "ecs/componentsMap.h"
 #include "ecs/archetypes.h"
@@ -194,7 +195,7 @@ namespace ecs {
       indent_str.resize(indent, ' ');
       LOGE("{}TemplateDB memory usage:", indent_str);
       indent_str.resize(indent + 2, ' ');
-      size_t templates_size = this->templates.capacity() * sizeof(Template);
+      size_t templates_size = this->templates.size() * sizeof(Template);
       for (auto &t: templates) {
         size_t template_size = 0;
         template_size += t.name.size();
@@ -307,7 +308,8 @@ namespace ecs {
     }
 
   private:
-    std::vector<Template> templates;
+    // a deque, not a vector: a template another parse adds must not move the ones already handed out
+    std::deque<Template> templates;
     std::vector<InstantiatedTemplate *> inst_templates;
     // std::string is to ensure name always exists
     // the TransparentHash and TransparentEqual are done to allow for indexing with a std::string

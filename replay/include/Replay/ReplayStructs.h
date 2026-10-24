@@ -1,7 +1,7 @@
 #pragma once
 #include "cstdint"
 #include "string"
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 
 constexpr uint32_t CURR_MAGIC = 0x00018c1c; // devserver version 0x00018c0a
 #pragma pack(push, 1)

@@ -1,7 +1,7 @@
 #pragma once
 #include "Module.h"
 #include "ecs/typesAndLimits.h"
-#include "ecs/Component.h"
+#include "ecs/component.h"
 #include "modules/bind_readonly_vector.h"
 
 namespace ecs {

@@ -8,7 +8,7 @@
 
 
 #include <cstdint>
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include "consts.h"
 #include <array>
 
@@ -35,6 +35,8 @@ public:
 
   void writeFieldsSize(BitStream &to) const;
   uint32_t readFieldsSizeAndFlag(const BitStream &from);
+  bool readFieldsSizeAndFlagChecked(const BitStream &from, uint32_t &fields);
+  uint32_t getFieldSize(uint8_t index) const { return index < currRdSz ? sizes[index] : 0; }
 
   void skipReadingField(uint8_t index, const BitStream &from) const;
 

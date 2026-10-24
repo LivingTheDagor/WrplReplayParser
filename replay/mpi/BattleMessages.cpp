@@ -267,23 +267,23 @@ namespace mpi {
     bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
       switch (field_id) {
         case 1: {
-          bs->Read(this->player_pid);
+          RET_FAIL(bs->Read(this->player_pid));
           break;
         }
         case 2: {
-          bs->Read(this->award);
+          RET_FAIL(bs->Read(this->award));
           break;
         }
         case 3: {
-          bs->Read(this->stage);
+          RET_FAIL(bs->Read(this->stage));
           break;
         }
         case 4: {
-          bs->Read(this->wp);
+          RET_FAIL(bs->Read(this->wp));
           break;
         }
         case 5: {
-          bs->Read(this->exp);
+          RET_FAIL(bs->Read(this->exp));
           break;
         }
           MPI_SERIALIZER_DEFAULT

@@ -48,7 +48,7 @@ namespace net {
     cb.WriteBits((const uint8_t *) &str, short_bits);
   }
 
-  static std::string oneString;
+  static thread_local std::string oneString; // one per thread: parses on other threads use it too
   static const char *read_istring(const BitStream &cb, InternedStringsRepl *istrs, uint32_t short_bits) {
     bool rawString = false;
     if (!cb.Read(rawString))
@@ -385,7 +385,8 @@ namespace net {
   }
 
   bool Connection::syncReadTemplate(const BitStream &bs, ecs::template_t templateId) {
-    G_ASSERT(templateId == serverTemplates.size()); // We rely on templateId being monotonically increased counter here
+    if (templateId != serverTemplates.size()) // We rely on templateId being monotonically increased counter here
+      return false;
 
     serverTemplates.resize(templateId + 1);
     serverToClientTemplates.resize(templateId + 1);

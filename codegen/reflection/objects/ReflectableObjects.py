@@ -138,7 +138,7 @@ class PickupZone(MissionZone):
 class BaseExtReflectable(ReflectableObject):
     protected = [
         Method("mpi::Message * dispatchMpiMessage(mpi::MessageID mid) override;"),
-        Method("void applyMpiMessage(const mpi::Message *m) override;")
+        Method("bool applyMpiMessage(const mpi::Message *m) override;")
     ]
     public = [
         SVar("ObjectRewindState<danet::CameraData, false, false, false>", "camera_data"),
@@ -207,7 +207,7 @@ class BaseExtReflectable(ReflectableObject):
 class FMWReflectable(BaseExtReflectable):  # id 0
     protected = [
         Method("mpi::Message * dispatchMpiMessage(mpi::MessageID mid) override;"),
-        Method("void applyMpiMessage(const mpi::Message *m) override;")
+        Method("bool applyMpiMessage(const mpi::Message *m) override;")
     ]
     pass
 
@@ -215,7 +215,7 @@ class FMWReflectable(BaseExtReflectable):  # id 0
 class GMReflectable(BaseExtReflectable):  # id 1
     protected = [
         Method("mpi::Message * dispatchMpiMessage(mpi::MessageID mid) override;"),
-        Method("void applyMpiMessage(const mpi::Message *m) override;")
+        Method("bool applyMpiMessage(const mpi::Message *m) override;")
     ]
     pass
 

@@ -1,7 +1,7 @@
 #include <math/dag_Point2.h>
 #include "modules/ecs/EntityId.h"
 #include "ecs/entityId.h"
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include "network/eid.h"
 
 PyEntityId py_entity_id;

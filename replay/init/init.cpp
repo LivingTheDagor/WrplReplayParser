@@ -16,7 +16,7 @@ namespace mpi {
   class BaseListener : public IMessageListener {
   public:
     virtual ~BaseListener() = default;
-    void receiveMpiMessage(const Message *msg, SystemID receiver) override { msg->obj->applyMpiMessage(msg); }
+    bool receiveMpiMessage(const Message *msg, SystemID receiver) override { return msg->obj->applyMpiMessage(msg); }
   };
 
   static BaseListener base;

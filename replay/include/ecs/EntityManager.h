@@ -1,8 +1,8 @@
 #pragma once
 
 #include "typesAndLimits.h"
-#include "ecs/ComponentTypes.h"
-#include "ecs/Component.h"
+#include "ecs/componentTypes.h"
+#include "ecs/component.h"
 #include "ecs/ComponentRef.h"
 #include "ecs/DataComponents.h"
 #include "onDemandInit.h"
@@ -20,6 +20,7 @@
 #include <shared_mutex>
 #include "EASTL/vector_map.h"
 #include "EASTL/vector_set.h"
+#include <atomic>
 #include <ioSys/dag_dataBlock.h>
 
 #include "wyhash.h"
@@ -145,7 +146,8 @@ namespace ecs {
     archetype_t EnsureArchetype(template_t tid, MgrArchetypeStorage &storage) {
       InstantiatedTemplate *inst = this->templates.getInstTemplate(tid);
       // Step 2: Check if archetype needs to be created
-      archetype_t arch_index = inst->archetype_index;
+      // read without the lock while another parse may set it under the lock, so atomically
+      archetype_t arch_index = std::atomic_ref(inst->archetype_index).load(std::memory_order_acquire);
 
       if (arch_index == INVALID_ARCHETYPE) {
         std::unique_lock lk(this->archetypes.archetypes_mtx);
@@ -157,13 +159,13 @@ namespace ecs {
             this->archetypes.createArchetype(inst->component_indexes.data(), (uint32_t) inst->component_indexes.size(),
                                              this->dataComponents, this->componentTypes, tid);
 
-          inst->archetype_index = arch_index;
+          std::atomic_ref(inst->archetype_index).store(arch_index, std::memory_order_release);
           updateAllQueries();
         }
         this->archetypes.createArchetype(arch_index, storage);
       } else {
         if (storage.getArch(arch_index) == nullptr) {
-          std::shared_lock lk(this->archetypes.archetypes_mtx);
+          dagor::archetype_read_lock lk(this->archetypes.archetypes_mtx);
           this->archetypes.createArchetype(arch_index, storage);
         }
       }

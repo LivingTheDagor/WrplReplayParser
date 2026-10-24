@@ -53,6 +53,8 @@ class file_sink {
   friend log_handler;
   std::string file_sink_path;
   std::ofstream out;
+  // the logger thread writes while a failing parse thread flushes
+  std::mutex out_mtx;
 
 public:
   ~file_sink();
@@ -63,9 +65,15 @@ public:
     }
   }
 
-  void onMessage(const std::string_view msg) { out << msg; }
+  void onMessage(const std::string_view msg) {
+    std::lock_guard<std::mutex> lock(out_mtx);
+    out << msg;
+  }
 
-  inline void flush() { out.flush(); }
+  inline void flush() {
+    std::lock_guard<std::mutex> lock(out_mtx);
+    out.flush();
+  }
 };
 
 
@@ -416,6 +424,14 @@ public:
 
 extern OnDemandInit<log_handler> g_log_handler;
 
+// Before initialize() and after shutdown there is no handler, and its accessor asserts. An assert logs, so touching
+// the handler then recurses until the stack overflows. Only errors pass then, and log_ext prints them to stderr.
+inline bool log_level_allowed(sink_handle_t sink, LOGLEVEL level) {
+  if (!g_log_handler.init_state())
+    return level == LOGLEVEL::ERROR_;
+  return g_log_handler->sink_dbg_lvl_allowed(sink, level);
+}
+
 sink_handle_t get_log_handle(const std::string &name);
 
 void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL level, std::string &&message);
@@ -425,12 +441,12 @@ void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL lev
 
 #define LOG_FMT_EXT_CHECK(sink, level, format_, ...)                                                   \
   do {                                                                                                 \
-    if (g_log_handler->sink_dbg_lvl_allowed(sink, level)) {                                            \
+    if (log_level_allowed(sink, level)) {                                                              \
       (log_ext(__FUNCTION__, __LINE__, sink, level, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__))); \
     }                                                                                                  \
   } while (0)
 
-#define SINK_LOG_ALLOWED(sink, level) (g_log_handler->sink_dbg_lvl_allowed(sink, level))
+#define SINK_LOG_ALLOWED(sink, level) (log_level_allowed(sink, level))
 // #define ONLY_ERROR_LOGGING 1
 #ifdef ONLY_ERROR_LOGGING
 #define LOGI(format_, ...)
