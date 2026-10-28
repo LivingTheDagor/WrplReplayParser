@@ -1,12 +1,11 @@
 #include "modules/ecs/ECSTypes.h"
 #include "ecs/EntityManager.h" // so all types are defined
 #include "pybind11/stl_bind.h"
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 
 
-
-
-// on mingw the array definitions adds to many section to the .cpp.obj file the compiler generations, so I had to move them to their own file
+// on mingw the array definitions adds to many section to the .cpp.obj file the compiler generations, so I had to move
+// them to their own file
 void PyECSTypes::include_array(py::module_ &m) {
   auto ecs = m.def_submodule("ecs");
   bind_readonly_vector<ecs::StringList>(ecs, "StringList");

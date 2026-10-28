@@ -3,7 +3,7 @@
 #include "vector"
 #include "cstdint"
 #include "translate.h"
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include "math/dag_Point3.h"
 #include <ioSys/dag_dataBlock.h>
 #include "ecs/entityId.h"
@@ -221,9 +221,9 @@ namespace unit {
     /// See Unit::Load for what that block is and why it needs its own pass.
     bool from_pilon = false;
     std::unique_ptr<TurretDesc> turret_desc{};
-    ParserState * state;
+    ParserState *state;
 
-    Weapon(const DataBlock *blk, Unit *unit, std::vector<uint16_t> &weapons_count, ParserState * state);
+    Weapon(const DataBlock *blk, Unit *unit, std::vector<uint16_t> &weapons_count, ParserState *state);
 
     /// What a loadout can put in this gun: the stock load first, then the named sets in
     /// blk order. The pick itself is not here:

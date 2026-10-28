@@ -1,6 +1,6 @@
 #include "Unit.h"
 #include "idFieldSerializer.h"
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include "ecs/EntityManager.h" // g_ecs_state
 #include "FileSystem.h"
 #include "math/dag_mathAng.h"

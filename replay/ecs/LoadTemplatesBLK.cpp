@@ -2,7 +2,7 @@
 #include "FileSystem.h"
 #include "VROMFs.h"
 #include "ecs/EntityManager.h"
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include <unordered_set>
 #include "regex"
 #include "osApiWrappers/dag_direct_simple.h"

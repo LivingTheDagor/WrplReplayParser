@@ -1,11 +1,11 @@
 
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 
-#include <danet/dag_netUtils.h>
+#include <daNet/dag_netUtils.h>
 
 
-#include <danet/bitStream.h>
-#include "danet/daNetTypes.h"
+#include <daNet/bitStream.h>
+#include "daNet/daNetTypes.h"
 #include <ioSys/dag_dataBlock.h>
 #include "consts.h"
 #include <math/dag_Point3.h>

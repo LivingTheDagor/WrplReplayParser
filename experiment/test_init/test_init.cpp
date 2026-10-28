@@ -1,5 +1,5 @@
 #include "ecs/EntityManager.h"
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include "network/CNetwork.h"
 #include "FileSystem.h"
 #include "init/initialize.h"

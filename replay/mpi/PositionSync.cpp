@@ -1,7 +1,7 @@
 #include "state/ParserState.h"
 #include "mpi/PositionSync.h"
 #include "Unit.h"
-#include "danet/dag_netUtils.h"
+#include "daNet/dag_netUtils.h"
 #include "math/dag_mathAng.h"
 
 bool separateServerSideDetection_g = true;
@@ -243,8 +243,7 @@ bool FMSync(ParserState &state, BitStream &bs) {
                 RET_FAIL(bs.ReadZigZag(temp_zig));
               }
             if (rounds_left >= 0)
-              state.AmmoEvents.push_back(
-                {state.curr_time_ms, unit, uint8_t(i), 0, uint32_t(rounds_left)});
+              state.AmmoEvents.push_back({state.curr_time_ms, unit, uint8_t(i), 0, uint32_t(rounds_left)});
           }
           uint32_t some_packed_val;
           uint32_t vals_4;

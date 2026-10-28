@@ -8,7 +8,7 @@
 
 
 #include <cstdint>
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include "consts.h"
 #include <array>
 

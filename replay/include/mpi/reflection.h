@@ -4,7 +4,7 @@
 //
 #pragma once
 #include <string.h>
-#include "danet/bitStream.h"
+#include "daNet/bitStream.h"
 #include <cstddef> // for offsetof macros
 #include "fmt/base.h"
 #include "fmt/format.h"

@@ -1,5 +1,5 @@
 #include "state/ParserState.h"
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include "Unit.h"
 #include "ecs/query/coreEvents.h"
 #include "ecs/ecsCodegen.h"

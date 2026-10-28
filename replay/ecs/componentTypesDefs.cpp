@@ -1,5 +1,5 @@
 
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include "idFieldSerializer.h"
 #include "ecs/EntityManager.h"
 #include "ecs/baseIo.h"

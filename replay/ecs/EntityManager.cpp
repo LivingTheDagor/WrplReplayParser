@@ -1,5 +1,5 @@
 #include "ecs/EntityManager.h"
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include "network/CNetwork.h"
 #include "network/message.h"
 #include "tracy/Tracy.hpp"

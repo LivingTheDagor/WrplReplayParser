@@ -1,8 +1,8 @@
 // Built with ECS codegen version 1.0
     #include <ecs/query/entitySystem.h>
     #include <ecs/componentTypes.h>
-    #include <ecs/ComponentTypesDefs.h>
-    #include <Pull.h>
+#include <ecs/componentTypesDefs.h>
+#include <Pull.h>
     #include "query_draw_units.cpp.inl"
 DEF_PULL_VAR(query_draw_units);
 #include <ecs/query/performQuery.h>

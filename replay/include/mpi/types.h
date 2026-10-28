@@ -13,7 +13,7 @@ namespace unit {
 #include "dag_assert.h"
 #include "vector"
 #include "array"
-#include "danet/daNetTypes.h"
+#include "daNet/daNetTypes.h"
 #include "ecs/entityId.h"
 #include "math/dag_Point3.h"
 #include "reflection.h"

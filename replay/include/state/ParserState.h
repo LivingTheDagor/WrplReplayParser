@@ -7,7 +7,7 @@
 #include "mpi/ObjectDispatcher.h"
 #include "mpi/GeneralObject.h"
 #include "Replay/Replay.h"
-#include "danet/delta/deltaCompression.h"
+#include "daNet/delta/deltaCompression.h"
 #ifndef _ECS_CODEGEN
 #include "tracy/Tracy.hpp"
 #endif

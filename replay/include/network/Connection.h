@@ -4,13 +4,13 @@ extern "C" {
 #include "lz4.h"
 }
 #include "ecs/EntityManager.h"
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include "utils.h"
 #include "consts.h"
 #include "ecs/typesAndLimits.h"
 #include "ecs/componentsMap.h"
 #include "BitVector.h"
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include "ecs/ComponentPrintingImplementations.h"
 
 #include <EASTL/vector_set.h>

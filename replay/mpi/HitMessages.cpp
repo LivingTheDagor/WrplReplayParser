@@ -1,6 +1,6 @@
 #include "math/dag_TMatrix.h"
 #include "math/dag_mathAng.h"
-#include "danet/dag_netUtils.h"
+#include "daNet/dag_netUtils.h"
 #include "state/ParserState.h"
 #include "mpi/GeneralObject.h"
 #include "Unit.h"
