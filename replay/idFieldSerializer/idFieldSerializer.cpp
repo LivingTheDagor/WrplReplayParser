@@ -6,7 +6,7 @@
 #include "math/dag_bits.h"
 
 
-void writeSize(BitStream &to, uint32_t size_in_bits) {
+void writeSize(danet::BitStream &to, uint32_t size_in_bits) {
   G_ASSERT(size_in_bits);
   uint8_t hdr = 0;
 
@@ -42,7 +42,7 @@ void writeSize(BitStream &to, uint32_t size_in_bits) {
   to.WriteCompressed(size_in_bits);
 }
 
-uint32_t readSize(const BitStream &from) {
+uint32_t readSize(const danet::BitStream &from) {
   bool ok = true;
   uint8_t hdr = 0;
 
@@ -91,7 +91,7 @@ void IdFieldSerializer32::checkFieldSize(uint8_t index, BitSize_t sz) const {
   G_ASSERT(sz == sizes[index]);
 }
 
-void IdFieldSerializer32::writeFieldsSize(BitStream &to) const {
+void IdFieldSerializer32::writeFieldsSize(danet::BitStream &to) const {
   G_ASSERT(currWrSz);
   to.AlignWriteToByteBoundary();
   BitSize_t offset = BITS_TO_BYTES(to.GetWriteOffset());
@@ -107,7 +107,7 @@ void IdFieldSerializer32::writeFieldsSize(BitStream &to) const {
   to.SetWriteOffset(end);
 }
 
-uint32_t IdFieldSerializer32::readFieldsSizeAndFlag(const BitStream &from) {
+uint32_t IdFieldSerializer32::readFieldsSizeAndFlag(const danet::BitStream &from) {
   uint32_t fields = 0;
   uint16_t offset = 0;
   BitSize_t start = from.GetReadOffset();
@@ -127,7 +127,7 @@ uint32_t IdFieldSerializer32::readFieldsSizeAndFlag(const BitStream &from) {
   return fields;
 }
 
-void IdFieldSerializer32::skipReadingField(uint8_t index, const BitStream &from) const {
+void IdFieldSerializer32::skipReadingField(uint8_t index, const danet::BitStream &from) const {
   G_ASSERT(index < currRdSz);
   from.SetReadOffset(from.GetReadOffset() + sizes[index]);
 }
@@ -157,7 +157,7 @@ void IdFieldSerializer255::setFieldId(Id id) {
   indices[currWrId++] = id;
 }
 
-void IdFieldSerializer255::writeFieldsIndex(BitStream &to, BitSize_t at) const {
+void IdFieldSerializer255::writeFieldsIndex(danet::BitStream &to, BitSize_t at) const {
   G_ASSERT(currWrId);
   G_ASSERT((at & 7) == 0); // aligned to byte
   to.AlignWriteToByteBoundary();
@@ -180,7 +180,7 @@ void IdFieldSerializer255::writeFieldsIndex(BitStream &to, BitSize_t at) const {
 
 inline static BitSize_t alingedToByte(BitSize_t count) { return count + 8 - (((count - 1) & 7) + 1); }
 
-bool IdFieldSerializer255::readFieldsIndex(const BitStream &from) {
+bool IdFieldSerializer255::readFieldsIndex(const danet::BitStream &from) {
   G_ASSERT(currRdSz && bitsPerId);
   BitSize_t startBody = from.GetReadOffset();
   // we are at the startBody so reread offset and check count
@@ -207,7 +207,7 @@ IdFieldSerializer255::Id IdFieldSerializer255::getFieldId(Index index) const { r
 
 uint32_t IdFieldSerializer255::getFieldSize(Index index) const { return sizes[index]; }
 
-void IdFieldSerializer255::writeFieldsSize(BitStream &to, BitSize_t at) const {
+void IdFieldSerializer255::writeFieldsSize(danet::BitStream &to, BitSize_t at) const {
   G_ASSERT(currWrId == 0 || currWrId == currWrSz);
   G_ASSERT(currWrSz);
   G_ASSERT((at & 7) == 0); // aligned to byte
@@ -225,7 +225,7 @@ void IdFieldSerializer255::writeFieldsSize(BitStream &to, BitSize_t at) const {
   to.SetWriteOffset(end);
 }
 
-IdFieldSerializer255::Index IdFieldSerializer255::readFieldsSizeAndCount(const BitStream &from, BitSize_t &end) {
+IdFieldSerializer255::Index IdFieldSerializer255::readFieldsSizeAndCount(const danet::BitStream &from, BitSize_t &end) {
   uint16_t offset = 0;
   Index count = 0;
   BitSize_t start = from.GetReadOffset();
@@ -247,7 +247,7 @@ IdFieldSerializer255::Index IdFieldSerializer255::readFieldsSizeAndCount(const B
   return currRdSz;
 }
 
-void IdFieldSerializer255::skipReadingField(Index index, const BitStream &from) const {
+void IdFieldSerializer255::skipReadingField(Index index, const danet::BitStream &from) const {
   G_ASSERT(index < currRdSz);
   from.SetReadOffset(from.GetReadOffset() + sizes[index]);
 }

@@ -52,510 +52,493 @@ namespace swap {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
 #endif
-class BitStream {
-public:
-  BitStream(IMemAlloc *a = defaultmem) : allocator(a) {
-    this->bitsUsed = 0;
-    this->dataOwner = 0;
-    this->bitsAllocated = 0;
-    this->readOffset = 0;
-    this->data = nullptr;
-    this->allocator = a;
-  }
-
-  BitStream(const uint8_t *_data, size_t lenInBytes, bool copy, IMemAlloc *a = defaultmem) :
-    bitsUsed((uint32_t) bytes2bits(lenInBytes)), dataOwner((uint32_t) copy ? 1 : 0), readOffset(0), allocator(a) {
-    if (copy) {
-      data = (uint8_t *) allocator->alloc(lenInBytes);
-      memcpy(data, _data, lenInBytes);
-      bitsAllocated = (uint32_t) bytes2bits(lenInBytes);
-    } else {
-      data = (uint8_t *) _data;
-      bitsAllocated = (uint32_t) bytes2bits(lenInBytes);
+namespace danet {
+  class BitStream {
+  public:
+    BitStream(IMemAlloc *a = defaultmem) : allocator(a) {
+      this->bitsUsed = 0;
+      this->dataOwner = 0;
+      this->bitsAllocated = 0;
+      this->readOffset = 0;
+      this->data = nullptr;
+      this->allocator = a;
     }
-  }
 
-  BitStream(const char *_data, size_t lenInBytes, bool copy, IMemAlloc *a = defaultmem) :
-    BitStream((uint8_t *) _data, lenInBytes, copy, a) {}
-
-  explicit BitStream(uint32_t reserveBytes, IMemAlloc *a = defaultmem) :
-    bitsUsed(0), dataOwner(1), readOffset(0), allocator(a) {
-    this->data = (uint8_t *) allocator->alloc(reserveBytes);
-    bitsAllocated = (uint32_t) bytes2bits(reserveBytes);
-    memset(data, 0, reserveBytes);
-  }
-
-  ~BitStream() {
-    if (dataOwner) {
-      allocator->free(GetData());
-      this->data = nullptr; // move is needed for python bindings to work, but previous code that wasnt moved is now
-                            // being moved and that broke stuff and this fixes that
-      this->dataOwner = false;
+    BitStream(const uint8_t *_data, size_t lenInBytes, bool copy, IMemAlloc *a = defaultmem) :
+      bitsUsed((uint32_t) bytes2bits(lenInBytes)), dataOwner((uint32_t) copy ? 1 : 0), readOffset(0), allocator(a) {
+      if (copy) {
+        data = (uint8_t *) allocator->alloc(lenInBytes);
+        memcpy(data, _data, lenInBytes);
+        bitsAllocated = (uint32_t) bytes2bits(lenInBytes);
+      } else {
+        data = (uint8_t *) _data;
+        bitsAllocated = (uint32_t) bytes2bits(lenInBytes);
+      }
     }
-  }
 
-  void Reset() { bitsUsed = readOffset = 0u; }
+    BitStream(const char *_data, size_t lenInBytes, bool copy, IMemAlloc *a = defaultmem) :
+      BitStream((uint8_t *) _data, lenInBytes, copy, a) {}
 
-  uint32_t GetNumberOfBitsUsed() const { return GetWriteOffset(); }
+    explicit BitStream(uint32_t reserveBytes, IMemAlloc *a = defaultmem) :
+      bitsUsed(0), dataOwner(1), readOffset(0), allocator(a) {
+      this->data = (uint8_t *) allocator->alloc(reserveBytes);
+      bitsAllocated = (uint32_t) bytes2bits(reserveBytes);
+      memset(data, 0, reserveBytes);
+    }
 
-  uint32_t GetWriteOffset() const { return bitsUsed; }
+    ~BitStream() {
+      if (dataOwner) {
+        allocator->free(GetData());
+        this->data = nullptr; // move is needed for python bindings to work, but previous code that wasnt moved is now
+                              // being moved and that broke stuff and this fixes that
+        this->dataOwner = false;
+      }
+    }
 
-  uint32_t GetNumberOfBytesUsed(void) const { return bits2bytes(bitsUsed); }
+    void Reset() { bitsUsed = readOffset = 0u; }
 
-  uint32_t GetReadOffset() const { return readOffset; }
+    uint32_t GetNumberOfBitsUsed() const { return GetWriteOffset(); }
 
-  void SetReadOffset(uint32_t newReadOffset) const { readOffset = newReadOffset; }
+    uint32_t GetWriteOffset() const { return bitsUsed; }
 
-  uint32_t GetNumberOfUnreadBits() const { return bitsUsed - readOffset; }
+    uint32_t GetNumberOfBytesUsed(void) const { return bits2bytes(bitsUsed); }
 
-  uint32_t GetNumberOfAllocatedBits() const { return bitsAllocated; }
+    uint32_t GetReadOffset() const { return readOffset; }
 
-  uint8_t *GetData() { return data; }
+    void SetReadOffset(uint32_t newReadOffset) const { readOffset = newReadOffset; }
 
-  const uint8_t *GetData() const { return data; }
-  std::span<uint8_t> getSlice() const { return std::span<uint8_t>(data, GetNumberOfBytesUsed()); }
+    uint32_t GetNumberOfUnreadBits() const { return bitsUsed - readOffset; }
 
-  const uint8_t *GetDataOffset() { return data + bits2bytes(readOffset); }
+    uint32_t GetNumberOfAllocatedBits() const { return bitsAllocated; }
 
-  void IgnoreBits(uint32_t bits) const { readOffset += std::min(bits, bitsUsed - readOffset); }
+    uint8_t *GetData() { return data; }
 
-  void IgnoreBytes(uint32_t bytes) const { IgnoreBits(bytes2bits(bytes)); }
+    const uint8_t *GetData() const { return data; }
+    std::span<uint8_t> getSlice() const { return std::span<uint8_t>(data, GetNumberOfBytesUsed()); }
 
-  void Devance(uint32_t bits) { bitsUsed -= bits; }
+    const uint8_t *GetDataOffset() { return data + bits2bytes(readOffset); }
 
-  void SetWriteOffset(uint32_t offs) { bitsUsed = offs; }
+    void IgnoreBits(uint32_t bits) const { readOffset += std::min(bits, bitsUsed - readOffset); }
 
-  void SetUnalignedWriteOffset(uint32_t offs) { bitsUsed = offs; }
+    void IgnoreBytes(uint32_t bytes) const { IgnoreBits(bytes2bits(bytes)); }
 
-  void AlignWriteToByteBoundary() {
-    if (bitsUsed)
-      bitsUsed += 8 - (((bitsUsed - 1) & 7) + 1);
-  }
+    void Devance(uint32_t bits) { bitsUsed -= bits; }
 
-  void AlignReadToByteBoundary() const {
-    if (readOffset)
-      readOffset += 8 - (((readOffset - 1) & 7) + 1);
-  }
+    void SetWriteOffset(uint32_t offs) { bitsUsed = offs; }
 
-  void ResetWritePointer() { bitsUsed = 0; }
+    void SetUnalignedWriteOffset(uint32_t offs) { bitsUsed = offs; }
 
-  void ResetReadPointer() const { readOffset = 0; }
+    void AlignWriteToByteBoundary() {
+      if (bitsUsed)
+        bitsUsed += 8 - (((bitsUsed - 1) & 7) + 1);
+    }
+
+    void AlignReadToByteBoundary() const {
+      if (readOffset)
+        readOffset += 8 - (((readOffset - 1) & 7) + 1);
+    }
+
+    void ResetWritePointer() { bitsUsed = 0; }
+
+    void ResetReadPointer() const { readOffset = 0; }
 
 
-  // actual read/write implementation
-  void WriteBits(const uint8_t *input, uint32_t bits) {
-    if (!input || !bits)
-      return;
-    reserveBits(bits);
+    // actual read/write implementation
+    void WriteBits(const uint8_t *input, uint32_t bits) {
+      if (!input || !bits)
+        return;
+      reserveBits(bits);
 
-    uint32_t bitsUsedMod8 = bitsUsed & 7;
-    uint32_t bitsMod8 = bits & 7;
-    const uint8_t *srcPtr = input;
-    uint8_t *destPtr = GetData() + (bitsUsed >> 3);
+      uint32_t bitsUsedMod8 = bitsUsed & 7;
+      uint32_t bitsMod8 = bits & 7;
+      const uint8_t *srcPtr = input;
+      uint8_t *destPtr = GetData() + (bitsUsed >> 3);
 
-    if (!bitsUsedMod8 && !bitsMod8) {
-      memcpy(destPtr, srcPtr, bits >> 3);
+      if (!bitsUsedMod8 && !bitsMod8) {
+        memcpy(destPtr, srcPtr, bits >> 3);
+        bitsUsed += bits;
+        return;
+      }
+
+      uint8_t upShift = 8 - bitsUsedMod8; // also how many remaining free bits in byte left
+      uint8_t srcByte;
+      uint8_t destByte = *destPtr & (0xff << upShift); // clear low bits
+
       bitsUsed += bits;
-      return;
+
+      for (; bits >= 8; bits -= 8) {
+        srcByte = *srcPtr++;
+        *destPtr++ = destByte | (srcByte >> bitsUsedMod8);
+        destByte = srcByte << upShift;
+      }
+      if (!bits) {
+        *destPtr = destByte | (*destPtr & (0xff >> bitsUsedMod8));
+        return;
+      }
+      srcByte = *srcPtr & ((1 << bits) - 1);
+      int bitsDiff = (int) bits - (int) upShift;
+      if (bitsDiff <= 0) // enough space left in byte to fit remaining bits?
+      {
+        *destPtr = destByte | (*destPtr & (0xff >> (bits + bitsUsedMod8))) | (srcByte << -bitsDiff);
+        return;
+      }
+      *destPtr++ = destByte | (srcByte >> bitsDiff);
+      bits -= upShift;
+      *destPtr = (*destPtr & (0xff >> bits)) | ((srcByte & ((1 << bits) - 1)) << (8 - bits));
     }
 
-    uint8_t upShift = 8 - bitsUsedMod8; // also how many remaining free bits in byte left
-    uint8_t srcByte;
-    uint8_t destByte = *destPtr & (0xff << upShift); // clear low bits
 
-    bitsUsed += bits;
-
-    for (; bits >= 8; bits -= 8) {
-      srcByte = *srcPtr++;
-      *destPtr++ = destByte | (srcByte >> bitsUsedMod8);
-      destByte = srcByte << upShift;
+    template<typename T, size_t bytes>
+    static inline void copyShift(const uint8_t *src, uint8_t *dest, uint32_t shift) {
+      T lane = 0;
+      std::memcpy(&lane, src, bytes + 1);
+      lane = swap::byte_swap(lane);
+      lane <<= shift; // == read_rem
+      lane = swap::byte_swap(lane);
+      std::memcpy(dest, &lane, bytes);
     }
-    if (!bits) {
-      *destPtr = destByte | (*destPtr & (0xff >> bitsUsedMod8));
-      return;
-    }
-    srcByte = *srcPtr & ((1 << bits) - 1);
-    int bitsDiff = (int) bits - (int) upShift;
-    if (bitsDiff <= 0) // enough space left in byte to fit remaining bits?
-    {
-      *destPtr = destByte | (*destPtr & (0xff >> (bits + bitsUsedMod8))) | (srcByte << -bitsDiff);
-      return;
-    }
-    *destPtr++ = destByte | (srcByte >> bitsDiff);
-    bits -= upShift;
-    *destPtr = (*destPtr & (0xff >> bits)) | ((srcByte & ((1 << bits) - 1)) << (8 - bits));
-  }
-
-
-  template<typename T, size_t bytes>
-  static inline void copyShift(const uint8_t *src, uint8_t *dest, uint32_t shift) {
-    T lane = 0;
-    std::memcpy(&lane, src, bytes + 1);
-    lane = swap::byte_swap(lane);
-    lane <<= shift; // == read_rem
-    lane = swap::byte_swap(lane);
-    std::memcpy(dest, &lane, bytes);
-  }
 #if defined(BITSTREAM_TESTS)
-  bool ReadBitsOld(uint8_t *output, uint32_t bits) const {
-    if (!bits)
-      return true;
-    else if (readOffset > bitsUsed || bits > bitsUsed - readOffset) // overflow-safe: bits may be wire-controlled
-    {
-      return false;
-    }
+    bool ReadBitsOld(uint8_t *output, uint32_t bits) const {
+      if (!bits)
+        return true;
+      else if (readOffset > bitsUsed || bits > bitsUsed - readOffset) // overflow-safe: bits may be wire-controlled
+      {
+        return false;
+      }
 
-    const uint8_t *dataPtr = GetData();
-    uint32_t readmod8 = readOffset & 7;
-    if (readmod8 == 0 && (bits & 7) == 0) // fast path - everything byte aligned
-    {
-      memcpy(output, dataPtr + bits2bytes(readOffset), bits2bytes(bits));
+      const uint8_t *dataPtr = GetData();
+      uint32_t readmod8 = readOffset & 7;
+      if (readmod8 == 0 && (bits & 7) == 0) // fast path - everything byte aligned
+      {
+        memcpy(output, dataPtr + bits2bytes(readOffset), bits2bytes(bits));
+        readOffset += bits;
+        return true;
+      }
+
+      memset(output, 0, bits2bytes(bits));
+
+      uint32_t offs = 0;
+      while (bits > 0) {
+        *(output + offs) |= *(dataPtr + (readOffset >> 3)) << readmod8;
+
+        if (readmod8 > 0 && bits > (8 - readmod8))
+          *(output + offs) |= *(dataPtr + (readOffset >> 3) + 1) >> (8 - readmod8);
+
+        if (bits >= 8) {
+          bits -= 8;
+          readOffset += 8;
+          offs++;
+        } else {
+          *(output + offs) >>= 8 - bits;
+          readOffset += bits;
+          break;
+        }
+      }
+      return true;
+    }
+#endif
+
+    bool ReadBits(uint8_t *output, uint32_t bits) const {
+      if (!bits)
+        return true;
+      if (readOffset > bitsUsed || bits > bitsUsed - readOffset) // overflow-safe: bits may be wire-controlled
+      {
+        return false;
+      }
+
+      const uint8_t *data_ptr = GetData() + (readOffset >> 3);
+      const uint32_t readmod8 = readOffset & 7;
+      const uint32_t bytes = bits >> 3;
+      const uint32_t rem = bits & 7;
+      uint32_t i = 0;
+
+      if (readmod8 == 0) {
+        memcpy(output, data_ptr, bytes);
+        i = bytes;
+        if (rem)
+          output[i] = data_ptr[i] >> (8 - rem);
+      } else {
+        if (bytes >= 7) {
+          for (; i + 7 <= bytes; i += 7) {
+            copyShift<uint64_t, 7>(data_ptr + i, output + i, readmod8);
+          }
+        }
+
+
+        uint32_t byte_count = bytes - i;
+        if (byte_count) {
+          if (byte_count >= 4) {
+            copyShift<uint64_t, 4>(data_ptr + i, output + i, readmod8);
+            byte_count -= 4;
+            i += 4;
+          }
+          if (byte_count >= 2) {
+            copyShift<uint32_t, 2>(data_ptr + i, output + i, readmod8);
+            byte_count -= 2;
+            i += 2;
+          }
+          if (byte_count >= 1) {
+            copyShift<uint16_t, 1>(data_ptr + i, output + i, readmod8);
+          }
+
+
+          i = bytes;
+        }
+
+        if (rem) {
+          uint8_t v = static_cast<uint8_t>(data_ptr[i] << readmod8);
+          if (readmod8 + rem > 8)
+            v |= data_ptr[i + 1] >> (8 - readmod8); // only touch next byte if needed
+          output[i] = v >> (8 - rem);
+        }
+      }
+
       readOffset += bits;
       return true;
     }
 
-    memset(output, 0, bits2bytes(bits));
+    void Write(const char *input, uint32_t lenInBytes) { WriteBits((const uint8_t *) input, bytes2bits(lenInBytes)); }
 
-    uint32_t offs = 0;
-    while (bits > 0) {
-      *(output + offs) |= *(dataPtr + (readOffset >> 3)) << readmod8;
+    bool Read(char *output, uint32_t lenInBytes) const { return ReadBits((uint8_t *) output, bytes2bits(lenInBytes)); }
 
-      if (readmod8 > 0 && bits > (8 - readmod8))
-        *(output + offs) |= *(dataPtr + (readOffset >> 3) + 1) >> (8 - readmod8);
-
-      if (bits >= 8) {
-        bits -= 8;
-        readOffset += 8;
-        offs++;
-      } else {
-        *(output + offs) >>= 8 - bits;
-        readOffset += bits;
-        break;
-      }
-    }
-    return true;
-  }
-#endif
-
-  bool ReadBits(uint8_t *output, uint32_t bits) const {
-    if (!bits)
-      return true;
-    if (readOffset > bitsUsed || bits > bitsUsed - readOffset) // overflow-safe: bits may be wire-controlled
-    {
-      return false;
+    template<typename T>
+    void Write(const T &t) {
+      WriteBits((const uint8_t *) &t, bytes2bits(sizeof(T)));
     }
 
-    const uint8_t *data_ptr = GetData() + (readOffset >> 3);
-    const uint32_t readmod8 = readOffset & 7;
-    const uint32_t bytes = bits >> 3;
-    const uint32_t rem = bits & 7;
-    uint32_t i = 0;
-
-    if (readmod8 == 0) {
-      memcpy(output, data_ptr, bytes);
-      i = bytes;
-      if (rem)
-        output[i] = data_ptr[i] >> (8 - rem);
-    } else {
-      if (bytes >= 7) {
-        for (; i + 7 <= bytes; i += 7) {
-          copyShift<uint64_t, 7>(data_ptr + i, output + i, readmod8);
-        }
-      }
-
-
-      uint32_t byte_count = bytes - i;
-      if (byte_count) {
-        if (byte_count >= 4) {
-          copyShift<uint64_t, 4>(data_ptr + i, output + i, readmod8);
-          byte_count -= 4;
-          i += 4;
-        }
-        if (byte_count >= 2) {
-          copyShift<uint32_t, 2>(data_ptr + i, output + i, readmod8);
-          byte_count -= 2;
-          i += 2;
-        }
-        if (byte_count >= 1) {
-          copyShift<uint16_t, 1>(data_ptr + i, output + i, readmod8);
-        }
-
-
-        i = bytes;
-      }
-
-      if (rem) {
-        uint8_t v = static_cast<uint8_t>(data_ptr[i] << readmod8);
-        if (readmod8 + rem > 8)
-          v |= data_ptr[i + 1] >> (8 - readmod8); // only touch next byte if needed
-        output[i] = v >> (8 - rem);
-      }
-    }
-
-    readOffset += bits;
-    return true;
-  }
-
-  void Write(const char *input, uint32_t lenInBytes) { WriteBits((const uint8_t *) input, bytes2bits(lenInBytes)); }
-
-  bool Read(char *output, uint32_t lenInBytes) const { return ReadBits((uint8_t *) output, bytes2bits(lenInBytes)); }
-
-  template<typename T>
-  void Write(const T &t) {
-    WriteBits((const uint8_t *) &t, bytes2bits(sizeof(T)));
-  }
-
-  // bools
-  void Write0() {
-    reserveBits(1);
-    const uint32_t bitsmod8 = bitsUsed & 7;
-    if (!(bitsUsed & 7))
-      GetData()[bitsUsed >> 3] = 0;
-    else
-      GetData()[bitsUsed >> 3] &= ~(0x80 >> bitsmod8);
-    bitsUsed++;
-  }
-  void Write1() {
-    reserveBits(1);
-    const uint32_t bitsmod8 = bitsUsed & 7;
-    if (!bitsmod8)
-      GetData()[bitsUsed >> 3] = 0x80;
-    else
-      GetData()[bitsUsed >> 3] |= 0x80 >> bitsmod8;
-    bitsUsed++;
-  }
-
-  void Write(bool f) { f ? Write1() : Write0(); }
-
-  void Write(const std::string &str) { writeString(str.c_str(), str.size()); }
-
-  void Write(const DataBlock &blk);
-
-  template<typename T>
-  bool Read(T &t) const {
-    constexpr auto bit_count = BYTES_TO_BITS(sizeof(T));
-    if constexpr (bit_count == 8)
-      return ReadSpecificLens<uint16_t>(t);
-    if constexpr (bit_count == 16)
-      return ReadSpecificLens<uint32_t>(t);
-    if constexpr (bit_count == 24)
-      return ReadSpecificLens<uint32_t>(t);
-    if constexpr (bit_count == 32)
-      return ReadSpecificLens<uint64_t>(t);
-    if constexpr (bit_count == 40)
-      return ReadSpecificLens<uint64_t>(t);
-    if constexpr (bit_count == 48)
-      return ReadSpecificLens<uint64_t>(t);
-    if constexpr (bit_count == 56)
-      return ReadSpecificLens<uint64_t>(t);
-    return ReadBits((uint8_t *) &t, bytes2bits(sizeof(T)));
-  }
-
-private:
-  template<typename Tu, typename T>
-  bool ReadSpecificLens(T &t) const {
-    constexpr auto byte_count = sizeof(T);
-    constexpr auto bit_count = BYTES_TO_BITS(byte_count);
-    if (bit_count > bitsUsed - readOffset)
-      return false;
-    const uint8_t *data_ptr = GetData() + (readOffset >> 3);
-    const uint32_t readmod8 = readOffset & 7;
-    if (readmod8 == 0) {
-      memcpy(&t, data_ptr, byte_count);
-    } else {
-      copyShift<Tu, byte_count>(data_ptr, (uint8_t *) &t, readmod8);
-    }
-    readOffset += bit_count;
-    return true;
-  }
-
-public:
-  bool ReadBit() const {
-    bool r = (GetData()[readOffset >> 3] & (0x80 >> (readOffset & 7))) != 0;
-    readOffset++;
-    return r;
-  }
-
-  bool Read(bool &v) const {
-    if (readOffset + 1 > bitsUsed)
-      return false;
-    v = ReadBit();
-    return true;
-  }
-
-  template<typename T>
-  void WriteAt(T t, uint32_t pos) {
-    const uint32_t curPos = GetWriteOffset();
-    SetWriteOffset(pos);
-    Write(t);
-    SetWriteOffset(curPos);
-  }
-
-
-  template<typename T>
-  void WriteArray(T *tptr, size_t cnt) {
-    WriteBits((const uint8_t *) tptr, (uint32_t) bytes2bits(sizeof(T) * cnt));
-  }
-  template<typename T>
-  inline bool ReadArray(T *tptr, size_t cnt) const {
-    return ReadBits((uint8_t *) tptr, (uint32_t) bytes2bits(sizeof(T) * cnt));
-  }
-
-
-  bool Read(std::string &str) const {
-    uint32_t sz;
-    if (!ReadCompressed(sz))
-      return false;
-    str.resize(sz);
-    if (!Read(str.data(), sz))
-      return false;
-    return true;
-  }
-
-
-  bool Read(BitStream &bs) const {
-    uint32_t numberOfBitsUsed;
-    if (!ReadCompressed(numberOfBitsUsed))
-      return false;
-    AlignReadToByteBoundary();
-    if (readOffset + numberOfBitsUsed > bitsUsed)
-      return false;
-    bs.bitsUsed = numberOfBitsUsed;
-    uint32_t bytesToCopy = bits2bytes(numberOfBitsUsed);
-    bs.reserveBits(bytes2bits(bytesToCopy));
-    memcpy(bs.GetData(), GetData() + bits2bytes(GetReadOffset()), bytesToCopy);
-    SetReadOffset(GetReadOffset() + bytes2bits(bytesToCopy));
-    return true;
-  }
-
-  bool Read(DataBlock &blk) const;
-
-
-  void Write(const BitStream &bs) {
-    uint32_t numberOfBitsUsed = bs.GetNumberOfBitsUsed();
-    WriteCompressed(numberOfBitsUsed);
-    // If someone ever will try to remove alignment at start/end, be sure to check everything with
-    // 1 2 3 4 5 6 and 7 bits of data in front of the bitstream!
-    AlignWriteToByteBoundary();
-    uint32_t bytesToCopy = bits2bytes(numberOfBitsUsed);
-    reserveBits(bytes2bits(bytesToCopy));
-    memcpy(GetData() + bits2bytes(GetWriteOffset()), bs.GetData(), bytesToCopy);
-    SetWriteOffset(GetWriteOffset() + bytes2bits(bytesToCopy));
-  }
-
-  void WriteCompressed(int v) { writeCompressedUnsignedGeneric(v); }
-
-  bool ReadCompressed(int &v) const { return readCompressedUnsignedGeneric(v); }
-
-  void WriteCompressed(uint64_t v) { writeCompressedUnsignedGeneric(v); }
-
-  void WriteCompressed(uint32_t v) { writeCompressedUnsignedGeneric(v); }
-
-  bool ReadCompressed(uint64_t &v) const { return readCompressedUnsignedGeneric(v); }
-
-  bool ReadCompressed(uint32_t &v) const { return readCompressedUnsignedGeneric(v); }
-
-  void WriteCompressed(uint16_t v) { writeCompressedUnsignedGeneric(v); }
-
-  bool ReadCompressed(uint16_t &v) const { return readCompressedUnsignedGeneric(v); }
-
-  void Write(const char *t) { writeString(t, (t && *t) ? strlen(t) : size_t(0)); }
-
-  void Write(char *t) { writeString(t, (t && *t) ? strlen(t) : size_t(0)); }
-
-  bool ReadZigZag(int &v) const {
-    uint32_t val;
-    if (!this->ReadCompressed(val))
-      return false;
-    v = -(val & 1) ^ val >> 1;
-    return true;
-  }
-
-  void WriteZigZag(int v) { this->WriteCompressed(v >> 0x1f ^ v * 2); }
-
-
-  void reserveBits(uint32_t bits) {
-    if (bits == 0)
-      return;
-
-    uint32_t newBitsAllocated = bitsUsed + bits;
-    if (!bitsAllocated || bitsAllocated < newBitsAllocated) {
-      size_t newBytesAllocated =
-        std::max(bitsAllocated ? (bitsAllocated >> 3) * 2u : 16u, bits2bytes(newBitsAllocated));
-      if (!data)
-        data = (uint8_t *) allocator->alloc(newBytesAllocated);
+    // bools
+    void Write0() {
+      reserveBits(1);
+      const uint32_t bitsmod8 = bitsUsed & 7;
+      if (!(bitsUsed & 7))
+        GetData()[bitsUsed >> 3] = 0;
       else
-        data = (uint8_t *) allocator->realloc(data, newBytesAllocated);
-
-      if (size_t tailBytes = newBytesAllocated - (bitsAllocated >> 3))
-        memset(data + (bitsAllocated >> 3), 0, tailBytes);
-      dataOwner = 1;
-      bitsAllocated = (uint32_t) bytes2bits(newBytesAllocated);
+        GetData()[bitsUsed >> 3] &= ~(0x80 >> bitsmod8);
+      bitsUsed++;
     }
-  }
-
-  void swap(BitStream &bs);
-
-  BitStream(const BitStream &other) :
-    bitsUsed(other.bitsUsed),
-    dataOwner(other.dataOwner),
-    bitsAllocated(other.bitsAllocated),
-    readOffset(other.readOffset),
-    allocator(other.allocator) {
-    if (other.data && other.dataOwner) {
-      data = (uint8_t *) allocator->alloc(bits2bytes(bitsAllocated));
-      memcpy(data, other.data, bits2bytes(bitsAllocated));
-      dataOwner = 1; // We own our copy
-    } else {
-      data = other.data; // Just pointer copy if no ownership
-      dataOwner = 0;
+    void Write1() {
+      reserveBits(1);
+      const uint32_t bitsmod8 = bitsUsed & 7;
+      if (!bitsmod8)
+        GetData()[bitsUsed >> 3] = 0x80;
+      else
+        GetData()[bitsUsed >> 3] |= 0x80 >> bitsmod8;
+      bitsUsed++;
     }
-  }
 
-  BitStream &operator=(const BitStream &other) {
-    if (this != &other) {
-      if (dataOwner && data)
-        allocator->free(data);
-      bitsUsed = other.bitsUsed;
-      bitsAllocated = other.bitsAllocated;
-      readOffset = other.readOffset;
+    void Write(bool f) { f ? Write1() : Write0(); }
+
+    void Write(const std::string &str) { writeString(str.c_str(), str.size()); }
+
+    void Write(const DataBlock &blk);
+
+    template<typename T>
+    bool Read(T &t) const {
+      constexpr auto bit_count = BYTES_TO_BITS(sizeof(T));
+      if constexpr (bit_count == 8)
+        return ReadSpecificLens<uint16_t>(t);
+      if constexpr (bit_count == 16)
+        return ReadSpecificLens<uint32_t>(t);
+      if constexpr (bit_count == 24)
+        return ReadSpecificLens<uint32_t>(t);
+      if constexpr (bit_count == 32)
+        return ReadSpecificLens<uint64_t>(t);
+      if constexpr (bit_count == 40)
+        return ReadSpecificLens<uint64_t>(t);
+      if constexpr (bit_count == 48)
+        return ReadSpecificLens<uint64_t>(t);
+      if constexpr (bit_count == 56)
+        return ReadSpecificLens<uint64_t>(t);
+      return ReadBits((uint8_t *) &t, bytes2bits(sizeof(T)));
+    }
+
+  private:
+    template<typename Tu, typename T>
+    bool ReadSpecificLens(T &t) const {
+      constexpr auto byte_count = sizeof(T);
+      constexpr auto bit_count = BYTES_TO_BITS(byte_count);
+      if (bit_count > bitsUsed - readOffset)
+        return false;
+      const uint8_t *data_ptr = GetData() + (readOffset >> 3);
+      const uint32_t readmod8 = readOffset & 7;
+      if (readmod8 == 0) {
+        memcpy(&t, data_ptr, byte_count);
+      } else {
+        copyShift<Tu, byte_count>(data_ptr, (uint8_t *) &t, readmod8);
+      }
+      readOffset += bit_count;
+      return true;
+    }
+
+  public:
+    bool ReadBit() const {
+      bool r = (GetData()[readOffset >> 3] & (0x80 >> (readOffset & 7))) != 0;
+      readOffset++;
+      return r;
+    }
+
+    bool Read(bool &v) const {
+      if (readOffset + 1 > bitsUsed)
+        return false;
+      v = ReadBit();
+      return true;
+    }
+
+    template<typename T>
+    void WriteAt(T t, uint32_t pos) {
+      const uint32_t curPos = GetWriteOffset();
+      SetWriteOffset(pos);
+      Write(t);
+      SetWriteOffset(curPos);
+    }
+
+
+    template<typename T>
+    void WriteArray(T *tptr, size_t cnt) {
+      WriteBits((const uint8_t *) tptr, (uint32_t) bytes2bits(sizeof(T) * cnt));
+    }
+    template<typename T>
+    inline bool ReadArray(T *tptr, size_t cnt) const {
+      return ReadBits((uint8_t *) tptr, (uint32_t) bytes2bits(sizeof(T) * cnt));
+    }
+
+
+    bool Read(std::string &str) const {
+      uint32_t sz;
+      if (!ReadCompressed(sz))
+        return false;
+      str.resize(sz);
+      if (!Read(str.data(), sz))
+        return false;
+      return true;
+    }
+
+
+    bool Read(BitStream &bs) const {
+      uint32_t numberOfBitsUsed;
+      if (!ReadCompressed(numberOfBitsUsed))
+        return false;
+      AlignReadToByteBoundary();
+      if (readOffset + numberOfBitsUsed > bitsUsed)
+        return false;
+      bs.bitsUsed = numberOfBitsUsed;
+      uint32_t bytesToCopy = bits2bytes(numberOfBitsUsed);
+      bs.reserveBits(bytes2bits(bytesToCopy));
+      memcpy(bs.GetData(), GetData() + bits2bytes(GetReadOffset()), bytesToCopy);
+      SetReadOffset(GetReadOffset() + bytes2bits(bytesToCopy));
+      return true;
+    }
+
+    bool Read(DataBlock &blk) const;
+
+
+    void Write(const BitStream &bs) {
+      uint32_t numberOfBitsUsed = bs.GetNumberOfBitsUsed();
+      WriteCompressed(numberOfBitsUsed);
+      // If someone ever will try to remove alignment at start/end, be sure to check everything with
+      // 1 2 3 4 5 6 and 7 bits of data in front of the bitstream!
+      AlignWriteToByteBoundary();
+      uint32_t bytesToCopy = bits2bytes(numberOfBitsUsed);
+      reserveBits(bytes2bits(bytesToCopy));
+      memcpy(GetData() + bits2bytes(GetWriteOffset()), bs.GetData(), bytesToCopy);
+      SetWriteOffset(GetWriteOffset() + bytes2bits(bytesToCopy));
+    }
+
+    void WriteCompressed(int v) { writeCompressedUnsignedGeneric(v); }
+
+    bool ReadCompressed(int &v) const { return readCompressedUnsignedGeneric(v); }
+
+    void WriteCompressed(uint64_t v) { writeCompressedUnsignedGeneric(v); }
+
+    void WriteCompressed(uint32_t v) { writeCompressedUnsignedGeneric(v); }
+
+    bool ReadCompressed(uint64_t &v) const { return readCompressedUnsignedGeneric(v); }
+
+    bool ReadCompressed(uint32_t &v) const { return readCompressedUnsignedGeneric(v); }
+
+    void WriteCompressed(uint16_t v) { writeCompressedUnsignedGeneric(v); }
+
+    bool ReadCompressed(uint16_t &v) const { return readCompressedUnsignedGeneric(v); }
+
+    void Write(const char *t) { writeString(t, (t && *t) ? strlen(t) : size_t(0)); }
+
+    void Write(char *t) { writeString(t, (t && *t) ? strlen(t) : size_t(0)); }
+
+    bool ReadZigZag(int &v) const {
+      uint32_t val;
+      if (!this->ReadCompressed(val))
+        return false;
+      v = -(val & 1) ^ val >> 1;
+      return true;
+    }
+
+    void WriteZigZag(int v) { this->WriteCompressed(v >> 0x1f ^ v * 2); }
+
+
+    void reserveBits(uint32_t bits) {
+      if (bits == 0)
+        return;
+
+      uint32_t newBitsAllocated = bitsUsed + bits;
+      if (!bitsAllocated || bitsAllocated < newBitsAllocated) {
+        size_t newBytesAllocated =
+          std::max(bitsAllocated ? (bitsAllocated >> 3) * 2u : 16u, bits2bytes(newBitsAllocated));
+        if (!data)
+          data = (uint8_t *) allocator->alloc(newBytesAllocated);
+        else
+          data = (uint8_t *) allocator->realloc(data, newBytesAllocated);
+
+        if (size_t tailBytes = newBytesAllocated - (bitsAllocated >> 3))
+          memset(data + (bitsAllocated >> 3), 0, tailBytes);
+        dataOwner = 1;
+        bitsAllocated = (uint32_t) bytes2bits(newBytesAllocated);
+      }
+    }
+
+    void swap(BitStream &bs);
+
+    BitStream(const BitStream &other) :
+      bitsUsed(other.bitsUsed),
+      dataOwner(other.dataOwner),
+      bitsAllocated(other.bitsAllocated),
+      readOffset(other.readOffset),
+      allocator(other.allocator) {
       if (other.data && other.dataOwner) {
         data = (uint8_t *) allocator->alloc(bits2bytes(bitsAllocated));
         memcpy(data, other.data, bits2bytes(bitsAllocated));
-        dataOwner = 1;
+        dataOwner = 1; // We own our copy
       } else {
-        data = other.data;
+        data = other.data; // Just pointer copy if no ownership
         dataOwner = 0;
       }
     }
-    return *this;
-  }
 
-  BitStream(BitStream &&other) noexcept :
-    bitsUsed(other.bitsUsed),
-    dataOwner(other.dataOwner),
-    bitsAllocated(other.bitsAllocated),
-    readOffset(other.readOffset),
-    data(other.data),
-    allocator(other.allocator) {
-    other.bitsUsed = 0;
-    other.bitsAllocated = 0;
-    other.readOffset = 0;
-    other.data = nullptr;
-    other.dataOwner = 0;
-    other.allocator = nullptr;
-  }
+    BitStream &operator=(const BitStream &other) {
+      if (this != &other) {
+        if (dataOwner && data)
+          allocator->free(data);
+        bitsUsed = other.bitsUsed;
+        bitsAllocated = other.bitsAllocated;
+        readOffset = other.readOffset;
+        if (other.data && other.dataOwner) {
+          data = (uint8_t *) allocator->alloc(bits2bytes(bitsAllocated));
+          memcpy(data, other.data, bits2bytes(bitsAllocated));
+          dataOwner = 1;
+        } else {
+          data = other.data;
+          dataOwner = 0;
+        }
+      }
+      return *this;
+    }
 
-  BitStream &operator=(BitStream &&other) noexcept {
-    if (this != &other) {
-      if (dataOwner && data)
-        allocator->free(data);
-      bitsUsed = other.bitsUsed;
-      bitsAllocated = other.bitsAllocated;
-      readOffset = other.readOffset;
-      dataOwner = other.dataOwner;
-      data = other.data;
-      allocator = other.allocator;
+    BitStream(BitStream &&other) noexcept :
+      bitsUsed(other.bitsUsed),
+      dataOwner(other.dataOwner),
+      bitsAllocated(other.bitsAllocated),
+      readOffset(other.readOffset),
+      data(other.data),
+      allocator(other.allocator) {
       other.bitsUsed = 0;
       other.bitsAllocated = 0;
       other.readOffset = 0;
@@ -563,68 +546,87 @@ public:
       other.dataOwner = 0;
       other.allocator = nullptr;
     }
-    return *this;
-  }
 
-  bool operator==(const BitStream &other) const {
-    return this->bitsUsed == other.bitsUsed && this->bitsAllocated == other.bitsAllocated &&
-           this->readOffset == other.readOffset && this->dataOwner == other.dataOwner &&
-           memcmp(this->data, other.data, bits2bytes(bitsUsed)) == 0;
-  }
-
-protected:
-  template<typename T>
-  void writeCompressedUnsignedGeneric(T v) {
-    for (int i = 0; i < (int) sizeof(v) + 1; ++i) {
-      uint8_t byte = uint8_t(v) | (v >= (1 << 7) ? (1 << 7) : 0);
-      Write(byte);
-      v >>= 7;
-      if (!v)
-        break;
+    BitStream &operator=(BitStream &&other) noexcept {
+      if (this != &other) {
+        if (dataOwner && data)
+          allocator->free(data);
+        bitsUsed = other.bitsUsed;
+        bitsAllocated = other.bitsAllocated;
+        readOffset = other.readOffset;
+        dataOwner = other.dataOwner;
+        data = other.data;
+        allocator = other.allocator;
+        other.bitsUsed = 0;
+        other.bitsAllocated = 0;
+        other.readOffset = 0;
+        other.data = nullptr;
+        other.dataOwner = 0;
+        other.allocator = nullptr;
+      }
+      return *this;
     }
-  }
 
-  template<typename T>
-  bool readCompressedUnsignedGeneric(T &v) const {
-    v = 0;
-    for (int i = 0; i < (int) sizeof(v) + 1; ++i) {
-      uint8_t byte = 0;
-      if (!Read(byte))
-        return false;
-      v |= T(byte & ~(1 << 7)) << (i * 7);
-      if ((byte & (1 << 7)) == 0)
-        break;
+    bool operator==(const BitStream &other) const {
+      return this->bitsUsed == other.bitsUsed && this->bitsAllocated == other.bitsAllocated &&
+             this->readOffset == other.readOffset && this->dataOwner == other.dataOwner &&
+             memcmp(this->data, other.data, bits2bytes(bitsUsed)) == 0;
     }
-    return true;
-  }
 
-  void writeString(const char *str, size_t str_len) {
-    WriteCompressed((uint32_t) str_len);
-    if (str_len)
-      Write(str, (uint32_t) str_len);
-  }
+  protected:
+    template<typename T>
+    void writeCompressedUnsignedGeneric(T v) {
+      for (int i = 0; i < (int) sizeof(v) + 1; ++i) {
+        uint8_t byte = uint8_t(v) | (v >= (1 << 7) ? (1 << 7) : 0);
+        Write(byte);
+        v >>= 7;
+        if (!v)
+          break;
+      }
+    }
 
-  void DuplicateBitStream(const BitStream &bs) {
-    bitsUsed = bs.bitsUsed;
-    dataOwner = 1;
-    readOffset = bs.readOffset;
-    data = bs.bitsAllocated ? (uint8_t *) allocator->alloc(bits2bytes(bs.bitsAllocated)) : nullptr;
-    memcpy(data, bs.data, bits2bytes(bs.bitsAllocated));
-    bitsAllocated = (uint32_t) bytes2bits(bits2bytes(bs.bitsAllocated));
-  }
+    template<typename T>
+    bool readCompressedUnsignedGeneric(T &v) const {
+      v = 0;
+      for (int i = 0; i < (int) sizeof(v) + 1; ++i) {
+        uint8_t byte = 0;
+        if (!Read(byte))
+          return false;
+        v |= T(byte & ~(1 << 7)) << (i * 7);
+        if ((byte & (1 << 7)) == 0)
+          break;
+      }
+      return true;
+    }
 
-  static inline uint32_t bits2bytes(size_t bi) { return (bi + 7) >> 3; }
+    void writeString(const char *str, size_t str_len) {
+      WriteCompressed((uint32_t) str_len);
+      if (str_len)
+        Write(str, (uint32_t) str_len);
+    }
 
-  static inline uint32_t bytes2bits(size_t by) { return by << 3; }
+    void DuplicateBitStream(const BitStream &bs) {
+      bitsUsed = bs.bitsUsed;
+      dataOwner = 1;
+      readOffset = bs.readOffset;
+      data = bs.bitsAllocated ? (uint8_t *) allocator->alloc(bits2bytes(bs.bitsAllocated)) : nullptr;
+      memcpy(data, bs.data, bits2bytes(bs.bitsAllocated));
+      bitsAllocated = (uint32_t) bytes2bits(bits2bytes(bs.bitsAllocated));
+    }
+
+    static inline uint32_t bits2bytes(size_t bi) { return (bi + 7) >> 3; }
+
+    static inline uint32_t bytes2bits(size_t by) { return by << 3; }
 
 
-  uint32_t bitsUsed : 31;
-  uint32_t dataOwner : 1;
-  uint32_t bitsAllocated;
-  mutable uint32_t readOffset;
-  uint8_t *data;
-  IMemAlloc *allocator; // TODO: rework to (stateless by default) allocator class
-};
+    uint32_t bitsUsed : 31;
+    uint32_t dataOwner : 1;
+    uint32_t bitsAllocated;
+    mutable uint32_t readOffset;
+    uint8_t *data;
+    IMemAlloc *allocator; // TODO: rework to (stateless by default) allocator class
+  };
+} // namespace danet
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif

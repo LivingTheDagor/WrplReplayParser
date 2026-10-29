@@ -31,28 +31,28 @@ namespace net
         return packet_num & (N - 1);
       }
 
-      void store(int packet_num, const BitStream &bin);
+      void store(int packet_num, const danet::BitStream &bin);
 
-      BitStream getDiff(int packet_num, const BitStream &new_ver) const;
-      BitStream applyPatch(int packet_num, const BitStream &delta) const;
+      danet::BitStream getDiff(int packet_num, const danet::BitStream &new_ver) const;
+      danet::BitStream applyPatch(int packet_num, const danet::BitStream &delta) const;
 
       void clear();
       bool isEmpty(int packet_num) const;
 
       int64_t getDebugAllocSize() const;
 
-      void savePackToStream(BitStream &bs) const;
-      bool readPackFromStream(BitStream &bs);
+      void savePackToStream(danet::BitStream &bs) const;
+      bool readPackFromStream(danet::BitStream &bs);
 
       History(IMemAlloc * allocator) : allocator(allocator) {}
 
     private:
-      std::array<BitStream, HIST_MAX> pack;
+      std::array<danet::BitStream, HIST_MAX> pack;
       IMemAlloc * allocator = nullptr;
     };
 
-    BitStream get_compressed_delta(const BitStream &base_version, const BitStream &new_ver, IMemAlloc *allocator);
-    BitStream apply_compressed_patch(const BitStream &base_version, const BitStream &compressed_delta,
+    danet::BitStream get_compressed_delta(const danet::BitStream &base_version, const danet::BitStream &new_ver, IMemAlloc *allocator);
+    danet::BitStream apply_compressed_patch(const danet::BitStream &base_version, const danet::BitStream &compressed_delta,
                                      IMemAlloc *allocator);
 
   } // namespace delta

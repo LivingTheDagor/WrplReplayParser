@@ -292,7 +292,7 @@ namespace net::delta {
   code;                       \
   END_PROF(x)
 
-  void compress(const BitStream &in, BitStream &out) {
+  void compress(const danet::BitStream &in, danet::BitStream &out) {
     int maxSize = in.GetNumberOfBytesUsed() * 2; // compression can't be worse than 1:2
     out.SetWriteOffset(0);
     out.reserveBits(BYTES_TO_BITS(maxSize));
@@ -304,12 +304,12 @@ namespace net::delta {
     else {
       LOGE("rle0ki_compress has been failed on a stream of size %d", in.GetNumberOfBytesUsed());
 
-      BitStream empty;
+      danet::BitStream empty;
       out.swap(empty);
     }
   }
 
-  void decompress(const BitStream &in, BitStream &out) {
+  void decompress(const danet::BitStream &in, danet::BitStream &out) {
     int maxSize = in.GetNumberOfBytesUsed() * 10; // compression can't be better than 10:1
     out.SetWriteOffset(0);
     out.reserveBits(BYTES_TO_BITS(maxSize));

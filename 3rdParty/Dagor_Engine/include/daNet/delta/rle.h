@@ -7,29 +7,25 @@
 #include <daNet/bitStream.h>
 #include "span"
 
-namespace net
-{
+namespace net {
 
-  namespace delta
-  {
+  namespace delta {
 
-    void compress(const BitStream &in, BitStream &out);
-    inline BitStream compress(const BitStream &in)
-    {
-      BitStream out;
+    void compress(const danet::BitStream &in, danet::BitStream &out);
+    inline danet::BitStream compress(const danet::BitStream &in) {
+      danet::BitStream out;
       compress(in, out);
       return out;
     }
 
-    void decompress(const BitStream &in, BitStream &out);
-    inline BitStream decompress(const BitStream &in, IMemAlloc * allocator)
-    {
-      BitStream out(allocator);
+    void decompress(const danet::BitStream &in, danet::BitStream &out);
+    inline danet::BitStream decompress(const danet::BitStream &in, IMemAlloc *allocator) {
+      danet::BitStream out(allocator);
       decompress(in, out);
       return out;
     }
 
-// raw interface
+    // raw interface
     int rle0ki_compress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice);
     int rle0ki_decompress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice);
 

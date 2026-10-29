@@ -528,7 +528,7 @@ namespace unit {
   }
 
   bool unit::Unit::LoadFromStorage(const FieldSerializerDict &data) {
-    BitStream bs{data.data.data(), data.data.size(), false};
+    danet::BitStream bs{data.data.data(), data.data.size(), false};
     IdFieldSerializer255 IdFieldSerializer{};
     uint32_t end;
     uint16_t count = IdFieldSerializer.readFieldsSizeAndCount(bs, end);
@@ -568,7 +568,7 @@ namespace unit {
           break;
         }
         case 0x33: {
-          BitStream t_bs;
+          danet::BitStream t_bs;
           RET_FAIL(bs.Read(t_bs));
           uint8_t sz;
           RET_FAIL(t_bs.Read(sz));

@@ -53,7 +53,7 @@ struct ChatMessage {
   bool is_local_message{}; // a message that only ur client sees (ex: chat spamming message)
   bool is_quick_message{}; // is a message created through the quick message menu
   std::string complaints; // this is basically useless information
-  inline bool FromBS(BitStream &bs);
+  inline bool FromBS(danet::BitStream &bs);
 };
 
 

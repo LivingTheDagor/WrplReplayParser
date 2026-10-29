@@ -128,7 +128,6 @@ public:
 };
 
 
-
 struct Rocket {
   ObjectRewindState<SpaceTimeEuler, false, false, false> positions{};
   /// Flight rebuilt from the release state, for stores the server never streamed.
@@ -165,9 +164,9 @@ struct Rocket {
   Point3 u12_5;
   uint8_t u1_4;
   float u4_5;
-  BitStream some_weap_type_info;
-  BitStream bomb_info; // only ever encodes a single 4 byte val
-  BitStream maybe_sensor_info; // from what I can tell, this is always encoded
+  danet::BitStream some_weap_type_info;
+  danet::BitStream bomb_info; // only ever encodes a single 4 byte val
+  danet::BitStream maybe_sensor_info; // from what I can tell, this is always encoded
   uint8_t u1_5;
   uint32_t u4_6;
   uint8_t u1_6;

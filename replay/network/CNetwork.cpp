@@ -10,7 +10,7 @@ namespace net {
 #define MAX_COMPRESSION_RATIO 8 // bound to avoid overcommit memory on decompression
 
 
-  inline bool bitstream_decompress(const BitStream &bs, BitStream &outbs) {
+  inline bool bitstream_decompress(const danet::BitStream &bs, danet::BitStream &outbs) {
     if (bs.GetReadOffset() >= bs.GetNumberOfBitsUsed())
       return false;
     assert((bs.GetReadOffset() & 7) == 0);
@@ -30,11 +30,11 @@ namespace net {
   }
 
   void CNetwork::onPacket(ReplayPacket *pkt, int cur_time_ms) {
-    BitStream &bs = pkt->stream;
-    BitStream bsTemp = BitStream();
+    danet::BitStream &bs = pkt->stream;
+    auto bsTemp = danet::BitStream();
     uint8_t ptype;
     pkt->stream.Read(ptype);
-    auto readCompressedIfPacketType = [&bs, &bsTemp, ptype, pkt](uint8_t ctype) -> const BitStream * {
+    auto readCompressedIfPacketType = [&bs, &bsTemp, ptype, pkt](uint8_t ctype) -> const danet::BitStream * {
       if (ptype != ctype)
         return &bs;
       if (bitstream_decompress(bs, bsTemp))
@@ -65,7 +65,7 @@ namespace net {
           EXCEPTION("Failed to read the time from a ID_ENTITY_REPLICATION");
         }
 
-        const BitStream *bsToRead = readCompressedIfPacketType(ID_ENTITY_REPLICATION_COMPRESSED);
+        const danet::BitStream *bsToRead = readCompressedIfPacketType(ID_ENTITY_REPLICATION_COMPRESSED);
         if (!bsToRead)
           break;
         if (!conn.readReplicationPacket(*bsToRead)) {
@@ -73,7 +73,7 @@ namespace net {
           break;
         }
         if (this->peer) {
-          BitStream acks{12};
+          danet::BitStream acks{12};
           acks.Write((char) ID_ENTITY_REPLICATION);
           acks.Write(sentTime);
           conn.writeLastRecvdPacketAcks(acks);
@@ -88,7 +88,7 @@ namespace net {
       }
       case ID_ENTITY_CREATION:
       case ID_ENTITY_CREATION_COMPRESSED: {
-        const BitStream *bsToRead = readCompressedIfPacketType(ID_ENTITY_CREATION_COMPRESSED);
+        const danet::BitStream *bsToRead = readCompressedIfPacketType(ID_ENTITY_CREATION_COMPRESSED);
         if (!bsToRead)
           break;
 

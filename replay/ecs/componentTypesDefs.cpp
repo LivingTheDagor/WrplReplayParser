@@ -502,10 +502,10 @@ namespace ecs {
     EXCEPTION("Called serialize of RocketSerializer, not implemented");
   }
 
-  bool ReadBitStream(const DeserializerCb &cb, BitStream &to) {
+  bool ReadBitStream(const DeserializerCb &cb, danet::BitStream &to) {
     uint16_t size;
     if (cb.read(&size, sizeof(size) * 8, 0)) {
-      to = BitStream();
+      to = danet::BitStream();
       to.reserveBits(size);
       auto ok = cb.read(to.GetData(), (uint16_t) ((size + 7) & 0xfffffff8), 0);
       to.SetWriteOffset(size);

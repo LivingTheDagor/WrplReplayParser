@@ -5,19 +5,16 @@
 
 #include "diff_impl.h"
 
-namespace net
-{
+namespace net {
 
-  namespace delta
-  {
+  namespace delta {
     const uint8_t versionMask = 0x7f;
     const uint8_t versionIncrement = 0x01;
     const uint8_t fullVersionMask = 0x80;
 
-    Buffer::Buffer(IMemAlloc * allocator) : allocator(allocator), version(0), confirmedVersion(0) { reset(); }
+    Buffer::Buffer(IMemAlloc *allocator) : allocator(allocator), version(0), confirmedVersion(0) { reset(); }
 
-    void Buffer::reset()
-    {
+    void Buffer::reset() {
       base.Reset();
       incrementVersion();
       setFullVersion();
@@ -28,31 +25,28 @@ namespace net
 
     void Buffer::setFullVersion() { version = (version & versionMask) | fullVersionMask; }
 
-    void Buffer::setBase(const BitStream &data)
-    {
+    void Buffer::setBase(const danet::BitStream &data) {
       base = data;
       incrementVersion();
     }
 
-    void Buffer::setBase(BitStream &&data)
-    {
+    void Buffer::setBase(danet::BitStream &&data) {
       base = std::move(data);
       incrementVersion();
     }
 
-    BitStream Buffer::getDiff(const BitStream &new_ver) const { return diff_impl(base, new_ver, allocator); }
+    danet::BitStream Buffer::getDiff(const danet::BitStream &new_ver) const {
+      return diff_impl(base, new_ver, allocator);
+    }
 
-    BitStream Buffer::applyPatch(const BitStream &delta)
-    {
-      BitStream result = diff_impl(base, delta, allocator);
+    danet::BitStream Buffer::applyPatch(const danet::BitStream &delta) {
+      danet::BitStream result = diff_impl(base, delta, allocator);
       setBase(result);
       return result;
     }
 
-    bool Buffer::checkVersionAndNeedApply(uint8_t incomming_version)
-    {
-      if (incomming_version & fullVersionMask)
-      {
+    bool Buffer::checkVersionAndNeedApply(uint8_t incomming_version) {
+      if (incomming_version & fullVersionMask) {
         reset();
         version = incomming_version;
         return true;

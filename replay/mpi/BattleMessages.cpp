@@ -27,10 +27,10 @@
     }                                                           \
     }                                                           \
     this->checkFieldSize(curr_field_index, this->payload.GetReadOffset() - start_index);
-#define RET_FAIL(op)      \
-  do {                    \
-    if (!(op))            \
-      return false;       \
+#define RET_FAIL(op) \
+  do {               \
+    if (!(op))       \
+      return false;  \
   } while (0)
 
 
@@ -77,7 +77,7 @@ namespace mpi {
   bool KillMessage::readPayload(ParserState *state) {
     IBattleMessage::readPayload(state);
     uint16_t killer_uid, victim_uid;
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       switch (field_id) {
         case 1: {
           RET_FAIL(bs->Read(this->offender_pid));
@@ -191,7 +191,7 @@ namespace mpi {
 
   bool CriticalDamageMessage::readPayload(ParserState *state) {
     IBattleMessage::readPayload(state);
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       switch (field_id) {
         case 1: {
           uint16_t uid;
@@ -230,7 +230,7 @@ namespace mpi {
 
   bool SevereDamageMessage::readPayload(ParserState *state) {
     IBattleMessage::readPayload(state);
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       switch (field_id) {
         case 1: {
           uint16_t uid;
@@ -264,7 +264,7 @@ namespace mpi {
   }
   bool AwardMessage::readPayload(ParserState *state) {
     IBattleMessage::readPayload(state);
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       switch (field_id) {
         case 1: {
           bs->Read(this->player_pid);

@@ -10,7 +10,7 @@ CREATE_HANDLE(handle_conn, "Connection")
 namespace net {
 
 
-  static int read_string(const BitStream &cb, std::string &to) {
+  static int read_string(const danet::BitStream &cb, std::string &to) {
     char buf[1024];
     buf[0] = 0;
     for (char *str = buf;;) {
@@ -26,7 +26,7 @@ namespace net {
         str++;
     };
     to += buf;
-    return to.length();
+    return static_cast<int>(to.length());
   }
 
   InternedStringsShared::InternedStringsShared() {
@@ -36,20 +36,20 @@ namespace net {
 
   InternedStringsRepl::InternedStringsRepl(InternedStringsShared *shared) : shared(shared) { serialized.set(0, true); }
 
-  inline bool read_string_no(const BitStream &cb, uint32_t &str, const uint32_t short_bits) {
+  inline bool read_string_no(const danet::BitStream &cb, uint32_t &str, const uint32_t short_bits) {
     // assume Little endian
     str = 0;
     return cb.ReadBits((uint8_t *) &str, short_bits);
   }
 
-  inline void write_string_no(BitStream &cb, uint32_t str, const uint32_t short_bits) {
+  inline void write_string_no(danet::BitStream &cb, uint32_t str, const uint32_t short_bits) {
     // assume Little endian
     G_ASSERT(str < uint32_t(1 << short_bits));
     cb.WriteBits((const uint8_t *) &str, short_bits);
   }
 
   static std::string oneString;
-  static const char *read_istring(const BitStream &cb, InternedStringsRepl *istrs, uint32_t short_bits) {
+  static const char *read_istring(const danet::BitStream &cb, InternedStringsRepl *istrs, uint32_t short_bits) {
     bool rawString = false;
     if (!cb.Read(rawString))
       return nullptr;
@@ -73,13 +73,13 @@ namespace net {
     return all.strings[str].c_str();
   }
 
-  static void write_raw_string(BitStream &cb, const std::string &pStr) {
+  static void write_raw_string(danet::BitStream &cb, const std::string &pStr) {
     cb.Write(true);
     cb.Write(pStr.c_str(), pStr.length() + 1);
   }
 
-  static void write_istring(BitStream &cb, const std::string &pStr, InternedStringsShared &all, uint32_t short_bits,
-                            eastl::bitvector<eastl::allocator, uint64_t> &out_used) {
+  static void write_istring(danet::BitStream &cb, const std::string &pStr, InternedStringsShared &all,
+                            uint32_t short_bits, eastl::bitvector<eastl::allocator, uint64_t> &out_used) {
     auto it = all.index.find(pStr);
     if (it == all.index.end()) {
       if (DAGOR_UNLIKELY(all.strings.size() >= uint32_t(1 << short_bits))) {
@@ -251,7 +251,7 @@ namespace net {
     }
   }
 
-  bool Connection::readConstructionPacket(const BitStream &bs, float compression_ratio) {
+  bool Connection::readConstructionPacket(const danet::BitStream &bs, float compression_ratio) {
     auto failRet = false;
 
     uint8_t written = 0;
@@ -314,7 +314,7 @@ namespace net {
     return AckData{remoteSequence, ackBits};
   }
 
-  ecs::EntityId Connection::deserializeConstruction(const BitStream &bs, ecs::entity_id_t serverId, uint32_t sz,
+  ecs::EntityId Connection::deserializeConstruction(const danet::BitStream &bs, ecs::entity_id_t serverId, uint32_t sz,
                                                     float cratio) {
     G_ASSERT(serverId != ecs::ECS_INVALID_ENTITY_ID_VAL);
     G_UNUSED(sz);
@@ -364,7 +364,7 @@ namespace net {
   }
 
 
-  const char *Connection::deserializeTemplate(const BitStream &bs, ecs::template_t &templateId,
+  const char *Connection::deserializeTemplate(const danet::BitStream &bs, ecs::template_t &templateId,
                                               bool &tpl_deserialized) {
     // it is too expensive to always serialize template name, so we just rely on construction being reliable ordered,
     // and write name once.
@@ -380,11 +380,11 @@ namespace net {
     return serverTemplates[templateId].c_str();
   }
 
-  static bool read_component_index(ecs::component_index_t &cidx, const BitStream &bs) {
+  static bool read_component_index(ecs::component_index_t &cidx, const danet::BitStream &bs) {
     return bs.ReadCompressed(cidx); //==todo: we only need 12 bits really. Write compressed form of.
   }
 
-  bool Connection::syncReadTemplate(const BitStream &bs, ecs::template_t templateId) {
+  bool Connection::syncReadTemplate(const danet::BitStream &bs, ecs::template_t templateId) {
     G_ASSERT(templateId == serverTemplates.size()); // We rely on templateId being monotonically increased counter here
 
     serverTemplates.resize(templateId + 1);
@@ -427,8 +427,8 @@ namespace net {
     return true;
   }
 
-  bool Connection::syncReadComponent(ecs::component_index_t serverCidx, const BitStream &bs, ecs::template_t templateId,
-                                     bool error) {
+  bool Connection::syncReadComponent(ecs::component_index_t serverCidx, const danet::BitStream &bs,
+                                     ecs::template_t templateId, bool error) {
     G_UNUSED(templateId);
     // 8 bytes. However, can write only two bytes, if we preserve component table (which we should)
     ecs::component_t name = 0;
@@ -459,7 +459,7 @@ namespace net {
     componentsSynced.set(serverCidx, true);
     return true;
   }
-  bool Connection::deserializeComponentConstruction(ecs::template_t server_template, const BitStream &bs,
+  bool Connection::deserializeComponentConstruction(ecs::template_t server_template, const danet::BitStream &bs,
                                                     ecs::ComponentsInitializer &init, int &out_ncomp) {
     BitstreamDeserializer deserializer(*mgr, bs, &objectKeysRepl);
     uint16_t compCount = 0;
@@ -513,7 +513,7 @@ namespace net {
     return true;
   }
 
-  bool Connection::readDestructionPacket(const BitStream &bs) {
+  bool Connection::readDestructionPacket(const danet::BitStream &bs) {
     uint8_t written = 0;
     const bool failRet = false;
     REPL_VER(bs.Read(written));
@@ -531,7 +531,7 @@ namespace net {
   }
 
   template<typename F>
-  static inline uint32_t write_block(BitStream &bs, BitStream &tmpbs, const F &writefn) {
+  static inline uint32_t write_block(danet::BitStream &bs, danet::BitStream &tmpbs, const F &writefn) {
     memset(tmpbs.GetData(), 0, tmpbs.GetNumberOfBytesUsed());
     tmpbs.ResetWritePointer();
 
@@ -546,12 +546,13 @@ namespace net {
     return blockSizeBytes;
   }
 
-  static void write_component_index(ecs::component_index_t cidx, BitStream &bs) {
+  static void write_component_index(ecs::component_index_t cidx, danet::BitStream &bs) {
     bs.WriteCompressed(cidx); //==todo: we only need 12 bits really. Write compressed form of.
   }
 
   // bs is where data is actually stored, tmpbs is where temporary data is stored.
-  bool Connection::writeConstructionPacket(BitStream &bs, BitStream &tmpbs, std::vector<ecs::EntityId> &toWrite) {
+  bool Connection::writeConstructionPacket(danet::BitStream &bs, danet::BitStream &tmpbs,
+                                           std::vector<ecs::EntityId> &toWrite) {
     BitSize_t afterHdrPos = bs.GetWriteOffset();
     int written = 0;
     bs.Write((uint8_t) 0);
@@ -562,7 +563,7 @@ namespace net {
       net::write_server_eid((ecs::entity_id_t) eid, bs);
 
       uint32_t blockSizeBytes =
-        write_block(bs, tmpbs, [this, eid](BitStream &bs2) { serializeConstruction(eid, bs2); });
+        write_block(bs, tmpbs, [this, eid](danet::BitStream &bs2) { serializeConstruction(eid, bs2); });
 
       G_FAST_ASSERT(blockSizeBytes);
       G_UNUSED(blockSizeBytes);
@@ -588,7 +589,7 @@ namespace net {
     return true;
   }
 
-  void Connection::serializeConstruction(ecs::EntityId eid, BitStream &bs, bool canSkipInitial) {
+  void Connection::serializeConstruction(ecs::EntityId eid, danet::BitStream &bs, bool canSkipInitial) {
     EXCEPTION("bad bad guh");
     /*
     #if NET_STAT_PROFILE_INITIAL_SIZES
@@ -713,7 +714,7 @@ namespace net {
   }
 
   typedef uint16_t sequence_t;
-  bool Connection::readReplicationPacket(const BitStream &bs) {
+  bool Connection::readReplicationPacket(const danet::BitStream &bs) {
 
     constexpr bool failRet = false;
     sequence_t remoteSequence = sequence_t(-1);
@@ -753,7 +754,7 @@ namespace net {
     return true;
   }
 
-  bool Connection::deserializeComponentReplication(ecs::EntityId eid, const BitStream &bs) {
+  bool Connection::deserializeComponentReplication(ecs::EntityId eid, const danet::BitStream &bs) {
 
     ecs::component_index_t serverCidx = 0;
     if (!read_component_index(serverCidx, bs))
@@ -808,7 +809,8 @@ namespace net {
     return bsds.skip(clientCidx, *datacomp);
   }
 
-  bool Connection::serializeComponentReplication(ecs::EntityId eid, const ecs::ComponentRef &comp, BitStream &bs) {
+  bool Connection::serializeComponentReplication(ecs::EntityId eid, const ecs::ComponentRef &comp,
+                                                 danet::BitStream &bs) {
     if (!componentsSynced.test(comp.getComponentId(), false)) // FIXME: race on components replication & re-creation
     {
       G_UNUSED(eid);
@@ -825,7 +827,7 @@ namespace net {
     return true;
   }
 
-  void Connection::writeLastRecvdPacketAcks(BitStream &bs) {
+  void Connection::writeLastRecvdPacketAcks(danet::BitStream &bs) {
     auto ackData = reliabilitySys.genLastSeqAckData();
     bs.Write(ackData.rseq);
     bs.Write(ackData.ackBits);

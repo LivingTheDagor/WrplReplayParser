@@ -75,5 +75,5 @@ public:
   uint32_t timestamp_ms{};
   // (Runtime state, not file data)
   // uint64_t runtimePayloadSizeBytes{};
-  BitStream stream;
+  danet::BitStream stream;
 };

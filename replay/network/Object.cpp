@@ -10,7 +10,7 @@ namespace net {
   if (!bs.Read(x))     \
     return failRet;
 
-  bool Object::deserializeComps(const BitStream &bs, Connection *conn) {
+  bool Object::deserializeComps(const danet::BitStream &bs, Connection *conn) {
     // G_ASSERTF(isReplica(), "%d", (ecs::entity_id_t)eid);
 
     bool failRet = false;

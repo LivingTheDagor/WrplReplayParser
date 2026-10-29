@@ -66,7 +66,7 @@ struct SensorsControlStates {
   int some_data_7;
   float field147_0xa8;
 
-  bool deserialize(BitStream &bs);
+  bool deserialize(danet::BitStream &bs);
 };
 
 struct TargetDesignationControlState {
@@ -87,14 +87,14 @@ struct TargetDesignationControlState {
   uint8_t v14;
   uint32_t v15;
 
-  bool deserialize(BitStream &bs);
+  bool deserialize(danet::BitStream &bs);
 };
 
 struct CounterMeasuresControlState {
   uint8_t v1;
   uint8_t v2;
 
-  bool deserialize(BitStream &bs);
+  bool deserialize(danet::BitStream &bs);
 };
 
 enum UnitType : uint8_t {

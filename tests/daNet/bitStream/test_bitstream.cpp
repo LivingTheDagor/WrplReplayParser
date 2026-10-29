@@ -23,8 +23,8 @@ void profile_bitread(uint32_t byte_count, size_t max_bitread) {
   for (size_t i = 0; i < bytes.size(); ++i) {
     bytes[i] = (uint8_t) get_rand<256>();
   }
-  BitStream old_bs{bytes.data(), byte_count, false};
-  BitStream new_bs{bytes.data(), byte_count, false};
+  danet::BitStream old_bs{bytes.data(), byte_count, false};
+  danet::BitStream new_bs{bytes.data(), byte_count, false};
   size_t MAX_BITS = max_bitread;
 
   while (old_bs.GetReadOffset() < old_bs.GetWriteOffset()) {

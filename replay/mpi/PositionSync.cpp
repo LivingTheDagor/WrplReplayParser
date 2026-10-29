@@ -8,7 +8,7 @@ bool separateServerSideDetection_g = true;
 bool resyncSaclosGuidanceParams = true; // actually known to be true, hopefully
 
 #define RET_FAIL(op) G_ASSERT_RETURN((op), false);
-bool SensorsControlStates::deserialize(BitStream &bs) {
+bool SensorsControlStates::deserialize(danet::BitStream &bs) {
   first_bool = bs.ReadBit();
   uint8_t sensor_type;
   bs.Read(sensor_type);
@@ -87,7 +87,7 @@ bool SensorsControlStates::deserialize(BitStream &bs) {
 }
 
 
-bool TargetDesignationControlState::deserialize(BitStream &bs) {
+bool TargetDesignationControlState::deserialize(danet::BitStream &bs) {
   RET_FAIL(bs.Read(v1));
   RET_FAIL(bs.Read(v2));
   v3 = bs.ReadBit();
@@ -127,7 +127,7 @@ bool TargetDesignationControlState::deserialize(BitStream &bs) {
   return true;
 }
 
-bool CounterMeasuresControlState::deserialize(BitStream &bs) {
+bool CounterMeasuresControlState::deserialize(danet::BitStream &bs) {
   RET_FAIL(bs.Read(v1));
   RET_FAIL(bs.Read(v2));
   return true;
@@ -155,7 +155,7 @@ std::vector<std::string> unit::getUnitTagsName(std::string_view &name) {
 G_STATIC_ASSERT(sizeof(TargetDesignationControlState) == 0x50);
 
 
-void DeserializeSeekerData(BitStream &bs) {
+void DeserializeSeekerData(danet::BitStream &bs) {
   // this will probably never be implemented unless if I actually go through and try to understand what this complex
   // bullshit is
   uint32_t val;
@@ -167,7 +167,7 @@ void DeserializeSeekerData(BitStream &bs) {
   return;
 }
 
-bool FMSync(ParserState &state, BitStream &bs) {
+bool FMSync(ParserState &state, danet::BitStream &bs) {
   ZoneScoped;
   uint16_t uid = 0;
   do {
@@ -364,7 +364,7 @@ struct SubVehicleDynData {
   float f6;
   Point3 some_position_maybe;
 
-  bool deserialize(BitStream &bs) {
+  bool deserialize(danet::BitStream &bs) {
     Point3 euler;
     std::array<int16_t, 3> euler_bits;
     bool ok = true;
@@ -383,7 +383,7 @@ struct SubVehicleDynData {
 };
 
 
-bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_from_compress) {
+bool ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bool is_from_compress) {
   ZoneScoped;
   if (!ref->ref_1) {
     G_ASSERT(is_from_compress);
@@ -650,7 +650,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
 }
 
 
-bool GMSync(ParserState &state, BitStream &bs) {
+bool GMSync(ParserState &state, danet::BitStream &bs) {
   ZoneScoped;
   uint16_t uid_lower;
   uint16_t uid_upper;
@@ -794,7 +794,7 @@ Rocket *getTorpedo(ParserState &state, ecs::EntityId eid) {
 
 typedef Rocket *(*get_weapon_cb)(ParserState &state, ecs::EntityId eid);
 
-bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
+bool ParseWeapon(ParserState &state, const danet::BitStream &bs, get_weapon_cb cb) {
   bool bool1, bool2;
   RET_FAIL(bs.Read(bool1));
   RET_FAIL(bs.Read(bool2));
@@ -935,7 +935,7 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
 }
 
 int count = 0;
-bool WeaponSync(ParserState &state, BitStream &bs) {
+bool WeaponSync(ParserState &state, danet::BitStream &bs) {
   count++;
   ZoneScoped;
   uint8_t rocket_count;

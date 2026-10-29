@@ -90,7 +90,7 @@ namespace pybind11 {
 class IRenderHandler {
 public:
   virtual bool setCount(uint32_t count, uint32_t curr_offs) = 0;
-  virtual void DrawIndex(uint32_t idx, uint32_t time_ms, std::string & value) = 0;
+  virtual void DrawIndex(uint32_t idx, uint32_t time_ms, std::string &value) = 0;
   virtual void onEnd() = 0;
 };
 
@@ -106,7 +106,7 @@ namespace danet {
   class ReplicatedObject;
 
 #define DANET_ENCODER_SIGNATURE \
-  int op, ReflectionVarMeta *meta, const ReflectableObject *ro, BitStream *bs, ParserState *state
+  int op, ReflectionVarMeta *meta, const ReflectableObject *ro, danet::BitStream *bs, ParserState *state
 
   typedef int (*reflection_var_encoder)(DANET_ENCODER_SIGNATURE);
 
@@ -163,7 +163,7 @@ namespace danet {
 
   public:
     virtual ~ReflectionVarMeta() = default;
-    virtual void DrawHistory(IRenderHandler* renderer) = 0;
+    virtual void DrawHistory(IRenderHandler *renderer) = 0;
     virtual std::string toString() = 0;
     uint8_t persistentId;
     bool isOpen = false; // used with ui stuff
@@ -209,7 +209,7 @@ namespace danet {
   template<typename T>
   class ReflectionVar : public ReflectionVarMeta, public ObjectRewindState<T, true> {
   public:
-    void DrawHistory(IRenderHandler* renderer) override;
+    void DrawHistory(IRenderHandler *renderer) override;
     std::string toString() override;
 
   private:
@@ -217,6 +217,7 @@ namespace danet {
 
     template<typename type_, typename... options>
     friend class pybind11::class_;
+
   public:
     ReflectionVar() = delete; // some values NEED to be set
     void init(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder = nullptr,
@@ -298,7 +299,7 @@ namespace danet {
 
     virtual void applyMpiMessage(const mpi::Message * /*m*/) override {}
 
-    ReflectableObject(ParserState * state, mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) :
+    ReflectableObject(ParserState *state, mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) :
       mpi::IObject(state, uid),
       debugWatermark(DANET_WATERMARK),
       prevChanged(nullptr),
@@ -473,12 +474,11 @@ namespace danet {
     /// 'draws' the object with ImGui or preferred GUI
     /// include the stub target
     virtual void drawObject() const;
-
   };
 
   class ReplicatedObject : public ReflectableObject {
   public:
-    ReplicatedObject(ParserState * state, mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) : ReflectableObject(state, uid) {
+    ReplicatedObject(ParserState *state, mpi::ObjectID uid = mpi::INVALID_OBJECT_ID) : ReflectableObject(state, uid) {
       setRelfectionFlag(REPLICATED);
     }
 
@@ -585,8 +585,8 @@ namespace danet {
     G_STATIC_ASSERT(danet::IsBase<danet::ReplicatedObject DANET_COMMA ThisClass>::Value); \
     return you_forget_to_put_IMPLEMENT_REPLICATION_4_##class_name;                        \
   }                                                                                       \
-  void serializeReplicaCreationData(BitStream &bs) const override;                        \
-  static danet::ReplicatedObject *createReplicatedObject(BitStream &bs, ParserState *state);
+  void serializeReplicaCreationData(danet::BitStream &bs) const override;                 \
+  static danet::ReplicatedObject *createReplicatedObject(danet::BitStream &bs, ParserState *state);
 
 #define DECL_REPLICATION(class_name, base_class) \
   DECL_REFLECTION(class_name, base_class)        \
@@ -603,7 +603,7 @@ namespace danet {
 #define DECL_REPLICATION_STUB                    \
   DECL_REFLECTION_STUB                           \
   int getClassId() const override { return -1; } \
-  void serializeReplicaCreationData(BitStream &) const override {}
+  void serializeReplicaCreationData(danet::BitStream &) const override {}
 
 #define IMPLEMENT_REPLICATION_BODY(class_name, str_name, templ_name, pref)                                           \
   pref int class_name::you_forget_to_put_IMPLEMENT_REPLICATION_4_##templ_name = -1;                                  \
@@ -621,4 +621,4 @@ namespace danet {
 #define IMPLEMENT_REPLICATION(class_name) IMPLEMENT_REPLICATION_BODY(class_name, class_name, class_name, )
 #define IMPLEMENT_REPLICATION_TEMPL(class_name, templ_name) \
   IMPLEMENT_REPLICATION_BODY(class_name, class_name, templ_name, template<>)
-}
+} // namespace danet

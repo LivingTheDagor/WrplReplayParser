@@ -4,7 +4,7 @@
 #include <daNet/dag_netUtils.h>
 
 
-#include <daNet/bitStream.h>
+#include <daNet/BitStream.h>
 #include "daNet/daNetTypes.h"
 #include <ioSys/dag_dataBlock.h>
 #include "consts.h"
@@ -15,85 +15,81 @@
 #include <dag_bitArray.h>
 #include <halfFloatSimple.h>
 
-namespace netutils
-{
+namespace netutils {
 
-  void debugDump(const DataBlock *b)
-  {
+  void debugDump(const DataBlock *b) {
     if (!b)
       return;
 #if DAGOR_DBGLEVEL > 0 && _TARGET_PC_WIN
     DynamicMemGeneralSaveCB txtCwr(tmpmem, 0, 8 << 10);
-  b->saveToTextStream(txtCwr);
-  debug("%s", (const char *)txtCwr.data());
+    b->saveToTextStream(txtCwr);
+    debug("%s", (const char *) txtCwr.data());
 #endif
   }
-/*
-  void writeCompressedBuffer(BitStream &msg, std::vector<uint8_t> buf)
-  {
-    std::vector<uint8_t> zip{};
-    zip.resize(max(4096u, buf.size() * 2)); // if compression worst than original
-    size_t zwrite = zstd_compress(zip.data(), zip.size(), buf.data(), buf.size(), compressionLevel 5);
+  /*
+    void writeCompressedBuffer(danet::BitStream &msg, std::vector<uint8_t> buf)
+    {
+      std::vector<uint8_t> zip{};
+      zip.resize(max(4096u, buf.size() * 2)); // if compression worst than original
+      size_t zwrite = zstd_compress(zip.data(), zip.size(), buf.data(), buf.size(), compressionLevel 5);
 
-    msg.reserveBits(BYTES_TO_BITS(sizeof(uint32_t) * 2 + (uint32_t)zwrite));
-    msg.WriteCompressed((uint32_t)zwrite);
-    msg.WriteCompressed((uint32_t)buf.size());
-    msg.Write((const char *)zip.data(), (uint32_t)zwrite);
-  }
+      msg.reserveBits(BYTES_TO_BITS(sizeof(uint32_t) * 2 + (uint32_t)zwrite));
+      msg.WriteCompressed((uint32_t)zwrite);
+      msg.WriteCompressed((uint32_t)buf.size());
+      msg.Write((const char *)zip.data(), (uint32_t)zwrite);
+    }
 
-  bool readCompressedBuffer(const BitStream &msg, Tab<uint8_t> &buf)
-  {
-    uint32_t comprSize = 0, size = 0;
-    if (!msg.ReadCompressed(comprSize) || !msg.ReadCompressed(size))
-      return false;
-    G_ASSERT((comprSize < (1 << 20)) && (size < (1 << 20))); // sanity check
-    if (BITS_TO_BYTES(msg.GetNumberOfUnreadBits()) < comprSize)
-      return false;
+    bool readCompressedBuffer(const danet::BitStream &msg, Tab<uint8_t> &buf)
+    {
+      uint32_t comprSize = 0, size = 0;
+      if (!msg.ReadCompressed(comprSize) || !msg.ReadCompressed(size))
+        return false;
+      G_ASSERT((comprSize < (1 << 20)) && (size < (1 << 20))); // sanity check
+      if (BITS_TO_BYTES(msg.GetNumberOfUnreadBits()) < comprSize)
+        return false;
 
-    buf.resize(size);
+      buf.resize(size);
 
-    int readSize = BITS_TO_BYTES(msg.GetReadOffset());
-    dag::ConstSpan<uint8_t> msgSlice(msg.GetData() + readSize, comprSize);
+      int readSize = BITS_TO_BYTES(msg.GetReadOffset());
+      dag::ConstSpan<uint8_t> msgSlice(msg.GetData() + readSize, comprSize);
 
-    size_t zread = zstd_decompress(buf.data(), buf.size(), msgSlice.data(), msgSlice.size());
-    msg.SetReadOffset(msg.GetReadOffset() + BYTES_TO_BITS(msgSlice.size()));
-    return zread == size;
-  }
+      size_t zread = zstd_decompress(buf.data(), buf.size(), msgSlice.data(), msgSlice.size());
+      msg.SetReadOffset(msg.GetReadOffset() + BYTES_TO_BITS(msgSlice.size()));
+      return zread == size;
+    }
 
-  void writeCompressedBlk(BitStream *message, const DataBlock &blk)
-  {
-    // TODO: consider replacement zlib with zstd with precoocked dictionary. see ioSys/dag_zlibIo.h for some details and benchmarks
-    G_ASSERT(message);
-    DynamicMemGeneralSaveCB cwr(framemem_ptr(), 0, 64 << 10);
-    blk.saveToStream(cwr);
-    writeCompressedBuffer(*message, dag::ConstSpan<uint8_t>((const uint8_t *)cwr.data(), cwr.size()));
-  }
+    void writeCompressedBlk(danet::BitStream *message, const DataBlock &blk)
+    {
+      // TODO: consider replacement zlib with zstd with precoocked dictionary. see ioSys/dag_zlibIo.h for some details
+    and benchmarks G_ASSERT(message); DynamicMemGeneralSaveCB cwr(framemem_ptr(), 0, 64 << 10); blk.saveToStream(cwr);
+      writeCompressedBuffer(*message, dag::ConstSpan<uint8_t>((const uint8_t *)cwr.data(), cwr.size()));
+    }
 
-  bool readCompressedBlk(const BitStream *message, DataBlock &blk)
-  {
-    G_ASSERT(message);
+    bool readCompressedBlk(const danet::BitStream *message, DataBlock &blk)
+    {
+      G_ASSERT(message);
 
-    Tab<uint8_t> tmpBuf(framemem_ptr());
-    if (!readCompressedBuffer(*message, tmpBuf))
-      return false;
+      Tab<uint8_t> tmpBuf(framemem_ptr());
+      if (!readCompressedBuffer(*message, tmpBuf))
+        return false;
 
-    InPlaceMemLoadCB crd(tmpBuf.data(), tmpBuf.size());
-    bool ret = dblk::load_from_stream(blk, crd, dblk::ReadFlag::ROBUST | dblk::ReadFlag::BINARY_ONLY | dblk::ReadFlag::RESTORE_FLAGS);
+      InPlaceMemLoadCB crd(tmpBuf.data(), tmpBuf.size());
+      bool ret = dblk::load_from_stream(blk, crd, dblk::ReadFlag::ROBUST | dblk::ReadFlag::BINARY_ONLY |
+    dblk::ReadFlag::RESTORE_FLAGS);
 
-    G_ASSERTF(blk.isValid(), "MP: Received blk is not valid");
+      G_ASSERTF(blk.isValid(), "MP: Received blk is not valid");
 
-    return ret;
-  }*/
+      return ret;
+    }*/
 
 #if defined(_MSC_VER) || defined(__clang__)
-  #if !(_TARGET_APPLE || _TARGET_C3 || defined(__e2k__)) || (_TARGET_PC_MACOSX && !_TARGET_SIMD_NEON)
+#if !(_TARGET_APPLE || _TARGET_C3 || defined(__e2k__)) || (_TARGET_PC_MACOSX && !_TARGET_SIMD_NEON)
 #pragma float_control(push)
 #pragma float_control(precise, on)
 #endif
 #endif
 
-  unsigned int pack_euler(const Point3 &euler)
-  {
+  unsigned int pack_euler(const Point3 &euler) {
     float heading = euler.y;
     float attitude = euler.z;
     float bank = euler.x;
@@ -127,8 +123,7 @@ namespace netutils
     return packed;
   }
 
-  void unpack_euler(unsigned int packed, Point3 &res)
-  {
+  void unpack_euler(unsigned int packed, Point3 &res) {
     float heading = float((packed >> 19) & ((1 << 10) - 1)) * PI / ((1 << 10) - 1);
     float attitude = float((packed >> 10) & ((1 << 9) - 1)) * HALFPI / ((1 << 9) - 1);
     float bank = float(packed & ((1 << 10) - 1)) * PI / ((1 << 10) - 1);
@@ -144,8 +139,7 @@ namespace netutils
     res.z = attitude;
   }
 
-  unsigned int pack_quat(const Quat &quat)
-  {
+  unsigned int pack_quat(const Quat &quat) {
     Point3 euler;
     ::quat_to_euler(quat, euler.y, euler.z, euler.x);
     euler.x = (euler.x + PI) / TWOPI;
@@ -156,16 +150,14 @@ namespace netutils
     return pack_euler(euler);
   }
 
-  void unpack_quat(unsigned int packed, Quat &res)
-  {
+  void unpack_quat(unsigned int packed, Quat &res) {
     Point3 euler;
     unpack_euler(packed, euler);
     euler_to_quat(euler.y, euler.z, euler.x, res);
     res = normalize(res);
   }
 
-  std::array<int16_t, 3> pack_euler_16(const Point3 &euler)
-  {
+  std::array<int16_t, 3> pack_euler_16(const Point3 &euler) {
     float heading = euler.y;
     float attitude = euler.z;
     float bank = euler.x;
@@ -182,8 +174,7 @@ namespace netutils
     return packed;
   }
 
-  void unpack_euler_16(std::array<int16_t, 3> packed, Point3 &res)
-  {
+  void unpack_euler_16(std::array<int16_t, 3> packed, Point3 &res) {
     float heading = netutils::UNPACKS<int16_t>(packed[0], PI);
     float attitude = netutils::UNPACKS<int16_t>(packed[1], HALFPI);
     float bank = netutils::UNPACKS<int16_t>(packed[2], PI);
@@ -193,8 +184,7 @@ namespace netutils
     res.z = attitude;
   }
 
-  void pack_dir(const Point3 &dir, uint8_t packed[3])
-  {
+  void pack_dir(const Point3 &dir, uint8_t packed[3]) {
     Point2 ang = dir_to_angles(dir);
     G_ASSERT(ang.x > (-PI - 1e-6f));
     G_ASSERT(ang.x < (PI + 1e-6f));
@@ -213,8 +203,7 @@ namespace netutils
     packed[2] = (p >> 16) & 0xFF;
   }
 
-  void unpack_dir(const uint8_t packed[3], Point3 &res)
-  {
+  void unpack_dir(const uint8_t packed[3], Point3 &res) {
     uint32_t p = uint32_t(packed[0]) | (uint32_t(packed[1]) << 8) | (uint32_t(packed[2]) << 16);
     uint32_t az = p & ((1 << 11) - 1);
     uint32_t elev = (p >> 11) & ((1 << 11) - 1);
@@ -228,8 +217,7 @@ namespace netutils
     res = angles_to_dir(ang);
   }
 
-  unsigned int pack_velocity(const Point3 &vel, float maxSpeed)
-  {
+  unsigned int pack_velocity(const Point3 &vel, float maxSpeed) {
     unsigned int packed = 0;
 
     float speed = length(vel);
@@ -245,7 +233,7 @@ namespace netutils
       packed |= (1 << 29);
 
     unsigned int speedRange = (1 << 11) - 1;
-    unsigned int packedSpeed = (unsigned int)((speed / maxSpeed) * float(speedRange));
+    unsigned int packedSpeed = (unsigned int) ((speed / maxSpeed) * float(speedRange));
     if (packedSpeed > speedRange)
       packedSpeed = speedRange;
 
@@ -253,8 +241,8 @@ namespace netutils
 
     unsigned int axisRange = (1 << 9) - 1;
 
-    unsigned int x = (unsigned)floorf(fabsf(axis.x) * axisRange);
-    unsigned int y = (unsigned)floorf(fabsf(axis.y) * axisRange);
+    unsigned int x = (unsigned) floorf(fabsf(axis.x) * axisRange);
+    unsigned int y = (unsigned) floorf(fabsf(axis.y) * axisRange);
     if (x > axisRange)
       x = axisRange;
     if (y > axisRange)
@@ -266,12 +254,10 @@ namespace netutils
     return packed;
   }
 
-  void unpack_velocity(unsigned int packed, Point3 &vel, float maxSpeed)
-  {
+  void unpack_velocity(unsigned int packed, Point3 &vel, float maxSpeed) {
     if (!packed)
       vel.zero();
-    else
-    {
+    else {
       unsigned int axisRange = (1 << 9) - 1;
 
       vel.x = float((packed >> 9) & axisRange) / float(axisRange);
@@ -294,20 +280,18 @@ namespace netutils
   }
 
 #if defined(_MSC_VER) || defined(__clang__)
-  #if !(_TARGET_APPLE || _TARGET_C3 || defined(__e2k__)) || (_TARGET_PC_MACOSX && !_TARGET_SIMD_NEON)
+#if !(_TARGET_APPLE || _TARGET_C3 || defined(__e2k__)) || (_TARGET_PC_MACOSX && !_TARGET_SIMD_NEON)
 #pragma float_control(pop)
 #endif
 #endif
 
-  void write_vector(BitStream &bs, const Point3 &pos, float max)
-  {
+  void write_vector(danet::BitStream &bs, const Point3 &pos, float max) {
     bs.Write(PACK_S16(pos.x, max));
     bs.Write(PACK_S16(pos.y, max));
     bs.Write(PACK_S16(pos.z, max));
   }
 
-  bool read_vector(const BitStream &bs, Point3 &pos, float max)
-  {
+  bool read_vector(const danet::BitStream &bs, Point3 &pos, float max) {
     int16_t x = 0;
     int16_t y = 0;
     int16_t z = 0;
@@ -315,44 +299,36 @@ namespace netutils
     done &= bs.Read(y);
     done &= bs.Read(z);
     if (done)
-      pos.set(netutils::UNPACKS<int16_t>(x, max), netutils::UNPACKS<int16_t>(y, max), netutils::UNPACKS<int16_t>(z, max));
+      pos.set(netutils::UNPACKS<int16_t>(x, max), netutils::UNPACKS<int16_t>(y, max),
+              netutils::UNPACKS<int16_t>(z, max));
 
     return done;
   }
 
-  void write_float(BitStream &bs, float val, const FloatSerializeProps &props)
-  {
-    if (props.sign)
-    {
+  void write_float(danet::BitStream &bs, float val, const FloatSerializeProps &props) {
+    if (props.sign) {
       bs.Write(val < 0.f);
       val = fabs(val);
     }
 
-    if (val < props.quantizeLimit)
-    {
+    if (val < props.quantizeLimit) {
       bs.Write(true);
       if (props.rough)
         bs.Write(PACK_U8(val, props.quantizeLimit));
       else
         bs.WriteCompressed(PACK_U16(val, props.quantizeLimit));
-    }
-    else
-    {
+    } else {
       bs.Write(false);
-      if (props.rough)
-      {
+      if (props.rough) {
         HalfFloatSimplePositive f = val;
         bs.WriteCompressed(f.val);
-      }
-      else
-      {
+      } else {
         bs.Write(val);
       }
     }
   }
 
-  bool read_float(const BitStream &bs, float &val, const FloatSerializeProps &props)
-  {
+  bool read_float(const danet::BitStream &bs, float &val, const FloatSerializeProps &props) {
     bool done = true;
 
     bool neg = false;
@@ -362,33 +338,24 @@ namespace netutils
     bool quantize = false;
     done &= bs.Read(quantize);
 
-    if (quantize)
-    {
-      if (props.rough)
-      {
+    if (quantize) {
+      if (props.rough) {
         uint8_t ui8 = 0;
         done &= bs.Read(ui8);
         if (done)
           val = netutils::UNPACK<uint8_t>(ui8, props.quantizeLimit);
-      }
-      else
-      {
+      } else {
         uint16_t ui16 = 0;
         done &= bs.ReadCompressed(ui16);
         if (done)
           val = netutils::UNPACK<uint16_t>(ui16, props.quantizeLimit);
       }
-    }
-    else
-    {
-      if (props.rough)
-      {
+    } else {
+      if (props.rough) {
         HalfFloatSimplePositive f;
         done &= bs.ReadCompressed(f.val);
         val = f;
-      }
-      else
-      {
+      } else {
         done &= bs.Read(val);
       }
     }
@@ -399,15 +366,13 @@ namespace netutils
     return done;
   }
 
-  void write_dir(BitStream &bs, const Point3 &dir)
-  {
+  void write_dir(danet::BitStream &bs, const Point3 &dir) {
     uint8_t dirPacked[] = {0, 0, 0};
     netutils::pack_dir(dir, dirPacked);
     bs.WriteArray(dirPacked, countof(dirPacked));
   }
 
-  bool read_dir(const BitStream &bs, Point3 &dir)
-  {
+  bool read_dir(const danet::BitStream &bs, Point3 &dir) {
     uint8_t dirPacked[] = {0, 0, 0};
     bool done = bs.ReadArray(dirPacked, countof(dirPacked));
     if (done)
@@ -415,10 +380,9 @@ namespace netutils
     return done;
   }
 
-  void write_idx(BitStream &bs, int idx) { bs.WriteCompressed(uint16_t(clamp(idx + 1, 0, 0xFFFF))); }
+  void write_idx(danet::BitStream &bs, int idx) { bs.WriteCompressed(uint16_t(clamp(idx + 1, 0, 0xFFFF))); }
 
-  bool read_idx(const BitStream &bs, int &idx)
-  {
+  bool read_idx(const danet::BitStream &bs, int &idx) {
     uint16_t ui = 0;
     bool done = bs.ReadCompressed(ui);
     if (done)
@@ -426,38 +390,33 @@ namespace netutils
     return done;
   }
 
-  void write_bitarray(BitStream &bs, const Bitarray &ba)
-  {
+  void write_bitarray(danet::BitStream &bs, const Bitarray &ba) {
     uint32_t sizeBits = ba.size();
     bs.WriteCompressed(sizeBits);
     if (sizeBits > 0)
-      bs.WriteBits((const uint8_t *)ba.getPtr(), sizeBits);
+      bs.WriteBits((const uint8_t *) ba.getPtr(), sizeBits);
   }
 
-  bool read_bitarray(const BitStream &bs, Bitarray &ba)
-  {
+  bool read_bitarray(const danet::BitStream &bs, Bitarray &ba) {
     uint32_t sizeBits = 0;
     bool done = bs.ReadCompressed(sizeBits);
 
-    if (done && sizeBits > 0)
-    {
+    if (done && sizeBits > 0) {
       std::vector<uint8_t> readBuffer{};
       readBuffer.resize(BITS_TO_BYTES_WORD_ALIGNED(sizeBits));
       done &= bs.ReadBits(readBuffer.data(), sizeBits);
       if (done)
-        ba.setPtr((const Bitarraybits *)readBuffer.data(), sizeBits);
+        ba.setPtr((const Bitarraybits *) readBuffer.data(), sizeBits);
     }
 
     return done;
   }
 
-  void write_euler(BitStream &bs, const Point3 &angles)
-  {
+  void write_euler(danet::BitStream &bs, const Point3 &angles) {
     bs.Write(pack_euler({clamp(angles.x, -PI, PI), clamp(angles.y, -PI, PI), clamp(angles.z, -HALFPI, HALFPI)}));
   }
 
-  bool read_euler(const BitStream &bs, Point3 &angles)
-  {
+  bool read_euler(const danet::BitStream &bs, Point3 &angles) {
     uint32_t packedAngles = 0;
     bool done = bs.Read(packedAngles);
     if (done)

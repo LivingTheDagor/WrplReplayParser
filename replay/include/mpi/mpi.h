@@ -72,7 +72,7 @@ namespace mpi // message passing interface
 
 #define MPI_HEADER_SIZE (sizeof(mpi::ObjectID) + sizeof(mpi::MessageID) + sizeof(mpi::SystemID))
 
-  inline void write_object_ext_uid(BitStream &bs, ObjectID oid, ObjectExtUID ext) {
+  inline void write_object_ext_uid(danet::BitStream &bs, ObjectID oid, ObjectExtUID ext) {
     // Because MPI lib is used only in WT-based games, first 11 bits are reserved for
     // index. In case mpiObjectExtUID is set, we can ignore the index, so we set
     // all 11 bits to 1
@@ -90,7 +90,7 @@ namespace mpi // message passing interface
     }
   }
 
-  inline bool read_object_ext_uid(const BitStream &bs, ObjectID &oid, ObjectExtUID &ext) {
+  inline bool read_object_ext_uid(const danet::BitStream &bs, ObjectID &oid, ObjectExtUID &ext) {
     // see write_object_ext_uid
     constexpr auto EXT_MASK = ObjectID(0x7FFu);
     ext = INVALID_OBJECT_EXT_UID;
@@ -104,7 +104,7 @@ namespace mpi // message passing interface
     return true;
   }
 
-  inline void write_object_ext_uid(BitStream &bs, const IObject *obj) {
+  inline void write_object_ext_uid(danet::BitStream &bs, const IObject *obj) {
     return write_object_ext_uid(bs, obj->getUID(), obj->mpiObjectExtUID);
   }
 
@@ -129,7 +129,7 @@ namespace mpi // message passing interface
     MessageID id; // identification of this message
     mutable bool delete_message = true; // do we delete message after dispatch + sendto? only to be used if the message
                                         // now has another object managing its lifetime
-    BitStream payload; // serialized parameters for this message
+    danet::BitStream payload; // serialized parameters for this message
 
     void setFieldSize(BitSize_t sz) { idFieldSerializer.setFieldSize(sz); }
 
@@ -142,7 +142,7 @@ namespace mpi // message passing interface
 
     void checkFieldSize(uint8_t index, BitSize_t size) { idFieldSerializer.checkFieldSize(index, size); }
 
-    inline bool parse(const eastl::function<bool(const BitStream *, uint32_t)> &cb);
+    inline bool parse(const eastl::function<bool(const danet::BitStream *, uint32_t)> &cb);
 
   private:
     IdFieldSerializer32 idFieldSerializer;
@@ -161,14 +161,14 @@ namespace mpi // message passing interface
       obj = rhs.obj;
       id = rhs.id;
       payload.~BitStream();
-      new (&payload) BitStream(rhs.payload.GetData(), rhs.payload.GetNumberOfBytesUsed(), true);
+      new (&payload) danet::BitStream(rhs.payload.GetData(), rhs.payload.GetNumberOfBytesUsed(), true);
       idFieldSerializer = rhs.idFieldSerializer;
       return *this;
     }
 
     void destroy() { this->~Message(); }
 
-    void serialize(BitStream &bs) const // full serialize of this message
+    void serialize(danet::BitStream &bs) const // full serialize of this message
     {
       write_object_ext_uid(bs, obj->getUID(), obj->mpiObjectExtUID);
       bs.Write(id);
@@ -196,7 +196,7 @@ namespace mpi // message passing interface
     virtual bool readPayload(ParserState *state) { return true; }
   };
 
-  Message *dispatch(const BitStream &bs, ParserState *state,
+  Message *dispatch(const danet::BitStream &bs, ParserState *state,
                     bool copy_payload = false); // assemble message by BitStream. Note : message should be
   // destroyed after use (i.e. msg->destroy())
   void sendto(Message *m, SystemID receiver); // send message, also apply if need to
@@ -208,7 +208,7 @@ namespace mpi // message passing interface
   IObject *dispatch_object(mpi::ObjectID oid, ObjectExtUID ext_uid, ParserState *state);
 
 
-  inline bool Message::parse(const eastl::function<bool(const BitStream *, uint32_t)> &cb) {
+  inline bool Message::parse(const eastl::function<bool(const danet::BitStream *, uint32_t)> &cb) {
     ZoneScoped;
     uint32_t fields = this->readFieldsSizeAndFlag();
     if (fields == 0) /* no data was serialized in a message that expects data*/

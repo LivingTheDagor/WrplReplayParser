@@ -22,14 +22,14 @@ namespace mpi {
 
     // 0xF15F body is byte aligned raw float32, so it is read by offset, not by bits.
     template<typename T>
-    bool raw_at(const BitStream &bs, uint32_t offset, T &out) {
+    bool raw_at(const danet::BitStream &bs, uint32_t offset, T &out) {
       bs.SetReadOffset(BYTES_TO_BITS(offset));
       return bs.Read(out);
     }
 
     // netutils::read_idx is a plain LEB128, not the danet compressed form. Its
     // width shifts everything after it, which is why the body has no fixed layout.
-    bool read_uleb(const BitStream &bs, uint32_t offset, uint32_t &out, uint32_t &size) {
+    bool read_uleb(const danet::BitStream &bs, uint32_t offset, uint32_t &out, uint32_t &size) {
       out = 0;
       size = 0;
       for (uint32_t i = 0; i < 5; ++i) {
@@ -45,7 +45,7 @@ namespace mpi {
       return false;
     }
 
-    bool raw_point3(const BitStream &bs, uint32_t offset, Point3 &out) {
+    bool raw_point3(const danet::BitStream &bs, uint32_t offset, Point3 &out) {
       float v[3]{};
       if (offset + sizeof(v) > bs.GetNumberOfBytesUsed())
         return false;
@@ -62,25 +62,24 @@ namespace mpi {
     // Closes a KineticHit and a Ricochet record.
     const netutils::FloatSerializeProps HIT_RATIO_PROPS{false, false, 1.f};
 
-    bool skip_float(const BitStream &bs, const netutils::FloatSerializeProps &props) {
+    bool skip_float(const danet::BitStream &bs, const netutils::FloatSerializeProps &props) {
       float v = 0.f;
       return netutils::read_float(bs, v, props);
     }
 
-    bool skip_dir(const BitStream &bs) {
+    bool skip_dir(const danet::BitStream &bs) {
       Point3 d{};
       return netutils::read_dir(bs, d);
     }
 
-    bool skip_bit(const BitStream &bs) {
+    bool skip_bit(const danet::BitStream &bs) {
       bool v = false;
       return bs.Read(v);
     }
   } // namespace
 
-  bool ProjectileKey::read(const BitStream *bs) {
-    return bs->Read(offender_oid) && bs->Read(generation) && bs->Read(projectile_id) &&
-           bs->Read(tail);
+  bool ProjectileKey::read(const danet::BitStream *bs) {
+    return bs->Read(offender_oid) && bs->Read(generation) && bs->Read(projectile_id) && bs->Read(tail);
   }
 
   // 0xF0E9 UnitHitEffects
@@ -91,13 +90,13 @@ namespace mpi {
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
     bool got_body = false;
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
       if (field_id != 1) {
         this->skipReadingField(idx);
         return true;
       }
-      BitStream body{};
+      danet::BitStream body{};
       if (!bs->Read(body))
         return false;
       if (!hit.projectile.read(&body))
@@ -146,7 +145,7 @@ namespace mpi {
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
     bool got_body = false;
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
       // Fields 1 and 3 both carry the offender oid.
       if (field_id == 1 || field_id == 3)
@@ -155,7 +154,7 @@ namespace mpi {
         this->skipReadingField(idx);
         return true;
       }
-      BitStream body{};
+      danet::BitStream body{};
       if (!bs->Read(body))
         return false;
       uint32_t type = 0, type_size = 0;
@@ -194,7 +193,7 @@ namespace mpi {
     damage.time_ms = state->curr_time_ms;
     damage.crit = this->id == MPI_PACKETS::UnitOnEffectiveCritHit;
     const bool is_crit = damage.crit;
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
       switch (field_id) {
         case 1: return damage.projectile.read(bs);
@@ -243,7 +242,7 @@ namespace mpi {
     uint8_t field_no = 0;
     outcome.time_ms = state->curr_time_ms;
     bool got_body = false;
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
       if (field_id == 1)
         return bs->Read(outcome.offender_oid);
@@ -253,7 +252,7 @@ namespace mpi {
         this->skipReadingField(idx);
         return true;
       }
-      BitStream body{};
+      danet::BitStream body{};
       if (!bs->Read(body))
         return false;
       got_body = true;
@@ -264,8 +263,8 @@ namespace mpi {
       for (uint16_t i = 0; ok && i < n16; ++i) { // ProjectileEvent
         uint8_t type = 0, unused = 0;
         ok = body.Read(type) && body.Read(unused);
-        ok &= skip_float(body, POS_PROPS) && skip_float(body, POS_PROPS) &&
-             skip_float(body, POS_PROPS) && skip_dir(body);
+        ok &=
+          skip_float(body, POS_PROPS) && skip_float(body, POS_PROPS) && skip_float(body, POS_PROPS) && skip_dir(body);
         if (ok && type == 6)
           ok = skip_float(body, EXPLOSION_RADIUS_PROPS);
       }
@@ -288,8 +287,7 @@ namespace mpi {
       for (uint8_t i = 0; ok && i < n8; ++i) { // Ricochet
         // No leading flag, and the same closing float as a KineticHit.
         ok = body.ReadZigZag(part) && skip_dir(body) && skip_float(body, ANGLE_PROPS) &&
-             skip_float(body, ANGLE_PROPS) && skip_float(body, ANGLE_PROPS) &&
-             skip_float(body, HIT_RATIO_PROPS);
+             skip_float(body, ANGLE_PROPS) && skip_float(body, ANGLE_PROPS) && skip_float(body, HIT_RATIO_PROPS);
         if (ok)
           outcome.ricochet_parts.push_back(part);
       }
@@ -304,8 +302,7 @@ namespace mpi {
         ok = body.Read(present);
         if (ok && present) {
           uint8_t nibble = 0, pair = 0;
-          ok = skip_bit(body) && skip_bit(body) && body.ReadBits(&nibble, 4) &&
-               body.ReadBits(&pair, 2);
+          ok = skip_bit(body) && skip_bit(body) && body.ReadBits(&nibble, 4) && body.ReadBits(&pair, 2);
           if (ok)
             outcome.changed_parts.push_back(i);
         }
@@ -313,9 +310,8 @@ namespace mpi {
 
       ok &= body.ReadCompressed(n16);
       for (uint16_t i = 0; ok && i < n16; ++i) { // FireSpawn
-        ok = body.ReadZigZag(part) && skip_float(body, POS_PROPS) &&
-             skip_float(body, POS_PROPS) && skip_float(body, POS_PROPS) &&
-             skip_float(body, FIRE_RADIUS_PROPS);
+        ok = body.ReadZigZag(part) && skip_float(body, POS_PROPS) && skip_float(body, POS_PROPS) &&
+             skip_float(body, POS_PROPS) && skip_float(body, FIRE_RADIUS_PROPS);
         if (ok)
           outcome.fire_parts.push_back(part);
       }
@@ -333,7 +329,7 @@ namespace mpi {
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
     explosion.time_ms = state->curr_time_ms;
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
       if (field_id == 1)
         return explosion.projectile.read(bs);
@@ -356,7 +352,7 @@ namespace mpi {
     direction.time_ms = state->curr_time_ms;
     uint8_t packed[3]{};
     uint8_t got = 0;
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
       if (field_id >= 1 && field_id <= 3) {
         if (!bs->Read(packed[field_id - 1]))
@@ -379,7 +375,7 @@ namespace mpi {
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
     ammo.time_ms = state->curr_time_ms;
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
       switch (field_id) {
         case 1: return bs->Read(ammo.barrel);
@@ -406,7 +402,7 @@ namespace mpi {
       default: shot.kind = ShotFireStop; break;
     }
     const bool is_single = shot.kind == ShotSingle;
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
       // Single shot has three 8 bit fields, all zero: it only carries the fact.
       // The weapon comes from the 0xF01B in the same millisecond.

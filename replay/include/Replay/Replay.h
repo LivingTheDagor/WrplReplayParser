@@ -320,7 +320,7 @@ class ReplayWriter {
   std::span<uint8_t> getCompressedData(std::vector<uint8_t> &storage);
   std::span<uint8_t> getData() { return {(uint8_t *) base_cb.data(), (size_t) base_cb.size()}; }
 
-  BitStream serializePacket(const ReplayPacket &pkt);
+  danet::BitStream serializePacket(const ReplayPacket &pkt);
 
   uint32_t calculatePacketSize(const ReplayPacket &pkt, bool &write_timestamp) {
     write_timestamp = pkt.timestamp_ms != curr_time_ms;
@@ -346,7 +346,7 @@ public:
     ReplayPacket pkt;
     pkt.timestamp_ms = time_ms;
     pkt.type = type;
-    pkt.stream = BitStream{(uint8_t *) data, size, false};
+    pkt.stream = danet::BitStream{(uint8_t *) data, size, false};
     write(pkt);
   }
 

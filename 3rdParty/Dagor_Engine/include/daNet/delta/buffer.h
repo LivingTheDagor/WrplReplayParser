@@ -6,19 +6,16 @@
 
 #include <daNet/bitStream.h>
 
-namespace net
-{
+namespace net {
 
-  namespace delta
-  {
+  namespace delta {
 
-    class Buffer
-    {
+    class Buffer {
       void incrementVersion();
       void setFullVersion();
 
     public:
-      Buffer(IMemAlloc * allocator);
+      Buffer(IMemAlloc *allocator);
 
       void reset();
 
@@ -26,18 +23,18 @@ namespace net
       uint8_t getConfirmedVersion() const { return confirmedVersion; }
       void setConfirmedVersion(uint8_t vers) { confirmedVersion = vers; }
 
-      void setBase(const BitStream &data);
-      void setBase(BitStream &&data);
+      void setBase(const danet::BitStream &data);
+      void setBase(danet::BitStream &&data);
 
-      BitStream getDiff(const BitStream &new_ver) const;
-      BitStream applyPatch(const BitStream &delta);
+      danet::BitStream getDiff(const danet::BitStream &new_ver) const;
+      danet::BitStream applyPatch(const danet::BitStream &delta);
 
       // check version: full packet make reset and need apply, different version skip - return false.
       bool checkVersionAndNeedApply(uint8_t incomming_version);
 
     private:
-      BitStream base;
-      IMemAlloc * allocator;
+      danet::BitStream base;
+      IMemAlloc *allocator;
       uint8_t version;
       uint8_t confirmedVersion;
     };

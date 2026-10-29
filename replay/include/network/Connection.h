@@ -94,23 +94,24 @@ namespace net {
   class Connection {
   public:
     explicit Connection(ecs::EntityManager *mgr) : objectKeysRepl(&this->objectKeysLocal) { this->mgr = mgr; }
-    ecs::EntityId deserializeConstruction(const BitStream &bs, ecs::entity_id_t serverId, uint32_t sz, float cratio);
-    bool readConstructionPacket(const BitStream &bs, float compression_ratio);
-    const char *deserializeTemplate(const BitStream &bs, ecs::template_t &templateId, bool &tpl_deserialized);
-    bool syncReadTemplate(const BitStream &bs, ecs::template_t templateId);
-    bool syncReadComponent(ecs::component_index_t serverCidx, const BitStream &bs, ecs::template_t templateId,
+    ecs::EntityId deserializeConstruction(const danet::BitStream &bs, ecs::entity_id_t serverId, uint32_t sz,
+                                          float cratio);
+    bool readConstructionPacket(const danet::BitStream &bs, float compression_ratio);
+    const char *deserializeTemplate(const danet::BitStream &bs, ecs::template_t &templateId, bool &tpl_deserialized);
+    bool syncReadTemplate(const danet::BitStream &bs, ecs::template_t templateId);
+    bool syncReadComponent(ecs::component_index_t serverCidx, const danet::BitStream &bs, ecs::template_t templateId,
                            bool error);
-    bool deserializeComponentConstruction(ecs::template_t server_template, const BitStream &bs,
+    bool deserializeComponentConstruction(ecs::template_t server_template, const danet::BitStream &bs,
                                           ecs::ComponentsInitializer &init, int &out_ncomp);
-    bool readDestructionPacket(const BitStream &bs);
-    bool readReplicationPacket(const BitStream &bs);
+    bool readDestructionPacket(const danet::BitStream &bs);
+    bool readReplicationPacket(const danet::BitStream &bs);
 
-    bool serializeComponentReplication(ecs::EntityId eid, const ecs::ComponentRef &attr, BitStream &bs);
-    bool deserializeComponentReplication(ecs::EntityId eid, const BitStream &bs);
+    bool serializeComponentReplication(ecs::EntityId eid, const ecs::ComponentRef &attr, danet::BitStream &bs);
+    bool deserializeComponentReplication(ecs::EntityId eid, const danet::BitStream &bs);
 
-    bool writeConstructionPacket(BitStream &bs, BitStream &tmpbs, std::vector<ecs::EntityId> &toWrite);
-    void serializeConstruction(ecs::EntityId eid, BitStream &bs, bool canSkipInitial = true);
-    void writeLastRecvdPacketAcks(BitStream &bs);
+    bool writeConstructionPacket(danet::BitStream &bs, danet::BitStream &tmpbs, std::vector<ecs::EntityId> &toWrite);
+    void serializeConstruction(ecs::EntityId eid, danet::BitStream &bs, bool canSkipInitial = true);
+    void writeLastRecvdPacketAcks(danet::BitStream &bs);
 
   public:
     mutable InternedStringsRepl objectKeysRepl;
