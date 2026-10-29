@@ -129,6 +129,7 @@ void PyReplay::include(py::module_ &m) {
     .def_readwrite("snapshotPeriodSec", &ReplayHeader::snapshotPeriodSec)
     .def_readwrite("gameVersion", &ReplayHeader::gameVersion);
 
+  // Each step reads the next packet into the same ReplayPacket and gives None, so the loop makes no new objects.
   py::class_<IReplayReaderIterInto>(sub, "IReplayReaderIterInto")
     .def("__iter__", [](IReplayReaderIterInto &rdr) { return rdr; })
     .def("__next__", [](IReplayReaderIterInto &rdr) {

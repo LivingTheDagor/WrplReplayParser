@@ -6,8 +6,10 @@
 #include "network/CNetwork.h"
 #include "mpi/ObjectDispatcher.h"
 #include "mpi/GeneralObject.h"
+#include "mpi/LocalClientObject.h"
+#include "mpi/SensorStates.h"
 #include "Replay/Replay.h"
-#include "danet/delta/deltaCompression.h"
+#include "daNet/delta/deltaCompression.h"
 #ifndef _ECS_CODEGEN
 #include "tracy/Tracy.hpp"
 #endif
@@ -16,6 +18,7 @@
 #include "memory/dag_memBase.h"
 #include "StateRewinder.h"
 #include "mpi/Ballistics.h"
+#include <memory>
 namespace unit {
   class Unit;
 }
@@ -100,6 +103,10 @@ protected:
   // used by ballisitics loader as cache
   std::unordered_map<std::string, unit::BallisticParams> ballistics_cache;
   std::unordered_map<std::string, std::vector<unit::BulletSet>> bullet_set_cache;
+  // Units must outlive ECS entities: stores and recorded events reference them and
+  // their weapons even after the owner entity disappears. Declared before the
+  // entity manager so they also remain alive while it destroys its stores.
+  std::vector<std::unique_ptr<unit::Unit>> owned_units;
   friend unit::BallisticParams;
   friend unit::BulletSet;
 
@@ -114,6 +121,7 @@ protected:
   friend IObjectRewindState;
 
 public:
+  void ownUnit(unit::Unit *unit);
   template<class T, class... Args>
   T *_new(Args &&...args) {
     return allocator._new<T>(std::forward<Args>(args)...);
@@ -140,6 +148,7 @@ public:
   float sea_level = 0.f;
   net::CNetwork conn{this};
   mpi::GeneralObject main_dispatch{this};
+  mpi::LocalClientObject local_client{this};
   net_delta_t NetDelta{allocator.getMem()};
   std::pmr::vector<MPlayer> players{get_allocator()};
   ecs::EntityManager g_entity_mgr{this}; // this order is required as g_entity_mgr needs to be destroyed before players
@@ -161,6 +170,25 @@ public:
   std::pmr::vector<mpi::HitOutcome> HitOutcomes{get_allocator()};
   std::pmr::vector<mpi::AmmoEvent> AmmoEvents{get_allocator()};
   std::pmr::vector<mpi::ShotEvent> ShotEvents{get_allocator()};
+  /// Which of the event lists below the parse fills; set before LoadFromReader. The two sync lists cost the most
+  /// memory (a long ground battle: 1.6 M ground syncs), so they are off.
+  struct EventLists {
+    bool sensors = true, designations = true, seekers = true, controls = true, spots = true, cockpit = true,
+         spawns = true, rpms = true, ground_syncs = false, store_syncs = false;
+  } keep{};
+  std::pmr::vector<mpi::SensorEvent> SensorEvents{get_allocator()};
+  std::pmr::vector<mpi::DesignationEvent> DesignationEvents{get_allocator()};
+  std::pmr::vector<mpi::SeekerEvent> SeekerEvents{get_allocator()};
+  std::pmr::vector<mpi::ControlEvent> ControlEvents{get_allocator()};
+  std::pmr::vector<mpi::GroundSyncEvent> GroundSyncEvents{get_allocator()};
+  /// The weapons of GroundSyncEvents and their rounds; each event holds its range of them.
+  std::pmr::vector<mpi::GroundWeaponSync> GroundWeapons{get_allocator()};
+  std::pmr::vector<uint16_t> GroundRounds{get_allocator()};
+  std::pmr::vector<mpi::StoreSyncEvent> StoreSyncEvents{get_allocator()};
+  std::pmr::vector<mpi::SpotEvent> SpotEvents{get_allocator()};
+  std::pmr::vector<mpi::SpawnEvent> SpawnEvents{get_allocator()};
+  std::pmr::vector<mpi::CockpitEvent> CockpitEvents{get_allocator()};
+  std::pmr::vector<mpi::RpmEvent> RpmEvents{get_allocator()};
   // missionArea1 owns the ptrs
   std::pmr::vector<ObjectRewindState<MissionArea *, false, true> *> missionAreas1{get_allocator()};
   std::pmr::vector<ObjectRewindState<MissionArea *, false> *> missionAreas2{get_allocator()};

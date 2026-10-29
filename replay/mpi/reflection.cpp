@@ -1,7 +1,7 @@
 
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include <mpi/reflection.h>
 #include <idFieldSerializer.h>
 #include <math/dag_TMatrix.h>
@@ -285,7 +285,8 @@ namespace danet {
     G_STATIC_ASSERT(DANET_REFLECTION_MAX_VARS_PER_OBJECT <= IdFieldSerializer255::MAX_FIELDS_NUM);
 
     // read var indexes
-    idFieldSerializer.readFieldsIndex(bs);
+    if (!idFieldSerializer.readFieldsIndex(bs))
+      return false;
     ReflectionVarMeta *v = varList.head;
     {
       ZoneScopedN("ReflectableObject::varCollection");

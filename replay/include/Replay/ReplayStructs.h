@@ -1,12 +1,12 @@
 #pragma once
 #include "cstdint"
 #include "string"
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 
-constexpr uint32_t CURR_MAGIC = 0x00018c1c; // devserver version 0x00018c0a
+constexpr uint32_t CURR_MAGIC = 0x00018c1c;
 #pragma pack(push, 1)
 struct ReplayHeader {
-  uint32_t header;
+  uint32_t header; // always 0x1000ace5
   uint32_t magic; // changes each major version
   char level_path[128];
   char mission_file[260];

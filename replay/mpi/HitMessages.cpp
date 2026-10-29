@@ -1,6 +1,6 @@
 #include "math/dag_TMatrix.h"
 #include "math/dag_mathAng.h"
-#include "danet/dag_netUtils.h"
+#include "daNet/dag_netUtils.h"
 #include "state/ParserState.h"
 #include "mpi/GeneralObject.h"
 #include "Unit.h"
@@ -370,6 +370,29 @@ namespace mpi {
     if (got == 3)
       netutils::unpack_dir(packed, direction.world_dir);
     return valid && got == 3;
+  }
+
+  // 0xF037 UnitDetected
+
+  bool UnitDetectedMessage::readPayload(ParserState *state) {
+    uint8_t field_no = 0;
+    uint8_t seen = 0;
+    spot.time_ms = state->curr_time_ms;
+    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+      const uint8_t idx = field_no++;
+      switch (field_id) {
+        case 1: seen |= 1; return bs->Read(spot.spotter_id);
+        case 2: seen |= 2; return bs->Read(spot.spotted_id);
+        default: break;
+      }
+      this->skipReadingField(idx);
+      return true;
+    });
+    if (!valid || seen != 3)
+      return false;
+    spot.spotter = state->getUnitObj(spot.spotter_id);
+    spot.spotted = state->getUnitObj(spot.spotted_id);
+    return true;
   }
 
   // 0xF0BD UnitBulletRearm

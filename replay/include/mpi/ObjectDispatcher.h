@@ -20,6 +20,9 @@ namespace mpi {
     REFL = 0x20000000,
   };
 
+  // Keeps the MPI messages and reflection data that arrive before the ECS creates their unit entity. Each item
+  // starts with a uint32: the byte count of the rest, with MPI or REFL in the high bits. get_queued_data() gives
+  // them, but the parser does not apply them at this time.
   class MpiQueueObject : public danet::ReflectableObject {
     struct QueueData {
       ObjectID oid;

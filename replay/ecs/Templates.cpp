@@ -7,13 +7,13 @@ namespace ecs {
   Template *TemplateDB::getTemplate(const template_t t) {
     std::shared_lock lk(this->template_mtx);
     if (t < templates.size())
-      return &templates[t];
+      return templates[t].get();
     return nullptr;
   }
 
   Template * TemplateDB::getTemplateNoLock(template_t t) {
     if (t < templates.size())
-      return &templates[t];
+      return templates[t].get();
     return nullptr;
   }
 
@@ -54,7 +54,7 @@ namespace ecs {
     std::shared_lock lk(this->template_mtx);
     for(const auto &t : this->templates)
     {
-      printTempl(t, 0, *g_ecs_data->getComponentTypes(), *g_ecs_data->getDataComponents());
+      printTempl(*t, 0, *g_ecs_data->getComponentTypes(), *g_ecs_data->getDataComponents());
     }
   }
 
@@ -85,6 +85,8 @@ namespace ecs {
     output.push_back(input.substr(start));
   }
 
+  // A name such as "a+b" is a compound template. The parts become its parents, in name order, and the new template
+  // is added to the database under the full name.
   template_t TemplateDB::buildTemplateIdByName(const char *templ_name) {
     {
       std::shared_lock lk(this->template_mtx);
@@ -166,9 +168,12 @@ namespace ecs {
     return this->templates;
   }
 
+  // For a template that is in this database already, the parents of db are added after its parents, and a component
+  // of db replaces the default value of the same component.
   void TemplateDB::applyFrom(TemplateDB &&db) {
     //std::unique_lock lk(this->mtx); // lock not needed as only called during init
-    for(auto &&templ : db.templates) {
+    for(auto &&templ_ptr : db.templates) {
+      auto &templ = *templ_ptr;
       auto iter = this->template_lookup.find(templ.name);
       if (iter == this->template_lookup.end()) {
         this->AddTemplate(std::move(templ));
@@ -215,6 +220,8 @@ namespace ecs {
     this->parent = p;
   }
 
+  // The first value of a component wins. The components of a template come before the components of its parents,
+  // and the parents are read in order, depth first.
   void InstantiatedTemplate::RecurseTemplates(template_t p, TemplateDB &db) {
 
     auto tmpl = db.getTemplateNoLock(p);

@@ -40,6 +40,7 @@ inline std::string to_lower_hex_with_leading_zero_prefix(uint64_t battle_hex) {
   return oss.str();
 }
 
+// Deletes all the files in path when the directory exists.
 inline void prepare_replay_directory(const std::string &path) {
   if (!fs::exists(path)) {
     fs::create_directories(path);
@@ -119,6 +120,8 @@ inline void download_replay(downloadFileCtx *ctx, uint64_t battle_hex) {
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // Get 0000.wrpl and then only the odd parts. These hold the packet stream. The even parts are state
+    // snapshots, and the parser does not use them. A 404 is the end of the battle.
     if (index == 0) {
       index++;
     } else {

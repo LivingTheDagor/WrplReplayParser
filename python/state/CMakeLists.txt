@@ -2,7 +2,7 @@ add_library(PyState State.cpp)
 
 target_link_libraries(PyState
         pybind11::module
-        Python::Python
+        Python::Module
         INIT::INIT
         PyMpi::PyMpi
         PyReplay::PyReplay

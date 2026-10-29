@@ -65,7 +65,8 @@ void PyUnit::include(py::module_ &m) {
 
   py::enum_<UnitType>(unit, "UnitType")
     .value("TankType", UnitType::TankType)
-    .value("AircraftType", UnitType::AircraftType);
+    .value("AircraftType", UnitType::AircraftType)
+    .value("ShipType", UnitType::ShipType);
 
   py::class_<unit::weapon_data>(unit, "WeaponData")
     .def_readonly("launcher", &unit::weapon_data::launcher,
@@ -96,6 +97,8 @@ void PyUnit::include(py::module_ &m) {
   py::class_<unit::Aircraft, unit::Unit, std::unique_ptr<unit::Aircraft, py::nodelete>>(unit, "Aircraft");
 
   py::class_<unit::Tank, unit::Unit, std::unique_ptr<unit::Tank, py::nodelete>> t(unit, "Tank");
+
+  py::class_<unit::Ship, unit::Unit, std::unique_ptr<unit::Ship, py::nodelete>>(unit, "Ship");
 
   py::class_<unit::TurretData>(m, "TurretData")
     .def_readonly("rel", &unit::TurretData::rel)
@@ -188,6 +191,7 @@ void PyUnit::include(py::module_ &m) {
                   "if 0xFFFFFFFF, then that means the unit or its corpse exists somewhere in the world")
     .def("AsAircraft", &unit::Unit::AsAircraft)
     .def("AsTank", &unit::Unit::AsTank)
+    .def("AsShip", &unit::Unit::AsShip)
     .def_readonly("unit_name", &unit::Unit::raw_unit_name) // mr luxman decided to be lazy
     .def_readonly("unit_name_clean", &unit::Unit::unit_name)
     .def_readonly("player_internal_name", &unit::Unit::player_internal_name)

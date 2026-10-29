@@ -2,7 +2,7 @@ add_library(PyBitStream BitStream.cpp)
 
 target_link_libraries(PyBitStream;
         pybind11::module
-        Python::Python
+        Python::Module
         DAG_MATH::DAG_MATH # gives you access to blk path
         LZ4::LZ4
         LOGGER::LOGGER

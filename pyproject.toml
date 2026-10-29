@@ -1,0 +1,22 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=3.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "PyReplayParser"
+version = "0.0.1"
+description = "War Thunder .wrpl replay parser with Python bindings"
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+requires-python = "==3.12.*"
+
+[tool.scikit-build]
+cmake.version = ">=3.22"
+cmake.build-type = "Release"
+build.targets = ["PyReplayParser"]
+install.components = ["PyReplayParser"]
+sdist.exclude = ["build", "debugging", "experiment", "replay_inspector"]
+
+[tool.scikit-build.cmake.define]
+PARSER_ENABLE_PYTHON_BINDINGS = "ON"

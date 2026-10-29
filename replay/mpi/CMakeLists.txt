@@ -2,6 +2,7 @@ add_library(MPI STATIC
         mpi.cpp
         reflection.cpp
         ObjectDispatcher.cpp
+        LocalClientObject.cpp
         codegen/serializers.cpp
         serializers.cpp
         Replication.cpp

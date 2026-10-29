@@ -5,7 +5,7 @@
 #pragma once
 
 #include "ecs/EntityManager.h"
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include <idFieldSerializer.h>
 #include "utils.h"
 #include "dag_assert.h"
@@ -108,6 +108,7 @@ namespace mpi // message passing interface
     return write_object_ext_uid(bs, obj->getUID(), obj->mpiObjectExtUID);
   }
 
+// Not used. It does not compile ("uin8_t"), and its loop does not end.
 #define SWITCH_MESSAGE_INDEXES(fields)      \
   while (fields != 0) {                     \
     uin8_t curr_index = 0;                  \
@@ -208,8 +209,13 @@ namespace mpi // message passing interface
   IObject *dispatch_object(mpi::ObjectID oid, ObjectExtUID ext_uid, ParserState *state);
 
 
+  // Calls cb once for each field in the IdFieldSerializer32 mask, with the field id. A failed field is logged,
+  // and the parse continues. A debug build first checks the field table with IdFieldSerializer32::isValid.
   inline bool Message::parse(const eastl::function<bool(const BitStream *, uint32_t)> &cb) {
     ZoneScoped;
+#if LDAG_DBGLEVEL > 0
+    G_ASSERT_RETURN(IdFieldSerializer32::isValid(this->payload), false);
+#endif
     uint32_t fields = this->readFieldsSizeAndFlag();
     if (fields == 0) /* no data was serialized in a message that expects data*/
       return false;
@@ -219,7 +225,7 @@ namespace mpi // message passing interface
       uint8_t curr_field = 0;
       while (((fields >> curr_field) & 1) == 0)
         curr_field++; /* this just iterates over all the fields to find the next one*/
-      fields &= ~(1 << (curr_field & 0x1f)); /*this is done to remove previous (and maybe current????) field index*/
+      fields &= ~(1u << (curr_field & 0x1f)); /*this is done to remove previous (and maybe current????) field index*/
       /* dont ask me how it works, its probably compiler black magic that created this, or Gaijin did*/
       BitSize_t start_index = this->payload.GetReadOffset();
       bool ret = cb(&this->payload, curr_field);

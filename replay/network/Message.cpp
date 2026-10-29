@@ -1,4 +1,5 @@
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
+// The parser does not call MessageClass::init() or the message id sync at this time.
 
 // #include <generic/dag_sort.h>
 #include <network/message.h>

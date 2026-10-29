@@ -236,16 +236,11 @@ namespace ecs {
 
     inline ComponentTypeManager *getCTM(type_index_t index) {
       G_ASSERTF_RETURN(!(this->types.size() <= index || index < 0), nullptr, "Invalid {} index for getCTM", index);
-      auto &data = this->types[index];
-      if (data.ctm) {
-        return data.ctm;
-      }
-      data.ctm = data.create();
-      return data.ctm;
+      return this->types[index].ctm;
     }
 
     inline ComponentTypeManager *getCTM(component_type_t hash) {
-      auto idx = typesIndex[hash];
+      auto idx = findOr(hash, 0);
       if (idx) {
         return getCTM(idx);
       }
@@ -266,7 +261,7 @@ namespace ecs {
     }
 
     inline std::string_view getName(component_t hash) {
-      auto idx = typesIndex[hash];
+      auto idx = findOr(hash, 0);
       if (idx) {
         return getName(idx);
       }
@@ -285,7 +280,7 @@ namespace ecs {
     }
 
     inline ComponentInfo *getComponentData(component_type_t hash) {
-      auto idx = typesIndex[hash];
+      auto idx = findOr(hash, 0);
       if (idx) {
         return getComponentData(idx);
       }

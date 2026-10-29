@@ -29,6 +29,8 @@ py::class_<State> bind_rewind_state(py::module_ &m, const char *name) {
       "is not supported, wrap it in list() for that. Prefer channels() for bulk access.");
 }
 
+// A read-only numpy view of one field in each of count TS records, with a stride of sizeof(TS). It does not copy.
+// owner keeps the memory alive while the view exists.
 template<typename TS, typename Field>
 py::array channel_view(const TS *base, const Field *field, size_t count, const py::object &owner) {
   (void) base;

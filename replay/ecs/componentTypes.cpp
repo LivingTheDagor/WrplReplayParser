@@ -2,7 +2,7 @@
 #include "ecs//ComponentTypes/objectType.h"
 #include "ecs//ComponentTypes/arrayType.h"
 #include "ecs/ComponentTypes/listType.h"
-#include "ecs/ComponentTypes.h"
+#include "ecs/componentTypes.h"
 
 #include "ecs/baseIo.h"
 
@@ -67,6 +67,7 @@ namespace ecs {
     for (CompileComponentTypeRegister *start = CompileComponentTypeRegister::tail; start; start = start->next) {
       registerType(start->name, start->name_hash, start->size, start->io, start->ctm, start->dtm, start->flags);
     }
+    createAllCTMs();
   }
 
   ComponentTypes::~ComponentTypes() {

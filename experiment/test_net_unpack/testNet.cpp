@@ -1,4 +1,4 @@
-#include "danet/dag_netUtils.h"
+#include "daNet/dag_netUtils.h"
 #include "math/dag_Point3.h"
 #include "math/dag_Quat.h"
 

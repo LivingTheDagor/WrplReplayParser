@@ -68,6 +68,7 @@ public:
   { assert_failed(__FILE__, __LINE__, __FUNCTION__, expr_str, fmt __VA_OPT__(, ) __VA_ARGS__); }
 
 
+// When LDAG_DBGLEVEL is 0, G_ASSERT runs the expression but does not check it. G_CHECK checks in all builds.
 #if LDAG_DBGLEVEL > 0
 #define G_ASSERT(expression)            G_ASSERT_EX(expression, #expression)
 #define G_ASSERTF(expression, fmt, ...) G_ASSERTF_EX(expression, #expression, fmt __VA_OPT__(, ) __VA_ARGS__)
@@ -196,6 +197,8 @@ public:
 #define G_DEBUG_BREAK ((void) 0)
 #endif
 
+// This also removes the -DLDAG_DBGLEVEL of the build. In a file that includes this header, a later
+// "#if LDAG_DBGLEVEL > 0" is always false (fixed in #16).
 #undef LDAG_DBGLEVEL
 
 #define G_LOGERR_AND_DO(expression, action, ...) \

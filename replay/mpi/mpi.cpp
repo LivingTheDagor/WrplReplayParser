@@ -194,6 +194,7 @@ namespace mpi {
                                                                                : nullptr);
   }
 
+  // An MPI packet is: object id (see read_object_ext_uid), uint16 message id, then the payload from the next byte.
   Message *dispatch(const BitStream &bs, ParserState *state, bool copy_payload) {
     ZoneScoped;
     ObjectID oid;
@@ -225,10 +226,13 @@ namespace mpi {
 
   void sendto(Message *m, SystemID receiver) {
     ZoneScoped;
-    if (++curr_call_depth >= MAX_CALL_DEPTH) {
+    struct DepthGuard {
+      DepthGuard() { ++curr_call_depth; }
+      ~DepthGuard() { --curr_call_depth; }
+    } depth_guard;
+    if (curr_call_depth >= MAX_CALL_DEPTH) {
       G_ASSERTF(0, "{} call depth is {}! Infinite recursion?!", __FUNCTION__, (int) curr_call_depth);
       // LOG("{} call depth is {}! Infinite recursion?!", __FUNCTION__, (int) curr_call_depth);
-      --curr_call_depth;
       return;
     }
 
@@ -240,7 +244,6 @@ namespace mpi {
       for (IMessageListener *l = message_listeners; l; l = l->next) // in reality, only one IMessageListener
         if (m->isApplicable(l))
           l->receiveMpiMessage(m, receiver);
-    --curr_call_depth;
   }
 
   void register_listener(IMessageListener *l) {

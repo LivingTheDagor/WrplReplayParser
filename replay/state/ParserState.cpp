@@ -3,6 +3,7 @@
 #include "mpi/PositionSync.h"
 #include "utils.h"
 #include "ioSys/dag_dataBlock.h"
+#include "Unit.h"
 
 namespace {
   // warthunder offsets all y offsets by the sea level. on most maps, this is 0, but some, like Pradesh, have a difference (last seen as 920)
@@ -36,6 +37,9 @@ bool ChatMessage::FromBS(BitStream &bs) {
 ParserState::ParserState(uint32_t player_count) {
   initialize(player_count);
 }
+void ParserState::ownUnit(unit::Unit *unit) {
+  owned_units.emplace_back(unit);
+}
 ParserState::ParserState(IReplay *replay) {
   auto header = replay->getHeader();
   if (!header)
@@ -46,6 +50,7 @@ ParserState::ParserState(IReplay *replay) {
 void ParserState::initialize(uint32_t player_count) {
   G_ASSERT(this->players.size() == 0);
   this->players.reserve(player_count);
+  // A player object id is object kind 14 (0xE) above bit 11, and the player index in the low 11 bits.
   for (size_t i = 0; i < player_count; i++) {
     this->players.emplace_back(this, (mpi::ObjectID)((0xe<<0xb)+i));
   }
@@ -99,6 +104,8 @@ private:
 
 };
 
+// All state changes in one millisecond go into one rewind event. The first packet with a later time
+// closes the event of the time before it.
 void ParserState::beforePacket(ReplayPacket &pkt) {
   if (pkt.timestamp_ms > this->state_update_start_time_ms) {
     if (!this->curr_ms_rewind_refs.empty()) {
@@ -116,6 +123,7 @@ void ParserState::beforePacket(ReplayPacket &pkt) {
   }
 }
 
+// UID 0x7FF means no unit.
 ecs::EntityId ParserState::getUnitEid(uint16_t uid) const {
   uid &= 0x7FF;
   if (uid == 0x7FF || uid >= this->uid_lookup.size()) {
@@ -158,6 +166,7 @@ void ParserState::recordTeamSpawnSide(int team, const std::string &mission_name)
   if ((observed_sides & spawn_side_mask) != 0)
     return;
 
+  // A team seen on the two sides gets spawn_side 0.
   observed_sides |= spawn_side_mask;
   teams[team].spawn_side = observed_sides == spawn_side_mask ? spawn_side : 0;
 }
@@ -197,7 +206,11 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       break;
     }
     case ReplayPacketType::AircraftSmall: {
-      FMSync(*this, pkt.stream);
+      if (!FMSync(*this, pkt.stream)) {
+        LOGE("Failed to parse aircraft packet at {} ms ({} bits unread)", pkt.timestamp_ms,
+             pkt.stream.GetNumberOfUnreadBits());
+        return false;
+      }
       break;
     }
     case ReplayPacketType::Chat: {

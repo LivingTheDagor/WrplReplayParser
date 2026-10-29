@@ -1,7 +1,8 @@
 #include "Replay/Replay.h"
 #include "filesystem"
 #include "dag_assert.h"
-#include "danet/daNetTypes.h"
+#include "Logger.h"
+#include "daNet/daNetTypes.h"
 
 std::string packet_names[]{"End", "Start", "Aircraft", "Chat", "MPI", "NextSegment", "ECS", "Snapshot", "ECS_Msg_Sync"};
 
@@ -133,13 +134,19 @@ DataBlock *Replay::getFooterBlk() {
     }                           \
   }
 
+// File layout: ReplayHeader, settings BLK (settings_blk_size bytes), zstd packet stream, footer BLK at
+// footer_blk_offset. When footer_blk_offset is 0, the packet stream goes to the end of the file.
 void Replay::load() {
   ZoneScopedN("Replay::load");
   auto file_size = this->Data.getRemainingSize(0);
   BAD_REPLAY(file_size != -1);
   BAD_REPLAY(this->Data.ReadInto(this->header, 0));
   BAD_REPLAY(this->header.header == 0x1000ace5);
-  BAD_REPLAY(this->header.magic == CURR_MAGIC);
+  if (this->header.magic != CURR_MAGIC) {
+    LOGE("Unsupported replay version {:#x}, this parser reads version {:#x}", this->header.magic, CURR_MAGIC);
+    is_valid = false;
+    return;
+  }
   zstd_offs = sizeof(ReplayHeader) + this->header.settings_blk_size;
 
   if (this->header.settings_blk_size) {
@@ -219,6 +226,7 @@ ServerReplay::ServerReplay(const std::string &b_path) {
   } else {
     EXCEPTION("Invalid ServerReplay, unable to find 0000.wrpl in supposed directory {}", path.string());
   }
+  // The packet stream is 0000.wrpl, then the odd parts. The even parts after 0000 hold state snapshots.
   for (int i = 1; i > 0; i += 2) {
     if (auto p = file_exists(fmt::format("{:0>4}.wrpl", i), files); !p.empty()) {
       repl_paths.emplace_back(p);
@@ -279,6 +287,7 @@ void ReplayWriter<streamWrite>::write(const ReplayPacket &pkt) {
   writePacketSize(cb, this->calculatePacketSize(pkt, write_timestamp));
   temp.packet_type = static_cast<uint16_t>(pkt.type);
   if (!write_timestamp) {
+    // 0x10 in the type: the packet has no time and uses the time of the packet before it.
     temp.packet_type |= 0x10;
     cb.writeObj(temp.packet_type);
   } else {

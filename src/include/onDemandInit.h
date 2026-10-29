@@ -22,16 +22,18 @@ public:
     new (obj) T(std::forward<Args>(args)...);
   }
 
-  bool init_state() { return initialized; }
+  bool init_state() const { return initialized; }
 
   ~OnDemandInit() {
     ZoneScoped;
     if (initialized)
       reinterpret_cast<T *>(obj)->~T();
+    initialized = false;
   }
 
 private:
   T *getPtr() const {
+    // When LDAG_DBGLEVEL is 0, G_ASSERT does not stop. Use init_state() first if the object can be missing.
     G_ASSERT(initialized == true);
     return (T *) &obj;
   }

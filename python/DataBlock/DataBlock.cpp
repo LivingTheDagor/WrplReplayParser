@@ -28,6 +28,7 @@ struct DataBlockRWObj : DataBlockRW {
 
 using namespace pybind11::literals;
 
+// A name that occurs more than one time in a block becomes a list of its values, in block order.
 void addObjectImpl(py::dict &dict, py::object obj, const std::string &name) {
   if (dict.contains(name)) {
     py::object v = dict[name.c_str()]; // If operator[] isn't available, use .attr("get")

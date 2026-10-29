@@ -127,6 +127,7 @@ py::object castData(ecs::component_type_t hash, const void *data) {
   if (lookup != cast_to_py_types.end()) {
     return lookup->second(data);
   }
+  // A type with no Python cast comes back as InvalidData that holds the raw bytes.
   auto name = ecs::g_ecs_data->getComponentTypes()->getName(hash);
   auto sz = ecs::g_ecs_data->getComponentTypes()->getComponentData(hash)->size;
   return py::cast(std::make_unique<InvalidData>(name, std::span<uint8_t>((uint8_t *) data, sz)));

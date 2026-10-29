@@ -24,7 +24,8 @@ MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
   IdFieldSerializer255 serializer255{};
   BitSize_t end;
   uint32_t count = serializer255.readFieldsSizeAndCount(bs, end);
-  G_ASSERT(serializer255.readFieldsIndex(bs));
+  if (!serializer255.readFieldsIndex(bs))
+    EXCEPTION("Invalid replication field table");
   auto local_44 = bs.GetReadOffset();
   // LOGE("Creating Zone");
   uint8_t zone_id = 0;
@@ -56,7 +57,9 @@ MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
       }
       default: EXCEPTION("");
     }
-    G_ASSERT(bs.GetReadOffset() - start_size == serializer255.getFieldSize(i));
+    if (bs.GetReadOffset() - start_size != serializer255.getFieldSize(i))
+      EXCEPTION("Replication field {} read {} bits, its size is {}", serializer255.getFieldId(i),
+                bs.GetReadOffset() - start_size, serializer255.getFieldSize(i));
 
     // LOGE("{}; data: {}", serializer255.getFieldId(i), FormatHexToStream(data).str());
   }
@@ -111,6 +114,8 @@ MissionZone *create_zone(BitStream &bs, uint8_t zone_type, ParserState *state) {
   return *state->Zones[zone_id]->curr();
 }
 
+// The class id is the registration index, and the registrations run in this order. The game sorts its classes by
+// name (normalizeReplication), but the parser does not call it, so keep this list in name order.
 IMPLEMENT_REPLICATION(Airfield) // 0
 
 IMPLEMENT_REPLICATION(BombingZone) // 1
@@ -170,7 +175,8 @@ danet::ReplicatedObject *BombingZone::createReplicatedObject(BitStream &bs, Pars
   IdFieldSerializer255 serializer255{};
   BitSize_t end;
   auto count = serializer255.readFieldsSizeAndCount(bs, end);
-  G_ASSERT(serializer255.readFieldsIndex(bs));
+  if (!serializer255.readFieldsIndex(bs))
+    EXCEPTION("Invalid replication field table");
   for (uint16_t i = 0; i < count; i++) {
     std::vector<char> data{};
     data.resize(BITS_TO_BYTES(serializer255.getFieldSize(i)));
@@ -187,7 +193,8 @@ danet::ReplicatedObject *CaptureZone::createReplicatedObject(BitStream &bs, Pars
   IdFieldSerializer255 serializer255{};
   BitSize_t end;
   auto count = serializer255.readFieldsSizeAndCount(bs, end);
-  G_ASSERT(serializer255.readFieldsIndex(bs));
+  if (!serializer255.readFieldsIndex(bs))
+    EXCEPTION("Invalid replication field table");
   for (uint16_t i = 0; i < count; i++) {
     std::vector<char> data{};
     data.resize(BITS_TO_BYTES(serializer255.getFieldSize(i)));
@@ -241,7 +248,8 @@ danet::ReplicatedObject *MissionArea::createReplicatedObject(BitStream &bs, Pars
   IdFieldSerializer255 serializer255{};
   BitSize_t end;
   auto count = serializer255.readFieldsSizeAndCount(bs, end);
-  G_ASSERT(serializer255.readFieldsIndex(bs));
+  if (!serializer255.readFieldsIndex(bs))
+    EXCEPTION("Invalid replication field table");
   std::string v1;
   uint32_t index = 0;
   uint8_t v3 = 0;
@@ -283,8 +291,9 @@ danet::ReplicatedObject *MissionArea::createReplicatedObject(BitStream &bs, Pars
       }
       case 8: {
         std::vector<Point3> temp{};
-        uint32_t size;
-        bs.ReadCompressed(size);
+        uint32_t size = 0;
+        if (!bs.ReadCompressed(size) || size > serializer255.getFieldSize(i) / BYTES_TO_BITS(sizeof(Point3)))
+          EXCEPTION("Invalid MissionArea point count {}", size);
         temp.resize(size);
         for (auto &v: temp) {
           bs.Read(v);
@@ -293,7 +302,9 @@ danet::ReplicatedObject *MissionArea::createReplicatedObject(BitStream &bs, Pars
       }
       default: EXCEPTION("");
     }
-    G_ASSERT(bs.GetReadOffset() - start_size == serializer255.getFieldSize(i));
+    if (bs.GetReadOffset() - start_size != serializer255.getFieldSize(i))
+      EXCEPTION("Replication field {} read {} bits, its size is {}", serializer255.getFieldId(i),
+                bs.GetReadOffset() - start_size, serializer255.getFieldSize(i));
 
     // LOGE("{}; data: {}", serializer255.getFieldId(i), FormatHexToStream(data).str());
   }
@@ -324,7 +335,8 @@ danet::ReplicatedObject *MissionDrawing::createReplicatedObject(BitStream &bs, P
   IdFieldSerializer255 serializer255{};
   BitSize_t end;
   auto count = serializer255.readFieldsSizeAndCount(bs, end);
-  G_ASSERT(serializer255.readFieldsIndex(bs));
+  if (!serializer255.readFieldsIndex(bs))
+    EXCEPTION("Invalid replication field table");
   for (uint16_t i = 0; i < count; i++) {
     std::vector<char> data{};
     data.resize(BITS_TO_BYTES(serializer255.getFieldSize(i)));

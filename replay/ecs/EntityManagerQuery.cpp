@@ -872,14 +872,14 @@ namespace ecs {
   }
 
   void GState::sendEventImmediate(EntityId eid, Event &evt, EntityManager &mgr) {
-    std::shared_lock lk(this->archetypes.archetypes_mtx);
+    dagor::archetype_read_lock lk(this->archetypes.archetypes_mtx);
     G_ASSERTF(evt.getFlags() & EVCAST_UNICAST, "Tried to send entity {:#x} event {} that is not unicast",
               eid.get_handle(), evt.getName());
     return notifyESEventHandlers(eid, evt, mgr);
   }
 
   void GState::broadcastEventImmediate(Event &evt, EntityManager &mgr) {
-    std::shared_lock lk(this->archetypes.archetypes_mtx);
+    dagor::archetype_read_lock lk(this->archetypes.archetypes_mtx);
     G_ASSERTF(evt.getFlags() & EVCAST_BROADCAST, "Tried to send event {} that is not broadcast", evt.getName());
     auto esListIt = esEvents.find(evt.getType());
     if (esListIt != esEvents.end()) {
@@ -1049,6 +1049,8 @@ namespace ecs {
 
   QueryCbResult GState::performQueryStoppable(EntityManager &mgr, QueryId h, const stoppable_query_cb_t &fun,
                                               void *user_data) {
+    // another parse can add an archetype, which rebuilds the queries under the unique lock
+    dagor::archetype_read_lock lk(this->archetypes.archetypes_mtx);
     uint32_t index = h.index();
     auto &__restrict archDesc = archetypeQueries[index];
     if (!archDesc.getQueriesCount())
@@ -1104,6 +1106,8 @@ namespace ecs {
   }
 
   void GState::performQuery(EntityManager &mgr, QueryId h, const query_cb_t &fun, void *user_data) {
+    // another parse can add an archetype, which rebuilds the queries under the unique lock
+    dagor::archetype_read_lock lk(this->archetypes.archetypes_mtx);
     uint32_t index = h.index();
     auto &__restrict archDesc = archetypeQueries[index];
     if (!archDesc.getQueriesCount())

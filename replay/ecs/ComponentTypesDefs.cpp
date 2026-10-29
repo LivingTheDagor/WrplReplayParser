@@ -175,12 +175,13 @@ public:
     uint32_t cnt;
     if (!ecs::read_compressed(cb, cnt))
       return false;
-    list.resize(cnt);
-    for (size_t i = 0; i < list.size(); ++i) {
+    // The count comes from the stream: grow per item, so a bad count fails at the stream end
+    // instead of allocating up front.
+    for (uint32_t i = 0; i < cnt; ++i) {
       ItemType tmp;
       if (!cb.read(&tmp, itemSizeInBits, itemComponentType))
         return false;
-      list[i] = tmp;
+      list.push_back(tmp);
     }
     return true;
   }
@@ -216,13 +217,12 @@ public:
     uint32_t cnt;
     if (!ecs::read_compressed(cb, cnt))
       return false;
-    list.resize(cnt << 3);
     // return cb.read(list.data(), (cnt<<3)*6, 0);
-    for (size_t i = 0; i < list.size(); ++i) {
+    for (uint64_t i = 0; i < uint64_t(cnt) << 3; ++i) {
       ItemType tmp;
       if (!cb.read(&tmp, 6, 0))
         return false;
-      list[i] = tmp;
+      list.push_back(tmp);
     }
     return true;
   }
@@ -247,12 +247,16 @@ static struct PropsIdListSerializer final : public ecs::ComponentSerializer {
     G_UNUSED(hint);
     props::PropsIdList &propList = *(props::PropsIdList *) data;
     uint32_t t;
-    bool isOk = read_compressed(cb, t);
-    propList.resize(t);
-    for (auto &prop: propList) {
-      isOk &= read_compressed(cb, prop.data);
+    if (!read_compressed(cb, t))
+      return false;
+    propList.clear();
+    for (uint32_t i = 0; i < t; ++i) {
+      props::PropsId prop{};
+      if (!read_compressed(cb, prop.data))
+        return false;
+      propList.push_back(prop);
     }
-    return isOk;
+    return true;
   }
 } PropsIdList_list_serializer;
 
@@ -423,6 +427,21 @@ static struct RendInstSerializer final : public ecs::ComponentSerializer {
   }
 } rendinst_serializer;
 
+// The bit count comes from the stream: grow the buffer as the bits arrive, so a bad count fails
+// at the stream end instead of allocating it up front.
+static bool read_bits_grow(const ecs::DeserializerCb &cb, std::vector<uint8_t> &out, uint64_t bits) {
+  constexpr uint64_t CHUNK_BITS = 1u << 16;
+  out.clear();
+  for (uint64_t done = 0; done < bits; done += CHUNK_BITS) {
+    const uint64_t n = std::min(bits - done, CHUNK_BITS);
+    const size_t at = out.size();
+    out.resize(at + BITS_TO_BYTES(n));
+    if (!cb.read(out.data() + at, n, 0))
+      return false;
+  }
+  return true;
+}
+
 class BufferedHudDataSerializer : public ecs::ComponentSerializer {
   void serialize(ecs::SerializerCb &cb, const void *data, size_t sz, ecs::component_type_t hint,
                  ecs::EntityManager *mgr) override {
@@ -437,12 +456,9 @@ class BufferedHudDataSerializer : public ecs::ComponentSerializer {
     G_ASSERT(hint == ecs::ComponentTypeInfo<BufferedHudData>::type);
     BufferedHudData *ptr = (BufferedHudData *) data;
     uint32_t arr_sz;
-    bool is_ok = read_compressed(cb, arr_sz);
-    if (!is_ok)
+    if (!read_compressed(cb, arr_sz))
       return false;
-    ptr->data.resize(arr_sz);
-    is_ok &= cb.read(ptr->data.data(), arr_sz << 3, 0);
-    return is_ok;
+    return read_bits_grow(cb, ptr->data, uint64_t(arr_sz) << 3);
   }
 };
 
@@ -459,8 +475,7 @@ namespace ecs {
     uint32_t blk_sz;
     if (!read_compressed(cb, blk_sz))
       return false;
-    actual->data.resize(BITS_TO_BYTES(blk_sz));
-    bool ok = cb.read(actual->data.data(), blk_sz, 0);
+    bool ok = read_bits_grow(cb, actual->data, blk_sz);
     // BitStream bs{(unsigned char *) m_data, blk_sz, false};
     // IdFieldSerializer255 IdFieldSerilizer;
     // uint32_t end;

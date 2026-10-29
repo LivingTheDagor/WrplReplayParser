@@ -1,5 +1,5 @@
-#include <danet/daNetTypes.h>
-#include "danet/BitStream.h"
+#include <daNet/daNetTypes.h>
+#include "daNet/bitStream.h"
 #include "modules/BitStream.h"
 extern "C" {
 #include "lz4.h"
@@ -182,9 +182,10 @@ void PyBitStream::include(py::module_ &m) {
       },
       py::arg("bits"))
     .def("ReadBLK",
-         [](BitStream &bs) {
+         [](BitStream &bs) -> std::optional<DataBlock> {
            DataBlock blk{};
-           G_ASSERT(bs.Read(blk));
+           if (!bs.Read(blk))
+             return {};
            return blk;
          })
     .def("IgnoreBits", &BitStream::IgnoreBits)
