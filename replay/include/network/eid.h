@@ -4,7 +4,7 @@
 #define MYEXTENSION_EID_H
 #include "ecs/typesAndLimits.h"
 #include "ecs/entityId.h"
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 
 
 namespace net {

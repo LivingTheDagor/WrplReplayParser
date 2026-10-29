@@ -22,12 +22,13 @@ public:
     new (obj) T(std::forward<Args>(args)...);
   }
 
-  bool init_state() { return initialized; }
+  bool init_state() const { return initialized; }
 
   ~OnDemandInit() {
     ZoneScoped;
     if (initialized)
       reinterpret_cast<T *>(obj)->~T();
+    initialized = false;
   }
 
 private:

@@ -8,7 +8,7 @@
 
 
 #include <cstdint>
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include "consts.h"
 #include <array>
 
@@ -35,6 +35,8 @@ public:
 
   void writeFieldsSize(BitStream &to) const;
   uint32_t readFieldsSizeAndFlag(const BitStream &from);
+  // debug builds only: false if the field table does not fit the stream. Leaves the read offset as it was.
+  static bool isValid(const BitStream &from);
 
   void skipReadingField(uint8_t index, const BitStream &from) const;
 

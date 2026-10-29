@@ -3,7 +3,7 @@
 #include "vector"
 #include "cstdint"
 #include "translate.h"
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include "math/dag_Point3.h"
 #include <ioSys/dag_dataBlock.h>
 #include "ecs/entityId.h"
@@ -13,6 +13,7 @@
 #include "mpi/codegen/ReflIncludes.h"
 #include "state/StateRewinder.h"
 #include "math/dag_mathAng.h"
+#include "mpi/SensorStates.h"
 
 struct SpaceTime {
   Point3 location{};
@@ -34,72 +35,13 @@ struct AngularSpaceTime : SpaceTimeEuler {
   }
 };
 
-#define COUNTER_MEASURES_COUNT 2
-#define SENSORS_COUNT          4
-#define TARGETS_NUM            8
 #define MAX_WEAPONS_PER_UNIT   256
 
-
-struct SensorsControlStates {
-  // a bunch of this is probably a union actually
-  bool v1 = 0;
-  bool v2 = 0;
-  bool first_bool = false; // maybe is turned on?
-  float unpacked_1 = 0;
-  float unpacked_2 = 0;
-  float unpacked_3 = 0;
-  int field149_0xa4 = 0;
-  int field150_0xa8 = 0;
-  uint8_t field132_0x84 = 0;
-  uint8_t field133_0x85 = 0;
-  std::vector<uint32_t> field4_0x4{};
-  uint8_t sensor_type_maybe = 0;
-  uint8_t field136_0x88 = 0;
-  uint8_t field137_0x89 = 0;
-  uint8_t field138_0x8a = 0;
-  float some_data_1{};
-  float some_data_2{};
-  float some_data_3{};
-  float some_data_4{};
-  float some_data_5{};
-  char some_data_6[4]{};
-  int some_data_7;
-  float field147_0xa8;
-
-  bool deserialize(BitStream &bs);
-};
-
-struct TargetDesignationControlState {
-  uint8_t v1;
-  uint8_t v2;
-  bool v3;
-  Point3 v4;
-  bool write_compressed;
-  float v5;
-  Point3 v6;
-  Point3 v7;
-  bool v8;
-  Point3 v9;
-  uint8_t v10;
-  float v11;
-  bool v12;
-  bool v13;
-  uint8_t v14;
-  uint32_t v15;
-
-  bool deserialize(BitStream &bs);
-};
-
-struct CounterMeasuresControlState {
-  uint8_t v1;
-  uint8_t v2;
-
-  bool deserialize(BitStream &bs);
-};
 
 enum UnitType : uint8_t {
   TankType = 1,
   AircraftType = 2,
+  ShipType = 3,
 
 };
 
@@ -152,6 +94,8 @@ namespace unit {
   class Aircraft;
 
   class Tank;
+
+  class Ship;
 
   /// One line of the loadout the player took into the battle: which gun, which bullet
   /// set of it, and how much of it was taken. \see Weapon::bulletSets
@@ -303,6 +247,11 @@ namespace unit {
     Tank *AsTank();
 
     Aircraft *AsAircraft();
+
+    Ship *AsShip();
+
+    /// A tank or a ship: the units whose ids carry 0x800 in the kill and hit records.
+    bool isGround() const { return unitType == TankType || unitType == ShipType; }
   };
 
 
@@ -343,6 +292,24 @@ namespace unit {
     ~Tank() override = default;
   };
 
+  /// A ship (ECS template ship+player_unit). Its reflection objects are those of a ground model.
+  class Ship : public Unit {
+    GMReflectable gm_data{state};
+    GM_DVMReflectable gm_dvm_data{state};
+
+  public:
+    const char *getUnitTypeName() override;
+    void Load() override;
+
+    explicit Ship(ParserState *state, uint16_t uid) : Unit(state, uid, ShipType) {
+      base_data = &gm_data;
+      base_dvm_data = &gm_dvm_data;
+      gm_data.owner_unit = this;
+    }
+
+    ~Ship() override = default;
+  };
+
   struct UnitRef {
     Unit *unit = nullptr;
     bool operator==(const UnitRef &other) const { return unit == other.unit; }
@@ -358,6 +325,7 @@ public:
     switch (val) {
       case UnitType::TankType: str = "TankType"; break;
       case UnitType::AircraftType: str = "AircraftType"; break;
+      case UnitType::ShipType: str = "ShipType"; break;
       default: str = "UNKNOWN"; break;
     }
     return format_to(ctx.out(), "{}({})", static_cast<int>(val), str);

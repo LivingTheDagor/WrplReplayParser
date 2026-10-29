@@ -9,11 +9,14 @@ def EntityId_writer(mgr: 'DataTypeManager', datatype: DataTypeInst, name: str):
     return f"      net::write_eid(*bs, {datatype.access_var(name)});"
 
 
+# Each element takes at least one bit, so a count above the unread bits is malformed. Check it
+# before resize so a bad count cannot allocate gigabytes.
 def vector_loader(mgr: 'DataTypeManager', datatype: DataTypeInst, name: str):
     template_type = datatype.compiled.template_args[0]
     size_type = datatype.compiled.template_args[1].full_type_name
     return f"""      {{{size_type} sz;
       REPL_VER(bs->Read(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       {datatype.get_ref_to_child(name)}resize(sz);
       for(auto & v : {datatype.access_var(name)}) {{
   {mgr.get_ReflectionVar_loader(DataTypeInst("v", template_type, False, 1), indent_lvl=2)}
@@ -34,6 +37,7 @@ def compressed_vector_loader(mgr: 'DataTypeManager', datatype: DataTypeInst, nam
     size_type = datatype.compiled.template_args[1].full_type_name
     return f"""      {{{size_type} sz;
       REPL_VER(bs->ReadCompressed(sz));
+      REPL_VER(sz <= bs->GetNumberOfUnreadBits());
       {datatype.get_ref_to_child(name)}resize(sz);
       for(auto & v : {datatype.access_var(name)}) {{
   {mgr.get_ReflectionVar_loader(DataTypeInst("v", template_type, False, 1), indent_lvl=2)}
@@ -67,6 +71,7 @@ def dummyForExitZonesSettings_loader(mgr: 'DataTypeManager', datatype: DataTypeI
     return f"""      int sz;
       REPL_VER(bs->ReadZigZag(sz));
       if(sz > 0) {{
+        REPL_VER(uint32_t(sz) <= bs->GetNumberOfUnreadBits());
         {datatype.get_ref_to_child(name)}vals.resize(sz);
         for(auto &v : ({datatype.access_var(name)}).vals) {{
           REPL_VER(bs->ReadZigZag(v.v1));
@@ -89,6 +94,7 @@ def zigZagVector_loader(mgr: 'DataTypeManager', datatype: DataTypeInst, name: st
     return f"""      int sz;
       REPL_VER(bs->ReadZigZag(sz));
       if(sz > 0) {{
+        REPL_VER(uint32_t(sz) <= bs->GetNumberOfUnreadBits());
         {datatype.get_ref_to_child(name)}resize(sz);
         for(auto & v : {datatype.access_var(name)}) {{
     {mgr.get_ReflectionVar_loader(DataTypeInst("v", template_type, False, 1), indent_lvl=4)} 

@@ -1,7 +1,7 @@
 #include "Replay/Replay.h"
 #include "filesystem"
 #include "dag_assert.h"
-#include "danet/daNetTypes.h"
+#include "daNet/daNetTypes.h"
 
 std::string packet_names[]{"End", "Start", "Aircraft", "Chat", "MPI", "NextSegment", "ECS", "Snapshot", "ECS_Msg_Sync"};
 

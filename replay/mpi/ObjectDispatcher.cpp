@@ -81,10 +81,10 @@ namespace mpi {
         return state->_new<BSMessage>(this, mid);
         //return new BSMessage(this, mid);
       }
+      case MPI_PACKETS::UnitDetected: {
+        return state->_new<UnitDetectedMessage>(this);
+      }
     }
-    // No dispatcher for this id. Measured on a full battle: 31 such ids arrive, and not
-    // one of them is addressed to a ground vehicle - everything the server sends about a
-    // tank is already read here.
     return nullptr;
   }
 
@@ -94,6 +94,11 @@ namespace mpi {
     auto bs = (BitStream *) &m->payload;
     // LOG("Deserialzing for Reflection type: %0x\n", mid);
     switch (mid) {
+      case MPI_PACKETS::UnitDetected: {
+        if (this->state->keep.spots)
+          this->state->SpotEvents.push_back(((const UnitDetectedMessage *) m)->spot);
+        break;
+      }
       case MPI_PACKETS::Kill: {
         const KillMessage *kill_m = dynamic_cast<const KillMessage *>(m);
         if (kill_m->offended_unit) {
@@ -110,13 +115,17 @@ namespace mpi {
         break;
       }
       case MPI_PACKETS::ReflectionNoDecompress: {
-        danet::deserializeReflectables(*bs, obj_dispatcher, this->state);
+        if (danet::deserializeReflectables(*bs, obj_dispatcher, this->state) < 0)
+          LOGE("Failed to read reflection payload");
         break;
       }
       case MPI_PACKETS::Reflection1:
       case  MPI_PACKETS::Reflection2: {
         uint8_t tmp = 0;
-        bs->Read(tmp);
+        if (!bs->Read(tmp)) {
+          LOGE("Failed to read reflection header");
+          return;
+        }
         bool isCompressed = tmp == 1;
         BitStream *outBs;
         BitStream t{};
@@ -126,14 +135,17 @@ namespace mpi {
         } else {
           outBs = bs;
         }
-        danet::deserializeReflectables(*outBs, obj_dispatcher, this->state);
+        if (danet::deserializeReflectables(*outBs, obj_dispatcher, this->state) < 0)
+          LOGE("Failed to read reflection payload");
         break;
       }
       case MPI_PACKETS::Replication: {
-        uint8_t do_weird_check;
-        bs->Read(do_weird_check);
-        int16_t sorta_confirms_is_compressed;
-        bs->Read(sorta_confirms_is_compressed);
+        uint8_t do_weird_check = 0;
+        int16_t sorta_confirms_is_compressed = 0;
+        if (!bs->Read(do_weird_check) || !bs->Read(sorta_confirms_is_compressed)) {
+          LOGE("Failed to read replication header");
+          return;
+        }
         if (sorta_confirms_is_compressed > -1) {
           danet::ReplicatedObject::onRecvReplicationEvent(*bs, this->state);
         } else {
@@ -157,7 +169,7 @@ namespace mpi {
         auto bsM = (BSMessage *) m;
         bool ret = WeaponSync(*state, bsM->data);
         if (!ret) {
-          LOGE("Failed to read We payload");
+          LOGE("Failed to read WeaponSync payload");
         }
         return;
       }
@@ -315,7 +327,7 @@ namespace mpi {
             return &state->main_dispatch;
           }
           case 0x3: {
-            return nullptr; // want to silence the "unable to dispatch with this"
+            return &state->local_client;
           }
           case 0x4: {
             return &state->gen_state;
@@ -355,6 +367,18 @@ namespace mpi {
     return nullptr;
   }
 
+  bool RpmMessage::readPayload(ParserState *state) {
+    rpm.time_ms = state->curr_time_ms;
+    BitStream nested;
+    if (!payload.Read(nested) || nested.GetNumberOfUnreadBits() % 16 != 0)
+      return false;
+    rpm.rpm.resize(nested.GetNumberOfUnreadBits() / 16);
+    for (auto &r: rpm.rpm)
+      if (!nested.Read(r))
+        return false;
+    return true;
+  }
+
   bool TankMessage::readPayload(ParserState *state) { return this->payload.Read(this->data); }
 
   void TankMessage::writePayload() { this->payload.Write(this->data); }
@@ -380,11 +404,11 @@ namespace mpi {
           break;
         }
         case 4: {
-          RET_FAIL(bs->Read(this->some_val));
+          RET_FAIL(bs->Read(this->camera_kind));
           break;
         }
         case 5: {
-          RET_FAIL(bs->Read(this->some_magnitude));
+          RET_FAIL(bs->Read(this->zoom));
           break;
         }
         case 6: {

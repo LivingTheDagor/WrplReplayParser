@@ -3,6 +3,7 @@
 #include "mpi/PositionSync.h"
 #include "utils.h"
 #include "ioSys/dag_dataBlock.h"
+#include "Unit.h"
 
 namespace {
   // warthunder offsets all y offsets by the sea level. on most maps, this is 0, but some, like Pradesh, have a difference (last seen as 920)
@@ -35,6 +36,9 @@ bool ChatMessage::FromBS(BitStream &bs) {
 }
 ParserState::ParserState(uint32_t player_count) {
   initialize(player_count);
+}
+void ParserState::ownUnit(unit::Unit *unit) {
+  owned_units.emplace_back(unit);
 }
 ParserState::ParserState(IReplay *replay) {
   auto header = replay->getHeader();
@@ -197,7 +201,11 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       break;
     }
     case ReplayPacketType::AircraftSmall: {
-      FMSync(*this, pkt.stream);
+      if (!FMSync(*this, pkt.stream)) {
+        LOGE("Failed to parse aircraft packet at {} ms ({} bits unread)", pkt.timestamp_ms,
+             pkt.stream.GetNumberOfUnreadBits());
+        return false;
+      }
       break;
     }
     case ReplayPacketType::Chat: {

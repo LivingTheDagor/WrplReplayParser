@@ -188,94 +188,99 @@ namespace net::delta {
   }
 
 
+  // Units are 2 bits, packed low bits first, so the output is a little-endian bit stream:
+  // they collect in a 64-bit word that is stored 8 bytes at a time, and a run of zero units
+  // only moves the bit position. Same output and return value as the unit-at-a-time loop;
+  // it never writes past dstSlice, where that loop could write one byte beyond it.
   int rle0ki_decompress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice) {
     ZoneScoped;
     uint8_t *dst = dstSlice.data();
-    size_t maxOriginalSize = dstSlice.size();
+    const size_t maxOriginalSize = dstSlice.size();
     const uint8_t *src = srcSlice.data();
-    size_t compressedSize = srcSlice.size();
+    const size_t compressedSize = srcSlice.size();
 
     if (compressedSize == 0)
       return 0;
-    int limit = compressedSize - 1;
-    if (limit < 0)
-      return -1;
+    const int limit = (int) compressedSize - 1;
 
-    uint8_t parity = src[limit];
+    const uint8_t parity = src[limit];
     if (parity != RLE0_PARITY_NO && parity != RLE0_PARITY_YES)
       return 0;
-
-    int val[] = {0, 0};
-    int code = -1;
-    int offset = RLE0_ZERO;
-    uint8_t *out = dst;
-    if (maxOriginalSize > 0)
-      *dst = 0;
-    else
+    if (maxOriginalSize == 0)
       return -1;
 
+    uint64_t acc = 0;   // pending units, low bits first
+    uint32_t nbits = 0; // bits pending in acc, may run past 64 inside a zero run
+    size_t outBytes = 0;
+    bool overflow = false;
+
+    auto flush8 = [&]() {
+      if (outBytes + 8 <= maxOriginalSize) {
+        for (int b = 0; b < 8; ++b)
+          dst[outBytes + b] = uint8_t(acc >> (8 * b));
+      } else {
+        overflow = true;
+      }
+      outBytes += 8;
+    };
+    auto putUnit = [&](uint32_t v) {
+      acc |= uint64_t(v) << nbits;
+      nbits += 2;
+      if (nbits == 64) {
+        flush8();
+        acc = 0;
+        nbits = 0;
+      }
+    };
+    auto putZeros = [&](uint32_t num) {
+      nbits += 2 * num;
+      while (nbits >= 64) {
+        flush8();
+        acc = 0; // every bit after the first word is a zero of this run
+        nbits -= 64;
+      }
+    };
+
+    int code = -1;
     int super = -1;
     for (int i = 0; i < limit; ++i) {
-      int klim = i != limit - 1 || parity == RLE0_PARITY_YES ? 2 : 1;
+      const int klim = i != limit - 1 || parity == RLE0_PARITY_YES ? 2 : 1;
+      const uint8_t byte = src[i];
       for (int k = 0; k < klim; ++k) {
-        val[0] = (*src >> (k * RLE0_FOUR)) & TWO_BITS_MASK;
-        val[1] = (*src >> (TWO_BITS_SHIFT + k * RLE0_FOUR)) & TWO_BITS_MASK;
-        int num = 0;
+        const uint32_t v0 = (byte >> (k * RLE0_FOUR)) & TWO_BITS_MASK;
+        const uint32_t v1 = (byte >> (TWO_BITS_SHIFT + k * RLE0_FOUR)) & TWO_BITS_MASK;
 
         if (code != RLE0_KI8)
-          code = val[0];
+          code = (int) v0;
 
         switch (code) {
-          case RLE0_ZR0:
-            num = val[1] + ZR0_BASE_VAL;
-            val[0] = val[1] = 0;
-            break;
-
-          case RLE0_ZR1:
-            num = val[1] + ZR1_BASE_VAL;
-            val[0] = val[1] = 0;
-            break;
-
+          case RLE0_ZR0: putZeros(v1 + ZR0_BASE_VAL); break;
+          case RLE0_ZR1: putZeros(v1 + ZR1_BASE_VAL); break;
           case RLE0_KI6:
             code = RLE0_KI8;
-            super = val[1];
-            [[fallthrough]];
-
-          case RLE0_KI2:
-            num = 1;
-            val[0] = val[1];
+            super = (int) v1;
+            putUnit(v1);
             break;
-
+          case RLE0_KI2: putUnit(v1); break;
           case RLE0_KI8:
             code = -1;
-            num = 2;
-            if (super == 0 && super == val[0] && val[0] == val[1])
-              num = 39;
+            if (super == 0 && v0 == 0 && v1 == 0)
+              putZeros(39);
+            else {
+              putUnit(v0);
+              putUnit(v1);
+            }
             break;
         }
-
-        for (int n = 0; n < num; ++n) {
-          *dst |= val[n & 1] << (offset * TWO_BITS_SHIFT);
-          ++offset;
-          if (offset == RLE0_FOUR) {
-            offset = RLE0_ZERO;
-            ++dst;
-            int len = dst - out;
-            if (len < maxOriginalSize)
-              *dst = 0;
-            else if (len > maxOriginalSize)
-              return -1;
-          }
-        }
       }
-      ++src;
     }
 
-    if (offset)
-      ++dst;
-    if (dst - out > maxOriginalSize)
+    const size_t tail = (nbits + 7) / 8;
+    if (overflow || outBytes + tail > maxOriginalSize)
       return -1;
-    return dst - out;
+    for (size_t b = 0; b < tail; ++b)
+      dst[outBytes + b] = uint8_t(acc >> (8 * b));
+    return (int) (outBytes + tail);
   }
 
 #define BEGIN_PROF(x) \

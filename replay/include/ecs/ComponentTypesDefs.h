@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ecs/ComponentTypes.h"
+#include "ecs/componentTypes.h"
 #include "ecs/ComponentTypes/objectType.h"
 #include "ecs/ComponentTypes/arrayType.h"
 #include "ecs/ComponentTypes/listType.h"

@@ -1,23 +1,25 @@
 #include "state/ParserState.h"
 #include "mpi/PositionSync.h"
 #include "Unit.h"
-#include "danet/dag_netUtils.h"
+#include "daNet/dag_netUtils.h"
 #include "math/dag_mathAng.h"
+#include <algorithm>
+#include <cstring>
 
 bool separateServerSideDetection_g = true;
 bool resyncSaclosGuidanceParams = true; // actually known to be true, hopefully
 
 #define RET_FAIL(op) G_ASSERT_RETURN((op), false);
 bool SensorsControlStates::deserialize(BitStream &bs) {
-  first_bool = bs.ReadBit();
+  RET_FAIL(bs.Read(first_bool));
   uint8_t sensor_type;
-  bs.Read(sensor_type);
+  RET_FAIL(bs.Read(sensor_type));
   sensor_type_maybe = sensor_type;
   sensor_type >>= 4;
   switch (sensor_type) {
     case 1: {
-      bool bool_2 = bs.ReadBit();
-      if (!bool_2)
+      RET_FAIL(bs.Read(has_state));
+      if (!has_state)
         return true;
       int16_t bit_packed;
       int16_t packed_val_1;
@@ -27,23 +29,28 @@ bool SensorsControlStates::deserialize(BitStream &bs) {
       field136_0x88 = (uint8_t) bit_packed & 0xf;
       field137_0x89 = (uint8_t) (bit_packed >> 4) & 0x3f;
       field138_0x8a = (uint8_t) (bit_packed >> 10) & 0xf;
-      RET_FAIL(bs.Read(some_data_1));
+      RET_FAIL(bs.Read(unknown_field_1));
       RET_FAIL(bs.Read(packed_val_1));
       RET_FAIL(bs.Read(packed_val_2));
       RET_FAIL(bs.Read(packed_val_3));
-      some_data_2 = netutils::UNPACKS<int16_t>(packed_val_1, 1.0f);
-      some_data_4 = netutils::UNPACKS<int16_t>(packed_val_2, PI);
-      some_data_5 = netutils::UNPACKS<int16_t>(packed_val_3, PI);
+      unknown_field_2 = netutils::UNPACKS<int16_t>(packed_val_1, 1.0f);
+      unknown_field_4 = netutils::UNPACKS<int16_t>(packed_val_2, PI);
+      unknown_field_5 = netutils::UNPACKS<int16_t>(packed_val_3, PI);
       if (bit_packed < 0) {
-        RET_FAIL(bs.Read(some_data_6[0]));
+        has_unknown_field_6_byte0 = true;
+        RET_FAIL(bs.Read(unknown_field_6_data[0]));
       }
-      bool bool_thing = bs.ReadBit();
+      bool bool_thing;
+      RET_FAIL(bs.Read(bool_thing));
       if (bool_thing) {
+        has_unknown_fields_149_150 = true;
         uint8_t bVar7;
         RET_FAIL(bs.Read(bVar7));
-        this->some_data_6[1] = bVar7 & 1;
-        this->field149_0xa4 = (int) ((char) (bVar7 << 5) >> 6);
-        this->field150_0xa8 = (int) ((char) (bVar7 << 3) >> 6);
+        this->unknown_field_6_data[1] = bVar7 & 1;
+        const int field149 = (bVar7 >> 1) & 3;
+        const int field150 = (bVar7 >> 3) & 3;
+        this->unknown_field_149 = field149 < 2 ? field149 : field149 - 4;
+        this->unknown_field_150 = field150 < 2 ? field150 : field150 - 4;
       }
       break;
     }
@@ -51,78 +58,87 @@ bool SensorsControlStates::deserialize(BitStream &bs) {
       if (first_bool == 0) {
         return true;
       }
-      field136_0x88 = bs.ReadBit();
+      bool flag;
+      RET_FAIL(bs.Read(flag));
+      field136_0x88 = flag;
       int16_t v;
       RET_FAIL(bs.Read(v));
-      some_data_1 = netutils::UNPACKS<int16_t>(v, PI);
-      RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_2), 0x60));
-      RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_5),
-                           0x60)); // ok for some fucking reason some_data_6 is a float here
-      RET_FAIL(bs.Read(field147_0xa8));
+      unknown_field_1 = netutils::UNPACKS<int16_t>(v, PI);
+      RET_FAIL(bs.Read(unknown_field_2));
+      RET_FAIL(bs.Read(unknown_field_3));
+      RET_FAIL(bs.Read(unknown_field_4));
+      RET_FAIL(bs.Read(unknown_field_5));
+      RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(unknown_field_6_data), 32));
+      RET_FAIL(bs.Read(unknown_field_7));
+      RET_FAIL(bs.Read(unknown_field_147));
       break;
     }
     case 3: {
-      G_ASSERT(false); // uglugluglug
-      break;
+      return false; // unsupported sensor layout
     }
     case 4: {
-      bool stuff_is_read = bs.ReadBit();
+      bool stuff_is_read;
+      RET_FAIL(bs.Read(stuff_is_read));
+      has_kind4_state = stuff_is_read;
       if (stuff_is_read) {
-        RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_1), 0x60));
+        RET_FAIL(bs.Read(unknown_field_1));
+        RET_FAIL(bs.Read(unknown_field_2));
+        RET_FAIL(bs.Read(unknown_field_3));
       }
       break;
     }
-    default: G_ASSERT(false);
+    default: RET_FAIL(false);
   }
-  bool stores_vec_thang = bs.ReadBit();
+  bool stores_vec_thang;
+  RET_FAIL(bs.Read(stores_vec_thang));
   if (stores_vec_thang) {
-    RET_FAIL(bs.ReadBits(&field132_0x84, 6));
-    field4_0x4.resize(field132_0x84);
-    for (int i = 0; i < field132_0x84; i++) {
-      RET_FAIL(bs.Read(field4_0x4[i]));
+    RET_FAIL(bs.ReadBits(&contact_count, 6));
+    contacts.resize(contact_count);
+    for (int i = 0; i < contact_count; i++) {
+      RET_FAIL(bs.Read(contacts[i]));
     }
-    RET_FAIL(bs.ReadBits(&field133_0x85, 6));
+    RET_FAIL(bs.ReadBits(&contacts_tail, 6));
   }
   return true;
 }
 
 
 bool TargetDesignationControlState::deserialize(BitStream &bs) {
-  RET_FAIL(bs.Read(v1));
-  RET_FAIL(bs.Read(v2));
-  v3 = bs.ReadBit();
-  if (v3) {
-    RET_FAIL(bs.Read(v4));
+  RET_FAIL(bs.Read(unknown_field_1));
+  RET_FAIL(bs.Read(unknown_field_2));
+  RET_FAIL(bs.Read(has_unknown_field_4));
+  if (has_unknown_field_4) {
+    RET_FAIL(bs.Read(unknown_field_4));
   }
-  write_compressed = bs.ReadBit();
-  if (write_compressed) {
-    RET_FAIL(bs.Read(v6));
-    RET_FAIL(netutils::read_vector(bs, v9, 4000.0f));
+  RET_FAIL(bs.Read(uses_compressed_vector));
+  if (uses_compressed_vector) {
+    RET_FAIL(bs.Read(unknown_field_6));
+    RET_FAIL(netutils::read_vector(bs, unknown_field_9, 4000.0f));
   } else {
-    RET_FAIL(bs.Read(v7));
-    RET_FAIL(bs.Read(v9));
+    RET_FAIL(bs.Read(unknown_field_7));
+    RET_FAIL(bs.Read(unknown_field_9));
   }
-  RET_FAIL(bs.Read(v5));
-  v8 = bs.ReadBit();
-  v10 = bs.ReadBit();
-  auto read_some_float = bs.ReadBit();
-  if (read_some_float) {
+  RET_FAIL(bs.Read(unknown_field_5));
+  RET_FAIL(bs.Read(unknown_field_8));
+  bool field_10;
+  RET_FAIL(bs.Read(field_10));
+  unknown_field_10 = field_10;
+  RET_FAIL(bs.Read(has_unknown_field_11));
+  if (has_unknown_field_11) {
     uint8_t temp;
     RET_FAIL(bs.Read(temp));
-    v11 = netutils::UNPACK<uint8_t>(temp, 1);
+    unknown_field_11 = netutils::UNPACK<uint8_t>(temp, 1);
   }
-  bool has_v14;
-  RET_FAIL(bs.Read(v12));
-  RET_FAIL(bs.Read(has_v14));
-  v13 = bs.ReadBit();
-  if (has_v14) {
-    RET_FAIL(bs.Read(v14));
+  RET_FAIL(bs.Read(unknown_field_12));
+  RET_FAIL(bs.Read(has_unknown_field_14));
+  RET_FAIL(bs.Read(unknown_field_13));
+  if (has_unknown_field_14) {
+    RET_FAIL(bs.Read(unknown_field_14));
   } else
-    v14 = 0;
-  bool has_v15;
-  RET_FAIL(bs.Read(has_v15));
-  if (has_v15) {
-    RET_FAIL(bs.Read(v15));
+    unknown_field_14 = 0;
+  RET_FAIL(bs.Read(has_unknown_field_15));
+  if (has_unknown_field_15) {
+    RET_FAIL(bs.Read(unknown_field_15));
   }
   return true;
 }
@@ -152,66 +168,171 @@ std::vector<std::string> unit::getUnitTagsName(std::string_view &name) {
     return {};
   return getUnitTagsBlk(blk);
 }
-G_STATIC_ASSERT(sizeof(TargetDesignationControlState) == 0x50);
+static bool ReadSeekerBits(ParserState &state, const BitStream &bs, uint32_t bits, mpi::SeekerEvent &ev) {
+  RET_FAIL(bits <= bs.GetNumberOfUnreadBits());
+  if (!state.keep.seekers || (ev.source == mpi::SeekerAircraft && !ev.unit)) {
+    bs.IgnoreBits(bits);
+    return true;
+  }
+  ev.bits = bits;
+  ev.data.resize(BITS_TO_BYTES(bits));
+  RET_FAIL(bs.ReadBits(ev.data.data(), bits));
+  state.SeekerEvents.push_back(std::move(ev));
+  return true;
+}
 
+// Seeker fields are read MSB first in each byte; a multi-byte number is little-endian
+// from its bit offset. The last partial byte of the block is right-aligned.
+static uint8_t SeekerByte(const mpi::SeekerEvent &ev, uint32_t at) {
+  const uint32_t full = ev.bits / 8 * 8, rem = ev.bits % 8;
+  uint8_t out = 0;
+  for (uint32_t i = at; i < at + 8; i++) {
+    uint8_t bit = i < full ? (ev.data[i / 8] >> (7 - i % 8)) & 1 : (ev.data[i / 8] >> (rem - 1 - (i - full))) & 1;
+    out = (uint8_t) (out << 1 | bit);
+  }
+  return out;
+}
 
-void DeserializeSeekerData(BitStream &bs) {
-  // this will probably never be implemented unless if I actually go through and try to understand what this complex
-  // bullshit is
-  uint32_t val;
-  bs.Read(val);
-  auto read_offs = bs.GetReadOffset();
-  bs.SetReadOffset(read_offs + val);
-  // bool does_read_call_one = bs.ReadBit();
+template <typename T>
+static T SeekerValue(const mpi::SeekerEvent &ev, uint32_t at) {
+  uint8_t raw[sizeof(T)];
+  for (uint32_t i = 0; i < sizeof(T); i++)
+    raw[i] = SeekerByte(ev, at + 8 * i);
+  T out;
+  memcpy(&out, raw, sizeof(T));
+  return out;
+}
 
-  return;
+mpi::SeekerState mpi::DecodeSeeker(const SeekerEvent &ev) {
+  SeekerState st{};
+  if (ev.data.size() < (uint64_t(ev.bits) + 7) / 8)
+    return st;
+  if (ev.source == SeekerAircraft) {
+    if (ev.bits == 518) {
+      // The 518-bit layout contains one seeker state. Its slot's presence bit
+      // follows one bit for each preceding absent slot, so the state's fields
+      // shift by one bit per slot relative to the second-slot offsets.
+      uint32_t slot = 0;
+      while (slot < 3 && !(ev.data[slot / 8] & (0x80u >> (slot % 8))))
+        ++slot;
+      if (slot == 3)
+        return st;
+      const int offset = int(slot) - 1;
+      st.ir_state = (SeekerByte(ev, 43 + offset) >> 5) & 7;
+      // -FLT_MAX until the seeker first locks
+      float t = SeekerValue<float>(ev, 50 + offset);
+      if (t > -1e30f)
+        st.lock_time = t;
+      st.seeker_dir = Point3(SeekerValue<float>(ev, 149 + offset), SeekerValue<float>(ev, 181 + offset),
+                             SeekerValue<float>(ev, 213 + offset));
+      st.gimbal_az = SeekerValue<float>(ev, 85 + offset);
+      st.gimbal_el = SeekerValue<float>(ev, 117 + offset);
+      st.fov_half = SeekerValue<float>(ev, 341 + offset);
+    } else if (ev.bits == 895) {
+      st.target_pos = Point3(SeekerValue<float>(ev, 83), SeekerValue<float>(ev, 115), SeekerValue<float>(ev, 147));
+    }
+    return st;
+  }
+  if (ev.source != SeekerWeapon)
+    return st;
+  if (ev.bits != 607 && ev.bits != 639 && ev.bits != 283)
+    return st;
+  uint32_t los_at, extra = 0;
+  // Bits 8-10: 111 track, 001 search; 100 in the 639-bit block, sent once as the seeker
+  // goes to track, which then has 32 bits of unknown meaning before the 607-bit layout.
+  uint8_t mode = (SeekerByte(ev, 8) >> 5) & 7;
+  if (ev.bits == 607 || ev.bits == 639) {
+    extra = ev.bits == 639 ? 32 : 0;
+    if (ev.bits == 607 && (mode == 7 || mode == 1))
+      st.tracking = mode == 7;
+    else if (ev.bits == 639 && mode == 4)
+      st.tracking = true;
+    st.target_pos = Point3(SeekerValue<float>(ev, 11), SeekerValue<float>(ev, 43), SeekerValue<float>(ev, 75));
+    st.range = (float) SeekerValue<uint16_t>(ev, 454 + extra);
+    los_at = 340 + extra;
+  } else if (ev.bits == 283) {
+    los_at = 58;
+  } else {
+    return st;
+  }
+  st.los = Point3(SeekerValue<int16_t>(ev, los_at), SeekerValue<int16_t>(ev, los_at + 16),
+                  SeekerValue<int16_t>(ev, los_at + 32)) / 32767.f;
+  st.decoded = true;
+  return st;
 }
 
 bool FMSync(ParserState &state, BitStream &bs) {
   ZoneScoped;
+  // Do not publish part of a packet if a later aircraft cannot be decoded.
+  struct EventRollback {
+    ParserState &state;
+    size_t ammo, controls, sensors, designations, seekers;
+    bool committed = false;
+    ~EventRollback() {
+      if (!committed) {
+        state.AmmoEvents.resize(ammo);
+        state.ControlEvents.resize(controls);
+        state.SensorEvents.resize(sensors);
+        state.DesignationEvents.resize(designations);
+        state.SeekerEvents.resize(seekers);
+      }
+    }
+  } rollback{state, state.AmmoEvents.size(), state.ControlEvents.size(), state.SensorEvents.size(),
+             state.DesignationEvents.size(), state.SeekerEvents.size()};
+  // Reused per thread to avoid an allocation on each aircraft packet.
+  thread_local std::vector<std::pair<unit::Aircraft *, SpaceTimeEuler>> positions;
+  positions.clear();
   uint16_t uid = 0;
   do {
-    bool uid_serialized = bs.ReadBit();
+    bool uid_serialized;
+    RET_FAIL(bs.Read(uid_serialized));
     if (uid_serialized) {
-      bs.ReadCompressed(uid);
+      RET_FAIL(bs.ReadCompressed(uid));
       uid &= 0x7FF;
     } else {
       uid += 1;
     }
     if (uid == 0x7FF)
       break;
-    bool has_data = bs.ReadBit();
+    bool has_data;
+    RET_FAIL(bs.Read(has_data));
     if (!has_data) {
       // LOG("yes to data");
       if (separateServerSideDetection_g == false) {
         G_ASSERT(false); // be ready for if this ever happens
       } else {
-        bool lVar30lessThan0 = bs.ReadBit();
-        bool cVar4NE0 = bs.ReadBit();
+        bool lVar30lessThan0, cVar4NE0;
+        RET_FAIL(bs.Read(lVar30lessThan0));
+        RET_FAIL(bs.Read(cVar4NE0));
         // if both true, then we do nothing
         if (!(lVar30lessThan0 && cVar4NE0)) {
+          // A sync can come before the ECS creates its aircraft. The game does not resolve it either:
+          // the record is read so the stream stays aligned, and nothing is stored for it.
           auto ref = state.getUnitObj(uid);
-          if (!ref)
-            return false;
-          auto unit = ref->AsAircraft();
-          if (!unit)
-            return false;
-          bool fVar41LessThan0p5 = bs.ReadBit();
+          auto unit = ref ? ref->AsAircraft() : nullptr;
+          mpi::ControlEvent control{state.curr_time_ms, unit};
+          RET_FAIL(bs.Read(control.on_ground));
           uint32_t some_uint;
-          bs.Read(some_uint);
-          bool _0x7330_val = bs.ReadBit();
-          bool v1 = bs.ReadBit();
-          if (v1) {
-            bool v2 = bs.ReadBit();
-            bool unk1 = bs.ReadBit();
-            bool unk2 = bs.ReadBit();
+          RET_FAIL(bs.Read(some_uint));
+          bool _0x7330_val, triggers;
+          RET_FAIL(bs.Read(_0x7330_val));
+          RET_FAIL(bs.Read(triggers));
+          if (triggers) {
+            RET_FAIL(bs.Read(control.fire_mg));
+            RET_FAIL(bs.Read(control.fire_cannon));
+            RET_FAIL(bs.Read(control.fire_additional));
+            // The count is the number of gun-type entries in the weapon list: guns, gun pods, turret guns, the
+            // dummy optic and HMD turrets and targeting pods (338 of 338 aircraft). The bit for each was 1 in
+            // only 19 syncs; its meaning is not known.
             uint8_t count = 0;
-            bs.ReadBits(&count, 4);
+            RET_FAIL(bs.ReadBits(&count, 4));
             // std::vector<uint32_t>
             dag::Vector<bool, StateAllocator::DagAllocType> temp_bits(state.getMem());
             temp_bits.reserve(count);
             for (int i = 0; i < count; i++) {
-              temp_bits.push_back(bs.ReadBit());
+              bool bit;
+              RET_FAIL(bs.Read(bit));
+              temp_bits.push_back(bit);
             }
           }
           int zig_val = 0;
@@ -227,11 +348,8 @@ bool FMSync(ParserState &state, BitStream &bs) {
           // what carries meaning, and finding it is left to the reader, as with the
           // ground counter this joins.
           for (int i = 0; i < zig_val; i++) {
-            // ReadZigZag leaves the value untouched when it fails, so a short read
-            // would push whatever was on the stack into the ammo stream. The start is
-            // -1 rather than 0 because RET_FAIL only asserts in a debug build: there a
-            // failed read falls through, and the check below then drops the record
-            // instead of reporting an empty barrel.
+            // ReadZigZag leaves the value untouched on failure; reject a short read
+            // before it can be published as an ammunition count.
             int rounds_left = -1, extra = 0;
             RET_FAIL(bs.ReadZigZag(rounds_left));
             RET_FAIL(bs.ReadZigZag(extra));
@@ -242,71 +360,68 @@ bool FMSync(ParserState &state, BitStream &bs) {
                 int temp_zig = 0;
                 RET_FAIL(bs.ReadZigZag(temp_zig));
               }
-            if (rounds_left >= 0)
+            if (unit && rounds_left >= 0)
               state.AmmoEvents.push_back(
                 {state.curr_time_ms, unit, uint8_t(i), 0, uint32_t(rounds_left)});
           }
           uint32_t some_packed_val;
           uint32_t vals_4;
           SpaceTimeEuler st{{}, {}};
-          bs.Read(st.location);
-          bs.Read(some_packed_val);
+          RET_FAIL(bs.Read(st.location));
+          RET_FAIL(bs.Read(some_packed_val));
           Point3 someEuler;
           netutils::unpack_euler(some_packed_val, st.euler);
-          *unit->positions.reserveOne() = st;
-          unit->positions.checkAndPush(&state);
+          if (unit)
+            positions.emplace_back(unit, st);
 
-          bs.Read(vals_4);
+          RET_FAIL(bs.Read(vals_4));
           Point3 vel;
           netutils::unpack_velocity(vals_4, vel, 500);
-          uint64_t
-            val_5; // holds lots of important data, more like a char[7] instead of a uint64_t, data is read as bytes
+          RET_FAIL(bs.GetNumberOfUnreadBits() >= ((8 - (bs.GetReadOffset() & 7)) & 7));
           bs.AlignReadToByteBoundary();
-          bs.ReadBits(reinterpret_cast<uint8_t *>(&val_5), 0x38);
+          RET_FAIL(bs.ReadBits(control.controls, 0x38));
           uint8_t number_of_engines;
-          bs.Read(number_of_engines);
+          RET_FAIL(bs.Read(number_of_engines));
           if (number_of_engines > 0xf)
             return false; // "FMsync: numEngines >= MAX_AIRCRAFT_MOTORS"
-          for (int i = 0; i < number_of_engines; i++) {
-            bool is_some_data_serialized = bs.ReadBit();
-            uint8_t v;
-            bs.Read(v);
-            float probably_engine_power = -1;
-            float packed_v_2 = -1;
-            if (is_some_data_serialized) {
-              int16_t temp_packed;
-              bs.Read(temp_packed);
-              probably_engine_power = netutils::UNPACKS<int16_t>(temp_packed, 1.1f);
+          control.engines.resize(number_of_engines);
+          for (auto &engine: control.engines) {
+            bool has_afterburner;
+            RET_FAIL(bs.Read(has_afterburner));
+            RET_FAIL(bs.Read(engine.state));
+            if (has_afterburner) {
+              int16_t packed;
+              RET_FAIL(bs.Read(packed));
+              engine.afterburner = netutils::UNPACKS<int16_t>(packed, 1.1f);
             }
-
-            auto is_some_packed_2 = bs.ReadBit();
-            if (is_some_packed_2) {
-              int8_t v_;
-              bs.Read(v_);
-              packed_v_2 = netutils::UNPACKS<int8_t>(v_, 1.0);
+            bool has_health;
+            RET_FAIL(bs.Read(has_health));
+            if (has_health) {
+              int8_t packed;
+              RET_FAIL(bs.Read(packed));
+              engine.health = netutils::UNPACKS<int8_t>(packed, 1.0);
             }
-
-            uint8_t v10;
-            uint8_t v11;
-            bs.Read(v10);
-            bs.Read(v11);
-            float v10f = netutils::UNPACK<uint8_t>(v10, 1.0);
-            float v11f = netutils::UNPACK<uint8_t>(v11, 1.0);
+            RET_FAIL(bs.Read(engine.radiators));
           }
+          if (unit && state.keep.controls)
+            state.ControlEvents.push_back(std::move(control));
           uint8_t sensorsCount;
-          bs.Read(sensorsCount);
+          RET_FAIL(bs.Read(sensorsCount));
           RET_FAIL(sensorsCount <= SENSORS_COUNT);
           std::pmr::vector<SensorsControlStates> sensors{sensorsCount, state.get_allocator()};
           for (auto &s: sensors) {
             RET_FAIL(s.deserialize(bs));
           }
-          uint8_t v;
+          uint8_t v = 0;
           if (sensorsCount != 0) {
-            bs.Read(v);
+            RET_FAIL(bs.Read(v));
           }
+          for (uint8_t i = 0; i < sensorsCount; i++)
+            if (unit && state.keep.sensors)
+              state.SensorEvents.push_back({state.curr_time_ms, unit, i, v, sensors[i]});
 
           uint8_t counterMeasuresCount;
-          bs.Read(counterMeasuresCount);
+          RET_FAIL(bs.Read(counterMeasuresCount));
           RET_FAIL(counterMeasuresCount <= COUNTER_MEASURES_COUNT);
           std::pmr::vector<CounterMeasuresControlState> counterMeasures{counterMeasuresCount, state.get_allocator()};
           for (auto &c: counterMeasures) {
@@ -314,26 +429,32 @@ bool FMSync(ParserState &state, BitStream &bs) {
           }
           uint8_t counter_measures_v;
           if (counterMeasuresCount > 0)
-            bs.Read(counter_measures_v);
+            RET_FAIL(bs.Read(counter_measures_v));
           uint8_t targetsNum = 0;
-          bs.ReadBits(&targetsNum, 4);
+          RET_FAIL(bs.ReadBits(&targetsNum, 4));
           RET_FAIL(targetsNum <= TARGETS_NUM);
           std::pmr::vector<TargetDesignationControlState> targets{targetsNum, state.get_allocator()};
-          for (auto &t: targets) {
-            RET_FAIL(t.deserialize(bs));
+          for (uint8_t i = 0; i < targetsNum; i++) {
+            RET_FAIL(targets[i].deserialize(bs));
+            if (unit && state.keep.designations)
+              state.DesignationEvents.push_back({state.curr_time_ms, unit, i, targets[i]});
           }
           bool bit_thing;
-          bs.Read(bit_thing);
+          RET_FAIL(bs.Read(bit_thing));
           if (bit_thing) {
             uint16_t vt_1;
             uint16_t vt_2;
-            bs.Read(vt_1);
-            bs.Read(vt_2);
+            RET_FAIL(bs.Read(vt_1));
+            RET_FAIL(bs.Read(vt_2));
           }
           bool bit_thing_2;
-          bs.Read(bit_thing_2);
+          RET_FAIL(bs.Read(bit_thing_2));
           if (bit_thing_2) {
-            DeserializeSeekerData(bs);
+            uint32_t bits;
+            RET_FAIL(bs.Read(bits));
+            mpi::SeekerEvent event{state.curr_time_ms, mpi::SeekerAircraft};
+            event.unit = unit;
+            RET_FAIL(ReadSeekerBits(state, bs, bits, event));
           }
         }
       }
@@ -342,8 +463,15 @@ bool FMSync(ParserState &state, BitStream &bs) {
     }
     // G_ASSERT(uid != 0); // WHY THE HELL CAN WE HAVE A UID THAT IS 0
   } while (uid != 0x7FF);
+  // In a client replay: the position of the author's own aircraft, equal to its sync
+  // position. All 0 in a server replay.
   float maybe_floats[3];
-  bs.Read(maybe_floats);
+  RET_FAIL(bs.Read(maybe_floats));
+  for (const auto &[unit, position] : positions) {
+    *unit->positions.reserveOne() = position;
+    unit->positions.checkAndPush(&state);
+  }
+  rollback.committed = true;
   // some extra data here
   return true;
 }
@@ -384,23 +512,36 @@ struct SubVehicleDynData {
 };
 
 
-bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_from_compress) {
+// AI guns have no unit object; their state is read all the same, into ev only.
+// The vehicle state a decoded record changes outside ev/weapons is collected here and published
+// by GMSync only after the whole record has been read. A read failure partway through the record
+// then drops the update instead of leaving the position history or the turret state half applied.
+struct VehiclePublish {
+  struct TurretState {
+    unit::Weapon *weapon;
+    Point3 angles;
+  };
+  unit::Unit *position_unit = nullptr;
+  SpaceTimeEuler position{};
+  std::vector<TurretState> turret_states{};
+};
+
+bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, mpi::GroundSyncEvent &ev,
+                      mpi::GroundWeaponSync *weapons, VehiclePublish &publish) {
   ZoneScoped;
-  if (!ref->ref_1) {
-    G_ASSERT(is_from_compress);
-    return true;
-  }
-  uint8_t v1;
-  RET_FAIL(bs.Read(v1));
+  RET_FAIL(bs.Read(ev.spawn_counter));
   bool b1;
   RET_FAIL(bs.Read(b1));
+  ev.set(ev.HasMotion, b1);
   if (b1) {
     Point3 direction{};
     if (ref->val1) {
       float floats[4];
       RET_FAIL(bs.Read(floats)); // 4 float reads, then 1 later (usePositionHistoryForSlaves is true
       if (true) {
-        if (bs.ReadBit()) {
+        bool extra;
+        RET_FAIL(bs.Read(extra));
+        if (extra) {
           float f1;
           float f2[6];
           float f3[4];
@@ -422,12 +563,13 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
       netutils::unpack_euler_16(vals, direction);
       // LOGI("{} {} {}", direction.x, direction.y, direction.z);
     }
-    bool bool2, bool3;
-    bs.Read(bool2);
-    bs.Read(bool3);
+    bool bool3, awake = false;
+    RET_FAIL(bs.Read(awake));
+    ev.set(ev.Awake, awake);
+    RET_FAIL(bs.Read(bool3));
     Point3 unit_position{};
     if (bool3) {
-      bs.Read(unit_position);
+      RET_FAIL(bs.Read(unit_position));
     } else {
       uint32_t tv1, tv2;
       RET_FAIL(bs.Read(tv1));
@@ -451,12 +593,11 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
       unit_position.x = fv1;
       unit_position.z = fv3;
     }
-    if (ref->ref_1 && ref->ref_1->AsTank()) {
-      auto tank = ref->ref_1->AsTank();
-      auto ref = tank->positions.reserveOne();
-      ref->euler = direction;
-      ref->location = unit_position;
-      tank->positions.checkAndPush(&state);
+    if (ref->ref_1 && ref->ref_1->isGround()) {
+      // Held back until the record is known good, see VehiclePublish.
+      publish.position_unit = ref->ref_1;
+      publish.position.euler = direction;
+      publish.position.location = unit_position;
     }
     Point3 out_2;
     if (ref->val1) {
@@ -468,46 +609,52 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
       out_2.y = netutils::UNPACKS(temp[1], 100.0);
       out_2.z = netutils::UNPACKS(temp[2], 100.0);
     }
-    int8_t temp_vals[3];
-    Point3 temp_p3;
-    RET_FAIL(bs.Read(temp_vals));
-    temp_p3.x = netutils::UNPACKS(temp_vals[0], PI);
-    temp_p3.y = netutils::UNPACKS(temp_vals[1], PI);
-    temp_p3.z = netutils::UNPACKS(temp_vals[2], PI);
-    bool bool4;
-    RET_FAIL(bs.Read(bool4));
-    uint8_t temp_vals_womp[4];
-    if (bool4) {
-      bs.Read(temp_vals_womp);
-    } else {
-      // some mathy logic here
+    ev.velocity = out_2;
+    RET_FAIL(bs.Read(ev.angular_raw));
+    bool has_drive;
+    RET_FAIL(bs.Read(has_drive));
+    if (has_drive) {
+      // The track scale is measured: the same 0.1266 m/s per step on 21 vehicle types.
+      RET_FAIL(bs.Read(ev.drive_raw));
+      ev.set(ev.HasDrive, true);
     }
-    int8_t local_584 = 0x55; // dunno why??? lmao its what ghidra says the def value is
-    RET_FAIL(bs.Read(local_584)); // if bool4 is true, this should be 0
-    float local_584_val = netutils::UNPACKS(local_584, 0.5);
+    RET_FAIL(bs.Read(ev.engine));
+    // Only a ship sends this block. A ship then sends no flag_b6 and no alive bit; the rest of its state is
+    // the same as a tank's (all 233,534 ship states of 3 naval battles read to the end).
     bool bool5;
     RET_FAIL(bs.Read(bool5));
+    ev.set(ev.IsShip, bool5);
     if (bool5) {
-      uint8_t some_vals[6]; // 7 u8 reads
-      uint8_t some_vals_2[2]; // 2 u8 reads
-      bool some_val_3;
-      uint8_t some_val_4[4];
-      RET_FAIL(bs.Read(some_vals));
-      if (bs.ReadBit()) {
+      // A ship sends the drive bytes as zeros.
+      ev.set(ev.HasDrive, false);
+      uint8_t ship[6]; // s0..s2 water levels (probable), s3 = s4 throttle, s5 rudder
+      uint8_t some_vals_2[2]; // never sent
+      uint8_t w[4]; // w0..w2 unknown (127 without flooding), then the shaft count
+      RET_FAIL(bs.Read(ship));
+      bool has_extra;
+      RET_FAIL(bs.Read(has_extra));
+      if (has_extra) {
         RET_FAIL(bs.Read(some_vals_2));
       }
-      RET_FAIL(bs.Read(some_val_3));
-      RET_FAIL(bs.Read(some_val_4));
-      RET_FAIL(some_val_4[3] <= 9);
-      std::vector<uint8_t> some_vals_5{};
-      some_vals_5.resize(some_val_4[3]);
-      for (auto &b: some_vals_5) {
-        RET_FAIL(bs.Read(b));
+      bool flooding;
+      RET_FAIL(bs.Read(flooding));
+      ev.set(ev.ShipFlooding, flooding);
+      RET_FAIL(bs.Read(w));
+      RET_FAIL(w[3] <= ev.MaxShafts);
+      std::copy_n(ship, 3, ev.ship_water);
+      ev.ship_throttle_raw = ship[3];
+      ev.ship_rudder_raw = ship[5];
+      ev.shaft_count = w[3];
+      for (uint8_t i = 0; i < ev.shaft_count; i++) {
+        RET_FAIL(bs.Read(ev.shafts[i]));
       }
+    } else {
+      bool bool6, alive;
+      RET_FAIL(bs.Read(bool6));
+      RET_FAIL(bs.Read(alive));
+      ev.set(ev.Alive, alive);
     }
-    bool bool6, bool7, bool8;
-    RET_FAIL(bs.Read(bool6));
-    RET_FAIL(bs.Read(bool7));
+    bool bool8;
     RET_FAIL(bs.Read(bool8));
     if (bool8) {
       uint8_t some_vals[9];
@@ -531,7 +678,9 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
       RET_FAIL(bs.ReadBits(&(some_vals[8]), 4));
     }
 
-    if (bs.ReadBit()) {
+    bool has_sub_vehicles;
+    RET_FAIL(bs.Read(has_sub_vehicles));
+    if (has_sub_vehicles) {
       uint8_t sub_vehicle_count{};
       RET_FAIL(bs.Read(sub_vehicle_count));
       RET_FAIL(sub_vehicle_count <= 4);
@@ -542,33 +691,37 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
       }
     }
   }
-  bool b2;
-  bool b3;
+  bool b2, player_controlled;
   RET_FAIL(bs.Read(b2));
-  RET_FAIL(bs.Read(b3));
+  RET_FAIL(bs.Read(player_controlled));
+  ev.set(ev.PlayerControlled, player_controlled);
   float turret_horizontal = 5000;
   for (int i = 0; i < ref->turret_count; i++) {
-    auto weap = ref->ref_1->getWeapon(i);
+    auto weap = ref->ref_1 ? ref->ref_1->getWeapon(i) : nullptr;
+    auto &wev = weapons[i];
     bool bool1, bool2, bool3, bool4;
-    uint8_t val1, val2;
+    uint8_t val1;
     RET_FAIL(bs.Read(bool1));
+    wev.flags |= wev.HasBroken | (bool1 ? wev.IsBroken : 0);
     RET_FAIL(bs.Read(val1));
     RET_FAIL(bs.Read(bool2));
     if (bool2) {
-      RET_FAIL(bs.Read(val2));
-      double val = netutils::UNPACK(val2, 1.0);
+      RET_FAIL(bs.Read(wev.heat_raw));
+      wev.flags |= wev.HasHeat;
     }
     RET_FAIL(bs.Read(bool3));
     RET_FAIL(bs.Read(bool4));
     // Nothing of these carries ammo, which was measured rather than assumed: v1 is zero
-    // in all 1.87 M samples of a battle, and v2 is only ever non-zero on turret 0, where
-    // it is the reload progress the UNPACK above turns into 0..1. A machine gun mount
-    // reports zero for both.
+    // in all 1.87 M samples of a battle. v2 is barrel heat, not the reload progress: it
+    // gains about 50 per main-gun shot, does not reset when the reload ends, and stays at
+    // 255 on a firing autocannon. A machine gun mount does not send it.
     // if (i==0)
     // LOGI("turret {}: bool1: {}; val1: {}; bool2: {}; val2: {}; bool3: {}; bool4: {}", i, bool1, val1, bool2, val2,
     //      bool3, bool4);
     if (b2) {
-      if (bs.ReadBit()) {
+      bool has_turret;
+      RET_FAIL(bs.Read(has_turret));
+      if (has_turret) {
         uint16_t tv1, tv2;
         uint8_t tv18, tv28;
         float turret_x = 0.f, turret_y = 0.f, turret_z = 0.f;
@@ -577,6 +730,10 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
         RET_FAIL(bs.Read(tv2));
         turret_x = UNPACK_S16(tv1, PI);
         turret_y = UNPACK_S16(tv2, PI);
+        wev.yaw_raw = int16_t(tv1);
+        wev.pitch_raw = int16_t(tv2);
+        wev.flags |= wev.HasTurret;
+        // The same two angles in 1/256 of a turn; up to 20 deg apart while the turret turns fast.
         RET_FAIL(bs.Read(tv18));
         RET_FAIL(bs.Read(tv28));
         rot11 = UNPACK_S16(tv18, 180.0f);
@@ -589,9 +746,9 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
           turret_z = UNPACK_S16(extra_val, PI);
           //;LOGI("extra_val: {}", extra_val);
         }
-        if (weap && weap->turret_desc) {
-          auto turret = weap->turret_desc.get();
-          turret->setData({turret_x, turret_y, turret_z});
+        // A ship sends its preset weapons first, then commonWeapons: not the unit's weapon order.
+        if (weap && weap->turret_desc && !ev.is_ship()) {
+          publish.turret_states.push_back({weap, {turret_x, turret_y, turret_z}});
         }
       }
     }
@@ -606,14 +763,18 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
   RET_FAIL(bs.Read(sensorsCount));
   RET_FAIL(sensorsCount <= SENSORS_COUNT);
   thread_local std::vector<SensorsControlStates> states{};
-  states.resize(sensorsCount);
+  states.assign(sensorsCount, {});
   for (auto &sensor: states) {
     RET_FAIL(sensor.deserialize(bs));
   }
+  uint8_t some_weird_val = 0;
   if (sensorsCount > 0) {
-    uint8_t some_weird_val;
     RET_FAIL(bs.Read(some_weird_val));
   }
+  if (ref->ref_1)
+    for (uint8_t i = 0; i < sensorsCount; i++)
+      if (state.keep.sensors)
+        state.SensorEvents.push_back({state.curr_time_ms, ref->ref_1, i, some_weird_val, states[i]});
   uint8_t counterMeasuresCount;
   RET_FAIL(bs.Read(counterMeasuresCount));
   RET_FAIL(counterMeasuresCount <= COUNTER_MEASURES_COUNT);
@@ -626,27 +787,14 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
   RET_FAIL(bs.ReadBits(&targetsNum, 4));
   RET_FAIL(targetsNum <= 8);
   thread_local std::vector<TargetDesignationControlState> targets{};
-  targets.resize(targetsNum);
-  for (auto &t: targets) {
-    RET_FAIL(t.deserialize(bs));
+  targets.assign(targetsNum, {});
+  for (uint8_t i = 0; i < targetsNum; i++) {
+    RET_FAIL(targets[i].deserialize(bs));
+    if (ref->ref_1)
+      if (state.keep.designations)
+        state.DesignationEvents.push_back({state.curr_time_ms, ref->ref_1, i, targets[i]});
   }
-  if (ref->ref_1) {
-    ref->ref_1->calculateTurretData();
-    /*LOGI("");
-    for (auto &weap: ref->ref_1->weapons) {
-      LOGI("{};{}", state.curr_time_ms / 1000.f, weap.blk_path);
-      if (weap.turret_desc) {
-        auto turret = weap.turret_desc.get();
-        LOGI("  head: ({}) ({})", turret->head->turret_rel.toString(0), turret->head->turret_abs.toString(0));
-        LOGI("  gun:  ({}) ({})", turret->gun->turret_rel.toString(0), turret->gun->turret_abs.toString(0));
-      }
-    }*/
-    for (auto &weapon: ref->ref_1->weapons) {
-      if (weapon.turret_desc) {
-        weapon.turret_desc->push_curr_state(state);
-      }
-    }
-  }
+  // The turret state is published by GMSync once the record is known good, see VehiclePublish.
   return true;
 }
 
@@ -657,11 +805,35 @@ bool GMSync(ParserState &state, BitStream &bs) {
   uint16_t uid_upper;
   float time_at;
   uint16_t packet_reliability_order;
-  bs.Read(uid_lower);
-  bs.Read(uid_upper);
+  RET_FAIL(bs.Read(uid_lower));
+  RET_FAIL(bs.Read(uid_upper));
   uint16_t uid_lower_base = uid_lower;
-  bs.Read(time_at);
-  bs.Read(packet_reliability_order);
+  RET_FAIL(bs.Read(time_at));
+  RET_FAIL(bs.Read(packet_reliability_order));
+  // A packet holds the records of several vehicles. Nothing of it is published until all of them are
+  // read: a failed read drops the events, pools and ground syncs the earlier records appended.
+  struct PacketRollback {
+    ParserState &s;
+    size_t sensors, designations, seekers, weapons, rounds, syncs;
+    bool active = true;
+    ~PacketRollback() {
+      if (!active)
+        return;
+      s.SensorEvents.resize(sensors);
+      s.DesignationEvents.resize(designations);
+      s.SeekerEvents.resize(seekers);
+      s.GroundWeapons.resize(weapons);
+      s.GroundRounds.resize(rounds);
+      s.GroundSyncEvents.resize(syncs);
+    }
+  } packet_rollback{state,
+                    state.SensorEvents.size(),
+                    state.DesignationEvents.size(),
+                    state.SeekerEvents.size(),
+                    state.GroundWeapons.size(),
+                    state.GroundRounds.size(),
+                    state.GroundSyncEvents.size()};
+  std::vector<std::pair<unit::Unit *, VehiclePublish>> publishes;
   for (; uid_lower < uid_upper; uid_lower++) {
     TankRef ref{};
     bool bool1;
@@ -675,7 +847,9 @@ bool GMSync(ParserState &state, BitStream &bs) {
       uint8_t some_val_idk;
       bool bool4;
       RET_FAIL(bs.Read(bool2)); // some weird flag setting based on bool value at unit + 0x90
-      if (bs.ReadBit()) {
+      bool has_some_val;
+      RET_FAIL(bs.Read(has_some_val));
+      if (has_some_val) {
         RET_FAIL(bs.ReadBits(&some_val_idk, 4));
       }
       RET_FAIL(bs.Read(ref.val2));
@@ -687,25 +861,63 @@ bool GMSync(ParserState &state, BitStream &bs) {
         RET_FAIL(bs.Read(ref.val1));
         RET_FAIL(bs.Read(ref.turret_count));
         RET_FAIL(bs.Read(isCompressed));
+        mpi::GroundSyncEvent ev{state.curr_time_ms, uid_lower};
+        ev.unit = ref.ref_1;
+        ev.weapon_count = ref.turret_count;
+        // With the list kept, the weapons go to the pool, and are dropped again when the event is not
+        // kept (no state or a failed read); else to a scratch array.
+        const bool keep = state.keep.ground_syncs;
+        struct PoolRollback {
+          ParserState &s;
+          size_t w, r;
+          bool active;
+          ~PoolRollback() {
+            if (active) {
+              s.GroundWeapons.resize(w);
+              s.GroundRounds.resize(r);
+            }
+          }
+        } rollback{state, state.GroundWeapons.size(), state.GroundRounds.size(), keep};
+        // State the record collects before it is known good; published after the last field is read.
+        VehiclePublish publish{};
+        thread_local std::vector<mpi::GroundWeaponSync> scratch{};
+        mpi::GroundWeaponSync *weapons;
+        if (keep) {
+          ev.weapons_begin = uint32_t(state.GroundWeapons.size());
+          state.GroundWeapons.resize(ev.weapons_begin + ref.turret_count);
+          weapons = state.GroundWeapons.data() + ev.weapons_begin;
+        } else {
+          scratch.assign(ref.turret_count, {});
+          weapons = scratch.data();
+        }
+        bool have_state = false;
         if (isCompressed) {
           auto &hist = state.NetDelta.getHistory(uid_lower);
           auto res = state.NetDelta.netDelta.readDelta(bs, &hist);
           if (res.ok) {
-            bool ret = ParseVehicleInfo(state, res.bs, &ref, true);
-            if (ret == false && ref.ref_1 != nullptr) {
+            have_state = ParseVehicleInfo(state, res.bs, &ref, ev, weapons, publish);
+            if (have_state == false && ref.ref_1 != nullptr) {
               LOGE("Failed to parse info for ground unit {} of uid {}", ref.ref_1->unit_name, ref.ref_1->uid);
             }
           }
         } else {
+          RET_FAIL(bs.GetNumberOfUnreadBits() >= ((8 - (bs.GetReadOffset() & 7)) & 7));
           bs.AlignReadToByteBoundary();
-          ParseVehicleInfo(state, bs, &ref, false);
-          G_ASSERT(false);
+          have_state = ParseVehicleInfo(state, bs, &ref, ev, weapons, publish);
+          if (!have_state)
+            return false; // The remaining fields cannot be located after a short state.
         }
-        bool bool7;
-        RET_FAIL(bs.Read(bool7));
-        if (bool7) {
-          Point4 tp4; // actually 4 float reads, but meght
-          bs.Read(tp4);
+        bool has_aim;
+        RET_FAIL(bs.Read(has_aim));
+        if (has_aim) {
+          // The point under the player's aim: minus the heading in degrees, the pitch in degrees, and
+          // the distance twice. Sent exactly while the state says a player sits in the vehicle.
+          float aim[4];
+          RET_FAIL(bs.Read(aim));
+          ev.aim[0] = -aim[0] * DEG_TO_RAD;
+          ev.aim[1] = aim[1] * DEG_TO_RAD;
+          ev.aim[2] = aim[2];
+          ev.set(ev.HasAim, true);
         }
         bool bool8;
         RET_FAIL(bs.Read(bool8));
@@ -714,36 +926,69 @@ bool GMSync(ParserState &state, BitStream &bs) {
             bool t1;
             RET_FAIL(bs.Read(t1));
             if (t1) {
-              uint8_t v1;
-              float v2;
-              float v3;
-              uint8_t v4;
-              RET_FAIL(bs.Read(v1));
-              RET_FAIL(bs.Read(v2));
-              RET_FAIL(bs.Read(v3));
-              RET_FAIL(bs.Read(v4));
-              // new ammunition counts!!!!
-              // first val is ammo 0, second is ammo 1, ...
-              for (int j = 0; j < v4; j++) {
-                uint16_t vv;
-                bs.Read(vv);
+              auto &w = weapons[i];
+              uint8_t ammo_types;
+              float last_shot, ready;
+              uint8_t count;
+              RET_FAIL(bs.Read(ammo_types));
+              RET_FAIL(bs.Read(last_shot));
+              RET_FAIL(bs.Read(ready));
+              RET_FAIL(bs.Read(count));
+              w.flags |= w.HasAmmo;
+              w.ammo_types = ammo_types;
+              w.last_shot_s = last_shot;
+              w.ready_s = ready;
+              w.round_count = count;
+              w.rounds_begin = uint32_t(state.GroundRounds.size());
+              for (uint8_t k = 0; k < count; k++) {
+                uint16_t r;
+                RET_FAIL(bs.Read(r));
+                if (keep)
+                  state.GroundRounds.push_back(r);
               }
             }
           }
         }
         bool has_sensor_info;
         bool has_sensor_info_2;
-        bs.Read(has_sensor_info);
+        RET_FAIL(bs.Read(has_sensor_info));
         if (has_sensor_info) {
-          bs.Read(has_sensor_info_2);
+          RET_FAIL(bs.Read(has_sensor_info_2));
           if (has_sensor_info_2) {
-            DeserializeSeekerData(bs);
+            uint32_t bits;
+            RET_FAIL(bs.Read(bits));
+            mpi::SeekerEvent event{state.curr_time_ms, mpi::SeekerGround};
+            event.unit = ref.ref_1;
+            RET_FAIL(ReadSeekerBits(state, bs, bits, event));
           }
         }
+        RET_FAIL(bs.GetNumberOfUnreadBits() >= ((8 - (bs.GetReadOffset() & 7)) & 7));
         bs.AlignReadToByteBoundary();
+        if (have_state)
+          publishes.emplace_back(ref.ref_1, std::move(publish));
+        if (keep && have_state) {
+          state.GroundSyncEvents.push_back(ev);
+          rollback.active = false;
+        }
       }
     }
   }
+  // Every record is read: publish the vehicle states they described.
+  for (auto &[unit, publish]: publishes) {
+    if (publish.position_unit) {
+      *publish.position_unit->positions.reserveOne() = publish.position;
+      publish.position_unit->positions.checkAndPush(&state);
+    }
+    if (unit) {
+      for (auto &turret_state: publish.turret_states)
+        turret_state.weapon->turret_desc->setData(turret_state.angles);
+      unit->calculateTurretData();
+      for (auto &weapon: unit->weapons)
+        if (weapon.turret_desc)
+          weapon.turret_desc->push_curr_state(state);
+    }
+  }
+  packet_rollback.active = false;
   return true;
 }
 
@@ -843,31 +1088,22 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
     entity->positions.checkAndPush(&state); // we don't compare, so this shouldn't invalidate our pointer
   }
   if (!bool2) {
-    int b5;
-    bs.ReadZigZag(b5);
+    // Server time in ticks of 1/48 s, 0 to 42 ms ahead of the packet time.
+    int tick;
+    RET_FAIL(bs.ReadZigZag(tick));
+    mpi::StoreSyncEvent sync{state.curr_time_ms, eid, (float) tick / 48.f};
     if (back) {
       RET_FAIL(bs.Read(back->euler));
     } else {
       Point3 b6;
       RET_FAIL(bs.Read(b6));
     }
-    Point3 b7;
-    Point3 b8;
-    uint16_t temp_t;
-    RET_FAIL(bs.Read(temp_t));
-    b7.x = netutils::UNPACK(temp_t, 4000.0f);
-    RET_FAIL(bs.Read(temp_t));
-    b7.y = netutils::UNPACK(temp_t, 4000.0f);
-    RET_FAIL(bs.Read(temp_t));
-    b7.z = netutils::UNPACK(temp_t, 4000.0f);
-
-
-    RET_FAIL(bs.Read(temp_t));
-    b8.x = netutils::UNPACK(temp_t, 30.0f);
-    RET_FAIL(bs.Read(temp_t));
-    b8.y = netutils::UNPACK(temp_t, 30.0f);
-    RET_FAIL(bs.Read(temp_t));
-    b8.z = netutils::UNPACK(temp_t, 30.0f);
+    int16_t vel[3];
+    RET_FAIL(bs.Read(vel));
+    sync.velocity = Point3(vel[0], vel[1], vel[2]) * (2000.f / 32767.f);
+    // Three more int16 near 0, x always 0: not the angular rate and not the lateral load.
+    int16_t b8[3];
+    RET_FAIL(bs.Read(b8));
 
     bool some_b;
     uint16_t some_val = 0;
@@ -895,6 +1131,10 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
       RET_FAIL(bs.ReadCompressed(temp));
       sf4 = (float) (temp - 1) / 48.f;
     }
+    if (flags & 1)
+      sync.flight_time = sf1;
+    if (state.keep.store_syncs)
+      state.StoreSyncEvents.push_back(sync);
     if (!bool1) {
       float vv;
       RET_FAIL(bs.Read(vv));
@@ -902,7 +1142,12 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
       RET_FAIL(bs.Read(vv2));
       uint16_t sz;
       RET_FAIL(bs.Read(sz));
-      bs.IgnoreBits(sz); // most likely seeker information
+      mpi::SeekerEvent ev{state.curr_time_ms, mpi::SeekerWeapon, eid};
+      ev.lost_for = vv;
+      if (flags & 1)
+        ev.flight_time = sf1;
+      ev.unknown_header_bit = vv2;
+      RET_FAIL(ReadSeekerBits(state, bs, sz, ev));
     } else if (resyncSaclosGuidanceParams) {
       bool do_stuff;
       RET_FAIL(bs.Read(do_stuff));
@@ -935,9 +1180,7 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
   return true;
 }
 
-int count = 0;
 bool WeaponSync(ParserState &state, BitStream &bs) {
-  count++;
   ZoneScoped;
   uint8_t rocket_count;
   RET_FAIL(bs.Read(rocket_count));

@@ -7,7 +7,7 @@
 #include "array"
 #include <cstring>
 #include "dag_assert.h"
-#include "danet/daNetTypes.h"
+#include "daNet/daNetTypes.h"
 
 
 template<typename T, size_t N>

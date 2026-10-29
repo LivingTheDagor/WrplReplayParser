@@ -32,8 +32,9 @@ namespace net {
   void CNetwork::onPacket(ReplayPacket *pkt, int cur_time_ms) {
     BitStream &bs = pkt->stream;
     BitStream bsTemp = BitStream();
-    uint8_t ptype;
-    pkt->stream.Read(ptype);
+    uint8_t ptype = 0;
+    if (!pkt->stream.Read(ptype))
+      EXCEPTION("Empty network packet");
     auto readCompressedIfPacketType = [&bs, &bsTemp, ptype, pkt](uint8_t ctype) -> const BitStream * {
       if (ptype != ctype)
         return &bs;
