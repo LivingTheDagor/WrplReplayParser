@@ -77,7 +77,9 @@ public:
     G_UNUSED(hint);
     G_UNUSED(sz);
     char buf[ecs::MAX_STRING_LENGTH];
-    ecs::read_string(cb, buf, sizeof(buf));
+    if (ecs::read_string(cb, buf, sizeof(buf)) == 0) {
+      return false;
+    }
     *((ecs::string *) data) = ecs::string(buf);
     return true;
   }
@@ -106,6 +108,7 @@ public:
 
 static ObjectSerializer object_serializer;
 ECS_REGISTER_CTM_TYPE(ecs::Object, &object_serializer);
+const constexpr uint32_t MAX_LIST_SIZE = 1 << 16;
 
 class ArraySerializer final : public ecs::ComponentSerializer {
 public:
@@ -132,6 +135,8 @@ public:
     uint32_t cnt;
     if (!ecs::read_compressed(cb, cnt))
       return false;
+    G_ASSERTF_RETURN(cnt <= MAX_LIST_SIZE, false, "ArraySerializer size {} exceeds maximum allowed {}", cnt,
+                     MAX_LIST_SIZE);
     arr.reserve(cnt);
     for (uint32_t i = 0; i < cnt; ++i) {
       if (ecs::MaybeComponent mbcomp = ecs::deserialize_child_component(cb, mgr))
@@ -175,6 +180,8 @@ public:
     uint32_t cnt;
     if (!ecs::read_compressed(cb, cnt))
       return false;
+    G_ASSERTF_RETURN(cnt <= MAX_LIST_SIZE, false, "ListSerializer size {} exceeds maximum allowed {}", cnt,
+                     MAX_LIST_SIZE);
     list.resize(cnt);
     for (size_t i = 0; i < list.size(); ++i) {
       ItemType tmp;
@@ -185,7 +192,6 @@ public:
     return true;
   }
 };
-
 
 class PartIdListSerializer final : public ecs::ComponentSerializer {
 public:
@@ -216,6 +222,7 @@ public:
     uint32_t cnt;
     if (!ecs::read_compressed(cb, cnt))
       return false;
+    G_ASSERTF_RETURN(cnt <= MAX_LIST_SIZE, false, "PartIdList size {} exceeds maximum allowed {}", cnt, MAX_LIST_SIZE);
     list.resize(cnt << 3);
     // return cb.read(list.data(), (cnt<<3)*6, 0);
     for (size_t i = 0; i < list.size(); ++i) {
@@ -248,6 +255,10 @@ static struct PropsIdListSerializer final : public ecs::ComponentSerializer {
     props::PropsIdList &propList = *(props::PropsIdList *) data;
     uint32_t t;
     bool isOk = read_compressed(cb, t);
+    if (!isOk)
+      return false;
+    G_ASSERTF_RETURN(t <= MAX_LIST_SIZE, false, "PropsIdListSerializer size {} exceeds maximum allowed {}", t,
+                     MAX_LIST_SIZE);
     propList.resize(t);
     for (auto &prop: propList) {
       isOk &= read_compressed(cb, prop.data);
@@ -435,13 +446,15 @@ class BufferedHudDataSerializer : public ecs::ComponentSerializer {
                    ecs::EntityManager *mgr) override {
 
     G_ASSERT(hint == ecs::ComponentTypeInfo<BufferedHudData>::type);
-    BufferedHudData *ptr = (BufferedHudData *) data;
+    BufferedHudData &hud = *(BufferedHudData *) data;
     uint32_t arr_sz;
     bool is_ok = read_compressed(cb, arr_sz);
     if (!is_ok)
       return false;
-    ptr->data.resize(arr_sz);
-    is_ok &= cb.read(ptr->data.data(), arr_sz << 3, 0);
+    G_ASSERTF_RETURN(arr_sz <= MAX_LIST_SIZE, false, "BufferedHudDataSerializer size {} exceeds maximum allowed {}",
+                     arr_sz, MAX_LIST_SIZE);
+    hud.data.resize(arr_sz);
+    is_ok &= cb.read(hud.data.data(), arr_sz << 3, 0);
     return is_ok;
   }
 };
@@ -459,6 +472,8 @@ namespace ecs {
     uint32_t blk_sz;
     if (!read_compressed(cb, blk_sz))
       return false;
+    G_ASSERTF_RETURN(blk_sz <= MAX_LIST_SIZE, false, "FieldSerializerDictIO size {} exceeds maximum allowed {}", blk_sz,
+                     MAX_LIST_SIZE);
     actual->data.resize(BITS_TO_BYTES(blk_sz));
     bool ok = cb.read(actual->data.data(), blk_sz, 0);
     // BitStream bs{(unsigned char *) m_data, blk_sz, false};

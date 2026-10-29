@@ -21,7 +21,7 @@ namespace ecs {
       if (str == buf + buf_size)
         *str = 0;
     } while (*(str++));
-    return str - buf;
+    return static_cast<int>(str - buf);
   }
   void serialize_entity_component_ref_typeless(const void *comp_data, component_index_t cidx,
                                                component_type_t type_name, type_index_t type_id,
@@ -89,41 +89,36 @@ namespace ecs {
     // always 'boxed', always allocating data
     // const bool allocatedMem = ChildComponent::is_child_comp_boxed_by_size(componentTypeInfo.size);
     // alignas(void *) char compData[8]; // actually, should be sizeof(ChildComponent::Value), but it is protected
-    void *tempData;
 
-    tempData = malloc(componentTypeInfo.size);
+    // unique ptr that use malloc and free instead of new[] and delete[].
+    auto tempData = std::unique_ptr<std::byte[], decltype(&std::free)>(
+      static_cast<std::byte *>(std::malloc(componentTypeInfo.size)), &std::free);
     if (typeIO) {
       // const bool isBoxed = (componentTypeInfo.flags & COMPONENT_TYPE_BOXED) != 0;
       ComponentTypeManager *ctm = NULL;
       if (need_constructor(componentTypeInfo.flags)) {
-        // yes, this const cast is ugly. It yet has to be here, there is no other way (besides explicit method in entity
-        // manager of course).
         ctm = const_cast<ComponentTypes *>(componentTypes)->getCTM(typeId);
-        G_ASSERTF(ctm, "type manager for type {:#x} ({}) missing", userType, typeId);
+        G_ASSERTF_RETURN(ctm, {}, "type manager for type {:#x} ({}) missing", userType, typeId);
       }
       if (ctm)
-        ctm->create(tempData, *mgr, INVALID_ENTITY_ID, cidx);
+        ctm->create(tempData.get(), *mgr, INVALID_ENTITY_ID, cidx);
       else if (!isPod)
-        memset(tempData, 0, componentTypeInfo.size);
-      if (typeIO->deserialize(deserializer, tempData, componentTypeInfo.size, userType, mgr))
-        return Component(tempData, userType, typeId, componentTypeInfo.size);
+        memset(tempData.get(), 0, componentTypeInfo.size);
+      if (typeIO->deserialize(deserializer, tempData.get(), componentTypeInfo.size, userType, mgr))
+        return Component(tempData.release(), userType, typeId, componentTypeInfo.size);
       else {
         if (ctm)
-          ctm->destroy(tempData);
-        free(tempData);
+          ctm->destroy(tempData.get());
         EXCEPTION("");
       }
     } else if (isPod) // pod data can be just readed as-is
     {
-      if (deserializer.read(tempData, componentTypeInfo.size * CHAR_BIT, userType))
-        return Component(tempData, userType, typeId, componentTypeInfo.size);
+      if (deserializer.read(tempData.get(), componentTypeInfo.size * CHAR_BIT, userType))
+        return Component(tempData.release(), userType, typeId, componentTypeInfo.size);
     } else {
-      free(tempData);
       EXCEPTION("Attempt to deserialize type {:#x} {}<{}>, which has no typeIO and not pod", userType, typeId,
                 componentTypes->getName(typeId).data());
     }
-    if (tempData)
-      free(tempData);
     return {};
   }
   MaybeComponent deserialize_child_component(const DeserializerCb &deserializer, ecs::EntityManager *mgr) {
