@@ -61,7 +61,7 @@ void profile_bitread(uint32_t byte_count, size_t max_bitread) {
   }
 }
 
-TEST_CASE("BitStream read bits") {
+TEST_CASE("BitStream read bits", "[bitstream]") {
   g_log_handler.initialize();
   for (int i = 0; i < 25; ++i) {
     profile_bitread(20000, 16 + 8 * i);

@@ -621,7 +621,10 @@ namespace danet {
       bool r = ReadCompressed(l);
       if (l && r) {
         internal::resize_str(t, l);
-        r &= Read((char *) t.c_str(), l);
+        if constexpr (internal::HaveAllocBuffer<T>::value)
+          r &= Read((char *) t.c_str(), l);
+        else // supposedly this is needed for std::string (as copilot says don't read into std::string.c_str()
+          r &= Read((char *) t.data(), l);
       }
       if (!r || !l)
         t.clear();

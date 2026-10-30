@@ -1,5 +1,5 @@
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
-
+#define CATCH_CONFIG_CONSOLE_WIDTH 300
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -11,6 +11,7 @@
 #include <EASTL/string.h>
 #include <generic/dag_tab.h>
 #include <EASTL/vector.h>
+#include <dag/dag_vector.h>
 
 static uint32_t ones(uint32_t n) { return (1 << n) - 1; }
 
@@ -125,8 +126,8 @@ TEMPLATE_TEST_CASE("Test various vector types read/write identity", "[bitstream]
     CHECK(arr[i] == arr2[i]);
 }
 
-TEMPLATE_TEST_CASE("Test various vector of string types read/write identity", "[bitstream]", Tab<std::string>,
-                   eastl::vector<eastl::string>) {
+TEMPLATE_TEST_CASE("Test various vector of string types read/write identity", "[bitstream]", eastl::vector<std::string>,
+                   Tab<std::string>, dag::Vector<std::string>) {
   danet::BitStream bs;
 
   TestType arr;
