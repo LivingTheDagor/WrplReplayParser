@@ -119,6 +119,8 @@ void PyCodegenTypes::include(py::module_ &m) {
 
   bind_readonly_vector<std::vector<danet::WeatherEffect>>(gen, "std_vector_danet_WeatherEffect_");
 
+  bind_readonly_vector<std::vector<ecs::EntityId>>(gen, "std_vector_ecs_EntityId_");
+
   bind_readonly_vector<std::vector<uint8_t>>(gen, "std_vector_uint8_t_");
 
   bind_readonly_vector<std::vector<uint16_t>>(gen, "std_vector_uint16_t_");

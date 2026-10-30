@@ -95,15 +95,15 @@ class dummyForKillStreaksProgress_reg(DataTypeRegister):
 class intPair_reg(DataTypeRegister):
     name = "danet::zigZagPair"
     members = [
-        "danet::zigZagInt v1;",
-        "danet::zigZagInt v2;",
+        "compressed_int<int> v1;",
+        "compressed_int<int> v2;",
     ]
 
 
 class dummyForExitZonesSettings_reg(DataTypeRegister):
     name = "danet::dummyForExitZonesSettings"
     members = [
-        "danet::zigZagVector<danet::zigZagPair> vals;",
+        "std::vector<danet::zigZagPair, compressed_int<int>> vals;",
     ]
 
 
@@ -188,11 +188,11 @@ class dummyForSupportPlanes_t_reg(DataTypeRegister):
     name = "danet::dummyForSupportPlanes"
     members = [
         "ecs::EntityId eid1;",
-        "std::compressed_vector<ecs::EntityId, uint32_t> eid1_list;",
+        "std::vector<ecs::EntityId, compressed_int<uint32_t>> eid1_list;",
         "ecs::EntityId eid2;",
-        "std::compressed_vector<ecs::EntityId, uint32_t> eid2_list;",
+        "std::vector<ecs::EntityId, compressed_int<uint32_t>> eid2_list;",
         "ecs::EntityId eid3;",
-        "std::compressed_vector<ecs::EntityId, uint32_t> eid3_list;",
+        "std::vector<ecs::EntityId, compressed_int<uint32_t>> eid3_list;",
         "ecs::EntityId eid4;",
-        "std::compressed_vector<ecs::EntityId, uint32_t> eid4_list;",
+        "std::vector<ecs::EntityId, compressed_int<uint32_t>> eid4_list;",
     ]

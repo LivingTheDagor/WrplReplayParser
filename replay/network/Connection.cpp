@@ -196,7 +196,7 @@ namespace net {
     } else if (user_type == ecs::ComponentTypeInfo<ecs::string>::type)
       ecs::write_string(*this, ((const ecs::string *) from)->c_str(), ecs::MAX_STRING_LENGTH);
     else
-      bs.WriteBits((const uint8_t *) from, sz_in_bits);
+      bs.WriteBits((const uint8_t *) from, static_cast<uint32_t>(sz_in_bits));
   }
 
 #define SEQ_HISTORY_DEPTH 1024
@@ -515,7 +515,7 @@ namespace net {
 
   bool Connection::readDestructionPacket(const danet::BitStream &bs) {
     uint8_t written = 0;
-    const bool failRet = false;
+    // const bool failRet = false;
     REPL_VER(bs.Read(written));
     for (int i = 0, n = written + 1; i < n; ++i) {
       ecs::entity_id_t serverEid = ecs::ECS_INVALID_ENTITY_ID_VAL;
@@ -716,7 +716,7 @@ namespace net {
   typedef uint16_t sequence_t;
   bool Connection::readReplicationPacket(const danet::BitStream &bs) {
 
-    constexpr bool failRet = false;
+    // constexpr bool failRet = false;
     sequence_t remoteSequence = sequence_t(-1);
     REPL_VER(bs.Read(remoteSequence));
     // LOG("squence_t: %i\n", remoteSequence);

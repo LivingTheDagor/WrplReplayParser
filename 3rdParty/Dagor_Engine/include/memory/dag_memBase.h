@@ -6,8 +6,7 @@
 #pragma once
 #include <cstdint>
 #include <stddef.h>
-class IMemAlloc
-{
+class IMemAlloc {
 public:
   /// destroy this memory allocator
   virtual void destroy() = 0;
@@ -40,7 +39,8 @@ public:
     allocate aligned memory.
     calls fatal on allocation error.
     @param sz size of requested block, in bytes
-    @param alignment of requested block, in bytes. If 0 - page size used. 16 - is default alloc alignment, don't bother to call with 16
+    @param alignment of requested block, in bytes. If 0 - page size used. 16 - is default alloc alignment, don't bother
+    to call with 16
     @return pointer to aligned block of memory
   */
   virtual void *allocAligned(size_t sz, size_t alignment) = 0;
@@ -72,29 +72,25 @@ public:
   //
   // inline versions of allocation functions that return size of allocated block
   //
-  inline void *alloc(size_t sz, size_t *asize)
-  {
+  inline void *alloc(size_t sz, size_t *asize) {
     void *p = alloc(sz);
     *asize = sz;
     return p;
   }
 
-  inline void *tryAlloc(size_t sz, size_t *asize)
-  {
+  inline void *tryAlloc(size_t sz, size_t *asize) {
     void *p = tryAlloc(sz);
     *asize = sz;
     return p;
   }
 
-  inline void *allocAligned(size_t sz, size_t alignment, size_t *asize)
-  {
+  inline void *allocAligned(size_t sz, size_t alignment, size_t *asize) {
     void *p = allocAligned(sz, alignment);
     *asize = sz;
     return p;
   }
 
-  inline bool resizeInplace(void *p, size_t sz, size_t *asize)
-  {
+  inline bool resizeInplace(void *p, size_t sz, size_t *asize) {
     bool ret = resizeInplace(p, sz);
     *asize = getSize(p);
     if (!*asize)
@@ -103,17 +99,29 @@ public:
   }
 };
 
-#define DECL_MEM(name)                            \
-extern IMemAlloc *name;                 \
-inline IMemAlloc *name##_ptr() { return name; } \
+#define DECL_MEM(name)    \
+  extern IMemAlloc *name; \
+  inline IMemAlloc *name##_ptr() { return name; }
 
 
-DECL_MEM(stdmem);    //< standard c/c++ memory allocator
+DECL_MEM(stdmem); //< standard c/c++ memory allocator
 DECL_MEM(scriptmem); //< memory for scripts objects
-DECL_MEM(strmem);    //< memory for strings objects
-DECL_MEM(tmpmem);    //< memory for small temporary objects
-DECL_MEM(inimem);    //< memory for objects allocated on init and released on shutdown
-DECL_MEM(midmem);    //< memory for objects that remain in memory for significant time
-DECL_MEM(uimem);     //< memory for UI-related objects
+DECL_MEM(strmem); //< memory for strings objects
+DECL_MEM(tmpmem); //< memory for small temporary objects
+DECL_MEM(inimem); //< memory for objects allocated on init and released on shutdown
+DECL_MEM(midmem); //< memory for objects that remain in memory for significant time
+DECL_MEM(uimem); //< memory for UI-related objects
 DECL_MEM(globmem);
 DECL_MEM(defaultmem); //< memory used by default (in operator new)
+
+/// C-style functions to provide allocation/deallocation
+__forceinline void *memalloc(size_t sz, IMemAlloc *a) { return a->alloc(sz); }
+__forceinline void *memalloc(size_t sz, IMemAlloc *a, size_t *asz) { return a->alloc(sz, asz); }
+
+/// special helper to allocate memory for typed array of 'cnt' items
+template<class T>
+inline T *memalloc_typed(size_t cnt, IMemAlloc *a) {
+  return (T *) a->alloc(cnt * sizeof(T));
+}
+
+__forceinline void memfree(void *p, IMemAlloc *a) { a->free(p); }

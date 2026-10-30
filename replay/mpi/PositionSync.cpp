@@ -215,7 +215,7 @@ bool FMSync(ParserState &state, danet::BitStream &bs) {
             }
           }
           int zig_val = 0;
-          RET_FAIL(bs.ReadZigZag(zig_val));
+          RET_FAIL(bs.ReadCompressed(zig_val));
           if (zig_val < 0 || zig_val > MAX_WEAPONS_PER_UNIT) { // no negatives
             return false;
           }
@@ -227,20 +227,20 @@ bool FMSync(ParserState &state, danet::BitStream &bs) {
           // what carries meaning, and finding it is left to the reader, as with the
           // ground counter this joins.
           for (int i = 0; i < zig_val; i++) {
-            // ReadZigZag leaves the value untouched when it fails, so a short read
+            // ReadCompressed leaves the value untouched when it fails, so a short read
             // would push whatever was on the stack into the ammo stream. The start is
             // -1 rather than 0 because RET_FAIL only asserts in a debug build: there a
             // failed read falls through, and the check below then drops the record
             // instead of reporting an empty barrel.
             int rounds_left = -1, extra = 0;
-            RET_FAIL(bs.ReadZigZag(rounds_left));
-            RET_FAIL(bs.ReadZigZag(extra));
+            RET_FAIL(bs.ReadCompressed(rounds_left));
+            RET_FAIL(bs.ReadCompressed(extra));
             if (extra > 0)
               for (int ii = 0; ii < extra; ii++) {
                 // Value goes nowhere, but a failure here desyncs the bit stream and the
                 // reads after it - position, engines - would drift silently.
                 int temp_zig = 0;
-                RET_FAIL(bs.ReadZigZag(temp_zig));
+                RET_FAIL(bs.ReadCompressed(temp_zig));
               }
             if (rounds_left >= 0)
               state.AmmoEvents.push_back({state.curr_time_ms, unit, uint8_t(i), 0, uint32_t(rounds_left)});
@@ -843,7 +843,7 @@ bool ParseWeapon(ParserState &state, const danet::BitStream &bs, get_weapon_cb c
   }
   if (!bool2) {
     int b5;
-    bs.ReadZigZag(b5);
+    bs.ReadCompressed(b5);
     if (back) {
       RET_FAIL(bs.Read(back->euler));
     } else {

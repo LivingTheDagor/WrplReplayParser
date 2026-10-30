@@ -4,17 +4,16 @@
 
 #include "daNetTypes.h"
 #include "dag_assert.h"
-#include <span>
 #include <cstring>
 #include <cstddef>
-#include <cstdint>
 #include <cstdlib>
 #include <algorithm>
 #include <string>
 #include "memory/dag_genMemAlloc.h"
+#include "generic/dag_span.h"
 
-class DataBlock;
-
+#include <EASTL/type_traits.h>
+#include <EASTL/utility.h>
 
 namespace swap {
   template<typename T>
@@ -52,96 +51,151 @@ namespace swap {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
 #endif
+class DataBlock;
+
 namespace danet {
-  class BitStream {
-  public:
-    BitStream(IMemAlloc *a = defaultmem) : allocator(a) {
-      this->bitsUsed = 0;
-      this->dataOwner = 0;
-      this->bitsAllocated = 0;
-      this->readOffset = 0;
-      this->data = nullptr;
-      this->allocator = a;
+  class BitStream;
+  namespace internal {
+#define DECL_HAS_MEMBER(name, mbr)                                                 \
+  template<class T, typename Enable = void>                                        \
+  struct name : public eastl::false_type {};                                       \
+  template<class T>                                                                \
+  struct name<T, typename eastl::enable_if<eastl::is_class<T>::value>::type> {     \
+  private:                                                                         \
+    struct Fallback {                                                              \
+      int mbr;                                                                     \
+    };                                                                             \
+    struct Derived : T, Fallback {};                                               \
+    template<class U>                                                              \
+    static eastl::yes_type test(...);                                              \
+    template<class U>                                                              \
+    static eastl::no_type test(decltype(U::mbr) *);                                \
+                                                                                   \
+  public:                                                                          \
+    static const bool value = sizeof(test<Derived>(0)) == sizeof(eastl::yes_type); \
+  }
+    DECL_HAS_MEMBER(IsString, c_str);
+    DECL_HAS_MEMBER(HaveAllocBuffer, allocBuffer);
+    DECL_HAS_MEMBER(IsContainer, resize);
+    DECL_HAS_MEMBER(IsOptional, has_value);
+#undef DECL_HAS_MEMBER
+    template<typename T>
+    inline typename eastl::enable_if<HaveAllocBuffer<T>::value>::type resize_str(T &str, uint32_t sz) {
+      str.allocBuffer(sz + 1);
+    }
+    template<typename T>
+    inline typename eastl::disable_if<HaveAllocBuffer<T>::value>::type resize_str(T &str, uint32_t sz) {
+      str.resize(sz);
     }
 
+    template<typename T, typename = decltype(write_type(eastl::declval<BitStream &>(), eastl::declval<T>()))>
+    eastl::true_type supports_write_type_test(const T &);
+    eastl::false_type supports_write_type_test(...);
+    template<typename T>
+    using supports_write_type = decltype(supports_write_type_test(eastl::declval<T>()));
+
+    template<typename T, typename = decltype(read_type(eastl::declval<const BitStream &>(), eastl::declval<T &>()))>
+    eastl::true_type supports_read_type_test(const T &);
+    eastl::false_type supports_read_type_test(...);
+    template<typename T>
+    using supports_read_type = decltype(supports_read_type_test(eastl::declval<T>()));
+  }; // namespace internal
+
+  class BitStream {
+  public:
+    BitStream(IMemAlloc *a = defaultmem) : bitsUsed(0), dataOwner(0), allocator(a) {}
     BitStream(const uint8_t *_data, size_t lenInBytes, bool copy, IMemAlloc *a = defaultmem) :
       bitsUsed((uint32_t) bytes2bits(lenInBytes)), dataOwner((uint32_t) copy ? 1 : 0), readOffset(0), allocator(a) {
       if (copy) {
-        data = (uint8_t *) allocator->alloc(lenInBytes);
+        size_t bytesAllocated = 0;
+        data = (uint8_t *) allocator->alloc(lenInBytes, &bytesAllocated);
+        G_ASSERT(bytesAllocated >= lenInBytes);
         memcpy(data, _data, lenInBytes);
-        bitsAllocated = (uint32_t) bytes2bits(lenInBytes);
+        bitsAllocated = (uint32_t) bytes2bits(bytesAllocated);
       } else {
         data = (uint8_t *) _data;
         bitsAllocated = (uint32_t) bytes2bits(lenInBytes);
       }
     }
-
-    BitStream(const char *_data, size_t lenInBytes, bool copy, IMemAlloc *a = defaultmem) :
-      BitStream((uint8_t *) _data, lenInBytes, copy, a) {}
-
-    explicit BitStream(uint32_t reserveBytes, IMemAlloc *a = defaultmem) :
+    BitStream(uint32_t reserveBytes, IMemAlloc *a = defaultmem) :
       bitsUsed(0), dataOwner(1), readOffset(0), allocator(a) {
-      this->data = (uint8_t *) allocator->alloc(reserveBytes);
-      bitsAllocated = (uint32_t) bytes2bits(reserveBytes);
-      memset(data, 0, reserveBytes);
+      size_t bytesAllocated = 0;
+      data = (uint8_t *) allocator->alloc(reserveBytes, &bytesAllocated);
+      G_ASSERT(bytesAllocated >= reserveBytes);
+      bitsAllocated = (uint32_t) bytes2bits(bytesAllocated);
+      memset(data, 0, bytesAllocated);
+    }
+
+    BitStream(const BitStream &bs) {
+      allocator = defaultmem;
+      DuplicateBitStream(bs);
+    }
+
+    BitStream(BitStream &&bs) {
+      memcpy(this, &bs, sizeof(*this));
+      auto bsa = bs.allocator;
+      memset(&bs, 0, sizeof(bs));
+      bs.allocator = bsa;
+    }
+
+    BitStream &operator=(const BitStream &bs) {
+      if (dataOwner)
+        memfree(GetData(), allocator);
+      DuplicateBitStream(bs);
+      return *this;
+    }
+
+    BitStream &operator=(BitStream &&bs) {
+      if (&bs != this) {
+        this->~BitStream();
+        memcpy(this, &bs, sizeof(*this));
+        auto bsa = bs.allocator;
+        memset(&bs, 0, sizeof(bs));
+        bs.allocator = bsa;
+      }
+      return *this;
     }
 
     ~BitStream() {
       if (dataOwner) {
-        allocator->free(GetData());
+        memfree(GetData(), allocator);
         this->data = nullptr; // move is needed for python bindings to work, but previous code that wasnt moved is now
                               // being moved and that broke stuff and this fixes that
         this->dataOwner = false;
       }
     }
 
+    void Clear() { *this = BitStream(allocator); }
+
+    //
+    // RakNet compatible interface
+    //
+
     void Reset() { bitsUsed = readOffset = 0u; }
-
     uint32_t GetNumberOfBitsUsed() const { return GetWriteOffset(); }
-
     uint32_t GetWriteOffset() const { return bitsUsed; }
-
     uint32_t GetNumberOfBytesUsed(void) const { return bits2bytes(bitsUsed); }
-
     uint32_t GetReadOffset() const { return readOffset; }
-
     void SetReadOffset(uint32_t newReadOffset) const { readOffset = newReadOffset; }
-
     uint32_t GetNumberOfUnreadBits() const { return bitsUsed - readOffset; }
-
     uint32_t GetNumberOfAllocatedBits() const { return bitsAllocated; }
-
     uint8_t *GetData() { return data; }
-
     const uint8_t *GetData() const { return data; }
     std::span<uint8_t> getSlice() const { return std::span<uint8_t>(data, GetNumberOfBytesUsed()); }
-
-    const uint8_t *GetDataOffset() { return data + bits2bytes(readOffset); }
-
     void IgnoreBits(uint32_t bits) const { readOffset += std::min(bits, bitsUsed - readOffset); }
-
     void IgnoreBytes(uint32_t bytes) const { IgnoreBits(bytes2bits(bytes)); }
-
-    void Devance(uint32_t bits) { bitsUsed -= bits; }
-
     void SetWriteOffset(uint32_t offs) { bitsUsed = offs; }
-
     void SetUnalignedWriteOffset(uint32_t offs) { bitsUsed = offs; }
-
     void AlignWriteToByteBoundary() {
       if (bitsUsed)
         bitsUsed += 8 - (((bitsUsed - 1) & 7) + 1);
     }
-
     void AlignReadToByteBoundary() const {
       if (readOffset)
         readOffset += 8 - (((readOffset - 1) & 7) + 1);
     }
-
     void ResetWritePointer() { bitsUsed = 0; }
-
     void ResetReadPointer() const { readOffset = 0; }
-
 
     // actual read/write implementation
     void WriteBits(const uint8_t *input, uint32_t bits) {
@@ -187,16 +241,6 @@ namespace danet {
       *destPtr = (*destPtr & (0xff >> bits)) | ((srcByte & ((1 << bits) - 1)) << (8 - bits));
     }
 
-
-    template<typename T, size_t bytes>
-    static inline void copyShift(const uint8_t *src, uint8_t *dest, uint32_t shift) {
-      T lane = 0;
-      std::memcpy(&lane, src, bytes + 1);
-      lane = swap::byte_swap(lane);
-      lane <<= shift; // == read_rem
-      lane = swap::byte_swap(lane);
-      std::memcpy(dest, &lane, bytes);
-    }
 #if defined(BITSTREAM_TESTS)
     bool ReadBitsOld(uint8_t *output, uint32_t bits) const {
       if (!bits)
@@ -237,7 +281,15 @@ namespace danet {
       return true;
     }
 #endif
-
+    template<typename T, size_t bytes>
+    static inline void copyShift(const uint8_t *src, uint8_t *dest, uint32_t shift) {
+      T lane = 0;
+      std::memcpy(&lane, src, bytes + 1);
+      lane = swap::byte_swap(lane);
+      lane <<= shift; // == read_rem
+      lane = swap::byte_swap(lane);
+      std::memcpy(dest, &lane, bytes);
+    }
     bool ReadBits(uint8_t *output, uint32_t bits) const {
       if (!bits)
         return true;
@@ -298,12 +350,199 @@ namespace danet {
     }
 
     void Write(const char *input, uint32_t lenInBytes) { WriteBits((const uint8_t *) input, bytes2bits(lenInBytes)); }
-
     bool Read(char *output, uint32_t lenInBytes) const { return ReadBits((uint8_t *) output, bytes2bits(lenInBytes)); }
 
+    bool Read(BitStream &bs) const {
+      uint32_t numberOfBitsUsed;
+      if (!ReadCompressed(numberOfBitsUsed))
+        return false;
+      AlignReadToByteBoundary();
+      if (readOffset > bitsUsed || numberOfBitsUsed > bitsUsed - readOffset) // overflow-safe
+        return false;
+      bs.bitsUsed = numberOfBitsUsed;
+      uint32_t bytesToCopy = bits2bytes(numberOfBitsUsed);
+      bs.reserveBits(bytes2bits(bytesToCopy));
+      memcpy(bs.GetData(), GetData() + bits2bytes(GetReadOffset()), bytesToCopy);
+      SetReadOffset(GetReadOffset() + bytes2bits(bytesToCopy));
+      return true;
+    }
+
+    void Write(const BitStream &bs) {
+      uint32_t numberOfBitsUsed = bs.GetNumberOfBitsUsed();
+      WriteCompressed(numberOfBitsUsed);
+      // If someone ever will try to remove alignment at start/end, be sure to check everything with
+      // 1 2 3 4 5 6 and 7 bits of data in front of the bitstream!
+      AlignWriteToByteBoundary();
+      uint32_t bytesToCopy = bits2bytes(numberOfBitsUsed);
+      reserveBits(bytes2bits(bytesToCopy));
+      memcpy(GetData() + bits2bytes(GetWriteOffset()), bs.GetData(), bytesToCopy);
+      SetWriteOffset(GetWriteOffset() + bytes2bits(bytesToCopy));
+    }
+
     template<typename T>
-    void Write(const T &t) {
+    typename eastl::disable_if_t<!eastl::is_trivially_copyable_v<T> || eastl::is_same_v<T, bool> ||
+                                 internal::supports_write_type<T>::value>
+    Write(const T &t) {
+      static_assert(!eastl::is_pointer_v<T>);
       WriteBits((const uint8_t *) &t, bytes2bits(sizeof(T)));
+    }
+    template<typename T>
+    typename eastl::disable_if_t<
+      !eastl::is_trivially_copyable_v<T> || eastl::is_same_v<T, bool> || internal::supports_read_type<T>::value, bool>
+    Read(T &t) const {
+      static_assert(!eastl::is_pointer_v<T> && !eastl::is_const_v<T>);
+
+      constexpr auto bit_count = BYTES_TO_BITS(sizeof(T));
+      if constexpr (bit_count == 8)
+        return ReadSpecificLens<uint16_t>(t);
+      if constexpr (bit_count == 16)
+        return ReadSpecificLens<uint32_t>(t);
+      if constexpr (bit_count == 24)
+        return ReadSpecificLens<uint32_t>(t);
+      if constexpr (bit_count == 32)
+        return ReadSpecificLens<uint64_t>(t);
+      if constexpr (bit_count == 40)
+        return ReadSpecificLens<uint64_t>(t);
+      if constexpr (bit_count == 48)
+        return ReadSpecificLens<uint64_t>(t);
+      if constexpr (bit_count == 56)
+        return ReadSpecificLens<uint64_t>(t);
+      return ReadBits((uint8_t *) &t, bytes2bits(sizeof(T)));
+    }
+
+    template<typename T>
+    eastl::enable_if_t<internal::supports_write_type<T>::value> Write(const T &t) {
+      write_type(*this, t);
+    }
+
+    template<typename T>
+    eastl::enable_if_t<internal::supports_read_type<T>::value, bool> Read(T &t) const {
+      return read_type(*this, t);
+    }
+
+    template<typename T>
+    typename eastl::enable_if<internal::IsContainer<T>::value && !internal::IsString<T>::value>::type
+    Write(const T &cont) {
+      uint32_t sz = (uint32_t) cont.size(), rsz = 0;
+      WriteCompressed(sz);
+      for (auto &elem: cont) {
+        Write(elem);
+        ++rsz;
+      }
+      G_ASSERT(rsz == sz);
+      G_UNUSED(sz);
+    }
+    template<typename T, size_t asz>
+    void Write(const T (&cont)[asz]) {
+      for (auto &elem: cont)
+        Write(elem);
+    }
+    template<typename T>
+    typename eastl::enable_if<internal::IsContainer<T>::value && !internal::IsString<T>::value, bool>::type
+    Read(T &cont) const {
+      uint32_t sz = 0;
+      if (!ReadCompressed(sz))
+        return false;
+      cont.resize(sz);
+      for (uint32_t i = 0; i < sz; ++i)
+        if (!Read(cont[i]))
+          return false;
+      return true;
+    }
+    template<typename T, size_t asz>
+    bool Read(T (&cont)[asz]) {
+      for (auto &elem: cont)
+        if (!Read(elem))
+          return false;
+      return true;
+    }
+
+    template<typename T>
+    typename eastl::enable_if<internal::IsOptional<T>::value>::type Write(const T &opt) {
+      bool hasVal = opt.has_value();
+      Write(hasVal);
+      if (hasVal)
+        Write(opt.value());
+    }
+    template<typename T>
+    typename eastl::enable_if<internal::IsOptional<T>::value, bool>::type Read(T &opt) const {
+      bool hasVal = false;
+      if (!Read(hasVal))
+        return false;
+      if (!hasVal) {
+        opt.reset();
+        return true;
+      }
+      typename T::value_type val;
+      if (!Read(val))
+        return false;
+      opt = eastl::move(val);
+      return true;
+    }
+
+    template<typename B> // Template to avoid implicit types overloads to bool
+    typename eastl::enable_if<eastl::is_same<B, bool>::value>::type Write(B f) {
+      f ? Write1() : Write0();
+    }
+
+    //
+    // VLQ (https://en.wikipedia.org/wiki/Variable-length_quantity)
+    //
+    void WriteCompressed(int64_t v) { writeCompressedSignedGeneric(v); }
+    bool ReadCompressed(int64_t &v) const { return readCompressedSignedGeneric(v); }
+    void WriteCompressed(int32_t v) { writeCompressedSignedGeneric(v); }
+    bool ReadCompressed(int32_t &v) const { return readCompressedSignedGeneric(v); }
+    void WriteCompressed(int16_t v) { writeCompressedSignedGeneric(v); }
+    bool ReadCompressed(int16_t &v) const { return readCompressedSignedGeneric(v); }
+
+    void WriteCompressed(uint64_t v) { writeCompressedUnsignedGeneric(v); }
+    bool ReadCompressed(uint64_t &v) const { return readCompressedUnsignedGeneric(v); }
+    void WriteCompressed(uint32_t v) { writeCompressedUnsignedGeneric(v); }
+    bool ReadCompressed(uint32_t &v) const { return readCompressedUnsignedGeneric(v); }
+    void WriteCompressed(uint16_t v) { writeCompressedUnsignedGeneric(v); }
+    bool ReadCompressed(uint16_t &v) const { return readCompressedUnsignedGeneric(v); }
+
+    // aligned bytes read/write
+    void WriteAlignedBytes(const uint8_t *input, uint32_t bytesLen) {
+      AlignWriteToByteBoundary();
+      Write((const char *) input, bytesLen);
+    }
+    bool ReadAlignedBytes(uint8_t *output, uint32_t bytesToRead) const {
+      if (!bytesToRead)
+        return true;
+      AlignReadToByteBoundary();
+      if (readOffset + (bytesToRead << 3) > bitsUsed)
+        return false;
+      memcpy(output, GetData() + (readOffset >> 3), bytesToRead);
+      readOffset += bytesToRead << 3;
+      return true;
+    }
+    void WriteAlignedBytesSafe(const char *input, uint32_t bytesLen, uint32_t maxBytesLen) {
+      if (!input || !bytesLen)
+        WriteCompressed((uint32_t) 0);
+      else {
+        WriteCompressed(bytesLen);
+        WriteAlignedBytes((const uint8_t *) input, std::min(bytesLen, maxBytesLen));
+      }
+    }
+    bool ReadAlignedBytesSafe(char *output, uint32_t &inpLen, uint32_t maxLen) const {
+      if (!ReadCompressed(inpLen))
+        return false;
+      inpLen = std::min(inpLen, maxLen);
+      if (!inpLen)
+        return false;
+      return ReadAlignedBytes((uint8_t *) output, inpLen);
+    }
+    bool ReadAlignedBytesSafeAlloc(char **input, unsigned &ilen, unsigned maxLen) const {
+      memfree(*input, allocator);
+      *input = NULL;
+      if (!ReadCompressed(ilen))
+        return false;
+      ilen = std::min(ilen, maxLen);
+      if (!ilen)
+        return false;
+      *input = (char *) memalloc(ilen, allocator);
+      return ReadAlignedBytes((uint8_t *) *input, (uint32_t) ilen);
     }
 
     // bools
@@ -325,34 +564,96 @@ namespace danet {
         GetData()[bitsUsed >> 3] |= 0x80 >> bitsmod8;
       bitsUsed++;
     }
-
-    void Write(bool f) { f ? Write1() : Write0(); }
-
-    void Write(const std::string &str) { writeString(str.c_str(), str.size()); }
-
-    void Write(const DataBlock &blk);
-
-    template<typename T>
-    bool Read(T &t) const {
-      constexpr auto bit_count = BYTES_TO_BITS(sizeof(T));
-      if constexpr (bit_count == 8)
-        return ReadSpecificLens<uint16_t>(t);
-      if constexpr (bit_count == 16)
-        return ReadSpecificLens<uint32_t>(t);
-      if constexpr (bit_count == 24)
-        return ReadSpecificLens<uint32_t>(t);
-      if constexpr (bit_count == 32)
-        return ReadSpecificLens<uint64_t>(t);
-      if constexpr (bit_count == 40)
-        return ReadSpecificLens<uint64_t>(t);
-      if constexpr (bit_count == 48)
-        return ReadSpecificLens<uint64_t>(t);
-      if constexpr (bit_count == 56)
-        return ReadSpecificLens<uint64_t>(t);
-      return ReadBits((uint8_t *) &t, bytes2bits(sizeof(T)));
+    bool ReadBit() const {
+      G_ASSERT(readOffset < bitsUsed);
+      bool r = (GetData()[readOffset >> 3] & (0x80 >> (readOffset & 7))) != 0;
+      readOffset++;
+      return r;
+    }
+    bool Read(bool &v) const {
+      if (readOffset + 1 > bitsUsed)
+        return false;
+      v = ReadBit();
+      return true;
     }
 
-  private:
+    // other
+    uint32_t CopyData(uint8_t **_data) const {
+      G_ASSERT(_data);
+      G_ASSERT(bitsUsed > 0);
+      *_data = (uint8_t *) memalloc(bits2bytes(bitsUsed), allocator);
+      memcpy(*_data, GetData(), bits2bytes(bitsUsed));
+      return bitsUsed;
+    }
+
+    //
+    // not compatible with RakNet interface
+    //
+    template<typename T>
+    void WriteAt(T t, uint32_t pos) {
+      const uint32_t curPos = GetWriteOffset();
+      SetWriteOffset(pos);
+      Write(t);
+      SetWriteOffset(curPos);
+    }
+
+    template<typename T>
+    void WriteArray(T *tptr, size_t cnt) {
+      WriteBits((const uint8_t *) tptr, (uint32_t) bytes2bits(sizeof(T) * cnt));
+    }
+    template<typename T>
+    inline bool ReadArray(T *tptr, size_t cnt) const {
+      return ReadBits((uint8_t *) tptr, (uint32_t) bytes2bits(sizeof(T) * cnt));
+    }
+
+    void Write(const char *t) { writeString(t, (t && *t) ? strlen(t) : size_t(0)); }
+    void Write(char *t) { writeString(t, (t && *t) ? strlen(t) : size_t(0)); }
+    template<typename T>
+    typename eastl::enable_if<internal::IsString<T>::value>::type Write(const T &str) {
+      size_t len = (size_t) str.length();
+      G_ASSERT(len == strlen(str.c_str()));
+      writeString(str.c_str(), len);
+    }
+
+    template<typename T>
+    typename eastl::enable_if<internal::IsString<T>::value, bool>::type Read(T &t) const {
+      uint16_t l = 0;
+      bool r = ReadCompressed(l);
+      if (l && r) {
+        internal::resize_str(t, l);
+        r &= Read((char *) t.c_str(), l);
+      }
+      if (!r || !l)
+        t.clear();
+      return r;
+    }
+
+    void Write(const DataBlock &blk);
+    bool Read(DataBlock &blk) const;
+
+    void reserveBits(uint32_t bits) {
+      if (bits == 0)
+        return;
+
+      uint32_t newBitsAllocated = bitsUsed + bits;
+      if (!bitsAllocated || bitsAllocated < newBitsAllocated) {
+        size_t newBytesAllocated =
+          std::max(bitsAllocated ? (bitsAllocated >> 3) * 2u : 16u, bits2bytes(newBitsAllocated));
+        if (!data)
+          data = (uint8_t *) malloc(newBytesAllocated);
+        else
+          data = (uint8_t *) realloc(data, newBytesAllocated);
+
+        if (size_t tailBytes = newBytesAllocated - (bitsAllocated >> 3))
+          memset(data + (bitsAllocated >> 3), 0, tailBytes);
+        dataOwner = 1;
+        bitsAllocated = (uint32_t) bytes2bits(newBytesAllocated);
+      }
+    }
+
+    void swap(BitStream &bs);
+
+  protected:
     template<typename Tu, typename T>
     bool ReadSpecificLens(T &t) const {
       constexpr auto byte_count = sizeof(T);
@@ -370,213 +671,27 @@ namespace danet {
       return true;
     }
 
-  public:
-    bool ReadBit() const {
-      bool r = (GetData()[readOffset >> 3] & (0x80 >> (readOffset & 7))) != 0;
-      readOffset++;
-      return r;
-    }
-
-    bool Read(bool &v) const {
-      if (readOffset + 1 > bitsUsed)
-        return false;
-      v = ReadBit();
-      return true;
+    template<typename T>
+    void writeCompressedSignedGeneric(T v) {
+      G_STATIC_ASSERT(eastl::is_signed<T>::value);
+      T vu = (v << 1) ^ (v >> (sizeof(T) * CHAR_BIT - 1));
+      writeCompressedUnsignedGeneric(typename eastl::make_unsigned<T>::type(vu));
     }
 
     template<typename T>
-    void WriteAt(T t, uint32_t pos) {
-      const uint32_t curPos = GetWriteOffset();
-      SetWriteOffset(pos);
-      Write(t);
-      SetWriteOffset(curPos);
-    }
-
-
-    template<typename T>
-    void WriteArray(T *tptr, size_t cnt) {
-      WriteBits((const uint8_t *) tptr, (uint32_t) bytes2bits(sizeof(T) * cnt));
-    }
-    template<typename T>
-    inline bool ReadArray(T *tptr, size_t cnt) const {
-      return ReadBits((uint8_t *) tptr, (uint32_t) bytes2bits(sizeof(T) * cnt));
-    }
-
-
-    bool Read(std::string &str) const {
-      uint32_t sz;
-      if (!ReadCompressed(sz))
+    bool readCompressedSignedGeneric(T &v) const {
+      G_STATIC_ASSERT(eastl::is_signed<T>::value);
+      typename eastl::make_unsigned<T>::type vu;
+      if (!readCompressedUnsignedGeneric(vu))
         return false;
-      str.resize(sz);
-      if (!Read(str.data(), sz))
-        return false;
+      v = static_cast<T>((vu >> 1) ^ (-(vu & 1)));
       return true;
     }
 
-
-    bool Read(BitStream &bs) const {
-      uint32_t numberOfBitsUsed;
-      if (!ReadCompressed(numberOfBitsUsed))
-        return false;
-      AlignReadToByteBoundary();
-      if (readOffset + numberOfBitsUsed > bitsUsed)
-        return false;
-      bs.bitsUsed = numberOfBitsUsed;
-      uint32_t bytesToCopy = bits2bytes(numberOfBitsUsed);
-      bs.reserveBits(bytes2bits(bytesToCopy));
-      memcpy(bs.GetData(), GetData() + bits2bytes(GetReadOffset()), bytesToCopy);
-      SetReadOffset(GetReadOffset() + bytes2bits(bytesToCopy));
-      return true;
-    }
-
-    bool Read(DataBlock &blk) const;
-
-
-    void Write(const BitStream &bs) {
-      uint32_t numberOfBitsUsed = bs.GetNumberOfBitsUsed();
-      WriteCompressed(numberOfBitsUsed);
-      // If someone ever will try to remove alignment at start/end, be sure to check everything with
-      // 1 2 3 4 5 6 and 7 bits of data in front of the bitstream!
-      AlignWriteToByteBoundary();
-      uint32_t bytesToCopy = bits2bytes(numberOfBitsUsed);
-      reserveBits(bytes2bits(bytesToCopy));
-      memcpy(GetData() + bits2bytes(GetWriteOffset()), bs.GetData(), bytesToCopy);
-      SetWriteOffset(GetWriteOffset() + bytes2bits(bytesToCopy));
-    }
-
-    void WriteCompressed(int v) { writeCompressedUnsignedGeneric(v); }
-
-    bool ReadCompressed(int &v) const { return readCompressedUnsignedGeneric(v); }
-
-    void WriteCompressed(uint64_t v) { writeCompressedUnsignedGeneric(v); }
-
-    void WriteCompressed(uint32_t v) { writeCompressedUnsignedGeneric(v); }
-
-    bool ReadCompressed(uint64_t &v) const { return readCompressedUnsignedGeneric(v); }
-
-    bool ReadCompressed(uint32_t &v) const { return readCompressedUnsignedGeneric(v); }
-
-    void WriteCompressed(uint16_t v) { writeCompressedUnsignedGeneric(v); }
-
-    bool ReadCompressed(uint16_t &v) const { return readCompressedUnsignedGeneric(v); }
-
-    void Write(const char *t) { writeString(t, (t && *t) ? strlen(t) : size_t(0)); }
-
-    void Write(char *t) { writeString(t, (t && *t) ? strlen(t) : size_t(0)); }
-
-    bool ReadZigZag(int &v) const {
-      uint32_t val;
-      if (!this->ReadCompressed(val))
-        return false;
-      v = -(val & 1) ^ val >> 1;
-      return true;
-    }
-
-    void WriteZigZag(int v) { this->WriteCompressed(v >> 0x1f ^ v * 2); }
-
-
-    void reserveBits(uint32_t bits) {
-      if (bits == 0)
-        return;
-
-      uint32_t newBitsAllocated = bitsUsed + bits;
-      if (!bitsAllocated || bitsAllocated < newBitsAllocated) {
-        size_t newBytesAllocated =
-          std::max(bitsAllocated ? (bitsAllocated >> 3) * 2u : 16u, bits2bytes(newBitsAllocated));
-        if (!data)
-          data = (uint8_t *) allocator->alloc(newBytesAllocated);
-        else
-          data = (uint8_t *) allocator->realloc(data, newBytesAllocated);
-
-        if (size_t tailBytes = newBytesAllocated - (bitsAllocated >> 3))
-          memset(data + (bitsAllocated >> 3), 0, tailBytes);
-        dataOwner = 1;
-        bitsAllocated = (uint32_t) bytes2bits(newBytesAllocated);
-      }
-    }
-
-    void swap(BitStream &bs);
-
-    BitStream(const BitStream &other) :
-      bitsUsed(other.bitsUsed),
-      dataOwner(other.dataOwner),
-      bitsAllocated(other.bitsAllocated),
-      readOffset(other.readOffset),
-      allocator(other.allocator) {
-      if (other.data && other.dataOwner) {
-        data = (uint8_t *) allocator->alloc(bits2bytes(bitsAllocated));
-        memcpy(data, other.data, bits2bytes(bitsAllocated));
-        dataOwner = 1; // We own our copy
-      } else {
-        data = other.data; // Just pointer copy if no ownership
-        dataOwner = 0;
-      }
-    }
-
-    BitStream &operator=(const BitStream &other) {
-      if (this != &other) {
-        if (dataOwner && data)
-          allocator->free(data);
-        bitsUsed = other.bitsUsed;
-        bitsAllocated = other.bitsAllocated;
-        readOffset = other.readOffset;
-        if (other.data && other.dataOwner) {
-          data = (uint8_t *) allocator->alloc(bits2bytes(bitsAllocated));
-          memcpy(data, other.data, bits2bytes(bitsAllocated));
-          dataOwner = 1;
-        } else {
-          data = other.data;
-          dataOwner = 0;
-        }
-      }
-      return *this;
-    }
-
-    BitStream(BitStream &&other) noexcept :
-      bitsUsed(other.bitsUsed),
-      dataOwner(other.dataOwner),
-      bitsAllocated(other.bitsAllocated),
-      readOffset(other.readOffset),
-      data(other.data),
-      allocator(other.allocator) {
-      other.bitsUsed = 0;
-      other.bitsAllocated = 0;
-      other.readOffset = 0;
-      other.data = nullptr;
-      other.dataOwner = 0;
-      other.allocator = nullptr;
-    }
-
-    BitStream &operator=(BitStream &&other) noexcept {
-      if (this != &other) {
-        if (dataOwner && data)
-          allocator->free(data);
-        bitsUsed = other.bitsUsed;
-        bitsAllocated = other.bitsAllocated;
-        readOffset = other.readOffset;
-        dataOwner = other.dataOwner;
-        data = other.data;
-        allocator = other.allocator;
-        other.bitsUsed = 0;
-        other.bitsAllocated = 0;
-        other.readOffset = 0;
-        other.data = nullptr;
-        other.dataOwner = 0;
-        other.allocator = nullptr;
-      }
-      return *this;
-    }
-
-    bool operator==(const BitStream &other) const {
-      return this->bitsUsed == other.bitsUsed && this->bitsAllocated == other.bitsAllocated &&
-             this->readOffset == other.readOffset && this->dataOwner == other.dataOwner &&
-             memcmp(this->data, other.data, bits2bytes(bitsUsed)) == 0;
-    }
-
-  protected:
     template<typename T>
     void writeCompressedUnsignedGeneric(T v) {
-      for (int i = 0; i < (int) sizeof(v) + 1; ++i) {
+      G_STATIC_ASSERT(eastl::is_unsigned<T>::value);
+      for (int i = 0; i < sizeof(v) + 1; ++i) {
         uint8_t byte = uint8_t(v) | (v >= (1 << 7) ? (1 << 7) : 0);
         Write(byte);
         v >>= 7;
@@ -587,8 +702,9 @@ namespace danet {
 
     template<typename T>
     bool readCompressedUnsignedGeneric(T &v) const {
+      G_STATIC_ASSERT(eastl::is_unsigned<T>::value);
       v = 0;
-      for (int i = 0; i < (int) sizeof(v) + 1; ++i) {
+      for (int i = 0; i < sizeof(v) + 1; ++i) {
         uint8_t byte = 0;
         if (!Read(byte))
           return false;
@@ -600,7 +716,8 @@ namespace danet {
     }
 
     void writeString(const char *str, size_t str_len) {
-      WriteCompressed((uint32_t) str_len);
+      G_ASSERT(uint16_t(str_len) == str_len);
+      WriteCompressed((uint16_t) str_len);
       if (str_len)
         Write(str, (uint32_t) str_len);
     }
@@ -609,24 +726,23 @@ namespace danet {
       bitsUsed = bs.bitsUsed;
       dataOwner = 1;
       readOffset = bs.readOffset;
-      data = bs.bitsAllocated ? (uint8_t *) allocator->alloc(bits2bytes(bs.bitsAllocated)) : nullptr;
+      size_t bytesAllocated = 0;
+      data = bs.bitsAllocated ? (uint8_t *) allocator->alloc(bits2bytes(bs.bitsAllocated), &bytesAllocated) : nullptr;
       memcpy(data, bs.data, bits2bytes(bs.bitsAllocated));
-      bitsAllocated = (uint32_t) bytes2bits(bits2bytes(bs.bitsAllocated));
+      bitsAllocated = (uint32_t) bytes2bits(bytesAllocated);
     }
 
-    static inline uint32_t bits2bytes(size_t bi) { return (bi + 7) >> 3; }
-
-    static inline uint32_t bytes2bits(size_t by) { return by << 3; }
-
+    static inline uint32_t bits2bytes(uint32_t bi) { return (bi + 7) >> 3; }
+    static inline uint32_t bytes2bits(uint32_t by) { return by << 3; }
 
     uint32_t bitsUsed : 31;
     uint32_t dataOwner : 1;
-    uint32_t bitsAllocated;
-    mutable uint32_t readOffset;
-    uint8_t *data;
+    uint32_t bitsAllocated = 0;
+    mutable uint32_t readOffset = 0;
+    uint8_t *data = nullptr;
     IMemAlloc *allocator; // TODO: rework to (stateless by default) allocator class
   };
-} // namespace danet
+}; // namespace danet
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif

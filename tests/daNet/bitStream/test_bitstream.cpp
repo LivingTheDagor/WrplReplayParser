@@ -4,8 +4,7 @@
 #include "daNet/bitStream.h"
 #include "daNet/daNetTypes.h"
 #include "math/dag_Point3.h"
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "doctest.h"
+#include <catch2/catch_test_macros.hpp>
 
 #include <chrono>
 uint64_t old_time = 0;
@@ -52,9 +51,9 @@ void profile_bitread(uint32_t byte_count, size_t max_bitread) {
     new_time += std::chrono::duration_cast<std::chrono::nanoseconds>(new_end - new_start).count();
     // G_CHECKF(old_bs.GetReadOffset() == new_bs.GetReadOffset(), "read offset mismatch; expected {:#x} but got {:#x}",
     //          old_bs.GetReadOffset(), new_bs.GetReadOffset());
-    CHECK_EQ(old_bs.GetReadOffset(), new_bs.GetReadOffset());
+    CHECK(old_bs.GetReadOffset() == new_bs.GetReadOffset());
     for (size_t i = 0; i < curr_bytes; ++i) {
-      CHECK_EQ(read_to_old[i], read_to_new[i]);
+      CHECK(read_to_old[i] == read_to_new[i]);
       // G_CHECKF(read_to_old[i] == read_to_new[i], "read fail at index; expected {:#x} but got {:#x}", i,
       // read_to_new[i],
       //          read_to_old[i]);
@@ -65,8 +64,7 @@ void profile_bitread(uint32_t byte_count, size_t max_bitread) {
 TEST_CASE("BitStream read bits") {
   g_log_handler.initialize();
   for (int i = 0; i < 25; ++i) {
-    for (int j = 0; j < 100; ++j)
-      profile_bitread(20000, 16 + 8 * i);
+    profile_bitread(20000, 16 + 8 * i);
     // LOGI("iter {} max {}", i, 16 + 8 * i);
     // LOGI("Old bit read time: {} ms", (double) old_time / 1000000);
     // LOGI("New bit read time: {} ms", (double) new_time / 1000000);

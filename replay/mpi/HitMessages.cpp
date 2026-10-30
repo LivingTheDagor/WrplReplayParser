@@ -108,11 +108,11 @@ namespace mpi {
       int skip_i = 0;
       Point3 unused_dir{};
       bool skip_b = false;
-      bool ok = body.ReadZigZag(skip_i);
+      bool ok = body.ReadCompressed(skip_i);
       ok &= netutils::read_vector(body, hit.local_pos, LOCAL_POS_MAX);
       ok &= netutils::read_dir(body, hit.local_dir);
       ok &= netutils::read_dir(body, unused_dir);
-      ok &= body.ReadZigZag(skip_i);
+      ok &= body.ReadCompressed(skip_i);
       ok &= body.Read(skip_b) && body.Read(skip_b) && body.Read(skip_b);
       int16_t i16 = 0;
       int8_t i8 = 0;
@@ -120,9 +120,9 @@ namespace mpi {
       ok &= body.Read(i16); // netutils::UNPACKS<int16_t>(i16, 20.f);
       ok &= body.Read(i16); // netutils::UNPACKS<int16_t>(i16, 1.f);
       ok &= body.Read(i16); // netutils::UNPACKS<int16_t>(i16, 100.f);
-      ok &= body.ReadZigZag(skip_i);
+      ok &= body.ReadCompressed(skip_i);
       ok &= body.Read(i8); // netutils::UNPACKS<int8_t>(i8, 5.f);
-      ok &= body.ReadZigZag(skip_i);
+      ok &= body.ReadCompressed(skip_i);
       ok &= body.Read(i8); // netutils::UNPACKS<int8_t>(i8, PI);
       ok &= body.Read(i8); // netutils::UNPACKS<int8_t>(i8, PI);
       if (!ok)
@@ -272,21 +272,21 @@ namespace mpi {
       ok &= body.Read(n8);
       for (uint8_t i = 0; ok && i < n8; ++i) { // KineticHit
         // The record carries no direction; it closes with a float instead.
-        ok = body.ReadZigZag(part) && skip_bit(body) && skip_float(body, ANGLE_PROPS) &&
+        ok = body.ReadCompressed(part) && skip_bit(body) && skip_float(body, ANGLE_PROPS) &&
              skip_float(body, ANGLE_PROPS) && skip_float(body, HIT_RATIO_PROPS);
         if (ok)
           outcome.kinetic_parts.push_back(part);
       }
       ok &= body.Read(n8);
       for (uint8_t i = 0; ok && i < n8; ++i) { // CumulativeHit
-        ok = body.ReadZigZag(part) && skip_bit(body);
+        ok = body.ReadCompressed(part) && skip_bit(body);
         if (ok)
           outcome.cumulative_parts.push_back(part);
       }
       ok &= body.Read(n8);
       for (uint8_t i = 0; ok && i < n8; ++i) { // Ricochet
         // No leading flag, and the same closing float as a KineticHit.
-        ok = body.ReadZigZag(part) && skip_dir(body) && skip_float(body, ANGLE_PROPS) &&
+        ok = body.ReadCompressed(part) && skip_dir(body) && skip_float(body, ANGLE_PROPS) &&
              skip_float(body, ANGLE_PROPS) && skip_float(body, ANGLE_PROPS) && skip_float(body, HIT_RATIO_PROPS);
         if (ok)
           outcome.ricochet_parts.push_back(part);
@@ -310,7 +310,7 @@ namespace mpi {
 
       ok &= body.ReadCompressed(n16);
       for (uint16_t i = 0; ok && i < n16; ++i) { // FireSpawn
-        ok = body.ReadZigZag(part) && skip_float(body, POS_PROPS) && skip_float(body, POS_PROPS) &&
+        ok = body.ReadCompressed(part) && skip_float(body, POS_PROPS) && skip_float(body, POS_PROPS) &&
              skip_float(body, POS_PROPS) && skip_float(body, FIRE_RADIUS_PROPS);
         if (ok)
           outcome.fire_parts.push_back(part);
