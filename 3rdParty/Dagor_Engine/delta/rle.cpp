@@ -279,19 +279,95 @@ namespace net::delta {
     return (int) (outBytes + tail);
   }
 
-#define BEGIN_PROF(x) \
-  BEGIN_LAG(x);       \
-  {                   \
-    TIME_PROFILE_DEV(x);
+  int rle0ki_decompress_old(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice) {
+    ZoneScoped;
+    uint8_t *dst = dstSlice.data();
+    size_t maxOriginalSize = dstSlice.size();
+    const uint8_t *src = srcSlice.data();
+    size_t compressedSize = srcSlice.size();
 
-#define END_PROF(x) \
-  }                 \
-  END_LAG(x);
+    if (compressedSize == 0)
+      return 0;
+    int limit = compressedSize - 1;
+    if (limit < 0)
+      return -1;
 
-#define PROFILE_CODE(x, code) \
-  BEGIN_PROF(x)               \
-  code;                       \
-  END_PROF(x)
+    uint8_t parity = src[limit];
+    if (parity != RLE0_PARITY_NO && parity != RLE0_PARITY_YES)
+      return 0;
+
+    int val[] = {0, 0};
+    int code = -1;
+    int offset = RLE0_ZERO;
+    uint8_t *out = dst;
+    if (maxOriginalSize > 0)
+      *dst = 0;
+    else
+      return -1;
+
+    int super = -1;
+    for (int i = 0; i < limit; ++i) {
+      int klim = i != limit - 1 || parity == RLE0_PARITY_YES ? 2 : 1;
+      for (int k = 0; k < klim; ++k) {
+        val[0] = (*src >> (k * RLE0_FOUR)) & TWO_BITS_MASK;
+        val[1] = (*src >> (TWO_BITS_SHIFT + k * RLE0_FOUR)) & TWO_BITS_MASK;
+        int num = 0;
+
+        if (code != RLE0_KI8)
+          code = val[0];
+
+        switch (code) {
+          case RLE0_ZR0:
+            num = val[1] + ZR0_BASE_VAL;
+            val[0] = val[1] = 0;
+            break;
+
+          case RLE0_ZR1:
+            num = val[1] + ZR1_BASE_VAL;
+            val[0] = val[1] = 0;
+            break;
+
+          case RLE0_KI6:
+            code = RLE0_KI8;
+            super = val[1];
+            [[fallthrough]];
+
+          case RLE0_KI2:
+            num = 1;
+            val[0] = val[1];
+            break;
+
+          case RLE0_KI8:
+            code = -1;
+            num = 2;
+            if (super == 0 && super == val[0] && val[0] == val[1])
+              num = 39;
+            break;
+        }
+
+        for (int n = 0; n < num; ++n) {
+          *dst |= val[n & 1] << (offset * TWO_BITS_SHIFT);
+          ++offset;
+          if (offset == RLE0_FOUR) {
+            offset = RLE0_ZERO;
+            ++dst;
+            int len = dst - out;
+            if (len < maxOriginalSize)
+              *dst = 0;
+            else if (len > maxOriginalSize)
+              return -1;
+          }
+        }
+      }
+      ++src;
+    }
+
+    if (offset)
+      ++dst;
+    if (dst - out > maxOriginalSize)
+      return -1;
+    return dst - out;
+  }
 
   void compress(const danet::BitStream &in, danet::BitStream &out) {
     int maxSize = in.GetNumberOfBytesUsed() * 2; // compression can't be worse than 1:2
