@@ -7,13 +7,13 @@ namespace ecs {
   Template *TemplateDB::getTemplate(const template_t t) {
     std::shared_lock lk(this->template_mtx);
     if (t < templates.size())
-      return &templates[t];
+      return templates[t].get();
     return nullptr;
   }
 
   Template * TemplateDB::getTemplateNoLock(template_t t) {
     if (t < templates.size())
-      return &templates[t];
+      return templates[t].get();
     return nullptr;
   }
 
@@ -54,7 +54,7 @@ namespace ecs {
     std::shared_lock lk(this->template_mtx);
     for(const auto &t : this->templates)
     {
-      printTempl(t, 0, *g_ecs_data->getComponentTypes(), *g_ecs_data->getDataComponents());
+      printTempl(*t, 0, *g_ecs_data->getComponentTypes(), *g_ecs_data->getDataComponents());
     }
   }
 
@@ -168,7 +168,8 @@ namespace ecs {
 
   void TemplateDB::applyFrom(TemplateDB &&db) {
     //std::unique_lock lk(this->mtx); // lock not needed as only called during init
-    for(auto &&templ : db.templates) {
+    for(auto &&templ_ptr : db.templates) {
+      auto &templ = *templ_ptr;
       auto iter = this->template_lookup.find(templ.name);
       if (iter == this->template_lookup.end()) {
         this->AddTemplate(std::move(templ));

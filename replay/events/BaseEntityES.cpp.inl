@@ -14,6 +14,7 @@ static void on_tank_appear_es(const ecs::EventEntityCreated &evt,
                               unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
   G_ASSERT(unit__ref.unit == nullptr);
   unit__ref.unit = new unit::Tank(manager.owned_by, static_cast<uint16_t>(uid));
+  manager.owned_by->ownUnit(unit__ref.unit);
   G_ASSERT_LOG(unit__ref.unit->LoadFromStorage(unit_storage__tank), "Failed to load tank with uid {}", uid);
 }
 
@@ -22,15 +23,23 @@ static void on_aircraft_appear_es(const ecs::EventEntityCreated &evt,
                                   unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
   G_ASSERT(unit__ref.unit == nullptr);
   unit__ref.unit = new unit::Aircraft(manager.owned_by, static_cast<uint16_t>(uid));
+  manager.owned_by->ownUnit(unit__ref.unit);
   G_ASSERT_LOG(unit__ref.unit->LoadFromStorage(unit_storage__aircraft), "Failed to load aircraft with uid {}", uid);
 }
 
-static void on_unit_disappear_es(const ecs::EventEntityDestroyed &evt, unit::UnitRef &unit__ref) {
-  if (unit__ref.unit)
-    delete unit__ref.unit;
+static void on_ship_appear_es(const ecs::EventEntityCreated &evt, const WarShipModelStorageComponent &unit_storage__ship,
+                              const int &uid, unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
+  G_ASSERT(unit__ref.unit == nullptr);
+  unit__ref.unit = new unit::Ship(manager.owned_by, static_cast<uint16_t>(uid));
+  manager.owned_by->ownUnit(unit__ref.unit);
+  G_ASSERT_LOG(unit__ref.unit->LoadFromStorage(unit_storage__ship), "Failed to load ship with uid {}", uid);
 }
 
-ECS_AFTER(on_aircraft_appear_es, on_tank_appear_es)
+static void on_unit_disappear_es(const ecs::EventEntityDestroyed &evt, unit::UnitRef &unit__ref) {
+  // ParserState owns the unit until all stores and recorded references are gone.
+}
+
+ECS_AFTER(on_aircraft_appear_es, on_tank_appear_es, on_ship_appear_es)
 static void after_unit_appear_es(const ecs::EventEntityCreated &evt, unit::UnitRef &unit__ref, const int &uid,
                                  ecs::EntityManager &manager) {
   if (unit__ref.unit) {
@@ -69,6 +78,27 @@ static void uid_entity_es(const ecs::EventEntityDestroyedBasic &evt, unit::UnitR
       unit__ref.unit->destroyed_at_ms = *manager.curr_time_ms;
     }
   }
+}
+
+// One SpawnEvent per unit entity: player vehicles, the dummy_plane of each slot, AI and support units.
+ECS_AFTER(after_unit_appear_es)
+static void spawn_event_es(const ecs::EventEntityCreated &evt, const int &uid, const ecs::string &unit__className,
+                           const int &unit__playerId, const ecs::string &unit__missionName, const int &team,
+                           const int &unitType, const unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
+  if (!manager.owned_by->keep.spawns)
+    return;
+  auto &spawn = manager.owned_by->SpawnEvents.emplace_back();
+  spawn.time_ms = *manager.curr_time_ms;
+  spawn.uid = static_cast<uint16_t>(uid & 0x7FF);
+  spawn.vehicle = unit__className;
+  spawn.player = unit__playerId;
+  spawn.team = team;
+  spawn.unit_type = unitType;
+  spawn.mission_name = unit__missionName;
+  spawn.dummy = spawn.vehicle == "dummy_plane";
+  spawn.unit = unit__ref.unit;
+  if (unit__ref.unit)
+    spawn.loadout = unit__ref.unit->loadout_name;
 }
 
 template<typename Callable>

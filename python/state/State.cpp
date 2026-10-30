@@ -86,12 +86,26 @@ void PyReplayState::include(py::module_ &m) {
   bind_readonly_vector_no_contain<std::vector<ChatMessage>>(m, "ChatMessageList");
   bind_readonly_vector_no_contain<std::vector<const mpi::IBattleMessage *>>(m, "IBattleMessageList");
 
+  using Keep = ParserState::EventLists;
+  py::class_<Keep>(m, "EventLists", "Which event lists the parse fills; set them before LoadFromReader")
+    .def_readwrite("sensors", &Keep::sensors)
+    .def_readwrite("designations", &Keep::designations)
+    .def_readwrite("seekers", &Keep::seekers)
+    .def_readwrite("controls", &Keep::controls)
+    .def_readwrite("spots", &Keep::spots)
+    .def_readwrite("cockpit", &Keep::cockpit)
+    .def_readwrite("spawns", &Keep::spawns)
+    .def_readwrite("rpms", &Keep::rpms)
+    .def_readwrite("ground_syncs", &Keep::ground_syncs, "Off by default: one event per vehicle sync")
+    .def_readwrite("store_syncs", &Keep::store_syncs, "Off by default: one event per store per sync");
+
   py::class_<ParserState>(m, "ParserState")
     .def(py::init<>())
     .def(py::init<IReplay *>())
     .def(py::init<Replay *>())
     .def(py::init<ServerReplay *>())
     .def_readonly("mgr", &ParserState::g_entity_mgr)
+    .def_readonly("keep", &ParserState::keep, "Event list switches, e.g. st.keep.ground_syncs = True")
     .def("getUnitEid", &ParserState::getUnitEid, py::arg("uid"))
     .def("getUnitRef", &ParserState::getUnitObj, py::arg("uid"), py::keep_alive<0, 1>())
     .def_readonly("players", &ParserState::players)
@@ -127,6 +141,30 @@ void PyReplayState::include(py::module_ &m) {
                   "Rounds left in a barrel: 0xF0BD for a ground vehicle, the aircraft sync for a plane. "
                   "A step down is that many rounds fired. The aircraft one rides every update, so values "
                   "repeat; a ground vehicle only sends it on a change.")
+    .def_readonly("sensors", &ParserState::SensorEvents,
+                  "Sensor states from the aircraft and ground vehicle syncs")
+    .def_readonly("designations", &ParserState::DesignationEvents,
+                  "Target designations from the aircraft and ground vehicle syncs")
+    .def_readonly("cockpit", &ParserState::CockpitEvents,
+                  "0xD04A, client replays only: the author's cockpit instruments as (id, value) pairs")
+    .def_readonly("rpms", &ParserState::RpmEvents,
+                  "0xD047: the RPM of each engine of an aircraft")
+    .def_readonly("spots", &ParserState::SpotEvents,
+                  "0xF037: the spotter sees the spotted unit, which gets its red mark on the spotter's screen")
+    .def_readonly("spawns", &ParserState::SpawnEvents,
+                  "One per unit entity the ECS creates: player vehicles, slot dummy planes, AI and support units")
+    .def_readonly("controls", &ParserState::ControlEvents,
+                  "The pilot's controls and the engines of each aircraft, from the flight-model syncs")
+    .def_readonly("ground_syncs", &ParserState::GroundSyncEvents,
+                  "0xF074: motion, drive, turret angles and weapon state of each ground vehicle, ship and AI gun")
+    .def_readonly("ground_weapon_pool", &ParserState::GroundWeapons,
+                  "The weapons of ground_syncs: an event holds weapon_count of them from weapons_begin")
+    .def_readonly("ground_round_pool", &ParserState::GroundRounds,
+                  "The rounds of ground_weapon_pool: a weapon holds round_count of them from rounds_begin")
+    .def_readonly("store_syncs", &ParserState::StoreSyncEvents,
+                  "0xF11A: server time and velocity of each missile or rocket in flight")
+    .def_readonly("seekers", &ParserState::SeekerEvents,
+                  "Seeker blocks of stores in flight, aircraft and ground vehicles; the known ones decoded")
     .def_readonly("shots", &ParserState::ShotEvents,
                   "0xF0B1 single shot, 0xF01B / 0xF01C trigger down and up")
     .def(
@@ -148,23 +186,24 @@ void PyReplayState::include(py::module_ &m) {
               while (cont && rdr.getNextPacket(pkt)) {
                 BitSize_t start_offs = pkt.stream.GetReadOffset();
                 cont = state.ParsePacket(pkt);
+                if (!cont && pkt.type != ReplayPacketType::EndMarker)
+                  throw std::runtime_error(fmt::format("Failed to parse packet at {} ms", pkt.timestamp_ms));
                 pkt.stream.SetReadOffset(start_offs);
                 func(&pkt);
               }
-            } catch (py::error_already_set &e) {
-              eptr = std::current_exception(); // catches python exception and rethrows it outside the thread
-            } catch (ExceptionException &e) {
-              eptr = std::current_exception();
-            } catch (AssertException &e) {
-              eptr = std::current_exception();
+            } catch (...) {
+              eptr = std::current_exception(); // python exceptions included, rethrown outside the thread
             }
           } else {
             try {
-              while (rdr.getNextPacket(pkt) && state.ParsePacket(pkt))
-                ;
-            } catch (ExceptionException &e) {
-              eptr = std::current_exception();
-            } catch (AssertException &e) {
+              while (rdr.getNextPacket(pkt)) {
+                if (!state.ParsePacket(pkt)) {
+                  if (pkt.type != ReplayPacketType::EndMarker)
+                    throw std::runtime_error(fmt::format("Failed to parse packet at {} ms", pkt.timestamp_ms));
+                  break;
+                }
+              }
+            } catch (...) {
               eptr = std::current_exception();
             }
           }
@@ -177,14 +216,21 @@ void PyReplayState::include(py::module_ &m) {
         }
         // if its another thread, then my segfault handler will catch it and print the stacktrace
       },
-      py::arg("reader"), py::arg("callback") = nullptr)
-    .def("collect_all_units", [](ParserState &state) { return collect_all_units(state); })
-    .def("collect_all_rockets", [](ParserState &state) { return collect_all_rockets(state); })
-    .def("collect_all_bombs", [](ParserState &state) { return collect_all_bombs(state); })
-    .def("collect_all_payloads", [](ParserState &state) { return collect_all_payloads(state); })
-    .def("collect_all_torpedoes", [](ParserState &state) { return collect_all_torpedoes(state); })
-    .def("collect_all_jettisoned",
-         [](ParserState &state) { return collect_all_jettisoned(state); });
+      py::arg("reader"), py::arg("callback") = nullptr,
+      "Load packets until the end marker or reader exhaustion. Raises RuntimeError on a packet decode failure; "
+      "aircraft events and positions from the failed packet are discarded.")
+    .def("collect_all_units", [](ParserState &state) { return collect_all_units(state); },
+         py::return_value_policy::reference_internal)
+    .def("collect_all_rockets", [](ParserState &state) { return collect_all_rockets(state); },
+         py::return_value_policy::reference_internal)
+    .def("collect_all_bombs", [](ParserState &state) { return collect_all_bombs(state); },
+         py::return_value_policy::reference_internal)
+    .def("collect_all_payloads", [](ParserState &state) { return collect_all_payloads(state); },
+         py::return_value_policy::reference_internal)
+    .def("collect_all_torpedoes", [](ParserState &state) { return collect_all_torpedoes(state); },
+         py::return_value_policy::reference_internal)
+    .def("collect_all_jettisoned", [](ParserState &state) { return collect_all_jettisoned(state); },
+         py::return_value_policy::reference_internal);
 }
 
 PyReplayState py_replay_state{};
