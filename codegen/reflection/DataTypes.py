@@ -262,6 +262,7 @@ class DataTypeManager:
         self.datatypes = NameSpace("global")
         self.inst_datatypes: dict[str, DataTypeCompiled] = {}
         self.RegistredObjects: dict[str, 'InstReflectable'] = {}
+        self.counter = 0
         for imp in modules:
             for obj in iterate_classes_in_source_order(imp):
                 name = obj.__name__
@@ -413,6 +414,10 @@ class DataTypeManager:
             self.inst_datatypes[type_inst] = inst
             get = inst
         return get
+
+    def counter_inc(self):
+        self.counter += 1
+        return self.counter
 
     def compile(self, codegen_header_path: str, codegen_cpp_path: str):
         def does_nm_contain_serialized_types(nm: NameSpace):

@@ -7,15 +7,15 @@
 #include "mpi/ObjectDispatcher.h"
 #include "mpi/GeneralObject.h"
 #include "Replay/Replay.h"
-#include "danet/delta/deltaCompression.h"
+#include "daNet/delta/deltaCompression.h"
 #ifndef _ECS_CODEGEN
 #include "tracy/Tracy.hpp"
 #endif
 #include "StateAllocator.h"
 #include "StateRewinder.h"
 #include "memory/dag_memBase.h"
-#include "StateRewinder.h"
 #include "mpi/Ballistics.h"
+#include "blockAllocator.h"
 namespace unit {
   class Unit;
 }
@@ -53,7 +53,7 @@ struct ChatMessage {
   bool is_local_message{}; // a message that only ur client sees (ex: chat spamming message)
   bool is_quick_message{}; // is a message created through the quick message menu
   std::string complaints; // this is basically useless information
-  inline bool FromBS(BitStream &bs);
+  inline bool FromBS(danet::BitStream &bs);
 };
 
 
@@ -67,6 +67,7 @@ struct RewindRef {
 #endif
 };
 
+
 // used to hold the state currently being destroyed
 // unless if you somehow destroy multiple states at the same time in the same thread
 // this will always represent the state currently in destruction, and can be used to pass it around without complex
@@ -79,6 +80,22 @@ struct ParserState {
   explicit ParserState(IReplay *replay);
 
 protected:
+  template<typename... Ts>
+  struct UnitAllocator {
+  private:
+    using AllocT = StateAllocator::DagAllocType;
+    static_assert((std::is_base_of_v<unit::Unit, Ts> && ...), "must derive from unit::Unit");
+    std::tuple<BlockAllocator<Ts, 16, AllocT>...> containers;
+
+  public:
+    explicit UnitAllocator(AllocT alloc_type) : containers{((void) sizeof(Ts), alloc_type)...} {}
+
+    template<typename T, typename... Args>
+    T &allocateOne(Args &&...args) {
+      return std::get<BlockAllocator<T, 16, AllocT>>(containers).getNext(std::forward<Args>(args)...);
+    }
+  };
+
   void initialize(uint32_t player_couunt);
   bool is_dtor{false};
   StateAllocator allocator{};
@@ -114,6 +131,7 @@ protected:
   friend IObjectRewindState;
 
 public:
+  UnitAllocator<unit::Aircraft, unit::Tank> _unit_allocator{allocator.getMem()};
   template<class T, class... Args>
   T *_new(Args &&...args) {
     return allocator._new<T>(std::forward<Args>(args)...);

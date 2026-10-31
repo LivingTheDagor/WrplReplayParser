@@ -5,7 +5,8 @@
 #include "ioSys/dag_dataBlock.h"
 
 namespace {
-  // warthunder offsets all y offsets by the sea level. on most maps, this is 0, but some, like Pradesh, have a difference (last seen as 920)
+  // warthunder offsets all y offsets by the sea level. on most maps, this is 0, but some, like Pradesh, have a
+  // difference (last seen as 920)
   float read_sea_level(const char *level_path) {
     if (!level_path || !*level_path)
       return 0.f;
@@ -23,7 +24,7 @@ namespace {
   }
 } // namespace
 
-bool ChatMessage::FromBS(BitStream &bs) {
+bool ChatMessage::FromBS(danet::BitStream &bs) {
   bool ok = true;
   ok &= bs.Read(player_name);
   ok &= bs.Read(message);
@@ -33,9 +34,7 @@ bool ChatMessage::FromBS(BitStream &bs) {
   ok &= bs.Read(complaints);
   return ok;
 }
-ParserState::ParserState(uint32_t player_count) {
-  initialize(player_count);
-}
+ParserState::ParserState(uint32_t player_count) { initialize(player_count); }
 ParserState::ParserState(IReplay *replay) {
   auto header = replay->getHeader();
   if (!header)
@@ -47,7 +46,7 @@ void ParserState::initialize(uint32_t player_count) {
   G_ASSERT(this->players.size() == 0);
   this->players.reserve(player_count);
   for (size_t i = 0; i < player_count; i++) {
-    this->players.emplace_back(this, (mpi::ObjectID)((0xe<<0xb)+i));
+    this->players.emplace_back(this, (mpi::ObjectID) ((0xe << 0xb) + i));
   }
   this->g_entity_mgr.curr_event = _new<ecs::EcsRewindEvent>();
 }
@@ -60,9 +59,7 @@ void ParserState::registerStateChange(IObjectRewindState *state, uint32_t back, 
 }
 
 #else
-void IObjectRewindState::pushBackState(ParserState *state) {
-  state->registerStateChange(this);
-}
+void IObjectRewindState::pushBackState(ParserState *state) { state->registerStateChange(this); }
 void ParserState::registerStateChange(IObjectRewindState *state) {
   this->curr_ms_rewind_refs.emplace_back(RewindRef{state});
 }
@@ -75,7 +72,7 @@ public:
   }
   ~StateUpdateEvent() override = default;
   void forward(ParserState &state) override {
-    for (auto & st : states) {
+    for (auto &st: states) {
 #if LDAG_DBGLEVEL > 0
       st.state->rewindForward(st.forward_index);
 #else
@@ -96,7 +93,6 @@ public:
 
 private:
   std::pmr::vector<RewindRef> states;
-
 };
 
 void ParserState::beforePacket(ReplayPacket &pkt) {
@@ -171,7 +167,7 @@ ParserState::~ParserState() {
   for (auto v: BattleMessages) {
     _delete(v);
   }
-  for (auto v : Zones) {
+  for (auto v: Zones) {
     _delete(v);
   }
   for (auto v: this->missionAreas1) {
@@ -257,27 +253,26 @@ void StateRewinder::rewind_to_ms(ParserState &parser_state, uint32_t time_ms) {
     return;
   }
   const uint32_t sz = actions_vector.size();
-    if (sz == 0)
-      return;
+  if (sz == 0)
+    return;
 
-    if (curr_index > 0 && actions_vector[curr_index - 1].time_ms_at > time_ms) {
-      while (curr_index > 0 && actions_vector[curr_index - 1].time_ms_at > time_ms) {
-        --curr_index;
-        parser_state.curr_time_ms = actions_vector[curr_index].time_ms_at;
-        actions_vector[curr_index].event->backward(parser_state);
-      }
-      parser_state.curr_time_ms = curr_index > 0 ? actions_vector[curr_index - 1].time_ms_at : 0;
-    } else {
-      while (curr_index < sz && actions_vector[curr_index].time_ms_at <= time_ms) {
-        parser_state.curr_time_ms = actions_vector[curr_index].time_ms_at;
-        actions_vector[curr_index].event->forward(parser_state);
-        ++curr_index;
-      }
+  if (curr_index > 0 && actions_vector[curr_index - 1].time_ms_at > time_ms) {
+    while (curr_index > 0 && actions_vector[curr_index - 1].time_ms_at > time_ms) {
+      --curr_index;
+      parser_state.curr_time_ms = actions_vector[curr_index].time_ms_at;
+      actions_vector[curr_index].event->backward(parser_state);
     }
+    parser_state.curr_time_ms = curr_index > 0 ? actions_vector[curr_index - 1].time_ms_at : 0;
+  } else {
+    while (curr_index < sz && actions_vector[curr_index].time_ms_at <= time_ms) {
+      parser_state.curr_time_ms = actions_vector[curr_index].time_ms_at;
+      actions_vector[curr_index].event->forward(parser_state);
+      ++curr_index;
+    }
+  }
 }
 void StateRewinder::add_action(ParserState &parser_state, IRewindEvent *action) {
-  actions_vector.emplace_back( action);
+  actions_vector.emplace_back(action);
   actions_vector.back().time_ms_at = parser_state.curr_time_ms;
   curr_index = actions_vector.size();
 }
-

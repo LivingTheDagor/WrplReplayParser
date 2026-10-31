@@ -55,14 +55,14 @@ namespace mpi {
   public:
     BSMessage(IObject *o, MessageID mid) : Message(o, mid) {}
 
-    BitStream data{};
+    danet::BitStream data{};
     bool readPayload(ParserState *state) override { return this->payload.Read(data); };
     void writePayload() override { this->payload.Write(data); };
   };
 
   class TankMessage : public Message {
   public:
-    BitStream data{};
+    danet::BitStream data{};
     TankMessage(IObject *o, MessageID mid) : Message(o, mid) {}
     bool readPayload(ParserState *state) override;
     void writePayload() override;
@@ -77,7 +77,7 @@ namespace mpi {
     float some_magnitude{};
     bool tracking_weapon{};
     ecs::EntityId weapon_eid{};
-    CameraStateMessage(IObject * o) : Message(o, MPI_PACKETS::UnitCamera) {}
+    CameraStateMessage(IObject *o) : Message(o, MPI_PACKETS::UnitCamera) {}
     bool readPayload(ParserState *state) override;
   };
 
@@ -188,15 +188,12 @@ namespace mpi {
     [[nodiscard]] uint16_t offender_uid() const { return offender_oid & 0x7FF; }
     [[nodiscard]] uint8_t offender_type() const { return offender_oid >> 11; }
     /// Same value 0xF15F carries as projectileUid.
-    [[nodiscard]] uint32_t projectile_uid() const {
-      return (uint32_t(projectile_id) << 8) | generation;
-    }
+    [[nodiscard]] uint32_t projectile_uid() const { return (uint32_t(projectile_id) << 8) | generation; }
     [[nodiscard]] bool valid() const { return projectile_id != 0xFFFF || generation != 0xFF; }
     bool operator==(const ProjectileKey &o) const {
-      return offender_oid == o.offender_oid && projectile_id == o.projectile_id &&
-             generation == o.generation;
+      return offender_oid == o.offender_oid && projectile_id == o.projectile_id && generation == o.generation;
     }
-    bool read(const BitStream *bs);
+    bool read(const danet::BitStream *bs);
   };
 
   /// 0xF133 UnitOnExplosion: a projectile went off next to this unit. Carries the

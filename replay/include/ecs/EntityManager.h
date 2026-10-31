@@ -1,7 +1,7 @@
 #pragma once
 
 #include "typesAndLimits.h"
-#include "ecs/ComponentTypes.h"
+#include "ecs/componentTypes.h"
 #include "ecs/Component.h"
 #include "ecs/ComponentRef.h"
 #include "ecs/DataComponents.h"

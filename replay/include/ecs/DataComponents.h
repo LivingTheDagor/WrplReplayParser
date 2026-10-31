@@ -3,7 +3,7 @@
 #ifndef MYEXTENSION_DATACOMPONENTS_H
 #define MYEXTENSION_DATACOMPONENTS_H
 
-#include "ecs/ComponentTypes.h"
+#include "ecs/componentTypes.h"
 #include "StringTableAllocator.h"
 
 namespace ecs {

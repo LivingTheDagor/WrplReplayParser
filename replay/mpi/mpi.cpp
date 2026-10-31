@@ -194,7 +194,7 @@ namespace mpi {
                                                                                : nullptr);
   }
 
-  Message *dispatch(const BitStream &bs, ParserState *state, bool copy_payload) {
+  Message *dispatch(const danet::BitStream &bs, ParserState *state, bool copy_payload) {
     ZoneScoped;
     ObjectID oid;
     ObjectExtUID extUid;
@@ -210,7 +210,7 @@ namespace mpi {
           G_ASSERT(!(bs.GetReadOffset() & 7)); // bit offset
           uint32_t bytesReaded = BITS_TO_BYTES(bs.GetReadOffset());
           new (&m->payload)
-            BitStream(bs.GetData() + bytesReaded, bs.GetNumberOfBytesUsed() - bytesReaded, copy_payload);
+            danet::BitStream(bs.GetData() + bytesReaded, bs.GetNumberOfBytesUsed() - bytesReaded, copy_payload);
           if (m->readPayload(state))
             return m;
           else if (m->delete_message)

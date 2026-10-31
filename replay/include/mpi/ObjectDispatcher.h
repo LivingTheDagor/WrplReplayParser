@@ -24,7 +24,7 @@ namespace mpi {
     struct QueueData {
       ObjectID oid;
       ObjectExtUID extUid;
-      BitStream bs;
+      danet::BitStream bs;
     };
 
     std::unordered_map<ecs::EntityId, std::vector<QueueData>> dispatched_objects;
@@ -33,11 +33,12 @@ namespace mpi {
 
     void applyMpiMessage(const Message *m) override;
 
-    bool deserialize(BitStream &bs, int data_size, ParserState *state) override;
+    bool deserialize(danet::BitStream &bs, int data_size, ParserState *state) override;
 
     friend ParserState;
 
     MpiQueueObject(ParserState *state) : danet::ReflectableObject(state) {}
+
   public:
     DECL_REFLECTION(MpiQueueObject, danet::ReflectableObject)
 

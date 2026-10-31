@@ -1,14 +1,14 @@
 #include "state/ParserState.h"
 #include "mpi/PositionSync.h"
 #include "Unit.h"
-#include "danet/dag_netUtils.h"
+#include "daNet/dag_netUtils.h"
 #include "math/dag_mathAng.h"
 
 bool separateServerSideDetection_g = true;
 bool resyncSaclosGuidanceParams = true; // actually known to be true, hopefully
 
 #define RET_FAIL(op) G_ASSERT_RETURN((op), false);
-bool SensorsControlStates::deserialize(BitStream &bs) {
+bool SensorsControlStates::deserialize(danet::BitStream &bs) {
   first_bool = bs.ReadBit();
   uint8_t sensor_type;
   bs.Read(sensor_type);
@@ -87,7 +87,7 @@ bool SensorsControlStates::deserialize(BitStream &bs) {
 }
 
 
-bool TargetDesignationControlState::deserialize(BitStream &bs) {
+bool TargetDesignationControlState::deserialize(danet::BitStream &bs) {
   RET_FAIL(bs.Read(v1));
   RET_FAIL(bs.Read(v2));
   v3 = bs.ReadBit();
@@ -127,7 +127,7 @@ bool TargetDesignationControlState::deserialize(BitStream &bs) {
   return true;
 }
 
-bool CounterMeasuresControlState::deserialize(BitStream &bs) {
+bool CounterMeasuresControlState::deserialize(danet::BitStream &bs) {
   RET_FAIL(bs.Read(v1));
   RET_FAIL(bs.Read(v2));
   return true;
@@ -155,7 +155,7 @@ std::vector<std::string> unit::getUnitTagsName(std::string_view &name) {
 G_STATIC_ASSERT(sizeof(TargetDesignationControlState) == 0x50);
 
 
-void DeserializeSeekerData(BitStream &bs) {
+void DeserializeSeekerData(danet::BitStream &bs) {
   // this will probably never be implemented unless if I actually go through and try to understand what this complex
   // bullshit is
   uint32_t val;
@@ -167,7 +167,7 @@ void DeserializeSeekerData(BitStream &bs) {
   return;
 }
 
-bool FMSync(ParserState &state, BitStream &bs) {
+bool FMSync(ParserState &state, danet::BitStream &bs) {
   ZoneScoped;
   uint16_t uid = 0;
   do {
@@ -215,7 +215,7 @@ bool FMSync(ParserState &state, BitStream &bs) {
             }
           }
           int zig_val = 0;
-          RET_FAIL(bs.ReadZigZag(zig_val));
+          RET_FAIL(bs.ReadCompressed(zig_val));
           if (zig_val < 0 || zig_val > MAX_WEAPONS_PER_UNIT) { // no negatives
             return false;
           }
@@ -227,20 +227,20 @@ bool FMSync(ParserState &state, BitStream &bs) {
           // what carries meaning, and finding it is left to the reader, as with the
           // ground counter this joins.
           for (int i = 0; i < zig_val; i++) {
-            // ReadZigZag leaves the value untouched when it fails, so a short read
+            // ReadCompressed leaves the value untouched when it fails, so a short read
             // would push whatever was on the stack into the ammo stream. The start is
             // -1 rather than 0 because RET_FAIL only asserts in a debug build: there a
             // failed read falls through, and the check below then drops the record
             // instead of reporting an empty barrel.
             int rounds_left = -1, extra = 0;
-            RET_FAIL(bs.ReadZigZag(rounds_left));
-            RET_FAIL(bs.ReadZigZag(extra));
+            RET_FAIL(bs.ReadCompressed(rounds_left));
+            RET_FAIL(bs.ReadCompressed(extra));
             if (extra > 0)
               for (int ii = 0; ii < extra; ii++) {
                 // Value goes nowhere, but a failure here desyncs the bit stream and the
                 // reads after it - position, engines - would drift silently.
                 int temp_zig = 0;
-                RET_FAIL(bs.ReadZigZag(temp_zig));
+                RET_FAIL(bs.ReadCompressed(temp_zig));
               }
             if (rounds_left >= 0)
               state.AmmoEvents.push_back({state.curr_time_ms, unit, uint8_t(i), 0, uint32_t(rounds_left)});
@@ -364,7 +364,7 @@ struct SubVehicleDynData {
   float f6;
   Point3 some_position_maybe;
 
-  bool deserialize(BitStream &bs) {
+  bool deserialize(danet::BitStream &bs) {
     Point3 euler;
     std::array<int16_t, 3> euler_bits;
     bool ok = true;
@@ -383,7 +383,7 @@ struct SubVehicleDynData {
 };
 
 
-bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_from_compress) {
+bool ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bool is_from_compress) {
   ZoneScoped;
   if (!ref->ref_1) {
     G_ASSERT(is_from_compress);
@@ -652,7 +652,7 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
 }
 
 
-bool GMSync(ParserState &state, BitStream &bs) {
+bool GMSync(ParserState &state, danet::BitStream &bs) {
   ZoneScoped;
   uint16_t uid_lower;
   uint16_t uid_upper;
@@ -796,7 +796,7 @@ Rocket *getTorpedo(ParserState &state, ecs::EntityId eid) {
 
 typedef Rocket *(*get_weapon_cb)(ParserState &state, ecs::EntityId eid);
 
-bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
+bool ParseWeapon(ParserState &state, const danet::BitStream &bs, get_weapon_cb cb) {
   bool bool1, bool2;
   RET_FAIL(bs.Read(bool1));
   RET_FAIL(bs.Read(bool2));
@@ -845,7 +845,7 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
   }
   if (!bool2) {
     int b5;
-    bs.ReadZigZag(b5);
+    bs.ReadCompressed(b5);
     if (back) {
       RET_FAIL(bs.Read(back->euler));
     } else {
@@ -937,7 +937,7 @@ bool ParseWeapon(ParserState &state, const BitStream &bs, get_weapon_cb cb) {
 }
 
 int count = 0;
-bool WeaponSync(ParserState &state, BitStream &bs) {
+bool WeaponSync(ParserState &state, danet::BitStream &bs) {
   count++;
   ZoneScoped;
   uint8_t rocket_count;

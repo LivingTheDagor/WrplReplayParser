@@ -16,8 +16,9 @@
 // #include <util/dag_hash.h>
 #include "dag_assert.h"
 
-class BitStream;
-
+namespace danet {
+  class BitStream;
+}
 
 namespace net {
 
@@ -58,8 +59,8 @@ namespace net {
 
     virtual const MessageClass &getMsgClass() const = 0;
 
-    virtual void pack(BitStream &bs) const = 0;
-    virtual bool unpack(const BitStream &bs, const net::IConnection &conn) = 0;
+    virtual void pack(danet::BitStream &bs) const = 0;
+    virtual bool unpack(const danet::BitStream &bs, const net::IConnection &conn) = 0;
 
     virtual IMessage *moveHeap() && = 0;
 
@@ -145,8 +146,8 @@ namespace net {
 
     static void startWaitingForMessageIdsSync();
     static void resetMessageIdsSync();
-    static void writeMessageIdsSync(BitStream &bs, uint64_t client_hash = 0u);
-    static bool applyMessageIdsSync(const BitStream &bs);
+    static void writeMessageIdsSync(danet::BitStream &bs, uint64_t client_hash = 0u);
+    static bool applyMessageIdsSync(const danet::BitStream &bs);
 
     static const MessageClass *getById(int msg_class_id);
     static int getNumClassIdBits();

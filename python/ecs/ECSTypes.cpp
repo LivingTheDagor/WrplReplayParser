@@ -3,7 +3,7 @@
 #include "modules/Math.h"
 #include "ecs/typesAndLimits.h"
 #include "ecs/EntityManager.h" // so all types are defined
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include "pybind11/stl_bind.h"
 #include "modules/mpi/unit.h"
 

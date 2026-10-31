@@ -112,7 +112,7 @@ def generate(input_file_name: str, output_file_name: str, rel_path_for_include: 
     include_preamble = """// Built with ECS codegen version %s
     #include <ecs/query/entitySystem.h>
     #include <ecs/componentTypes.h>
-    #include <ecs/ComponentTypesDefs.h>
+    #include <ecs/componentTypesDefs.h>
     #include <Pull.h>
     """ % version
     include_preamble += '#include "' + rel_path_for_include + '"\n'

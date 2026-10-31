@@ -1,7 +1,7 @@
 #pragma once
 #include "cstdint"
 #include "string"
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 
 constexpr uint32_t CURR_MAGIC = 0x00018c28;
 #pragma pack(push, 1)
@@ -75,5 +75,5 @@ public:
   uint32_t timestamp_ms{};
   // (Runtime state, not file data)
   // uint64_t runtimePayloadSizeBytes{};
-  BitStream stream;
+  danet::BitStream stream;
 };

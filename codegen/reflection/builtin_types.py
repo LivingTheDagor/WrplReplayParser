@@ -47,6 +47,18 @@ class int_reg(DataTypeRegister):
     is_pod = True
 
 
+class compressed_int_reg(DataTypeRegister):
+    name = "compressed_int"
+    # the integer type to be compressed
+    template_type_args = [DataTypeType]
+    custom_loader = compressed_int_loader
+    custom_writer = compressed_int_writer
+
+    @staticmethod
+    def serialize_name(datatype: 'DataTypeCompiled'):
+        return f"{str(datatype.template_args[0])}"
+
+
 class float_reg(DataTypeRegister):
     name = "float"
     is_pod = True
@@ -81,47 +93,6 @@ class vector_reg(DataTypeRegister):
     @staticmethod
     def serialize_name(datatype: 'DataTypeCompiled'):
         return f"std::vector<{str(datatype.template_args[0])}>"  # the second arg is only for code generation
-
-
-class compressed_vector_reg(DataTypeRegister):
-    name = "std::compressed_vector"
-    # second DataTypeType is the type of the value holding our size, most often u8, but can be u32
-    template_type_args = [DataTypeType, DataTypeType]
-    custom_loader = compressed_vector_loader
-    custom_writer = compressed_vector_writer
-
-    @staticmethod
-    def serialize_name(datatype: 'DataTypeCompiled'):
-        return f"std::vector<{str(datatype.template_args[0])}>"  # the second arg is only for code generation
-
-class zigZagInt_reg(DataTypeRegister):
-    name = "danet::zigZagInt"
-    custom_loader = zigZagInt_loader
-    custom_writer = zigZagInt_writer
-
-    @staticmethod
-    def serialize_name(datatype: 'DataTypeCompiled'):
-        return "int"
-
-    @staticmethod
-    def get_base_name(datatype: 'DataTypeCompiled'):
-        return "int"
-
-
-class zigZagVector_reg(DataTypeRegister):
-    name = "danet::zigZagVector"
-    template_type_args = [DataTypeType]
-    custom_loader = zigZagVector_loader
-    custom_writer = zigZagVector_writer
-
-    @staticmethod
-    def serialize_name(datatype: 'DataTypeCompiled'):
-        base = "std::vector"
-        return f"{base}<{str(datatype.template_args[0])}>"
-
-    @staticmethod
-    def get_base_name(datatype: 'DataTypeCompiled'):
-        return "std::vector"
 
 
 class array_reg(DataTypeRegister):

@@ -1,5 +1,5 @@
-#include <danet/daNetTypes.h>
-#include "danet/BitStream.h"
+#include <daNet/daNetTypes.h>
+#include "daNet/bitStream.h"
 #include "modules/BitStream.h"
 extern "C" {
 #include "lz4.h"
@@ -13,7 +13,7 @@ extern "C" {
 using ssize_t = Py_ssize_t;
 PyBitStream py_bitstream{};
 
-std::optional<py::bytes> read_bits(BitStream &bs, uint32_t bits) {
+std::optional<py::bytes> read_bits(danet::BitStream &bs, uint32_t bits) {
   if ((bits) > bs.GetNumberOfUnreadBits())
     return {};
   std::string payload{};
@@ -26,20 +26,22 @@ std::optional<py::bytes> read_bits(BitStream &bs, uint32_t bits) {
 
 void PyBitStream::include(py::module_ &m) {
   DO_INCLUDE()
-  py::class_<BitStream>(m, "BitStream")
+  py::class_<danet::BitStream>(m, "BitStream")
     .def(py::init([](py::bytes &data) {
       auto spn = bytes_to_span(data);
-      return BitStream(spn.data(), spn.size(), true);
+      return danet::BitStream(spn.data(), spn.size(), true);
     }))
     .def(
       "ReadBytes",
-      [](BitStream &bs, uint32_t bytes) -> std::optional<py::bytes> { return read_bits(bs, BYTES_TO_BITS(bytes)); },
+      [](danet::BitStream &bs, uint32_t bytes) -> std::optional<py::bytes> {
+        return read_bits(bs, BYTES_TO_BITS(bytes));
+      },
       py::arg("bytes"))
     .def(
-      "ReadBits", [](BitStream &bs, uint32_t bits) -> std::optional<py::bytes> { return read_bits(bs, bits); },
+      "ReadBits", [](danet::BitStream &bs, uint32_t bits) -> std::optional<py::bytes> { return read_bits(bs, bits); },
       py::arg("bits"))
     .def("ReadUInt8",
-         [](BitStream &bs) -> std::optional<uint8_t> {
+         [](danet::BitStream &bs) -> std::optional<uint8_t> {
            uint8_t v;
            if (bs.Read(v)) {
              return {v};
@@ -47,7 +49,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadUInt16",
-         [](BitStream &bs) -> std::optional<uint16_t> {
+         [](danet::BitStream &bs) -> std::optional<uint16_t> {
            uint16_t v;
            if (bs.Read(v)) {
              return {v};
@@ -55,7 +57,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadUInt32",
-         [](BitStream &bs) -> std::optional<uint32_t> {
+         [](danet::BitStream &bs) -> std::optional<uint32_t> {
            uint32_t v;
            if (bs.Read(v)) {
              return {v};
@@ -63,7 +65,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadUInt64",
-         [](BitStream &bs) -> std::optional<uint64_t> {
+         [](danet::BitStream &bs) -> std::optional<uint64_t> {
            uint64_t v;
            if (bs.Read(v)) {
              return {v};
@@ -71,7 +73,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadInt8",
-         [](BitStream &bs) -> std::optional<int8_t> {
+         [](danet::BitStream &bs) -> std::optional<int8_t> {
            int8_t v;
            if (bs.Read(v)) {
              return {v};
@@ -79,7 +81,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadInt16",
-         [](BitStream &bs) -> std::optional<int16_t> {
+         [](danet::BitStream &bs) -> std::optional<int16_t> {
            int16_t v;
            if (bs.Read(v)) {
              return {v};
@@ -87,7 +89,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadInt",
-         [](BitStream &bs) -> std::optional<int32_t> {
+         [](danet::BitStream &bs) -> std::optional<int32_t> {
            int32_t v;
            if (bs.Read(v)) {
              return {v};
@@ -95,7 +97,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadInt64",
-         [](BitStream &bs) -> std::optional<int64_t> {
+         [](danet::BitStream &bs) -> std::optional<int64_t> {
            int64_t v;
            if (bs.Read(v)) {
              return {v};
@@ -103,7 +105,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadFloat",
-         [](BitStream &bs) -> std::optional<float> {
+         [](danet::BitStream &bs) -> std::optional<float> {
            float v;
            if (bs.Read(v)) {
              return {v};
@@ -111,7 +113,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadDouble",
-         [](BitStream &bs) -> std::optional<double> {
+         [](danet::BitStream &bs) -> std::optional<double> {
            double v;
            if (bs.Read(v)) {
              return {v};
@@ -119,7 +121,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadString",
-         [](BitStream &bs) -> std::optional<std::string> {
+         [](danet::BitStream &bs) -> std::optional<std::string> {
            std::string v{};
            if (bs.Read(v)) {
              return {v};
@@ -127,7 +129,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadUleb16",
-         [](BitStream &bs) -> std::optional<uint16_t> {
+         [](danet::BitStream &bs) -> std::optional<uint16_t> {
            uint16_t v{};
            if (bs.ReadCompressed(v)) {
              return {v};
@@ -135,7 +137,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadUleb32",
-         [](BitStream &bs) -> std::optional<uint32_t> {
+         [](danet::BitStream &bs) -> std::optional<uint32_t> {
            uint32_t v{};
            if (bs.ReadCompressed(v)) {
              return {v};
@@ -143,7 +145,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadUleb64",
-         [](BitStream &bs) -> std::optional<uint64_t> {
+         [](danet::BitStream &bs) -> std::optional<uint64_t> {
            uint64_t v{};
            if (bs.ReadCompressed(v)) {
              return {v};
@@ -151,7 +153,7 @@ void PyBitStream::include(py::module_ &m) {
            return {};
          })
     .def("ReadBool",
-         [](BitStream &bs) -> std::optional<bool> {
+         [](danet::BitStream &bs) -> std::optional<bool> {
            bool v{};
            if (bs.Read(v)) {
              return {v};
@@ -160,8 +162,8 @@ void PyBitStream::include(py::module_ &m) {
          })
 
     .def("ReadBS",
-         [](BitStream &bs) -> std::optional<BitStream> {
-           BitStream v{};
+         [](danet::BitStream &bs) -> std::optional<danet::BitStream> {
+           danet::BitStream v{};
            if (bs.Read(v)) {
              return {v};
            }
@@ -169,7 +171,7 @@ void PyBitStream::include(py::module_ &m) {
          })
     .def(
       "readBitsInt",
-      [](BitStream &bs, uint32_t bits) -> std::optional<uint64_t> {
+      [](danet::BitStream &bs, uint32_t bits) -> std::optional<uint64_t> {
         if (bits > 64) {
           throw py::index_error{};
         }
@@ -182,19 +184,19 @@ void PyBitStream::include(py::module_ &m) {
       },
       py::arg("bits"))
     .def("ReadBLK",
-         [](BitStream &bs) {
+         [](danet::BitStream &bs) {
            DataBlock blk{};
            G_ASSERT(bs.Read(blk));
            return blk;
          })
-    .def("IgnoreBits", &BitStream::IgnoreBits)
-    .def("IgnoreBytes", &BitStream::IgnoreBytes)
-    .def("GetReadOffset", &BitStream::GetReadOffset)
-    .def("SetReadOffset", &BitStream::SetReadOffset, py::arg("offset"))
-    .def("GetNumberOfBitsUsed", &BitStream::GetNumberOfBitsUsed)
-    .def("GetNumberOfUnreadBits", &BitStream::GetNumberOfUnreadBits)
-    .def("AlignReadToByteBoundary", &BitStream::AlignReadToByteBoundary)
-    .def("GetData", [](BitStream &bs) {
+    .def("IgnoreBits", &danet::BitStream::IgnoreBits)
+    .def("IgnoreBytes", &danet::BitStream::IgnoreBytes)
+    .def("GetReadOffset", &danet::BitStream::GetReadOffset)
+    .def("SetReadOffset", &danet::BitStream::SetReadOffset, py::arg("offset"))
+    .def("GetNumberOfBitsUsed", &danet::BitStream::GetNumberOfBitsUsed)
+    .def("GetNumberOfUnreadBits", &danet::BitStream::GetNumberOfUnreadBits)
+    .def("AlignReadToByteBoundary", &danet::BitStream::AlignReadToByteBoundary)
+    .def("GetData", [](danet::BitStream &bs) {
       return py::memoryview::from_memory(bs.GetData(), (ssize_t) bs.GetNumberOfBytesUsed(), true);
     });
   m.def(
@@ -220,7 +222,7 @@ void PyBitStream::include(py::module_ &m) {
     .def(py::init<>())
     .def(
       "readFieldsSizeAndCount",
-      [](IdFieldSerializer255 &serializer255, BitStream &bs) -> py::tuple {
+      [](IdFieldSerializer255 &serializer255, danet::BitStream &bs) -> py::tuple {
         BitSize_t end;
         auto count = serializer255.readFieldsSizeAndCount(bs, end);
         return py::make_tuple(count, end);
