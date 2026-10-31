@@ -243,8 +243,7 @@ bool FMSync(ParserState &state, BitStream &bs) {
                 RET_FAIL(bs.ReadZigZag(temp_zig));
               }
             if (rounds_left >= 0)
-              state.AmmoEvents.push_back(
-                {state.curr_time_ms, unit, uint8_t(i), 0, uint32_t(rounds_left)});
+              state.AmmoEvents.push_back({state.curr_time_ms, unit, uint8_t(i), 0, uint32_t(rounds_left)});
           }
           uint32_t some_packed_val;
           uint32_t vals_4;
@@ -477,8 +476,10 @@ bool ParseVehicleInfo(ParserState &state, BitStream &bs, TankRef *ref, bool is_f
     bool bool4;
     RET_FAIL(bs.Read(bool4));
     uint8_t temp_vals_womp[4];
+    bool some_bool;
     if (bool4) {
       bs.Read(temp_vals_womp);
+      bs.Read(some_bool);
     } else {
       // some mathy logic here
     }

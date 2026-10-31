@@ -903,6 +903,9 @@ ECS_AUTO_REGISTER_COMPONENT(InvalidType, "player__support_units_status_notificat
 ECS_AUTO_REGISTER_COMPONENT(InvalidType, "ik_pilot_inertia_seats__data", nullptr);
 ECS_AUTO_REGISTER_COMPONENT(InvalidType, "pickup_airdrop__controller", nullptr);
 ECS_AUTO_REGISTER_COMPONENT(InvalidType, "human_segmented_physics", nullptr);
+// eagles shadow update
+ECS_AUTO_REGISTER_COMPONENT(InvalidType, "active_protection_system", nullptr);
+
 ECS_AUTO_REGISTER_COMPONENT(CapsulesAOHolder, "capsules_ao", nullptr);
 ECS_AUTO_REGISTER_COMPONENT(aimmem::AimingMemPoints, "player__aiming_mem_points", nullptr);
 ECS_AUTO_REGISTER_COMPONENT(mat44f, "close_geometry_prev_to_curr_frame_transform", nullptr);

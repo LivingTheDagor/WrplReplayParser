@@ -44,18 +44,18 @@ namespace mpi {
       case MPI_PACKETS::Reflection2:
       case MPI_PACKETS::ReflectionNoDecompress: {
         return state->_new<Message>(this, mid);
-        //return new Message(this, mid);
+        // return new Message(this, mid);
         break;
       }
       case MPI_PACKETS::Kill: {
         return state->_new<KillMessage>(this);
-        ///return new KillMessage(this);
+        /// return new KillMessage(this);
         DISPATCHER_LOGD1("KILL");
         break;
       }
       case MPI_PACKETS::Awards: {
         return state->_new<AwardMessage>(this);
-        ///return new AwardMessage(this);
+        /// return new AwardMessage(this);
         DISPATCHER_LOGD1("Awards");
         break;
       }
@@ -66,7 +66,7 @@ namespace mpi {
       }
       case MPI_PACKETS::CriticalDamage: {
         return state->_new<CriticalDamageMessage>(this);
-        //return new CriticalDamageMessage(this);
+        // return new CriticalDamageMessage(this);
         DISPATCHER_LOGD1("CriticalDamage");
         break;
       }
@@ -74,12 +74,12 @@ namespace mpi {
       case MPI_PACKETS::Tank2: {
         DISPATCHER_LOGD1("Tank");
         return state->_new<TankMessage>(this, mid);
-        //return new TankMessage(this, mid);
+        // return new TankMessage(this, mid);
       }
       case MPI_PACKETS::Rocket1:
       case MPI_PACKETS::Rocket2: {
         return state->_new<BSMessage>(this, mid);
-        //return new BSMessage(this, mid);
+        // return new BSMessage(this, mid);
       }
     }
     // No dispatcher for this id. Measured on a full battle: 31 such ids arrive, and not
@@ -114,7 +114,7 @@ namespace mpi {
         break;
       }
       case MPI_PACKETS::Reflection1:
-      case  MPI_PACKETS::Reflection2: {
+      case MPI_PACKETS::Reflection2: {
         uint8_t tmp = 0;
         bs->Read(tmp);
         bool isCompressed = tmp == 1;
@@ -147,6 +147,7 @@ namespace mpi {
       case MPI_PACKETS::Tank2: {
         auto tankM = (TankMessage *) m;
         auto ret = GMSync(*state, tankM->data);
+        // auto ret = true;
         if (!ret) {
           LOGE("Failed to read TankMessage payload");
         }
@@ -202,7 +203,7 @@ namespace mpi {
     }
 
     auto eid = ecs::EntityId(extUid);
-    unit::UnitRef* ref=nullptr;
+    unit::UnitRef *ref = nullptr;
     {
       ZoneScopedN("unit::UnitRef_getNullable");
       ref = state->g_entity_mgr.getNullable<unit::UnitRef>(eid, ECS_HASH("unit__ref"));
@@ -360,7 +361,7 @@ namespace mpi {
   void TankMessage::writePayload() { this->payload.Write(this->data); }
 
 
-  #define RET_FAIL(opt) \
+#define RET_FAIL(opt) \
   if (!(opt))         \
   return false
 
@@ -395,7 +396,7 @@ namespace mpi {
           RET_FAIL(net::read_eid(*bs, this->weapon_eid));
           break;
         }
-        MPI_SERIALIZER_DEFAULT
+          MPI_SERIALIZER_DEFAULT
       }
       return true;
     });
