@@ -15,7 +15,7 @@ CREATE_HANDLE(handle_object_dispatcher, "ObjectDispatcher")
 namespace mpi {
   constexpr uint32_t MAX_ZSTD_BLOCK_SIZE = 64u * 1024u * 1024u;
 
-  void zstd_decompress(BitStream &in, BitStream &out) {
+  void zstd_decompress(danet::BitStream &in, danet::BitStream &out) {
     ZoneScoped;
     uint32_t comp_size = 0;
     uint32_t decomp_size = 0;
@@ -44,18 +44,18 @@ namespace mpi {
       case MPI_PACKETS::Reflection2:
       case MPI_PACKETS::ReflectionNoDecompress: {
         return state->_new<Message>(this, mid);
-        //return new Message(this, mid);
+        // return new Message(this, mid);
         break;
       }
       case MPI_PACKETS::Kill: {
         return state->_new<KillMessage>(this);
-        ///return new KillMessage(this);
+        /// return new KillMessage(this);
         DISPATCHER_LOGD1("KILL");
         break;
       }
       case MPI_PACKETS::Awards: {
         return state->_new<AwardMessage>(this);
-        ///return new AwardMessage(this);
+        /// return new AwardMessage(this);
         DISPATCHER_LOGD1("Awards");
         break;
       }
@@ -66,7 +66,7 @@ namespace mpi {
       }
       case MPI_PACKETS::CriticalDamage: {
         return state->_new<CriticalDamageMessage>(this);
-        //return new CriticalDamageMessage(this);
+        // return new CriticalDamageMessage(this);
         DISPATCHER_LOGD1("CriticalDamage");
         break;
       }
@@ -74,12 +74,12 @@ namespace mpi {
       case MPI_PACKETS::Tank2: {
         DISPATCHER_LOGD1("Tank");
         return state->_new<TankMessage>(this, mid);
-        //return new TankMessage(this, mid);
+        // return new TankMessage(this, mid);
       }
       case MPI_PACKETS::Rocket1:
       case MPI_PACKETS::Rocket2: {
         return state->_new<BSMessage>(this, mid);
-        //return new BSMessage(this, mid);
+        // return new BSMessage(this, mid);
       }
     }
     // No dispatcher for this id. Measured on a full battle: 31 such ids arrive, and not
@@ -91,7 +91,7 @@ namespace mpi {
   void GeneralObject::applyMpiMessage(const Message *m) {
     ZoneScoped;
     auto mid = m->id;
-    auto bs = (BitStream *) &m->payload;
+    auto bs = (danet::BitStream *) &m->payload;
     // LOG("Deserialzing for Reflection type: %0x\n", mid);
     switch (mid) {
       case MPI_PACKETS::Kill: {
@@ -114,12 +114,12 @@ namespace mpi {
         break;
       }
       case MPI_PACKETS::Reflection1:
-      case  MPI_PACKETS::Reflection2: {
+      case MPI_PACKETS::Reflection2: {
         uint8_t tmp = 0;
         bs->Read(tmp);
         bool isCompressed = tmp == 1;
-        BitStream *outBs;
-        BitStream t{};
+        danet::BitStream *outBs;
+        danet::BitStream t{};
         if (isCompressed) {
           zstd_decompress(*bs, t);
           outBs = &t;
@@ -137,7 +137,7 @@ namespace mpi {
         if (sorta_confirms_is_compressed > -1) {
           danet::ReplicatedObject::onRecvReplicationEvent(*bs, this->state);
         } else {
-          BitStream t{};
+          danet::BitStream t{};
           zstd_decompress(*bs, t);
           danet::ReplicatedObject::onRecvReplicationEvent(t, this->state);
         }
@@ -202,7 +202,7 @@ namespace mpi {
     }
 
     auto eid = ecs::EntityId(extUid);
-    unit::UnitRef* ref=nullptr;
+    unit::UnitRef *ref = nullptr;
     {
       ZoneScopedN("unit::UnitRef_getNullable");
       ref = state->g_entity_mgr.getNullable<unit::UnitRef>(eid, ECS_HASH("unit__ref"));
@@ -262,7 +262,7 @@ namespace mpi {
     }
   }
 
-  bool MpiQueueObject::deserialize(BitStream &other_bs, int data_size, ParserState *state) {
+  bool MpiQueueObject::deserialize(danet::BitStream &other_bs, int data_size, ParserState *state) {
     ZoneScopedN("MpiQueueObject::deserialize");
     auto eid = eid_from_ext_uid(this->mpiObjectExtUID);
     auto &queue_data = this->dispatched_objects[eid].emplace_back();
@@ -360,12 +360,12 @@ namespace mpi {
   void TankMessage::writePayload() { this->payload.Write(this->data); }
 
 
-  #define RET_FAIL(opt) \
+#define RET_FAIL(opt) \
   if (!(opt))         \
   return false
 
   bool CameraStateMessage::readPayload(ParserState *state) {
-    bool valid = parse([&](const BitStream *bs, uint32_t field_id) {
+    bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       switch (field_id) {
         case 1: {
           RET_FAIL(bs->Read(this->camera_circle_quat));
@@ -395,7 +395,7 @@ namespace mpi {
           RET_FAIL(net::read_eid(*bs, this->weapon_eid));
           break;
         }
-        MPI_SERIALIZER_DEFAULT
+          MPI_SERIALIZER_DEFAULT
       }
       return true;
     });

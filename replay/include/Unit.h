@@ -3,7 +3,7 @@
 #include "vector"
 #include "cstdint"
 #include "translate.h"
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include "math/dag_Point3.h"
 #include <ioSys/dag_dataBlock.h>
 #include "ecs/entityId.h"
@@ -66,7 +66,7 @@ struct SensorsControlStates {
   int some_data_7;
   float field147_0xa8;
 
-  bool deserialize(BitStream &bs);
+  bool deserialize(danet::BitStream &bs);
 };
 
 struct TargetDesignationControlState {
@@ -87,14 +87,14 @@ struct TargetDesignationControlState {
   uint8_t v14;
   uint32_t v15;
 
-  bool deserialize(BitStream &bs);
+  bool deserialize(danet::BitStream &bs);
 };
 
 struct CounterMeasuresControlState {
   uint8_t v1;
   uint8_t v2;
 
-  bool deserialize(BitStream &bs);
+  bool deserialize(danet::BitStream &bs);
 };
 
 enum UnitType : uint8_t {
@@ -221,9 +221,9 @@ namespace unit {
     /// See Unit::Load for what that block is and why it needs its own pass.
     bool from_pilon = false;
     std::unique_ptr<TurretDesc> turret_desc{};
-    ParserState * state;
+    ParserState *state;
 
-    Weapon(const DataBlock *blk, Unit *unit, std::vector<uint16_t> &weapons_count, ParserState * state);
+    Weapon(const DataBlock *blk, Unit *unit, std::vector<uint16_t> &weapons_count, ParserState *state);
 
     /// What a loadout can put in this gun: the stock load first, then the named sets in
     /// blk order. The pick itself is not here:

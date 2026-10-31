@@ -1,8 +1,8 @@
-#include "danet/Bitstream.h"
+#include "daNet/bitStream.h"
 #include "ioSys/dag_dataBlock.h"
 #include "ioSys/dag_memIo.h"
 
-void BitStream::Write(const DataBlock &blk) {
+void danet::BitStream::Write(const DataBlock &blk) {
   if (blk.isEmpty())
     WriteCompressed((uint32_t) 0);
   else {
@@ -23,7 +23,7 @@ void BitStream::Write(const DataBlock &blk) {
   }
 }
 
-bool BitStream::Read(DataBlock &blk) const {
+bool danet::BitStream::Read(DataBlock &blk) const {
   blk.reset();
   uint32_t bytesToRead = 0;
   if (!ReadCompressed(bytesToRead))
@@ -44,7 +44,7 @@ bool BitStream::Read(DataBlock &blk) const {
 }
 
 // gaijins idea not mine
-void BitStream::swap(BitStream &bs) {
+void danet::BitStream::swap(BitStream &bs) {
 #define _SWAP(type, l, r) \
   {                       \
     type t = l;           \
@@ -56,6 +56,6 @@ void BitStream::swap(BitStream &bs) {
   _SWAP(uint32_t, this->bitsAllocated, bs.bitsAllocated)
   _SWAP(uint32_t, this->readOffset, bs.readOffset)
   _SWAP(uint8_t *, this->data, bs.data)
-  _SWAP(IMemAlloc*, this->allocator, bs.allocator)
+  _SWAP(IMemAlloc *, this->allocator, bs.allocator)
 #undef _SWAP
 }

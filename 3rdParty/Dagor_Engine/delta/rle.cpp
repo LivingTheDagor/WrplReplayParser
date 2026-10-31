@@ -191,6 +191,97 @@ namespace net::delta {
   int rle0ki_decompress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice) {
     ZoneScoped;
     uint8_t *dst = dstSlice.data();
+    const size_t maxOriginalSize = dstSlice.size();
+    const uint8_t *src = srcSlice.data();
+    const size_t compressedSize = srcSlice.size();
+
+    if (compressedSize == 0)
+      return 0;
+    const int limit = (int) compressedSize - 1;
+
+    const uint8_t parity = src[limit];
+    if (parity != RLE0_PARITY_NO && parity != RLE0_PARITY_YES)
+      return 0;
+    if (maxOriginalSize == 0)
+      return -1;
+
+    uint64_t acc = 0; // pending units, low bits first
+    uint32_t nbits = 0; // bits pending in acc, may run past 64 inside a zero run
+    size_t outBytes = 0;
+    bool overflow = false;
+
+    auto flush8 = [&]() {
+      if (outBytes + 8 <= maxOriginalSize) {
+        for (int b = 0; b < 8; ++b)
+          dst[outBytes + b] = uint8_t(acc >> (8 * b));
+      } else {
+        overflow = true;
+      }
+      outBytes += 8;
+    };
+    auto putUnit = [&](uint32_t v) {
+      acc |= uint64_t(v) << nbits;
+      nbits += 2;
+      if (nbits == 64) {
+        flush8();
+        acc = 0;
+        nbits = 0;
+      }
+    };
+    auto putZeros = [&](uint32_t num) {
+      nbits += 2 * num;
+      while (nbits >= 64) {
+        flush8();
+        acc = 0; // every bit after the first word is a zero of this run
+        nbits -= 64;
+      }
+    };
+
+    int code = -1;
+    int super = -1;
+    for (int i = 0; i < limit; ++i) {
+      const int klim = i != limit - 1 || parity == RLE0_PARITY_YES ? 2 : 1;
+      const uint8_t byte = src[i];
+      for (int k = 0; k < klim; ++k) {
+        const uint32_t v0 = (byte >> (k * RLE0_FOUR)) & TWO_BITS_MASK;
+        const uint32_t v1 = (byte >> (TWO_BITS_SHIFT + k * RLE0_FOUR)) & TWO_BITS_MASK;
+
+        if (code != RLE0_KI8)
+          code = (int) v0;
+
+        switch (code) {
+          case RLE0_ZR0: putZeros(v1 + ZR0_BASE_VAL); break;
+          case RLE0_ZR1: putZeros(v1 + ZR1_BASE_VAL); break;
+          case RLE0_KI6:
+            code = RLE0_KI8;
+            super = (int) v1;
+            putUnit(v1);
+            break;
+          case RLE0_KI2: putUnit(v1); break;
+          case RLE0_KI8:
+            code = -1;
+            if (super == 0 && v0 == 0 && v1 == 0)
+              putZeros(39);
+            else {
+              putUnit(v0);
+              putUnit(v1);
+            }
+            break;
+        }
+      }
+    }
+
+    const size_t tail = (nbits + 7) / 8;
+    if (overflow || outBytes + tail > maxOriginalSize)
+      return -1;
+    for (size_t b = 0; b < tail; ++b)
+      dst[outBytes + b] = uint8_t(acc >> (8 * b));
+    return (int) (outBytes + tail);
+  }
+
+  int rle0ki_decompress_old(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice) {
+    ZoneScoped;
+    uint8_t *dst = dstSlice.data();
     size_t maxOriginalSize = dstSlice.size();
     const uint8_t *src = srcSlice.data();
     size_t compressedSize = srcSlice.size();
@@ -278,21 +369,7 @@ namespace net::delta {
     return dst - out;
   }
 
-#define BEGIN_PROF(x) \
-  BEGIN_LAG(x);       \
-  {                   \
-    TIME_PROFILE_DEV(x);
-
-#define END_PROF(x) \
-  }                 \
-  END_LAG(x);
-
-#define PROFILE_CODE(x, code) \
-  BEGIN_PROF(x)               \
-  code;                       \
-  END_PROF(x)
-
-  void compress(const BitStream &in, BitStream &out) {
+  void compress(const danet::BitStream &in, danet::BitStream &out) {
     int maxSize = in.GetNumberOfBytesUsed() * 2; // compression can't be worse than 1:2
     out.SetWriteOffset(0);
     out.reserveBits(BYTES_TO_BITS(maxSize));
@@ -304,12 +381,12 @@ namespace net::delta {
     else {
       LOGE("rle0ki_compress has been failed on a stream of size %d", in.GetNumberOfBytesUsed());
 
-      BitStream empty;
+      danet::BitStream empty;
       out.swap(empty);
     }
   }
 
-  void decompress(const BitStream &in, BitStream &out) {
+  void decompress(const danet::BitStream &in, danet::BitStream &out) {
     int maxSize = in.GetNumberOfBytesUsed() * 10; // compression can't be better than 10:1
     out.SetWriteOffset(0);
     out.reserveBits(BYTES_TO_BITS(maxSize));

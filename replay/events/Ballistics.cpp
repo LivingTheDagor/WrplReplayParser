@@ -1,5 +1,5 @@
 #include "state/ParserState.h"
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include "Unit.h"
 
 #include <ioSys/dag_dataBlock.h>
@@ -21,10 +21,9 @@
 namespace unit {
   constexpr float GRAVITY = 9.80665f;
   constexpr float RHO0 = 1.225f;
-  constexpr uint32_t STEP_MS = 10;     // integration step
+  constexpr uint32_t STEP_MS = 10; // integration step
   constexpr float STEP_S = float(STEP_MS) * 0.001f;
-  constexpr uint32_t SAMPLE_MS = 100;  // spacing of the published samples
-
+  constexpr uint32_t SAMPLE_MS = 100; // spacing of the published samples
 
 
   // Standard atmosphere, referenced to sea level. Drag on a bomb dropped from four
@@ -63,11 +62,10 @@ namespace unit {
       return it->second.mass > 0.f ? &it->second : nullptr;
     BallisticParams params{};
     static const char *const kinds[][2] = {{"bombguns", "bomb"}, {"rocketguns", "rocket"}};
-    for (const auto &kind : kinds) {
+    for (const auto &kind: kinds) {
       DataBlock blk{};
-      const std::string path = std::string("gamedata/weapons/") + kind[0] + "/" + weapon_id + ".blk";
-      // ROBUST: most ids have no gun blk at all (smoke grenades, countermeasures),
-      // and a plain load treats a missing file as fatal.
+      const std::string path = fmt::format("gamedata/weapons/{}/{}.blk", kind[0], weapon_id);
+      // robust load as certain weapons have no gun blk, and default dblk::load treats missing file as fatal.
       if (!dblk::load(blk, path, dblk::ReadFlags(dblk::ReadFlag::ROBUST)))
         continue;
       if (params.tryLoad(&blk, kind[1]))

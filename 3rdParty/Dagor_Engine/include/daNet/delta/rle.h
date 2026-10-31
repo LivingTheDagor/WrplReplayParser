@@ -1,0 +1,35 @@
+//
+// Dagor Engine 6.5
+// Copyright (C) Gaijin Games KFT.  All rights reserved.
+//
+#pragma once
+
+#include <daNet/bitStream.h>
+#include "span"
+
+namespace net {
+
+  namespace delta {
+
+    void compress(const danet::BitStream &in, danet::BitStream &out);
+    inline danet::BitStream compress(const danet::BitStream &in) {
+      danet::BitStream out;
+      compress(in, out);
+      return out;
+    }
+
+    void decompress(const danet::BitStream &in, danet::BitStream &out);
+    inline danet::BitStream decompress(const danet::BitStream &in, IMemAlloc *allocator) {
+      danet::BitStream out(allocator);
+      decompress(in, out);
+      return out;
+    }
+
+    // raw interface
+    int rle0ki_compress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice);
+    int rle0ki_decompress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice);
+    int rle0ki_decompress_old(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice);
+
+  } // namespace delta
+
+} // namespace net

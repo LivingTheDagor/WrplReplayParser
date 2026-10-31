@@ -17,6 +17,8 @@ namespace danet {
 
   int boolCoder(DANET_ENCODER_SIGNATURE);
 
+  int intCoder(DANET_ENCODER_SIGNATURE);
+
   int stringCoder(DANET_ENCODER_SIGNATURE);
 
   int DataBlockCoder(DANET_ENCODER_SIGNATURE);
@@ -44,8 +46,6 @@ namespace danet {
   int Point3Coder(DANET_ENCODER_SIGNATURE);
 
   int dummyForExitZonesSettingsCoder(DANET_ENCODER_SIGNATURE);
-
-  int intCoder(DANET_ENCODER_SIGNATURE);
 
   int WeatherEffectsCoder(DANET_ENCODER_SIGNATURE);
 

@@ -8,7 +8,7 @@
 
 
 #include <cstdint>
-#include "danet/BitStream.h"
+#include "daNet/bitStream.h"
 #include "consts.h"
 #include <array>
 
@@ -33,10 +33,10 @@ public:
 
   void checkFieldSize(uint8_t index, BitSize_t sz) const;
 
-  void writeFieldsSize(BitStream &to) const;
-  uint32_t readFieldsSizeAndFlag(const BitStream &from);
+  void writeFieldsSize(danet::BitStream &to) const;
+  uint32_t readFieldsSizeAndFlag(const danet::BitStream &from);
 
-  void skipReadingField(uint8_t index, const BitStream &from) const;
+  void skipReadingField(uint8_t index, const danet::BitStream &from) const;
 
 private:
   std::array<uint32_t, MAX_FIELDS_NUM> sizes;
@@ -73,13 +73,13 @@ public:
   [[nodiscard]] Id getFieldId(Index index) const;
   [[nodiscard]] uint32_t getFieldSize(Index index) const;
 
-  void writeFieldsSize(BitStream &to, BitSize_t at = 0) const;
-  Index readFieldsSizeAndCount(const BitStream &from, BitSize_t &end);
+  void writeFieldsSize(danet::BitStream &to, BitSize_t at = 0) const;
+  Index readFieldsSizeAndCount(const danet::BitStream &from, BitSize_t &end);
 
-  void skipReadingField(Index index, const BitStream &from) const;
+  void skipReadingField(Index index, const danet::BitStream &from) const;
 
-  void writeFieldsIndex(BitStream &to, BitSize_t at = 0) const;
-  bool readFieldsIndex(const BitStream &from);
+  void writeFieldsIndex(danet::BitStream &to, BitSize_t at = 0) const;
+  bool readFieldsIndex(const danet::BitStream &from);
 
 private:
   std::array<uint32_t, MAX_FIELDS_NUM> sizes;

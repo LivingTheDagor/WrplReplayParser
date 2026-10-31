@@ -6,7 +6,7 @@
 #include <set>
 #include <mutex>
 
-#include "ecs/ComponentTypes.h"
+#include "ecs/componentTypes.h"
 #include "ecs/typesAndLimits.h"
 #include "ecs/componentsMap.h"
 #include "ecs/archetypes.h"

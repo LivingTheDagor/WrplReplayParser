@@ -1,4 +1,4 @@
-#include <danet/daNetTypes.h>
+#include <daNet/daNetTypes.h>
 #include "Replay/Replay.h"
 #include "Replay/ReplayReader.h"
 #include "utils.h"
@@ -102,7 +102,7 @@ bool FullDecompressReplayReader::getNextPacket(ReplayPacket &packet) {
   if (pkt_sz == 0)
     return false;
   packet.stream.~BitStream();
-  packet.stream = BitStream(crd.data() + crd.tell(), pkt_sz, false);
+  packet.stream = danet::BitStream(crd.data() + crd.tell(), pkt_sz, false);
   if (!crd.seekrel((int) pkt_sz))
     return false;
   uint16_t type_t = 0x0;
@@ -116,7 +116,7 @@ bool FullDecompressReplayReader::getNextPacket(ReplayPacket &packet) {
   packet.timestamp_ms = curr_time;
   packet.type = (ReplayPacketType) type_t;
   uint32_t offs = BITS_TO_BYTES(packet.stream.GetReadOffset());
-  packet.stream = BitStream(packet.stream.GetData() + offs, pkt_sz - offs, false);
+  packet.stream = danet::BitStream(packet.stream.GetData() + offs, pkt_sz - offs, false);
   return true;
 }
 
@@ -174,7 +174,7 @@ bool CompressedReplayReader::getNextPacket(ReplayPacket &packet) {
   uint32_t pkt_sz = getPacketSize(reader);
   if (pkt_sz == 0)
     return false;
-  packet.stream = BitStream();
+  packet.stream = danet::BitStream();
   packet.stream.reserveBits(BYTES_TO_BITS(pkt_sz));
   if (reader.tryRead(packet.stream.GetData(), (int) pkt_sz) != pkt_sz)
     return false;
@@ -188,7 +188,7 @@ bool CompressedReplayReader::getNextPacket(ReplayPacket &packet) {
     type_t ^= 0x10;
   }
   auto byte_offs = BITS_TO_BYTES(packet.stream.GetReadOffset());
-  BitStream temp_bs = BitStream(packet.stream.GetData() + byte_offs, pkt_sz - byte_offs, true);
+  auto temp_bs = danet::BitStream(packet.stream.GetData() + byte_offs, pkt_sz - byte_offs, true);
   packet.stream = std::move(temp_bs);
   packet.timestamp_ms = curr_time;
   packet.type = (ReplayPacketType) type_t;

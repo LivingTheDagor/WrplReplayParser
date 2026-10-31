@@ -1,5 +1,5 @@
 #include "ecs/EntityManager.h" // component.h included through this
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include "ecs/ComponentRef.h"
 
 

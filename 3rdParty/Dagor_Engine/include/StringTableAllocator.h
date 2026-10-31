@@ -11,7 +11,6 @@
 #include <shared_mutex>
 #include <mutex>
 
-#pragma pack(push, 4)
 struct StringTableAllocator {
   enum {
     DEFAULT_PAGE_SIZE_SHIFT = 8,
@@ -168,5 +167,4 @@ public:
     allocator(start_page_shift_, max_page_shift_) {}
 };
 
-#pragma pack(pop)
 #endif // MYEXTENSION_STRINGTABLEALLOCATOR_H

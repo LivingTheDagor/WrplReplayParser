@@ -6,7 +6,7 @@
 #include "ecs/typesAndLimits.h"
 #include <optional>
 #include "utils.h"
-#include "ComponentTypes.h"
+#include "componentTypes.h"
 
 namespace ecs {
   constexpr int MAX_STRING_LENGTH = 32768;

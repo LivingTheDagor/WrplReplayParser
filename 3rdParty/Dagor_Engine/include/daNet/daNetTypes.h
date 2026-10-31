@@ -20,8 +20,7 @@ struct _ENetPacket;
 //
 // DaNet types and structs
 //
-struct NetworkID
-{
+struct NetworkID {
   uint16_t localSystemAddress;
 
   inline bool operator==(const NetworkID &rhs) const { return localSystemAddress == rhs.localSystemAddress; }
@@ -33,8 +32,7 @@ struct NetworkID
 
 struct SystemAddress // extended ENetAddress
 {
-  union
-  {
+  union {
     uint32_t host;
     uint32_t binaryAddress;
   };
@@ -44,8 +42,7 @@ struct SystemAddress // extended ENetAddress
   const char *ToString(bool withPort = true) const;
 
   SystemAddress() : host(0), port(0), _unused(0) {}
-  SystemAddress(uint32_t h, uint16_t p)
-  {
+  SystemAddress(uint32_t h, uint16_t p) {
     host = h;
     port = p;
     _unused = 0;
@@ -57,23 +54,15 @@ struct SystemAddress // extended ENetAddress
 
   void SetBinaryAddress(const char *str);
 };
-class BitStream;
-namespace danet
-{
-void write_type(BitStream &bs, const SystemAddress &sa);
-bool read_type(const BitStream &bs, SystemAddress &sa);
+namespace danet {
+  class BitStream;
+  void write_type(danet::BitStream &bs, const SystemAddress &sa);
+  bool read_type(const danet::BitStream &bs, SystemAddress &sa);
 } // namespace danet
 
-struct SocketDescriptor
-{
-  enum
-  {
-    STR,
-    SOCKET,
-    BINARY
-  };
-  union
-  {
+struct SocketDescriptor {
+  enum { STR, SOCKET, BINARY };
+  union {
     char hostAddress[32];
     intptr_t socket;
     uint32_t host;
@@ -90,8 +79,7 @@ typedef uint8_t MessageID;
 typedef uint32_t BitSize_t;
 typedef uint16_t SystemIndex;
 
-struct Packet
-{
+struct Packet {
   SystemIndex systemIndex;
   SystemAddress systemAddress;
   uint32_t length;
@@ -101,24 +89,21 @@ struct Packet
   _ENetPacket *enet_packet;
 };
 
-namespace danet
-{
-enum Options
-{
-  DUMP_REFLECTION = 1,        // dump all reflection var serialization and deserialization in log
-  AUTO_CONVERT_ENDIANESS = 2, // aut convert endianess in danet::BitStream
-};
-extern uint32_t option_flags;
+namespace danet {
+  enum Options {
+    DUMP_REFLECTION = 1, // dump all reflection var serialization and deserialization in log
+    AUTO_CONVERT_ENDIANESS = 2, // aut convert endianess in danet::BitStream
+  };
+  extern uint32_t option_flags;
 
-struct PeerQoSStat
-{
-  DaNetTime connectionStartTime = 0;
-  int averagePing = 0;
-  int averagePingVariance = 0;
-  int lowestPing = 0;
-  int highestPingVariance = 0;
-  float packetLoss = 0; // [0..1]
-};
+  struct PeerQoSStat {
+    DaNetTime connectionStartTime = 0;
+    int averagePing = 0;
+    int averagePingVariance = 0;
+    int lowestPing = 0;
+    int highestPingVariance = 0;
+    float packetLoss = 0; // [0..1]
+  };
 }; // namespace danet
 
 extern const SystemAddress UNASSIGNED_SYSTEM_ADDRESS;

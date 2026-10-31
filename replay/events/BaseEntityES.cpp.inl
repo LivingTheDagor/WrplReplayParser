@@ -1,11 +1,11 @@
 #include "state/ParserState.h"
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include "Unit.h"
 #include "ecs/query/coreEvents.h"
 #include "ecs/ecsCodegen.h"
 
-static void team_spawn_side_es(const ecs::EventEntityCreated &, const ecs::string &unit__missionName,
-                               const int &team, ecs::EntityManager &manager) {
+static void team_spawn_side_es(const ecs::EventEntityCreated &, const ecs::string &unit__missionName, const int &team,
+                               ecs::EntityManager &manager) {
   manager.owned_by->recordTeamSpawnSide(team, unit__missionName);
 }
 
@@ -13,7 +13,8 @@ static void on_tank_appear_es(const ecs::EventEntityCreated &evt,
                               const HeavyVehicleModelStorageComponent &unit_storage__tank, const int &uid,
                               unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
   G_ASSERT(unit__ref.unit == nullptr);
-  unit__ref.unit = new unit::Tank(manager.owned_by, static_cast<uint16_t>(uid));
+  unit__ref.unit =
+    &manager.owned_by->_unit_allocator.allocateOne<unit::Tank>(manager.owned_by, static_cast<uint16_t>(uid));
   G_ASSERT_LOG(unit__ref.unit->LoadFromStorage(unit_storage__tank), "Failed to load tank with uid {}", uid);
 }
 
@@ -21,14 +22,12 @@ static void on_aircraft_appear_es(const ecs::EventEntityCreated &evt,
                                   const FlightModelWrapStorageComponent &unit_storage__aircraft, const int &uid,
                                   unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
   G_ASSERT(unit__ref.unit == nullptr);
-  unit__ref.unit = new unit::Aircraft(manager.owned_by, static_cast<uint16_t>(uid));
+  unit__ref.unit =
+    &manager.owned_by->_unit_allocator.allocateOne<unit::Aircraft>(manager.owned_by, static_cast<uint16_t>(uid));
   G_ASSERT_LOG(unit__ref.unit->LoadFromStorage(unit_storage__aircraft), "Failed to load aircraft with uid {}", uid);
 }
 
-static void on_unit_disappear_es(const ecs::EventEntityDestroyed &evt, unit::UnitRef &unit__ref) {
-  if (unit__ref.unit)
-    delete unit__ref.unit;
-}
+static void on_unit_disappear_es(const ecs::EventEntityDestroyed &evt, unit::UnitRef &unit__ref) {}
 
 ECS_AFTER(on_aircraft_appear_es, on_tank_appear_es)
 static void after_unit_appear_es(const ecs::EventEntityCreated &evt, unit::UnitRef &unit__ref, const int &uid,

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <thread>
 #include "FileSystem.h"
-#include "ecs/ComponentTypesDefs.h"
+#include "ecs/componentTypesDefs.h"
 #include "init/initialize.h"
 #include "mpi/ObjectDispatcher.h"
 #include "mpi/codegen/ReflIncludes.h"
