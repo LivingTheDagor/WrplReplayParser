@@ -147,6 +147,7 @@ namespace mpi {
       case MPI_PACKETS::Tank2: {
         auto tankM = (TankMessage *) m;
         auto ret = GMSync(*state, tankM->data);
+        // auto ret = true;
         if (!ret) {
           LOGE("Failed to read TankMessage payload");
         }
