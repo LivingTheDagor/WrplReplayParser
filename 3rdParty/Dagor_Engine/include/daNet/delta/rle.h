@@ -28,6 +28,7 @@ namespace net {
     // raw interface
     int rle0ki_compress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice);
     int rle0ki_decompress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice);
+    int rle0ki_decompress_old(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice);
 
   } // namespace delta
 
