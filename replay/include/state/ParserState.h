@@ -77,7 +77,7 @@ inline thread_local ParserState *_in_destruction_state{};
 struct ParserState {
 
   explicit ParserState(uint32_t player_count = 32);
-  explicit ParserState(IReplay *replay);
+  explicit ParserState(replay::IReplay *replay);
 
 protected:
   template<typename... Ts>

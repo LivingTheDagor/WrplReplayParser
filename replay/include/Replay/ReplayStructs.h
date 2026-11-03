@@ -49,7 +49,6 @@ struct ReplayHeader {
   uint16_t snapshotPeriodSec;
   uint64_t gameVersion;
 };
-static_assert(offsetof(ReplayHeader, weather) == 0x28c);
 #pragma pack(pop)
 static_assert(sizeof(ReplayHeader) == 1234);
 

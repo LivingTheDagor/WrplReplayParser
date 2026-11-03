@@ -120,19 +120,19 @@ int main() {
   std::string logfile_str = (conf_dir / "logfile.txt").string();
   initialize(bin_path_str, "", logfile_str);
   // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
-  IReplayReader *rdr = nullptr;
-  IReplay *rpl = nullptr;
+  std::unique_ptr<replay::IReplayReader> rdr = nullptr;
+  std::unique_ptr<replay::IReplay> rpl = nullptr;
   if (is_server_replay) {
     fs::path t{rpl_path_str};
-    rpl = new ServerReplay(t.string());
+    rpl = std::make_unique<replay::ServerReplay>(t.string());
   } else {
-    rpl = new Replay(rpl_path_str);
+    rpl = std::make_unique<replay::Replay>(rpl_path_str);
   }
   rdr = rpl->getReplayReader();
   int idx;
   auto start = std::chrono::high_resolution_clock::now();
   {
-    ParserState state{rpl};
+    ParserState state{rpl.get()};
     ReplayPacket pkt{};
     // std::exit(0);
 
@@ -158,8 +158,6 @@ int main() {
     state.rewindToMs(105620);
     state.rewindToMs(157507);
     state.rewindToMs(156777);
-    delete rdr;
-    delete rpl;
   }
   auto ended = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> duration = ended - start;
