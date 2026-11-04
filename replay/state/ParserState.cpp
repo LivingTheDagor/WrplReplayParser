@@ -67,7 +67,8 @@ void ParserState::registerStateChange(IObjectRewindState *state) {
 
 class StateUpdateEvent : public IRewindEvent {
 public:
-  StateUpdateEvent(ParserState *state, std::pmr::vector<RewindRef> &states) : states(state->get_allocator()) {
+  StateUpdateEvent(ParserState *state, std::pmr::vector<ParserState::RewindRef> &states) :
+    states(state->get_allocator()) {
     this->states = std::move(states);
   }
   ~StateUpdateEvent() override = default;
@@ -92,7 +93,7 @@ public:
   }
 
 private:
-  std::pmr::vector<RewindRef> states;
+  std::pmr::vector<ParserState::RewindRef> states;
 };
 
 void ParserState::beforePacket(ReplayPacket &pkt) {

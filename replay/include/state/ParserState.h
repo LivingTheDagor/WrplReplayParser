@@ -17,6 +17,7 @@
 #include "blockAllocator.h"
 #include "chat.h"
 #include "mpi/PositionSync.h"
+#include "internal/net_delta.h"
 
 class PyReplayState;
 namespace unit {
@@ -29,34 +30,6 @@ namespace pybind11 {
   template<typename type_, typename... options>
   class class_;
 }
-struct net_delta_t {
-  net_delta_t(IMemAlloc *alloc) : allocator(alloc), netDelta(5, 0xd, alloc) {}
-  IMemAlloc *allocator;
-  net::DeltaComp netDelta{5, 0xd, allocator};
-  std::vector<net::DeltaComp::History> histories{};
-  net::DeltaComp::History &getHistory(uint16_t uid) {
-    if (uid >= histories.size()) {
-      histories.resize(uid + 1);
-    }
-    auto &hist = histories[uid];
-    if (!hist.isInited()) {
-      // use_cache only ever matters in a network context
-      netDelta.initHistory(hist, true, false);
-    }
-    return hist;
-  }
-};
-
-
-struct RewindRef {
-  IObjectRewindState
-    *state; // this assumes the memory location of ANY rewindable object will never be changed after registration
-  // only for sanity checking
-#if LDAG_DBGLEVEL > 0
-  uint32_t forward_index;
-  uint32_t rewind_index;
-#endif
-};
 
 
 // used to hold the state currently being destroyed
@@ -88,7 +61,6 @@ protected:
     }
   };
 
-
 #if LDAG_DBGLEVEL > 0
   void registerStateChange(IObjectRewindState *state, uint32_t back, uint32_t curr);
 #else
@@ -97,8 +69,16 @@ protected:
 
   void beforePacket(ReplayPacket &pkt);
 
-
 public:
+  struct RewindRef {
+    IObjectRewindState
+      *state; // this assumes the memory location of ANY rewindable object will never be changed after registration
+    // only for sanity checking
+#if LDAG_DBGLEVEL > 0
+    uint32_t forward_index;
+    uint32_t rewind_index;
+#endif
+  };
   template<class T, class... Args>
   T *_new(Args &&...args) {
     return allocator._new<T>(std::forward<Args>(args)...);
