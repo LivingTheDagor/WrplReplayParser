@@ -85,7 +85,7 @@ namespace mpi {
   // 0xF0E9 UnitHitEffects
 
   bool UnitHitEffectsMessage::readPayload(ParserState *state) {
-    hit.time_ms = state->curr_time_ms;
+    hit.time_ms = state->getCurrTimeMs();
     // Position in the size table, needed to skip an unknown field by its entry
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
@@ -140,7 +140,7 @@ namespace mpi {
   // 0xF15F hit analysis
 
   bool UnitHitAnalysisMessage::readPayload(ParserState *state) {
-    analysis.time_ms = state->curr_time_ms;
+    analysis.time_ms = state->getCurrTimeMs();
     // Position in the size table, needed to skip an unknown field by its entry
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
@@ -190,7 +190,7 @@ namespace mpi {
     // Position in the size table, needed to skip an unknown field by its entry
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
-    damage.time_ms = state->curr_time_ms;
+    damage.time_ms = state->getCurrTimeMs();
     damage.crit = this->id == MPI_PACKETS::UnitOnEffectiveCritHit;
     const bool is_crit = damage.crit;
     bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
@@ -240,7 +240,7 @@ namespace mpi {
     // Position in the size table, needed to skip an unknown field by its entry
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
-    outcome.time_ms = state->curr_time_ms;
+    outcome.time_ms = state->getCurrTimeMs();
     bool got_body = false;
     bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
@@ -328,7 +328,7 @@ namespace mpi {
     // Position in the size table, needed to skip an unknown field by its entry
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
-    explosion.time_ms = state->curr_time_ms;
+    explosion.time_ms = state->getCurrTimeMs();
     bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
       if (field_id == 1)
@@ -349,7 +349,7 @@ namespace mpi {
     // Position in the size table, needed to skip an unknown field by its entry
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
-    direction.time_ms = state->curr_time_ms;
+    direction.time_ms = state->getCurrTimeMs();
     uint8_t packed[3]{};
     uint8_t got = 0;
     bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
@@ -374,7 +374,7 @@ namespace mpi {
     // Position in the size table, needed to skip an unknown field by its entry
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
-    ammo.time_ms = state->curr_time_ms;
+    ammo.time_ms = state->getCurrTimeMs();
     bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
       switch (field_id) {
@@ -395,7 +395,7 @@ namespace mpi {
     // Position in the size table, needed to skip an unknown field by its entry
     // instead of desyncing the read offset.
     uint8_t field_no = 0;
-    shot.time_ms = state->curr_time_ms;
+    shot.time_ms = state->getCurrTimeMs();
     switch (this->id) {
       case MPI_PACKETS::UnitSingleShot: shot.kind = ShotSingle; break;
       case MPI_PACKETS::GmDoStartFire: shot.kind = ShotFireStart; break;

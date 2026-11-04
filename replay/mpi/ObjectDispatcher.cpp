@@ -8,9 +8,16 @@
 #include "math/dag_mathAng.h"
 #include "mpi/PositionSync.h"
 #include "network/eid.h"
-#include "state/ParserState.h"
+#include "state/internal/share.h"
 
 CREATE_HANDLE(handle_object_dispatcher, "ObjectDispatcher")
+
+struct SHARE_STRUCT(ObjectDispatcher) {
+  static auto &BattleMessages(ParserState &state) { return parserInt::ParserShare::get_battle_messages(state); }
+  static auto &EntityManager(ParserState &state) { return parserInt::ParserShare::get_ecs(state); }
+};
+
+struct alias : public SHARE_STRUCT(ObjectDispatcher) {};
 
 namespace mpi {
   constexpr uint32_t MAX_ZSTD_BLOCK_SIZE = 64u * 1024u * 1024u;
@@ -97,7 +104,7 @@ namespace mpi {
       case MPI_PACKETS::Kill: {
         const KillMessage *kill_m = dynamic_cast<const KillMessage *>(m);
         if (kill_m->offended_unit) {
-          kill_m->offended_unit->killed_at_ms = this->state->curr_time_ms;
+          kill_m->offended_unit->killed_at_ms = this->state->getCurrTimeMs();
         }
         [[fallthrough]];
       }
@@ -106,7 +113,7 @@ namespace mpi {
       case MPI_PACKETS::Awards: {
         m->delete_message = false;
         const IBattleMessage *battle_m = dynamic_cast<const IBattleMessage *>(m);
-        this->state->BattleMessages.push_back(battle_m);
+        alias::BattleMessages(*state).push_back(battle_m);
         break;
       }
       case MPI_PACKETS::ReflectionNoDecompress: {
@@ -146,7 +153,7 @@ namespace mpi {
       case MPI_PACKETS::Tank1:
       case MPI_PACKETS::Tank2: {
         auto tankM = (TankMessage *) m;
-        auto ret = GMSync(*state, tankM->data);
+        auto ret = dataSync::GMSync(*state, tankM->data);
         if (!ret) {
           LOGE("Failed to read TankMessage payload");
         }
@@ -155,7 +162,7 @@ namespace mpi {
       case MPI_PACKETS::Rocket1:
       case MPI_PACKETS::Rocket2: {
         auto bsM = (BSMessage *) m;
-        bool ret = WeaponSync(*state, bsM->data);
+        bool ret = dataSync::WeaponSync(*state, bsM->data);
         if (!ret) {
           LOGE("Failed to read We payload");
         }
@@ -205,7 +212,7 @@ namespace mpi {
     unit::UnitRef *ref = nullptr;
     {
       ZoneScopedN("unit::UnitRef_getNullable");
-      ref = state->g_entity_mgr.getNullable<unit::UnitRef>(eid, ECS_HASH("unit__ref"));
+      ref = alias::EntityManager(*state).getNullable<unit::UnitRef>(eid, ECS_HASH("unit__ref"));
     }
     if (!ref) {
       if (do_queue) {
@@ -279,7 +286,7 @@ namespace mpi {
     return true;
   }
 
-  IObject *ObjectDispatcher(ObjectID oid, ObjectExtUID extUid, ParserState *state) {
+  IObject *MpiQueueObject::ObjectDispatcher(ObjectID oid, ObjectExtUID extUid, ParserState *state) {
     ZoneScoped;
     uint16_t count = oid & 0x7ff;
     uint8_t obj = (uint8_t) (oid >> 0xb);

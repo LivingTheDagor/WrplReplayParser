@@ -51,10 +51,9 @@ namespace mpi {
 
     // put here purely to make friending easier
     static IObject *UnitRef_Dispatch(ObjectID oid, ObjectExtUID extUid, ParserState *state, bool do_queue);
+    static IObject *ObjectDispatcher(ObjectID oid, ObjectExtUID extUid, ParserState *state);
   };
 
-
-  IObject *ObjectDispatcher(ObjectID oid, ObjectExtUID extUid, ParserState *state);
 
 } // namespace mpi
 

@@ -137,11 +137,11 @@ int main() {
     // std::exit(0);
 
     while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
-    for (auto &plr: state.players) {
+    for (auto &plr: state.getPlayers()) {
       auto owned_eid = *plr.ownedUnitRef.Get();
       std::string *vehicle = nullptr;
       if (owned_eid != ecs::INVALID_ENTITY_ID) {
-        vehicle = state.g_entity_mgr.getNullable<ecs::string>(owned_eid, ECS_HASH("unit__className"));
+        vehicle = state.getEntityManager().getNullable<ecs::string>(owned_eid, ECS_HASH("unit__className"));
       }
       if (vehicle)
         LOGE("player_id: {}; playerName: {}; team: {}; vehicle: {}", plr.uid.Get()->account_id, plr.uid.Get()->name,
@@ -150,7 +150,7 @@ int main() {
         LOGE("Name: {}; team: {}; no_vehicle", plr.uid.Get()->name, *plr.team.Get());
     }
     iterate_all_units(state);
-    idx = state.current_packet_index;
+    idx = state.getCurrentPacketIndex();
     /*
     auto heap_ptr = state.get_allocator()->get_heap_ptr();
     std::cout << mi_stats_as_json(&heap_ptr->stats, 0, NULL) << std::endl;

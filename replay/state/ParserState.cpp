@@ -193,7 +193,7 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       break;
     }
     case ReplayPacketType::AircraftSmall: {
-      FMSync(*this, pkt.stream);
+      dataSync::FMSync(*this, pkt.stream);
       break;
     }
     case ReplayPacketType::Chat: {

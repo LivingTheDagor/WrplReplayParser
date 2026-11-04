@@ -3,6 +3,14 @@
 #include "Unit.h"
 #include "ecs/query/coreEvents.h"
 #include "ecs/ecsCodegen.h"
+#include "state/internal/share.h"
+
+struct SHARE_STRUCT(BaseEntityES) {
+  static auto &get_unit_allocator(ParserState &state) { return parserInt::ParserShare::get_unit_allocator(state); }
+  static auto &get_mgr(ParserState &state) { return parserInt::ParserShare::get_ecs(state); }
+};
+
+struct alias : public SHARE_STRUCT(BaseEntityES) {};
 
 static void team_spawn_side_es(const ecs::EventEntityCreated &, const ecs::string &unit__missionName, const int &team,
                                ecs::EntityManager &manager) {
@@ -13,8 +21,8 @@ static void on_tank_appear_es(const ecs::EventEntityCreated &evt,
                               const HeavyVehicleModelStorageComponent &unit_storage__tank, const int &uid,
                               unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
   G_ASSERT(unit__ref.unit == nullptr);
-  unit__ref.unit =
-    &manager.owned_by->_unit_allocator.allocateOne<unit::Tank>(manager.owned_by, static_cast<uint16_t>(uid));
+  auto &alloc = alias::get_unit_allocator(*manager.owned_by);
+  unit__ref.unit = &alloc.allocateOne<unit::Tank>(manager.owned_by, static_cast<uint16_t>(uid));
   G_ASSERT_LOG(unit__ref.unit->LoadFromStorage(unit_storage__tank), "Failed to load tank with uid {}", uid);
 }
 
@@ -22,8 +30,8 @@ static void on_aircraft_appear_es(const ecs::EventEntityCreated &evt,
                                   const FlightModelWrapStorageComponent &unit_storage__aircraft, const int &uid,
                                   unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
   G_ASSERT(unit__ref.unit == nullptr);
-  unit__ref.unit =
-    &manager.owned_by->_unit_allocator.allocateOne<unit::Aircraft>(manager.owned_by, static_cast<uint16_t>(uid));
+  auto &alloc = alias::get_unit_allocator(*manager.owned_by);
+  unit__ref.unit = &alloc.allocateOne<unit::Aircraft>(manager.owned_by, static_cast<uint16_t>(uid));
   G_ASSERT_LOG(unit__ref.unit->LoadFromStorage(unit_storage__aircraft), "Failed to load aircraft with uid {}", uid);
 }
 
@@ -75,8 +83,8 @@ ECS_REQUIRE(ecs::Tag playerUnit)
 static void iterate_all_units_ecs_query(ecs::EntityManager &manager, Callable c);
 
 void iterate_all_units(ParserState &state) {
-  iterate_all_units_ecs_query(state.g_entity_mgr, [](const unit::UnitRef &unit__ref, const ecs::string &unit__className,
-                                                     const ecs::EntityId eid) {
+  iterate_all_units_ecs_query(alias::get_mgr(state), [](const unit::UnitRef &unit__ref,
+                                                        const ecs::string &unit__className, const ecs::EntityId eid) {
     if (unit__ref.unit) {
       auto &unit = *unit__ref.unit;
       // log_ext("", 0, DEFAULT_SINK_HANDLER, LOGLEVEL::INFO, fmt::format("{}, {}", unit__ref.unit->uid,
@@ -95,7 +103,7 @@ void iterate_all_units(ParserState &state) {
 std::vector<unit::Unit *> collect_all_units(ParserState &state) {
   std::vector<unit::Unit *> units{};
   iterate_all_units_ecs_query(
-    state.g_entity_mgr,
+    alias::get_mgr(state),
     [&units](const unit::UnitRef &unit__ref, const ecs::string &unit__className, const ecs::EntityId eid) {
       if (unit__ref.unit && !unit__ref.unit->positions.history().empty()) {
         units.push_back(unit__ref.unit);

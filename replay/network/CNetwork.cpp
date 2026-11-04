@@ -54,7 +54,7 @@ namespace net {
         }
         ecs::EntityId eid = ecs::EntityId(serverEid);
         CNET_LOGD3("ID_ENTITY_MSG for entity {:#x} of template {}", serverEid,
-                   this->state->g_entity_mgr.getEntityTemplateName(eid));
+                   this->state->getEntityManager().getEntityTemplateName(eid));
         // actual code
         break;
       }

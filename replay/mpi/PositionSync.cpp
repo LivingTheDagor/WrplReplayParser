@@ -1,4 +1,4 @@
-#include "state/ParserState.h"
+#include "state/internal/share.h"
 #include "mpi/PositionSync.h"
 #include "Unit.h"
 #include "daNet/dag_netUtils.h"
@@ -6,6 +6,7 @@
 
 bool separateServerSideDetection_g = true;
 bool resyncSaclosGuidanceParams = true; // actually known to be true, hopefully
+
 
 #define RET_FAIL(op) G_ASSERT_RETURN((op), false);
 bool SensorsControlStates::deserialize(danet::BitStream &bs) {
@@ -167,7 +168,7 @@ void DeserializeSeekerData(danet::BitStream &bs) {
   return;
 }
 
-bool FMSync(ParserState &state, danet::BitStream &bs) {
+bool dataSync::FMSync(ParserState &state, danet::BitStream &bs) {
   ZoneScoped;
   uint16_t uid = 0;
   do {
@@ -243,7 +244,7 @@ bool FMSync(ParserState &state, danet::BitStream &bs) {
                 RET_FAIL(bs.ReadCompressed(temp_zig));
               }
             if (rounds_left >= 0)
-              state.AmmoEvents.push_back({state.curr_time_ms, unit, uint8_t(i), 0, uint32_t(rounds_left)});
+              state.AmmoEvents.push_back({state.getCurrTimeMs(), unit, uint8_t(i), 0, uint32_t(rounds_left)});
           }
           uint32_t some_packed_val;
           uint32_t vals_4;
@@ -347,16 +348,6 @@ bool FMSync(ParserState &state, danet::BitStream &bs) {
   return true;
 }
 
-struct TankRef {
-  unit::Unit *ref_1 = nullptr; // + 0.0 always matches
-  unit::Unit *ref_2 = nullptr; // + 0x8 needs to not match flags 0x10 and 0x1800
-  bool val1 = false;
-  bool val2 = false;
-  bool val3 = false;
-  uint8_t turret_count = 0;
-};
-
-
 struct SubVehicleDynData {
   Quat quat;
   float f4;
@@ -383,7 +374,7 @@ struct SubVehicleDynData {
 };
 
 
-bool ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bool is_from_compress) {
+bool dataSync::ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bool is_from_compress) {
   ZoneScoped;
   if (!ref->ref_1) {
     G_ASSERT(is_from_compress);
@@ -650,7 +641,7 @@ bool ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bo
 }
 
 
-bool GMSync(ParserState &state, danet::BitStream &bs) {
+bool dataSync::GMSync(ParserState &state, danet::BitStream &bs) {
   ZoneScoped;
   uint16_t uid_lower;
   uint16_t uid_upper;
@@ -753,15 +744,15 @@ bool GMSync(ParserState &state, danet::BitStream &bs) {
 // and jettisoned were asked for by nobody at all, which cost such a store its whole
 // trajectory.
 static Rocket *getAnyStoreImpl(ParserState &state, ecs::EntityId eid) {
-  if (auto *r = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("rocket_component")))
+  if (auto *r = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("rocket_component")))
     return r;
-  if (auto *b = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("bomb_component")))
+  if (auto *b = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("bomb_component")))
     return b;
-  if (auto *p = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("payload_component")))
+  if (auto *p = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("payload_component")))
     return p;
-  if (auto *j = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("jettisoned_component")))
+  if (auto *j = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("jettisoned_component")))
     return j;
-  return state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("torpedo_component"));
+  return state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("torpedo_component"));
 }
 
 static Rocket *getAnyStore(ParserState &state, ecs::EntityId eid, StoreType actual) {
@@ -773,28 +764,27 @@ static Rocket *getAnyStore(ParserState &state, ecs::EntityId eid, StoreType actu
 
 
 Rocket *getRocket(ParserState &state, ecs::EntityId eid) {
-  if (auto *r = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("rocket_component")))
+  if (auto *r = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("rocket_component")))
     return r;
   return getAnyStore(state, eid, StoreType::Rocket);
 }
 
 
 Rocket *getBomb(ParserState &state, ecs::EntityId eid) {
-  if (auto *b = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("bomb_component")))
+  if (auto *b = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("bomb_component")))
     return b;
   return getAnyStore(state, eid, StoreType::Bomb);
 }
 
 
 Rocket *getTorpedo(ParserState &state, ecs::EntityId eid) {
-  if (auto *t = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("torpedo_component")))
+  if (auto *t = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("torpedo_component")))
     return t;
   return getAnyStore(state, eid, StoreType::Torpedo);
 }
 
-typedef Rocket *(*get_weapon_cb)(ParserState &state, ecs::EntityId eid);
 
-bool ParseWeapon(ParserState &state, const danet::BitStream &bs, get_weapon_cb cb) {
+bool dataSync::ParseWeapon(ParserState &state, const danet::BitStream &bs, get_weapon_cb cb) {
   bool bool1, bool2;
   RET_FAIL(bs.Read(bool1));
   RET_FAIL(bs.Read(bool2));
@@ -935,7 +925,7 @@ bool ParseWeapon(ParserState &state, const danet::BitStream &bs, get_weapon_cb c
 }
 
 int count = 0;
-bool WeaponSync(ParserState &state, danet::BitStream &bs) {
+bool dataSync::WeaponSync(ParserState &state, danet::BitStream &bs) {
   count++;
   ZoneScoped;
   uint8_t rocket_count;

@@ -423,9 +423,9 @@ protected:
     Data data{time_start_ms, time_end_ms, draw_list, canvas_p0, &info};
     on_unit_cb_t on_unit_cb = [&data, this](const unit::Unit &unit) {
       auto pid = unit.owner_pid;
-      if (pid == -1 || pid >= this->state.players.size())
+      if (pid == -1 || pid >= this->state.getPlayers().size())
         return;
-      auto team = *this->state.players[pid].team.curr();
+      auto team = *this->state.getPlayers()[pid].team.curr();
       static std::vector<ImVec2> screen_points;
       auto &state = this->state;
       // front is earliest point
@@ -488,7 +488,7 @@ protected:
 
         auto *camera_data = unit.base_data->camera_data.currState();
         // we only want to draw data if camera_data is younger than 250 ms
-        if (camera_data && state.curr_time_ms - camera_data->time_ms < 1000) {
+        if (camera_data && state.getCurrTimeMs() - camera_data->time_ms < 1000) {
 
           DrawYawLine(camera_data->data.gun_pointer.x, front_uv, 40, IM_COL32(255, 0, 0, 255), 2.0f);
           DrawYawLine(camera_data->data.camera_euler.y, front_uv, 50, IM_COL32(255, 200, 0, 255), 2.0f);
@@ -517,11 +517,11 @@ protected:
 
     on_rocket_cb_t on_rocket_cb = [&data, this](const Rocket &rocket) {
       auto owner_eid = rocket.ownerEid;
-      int *player__id = this->state.g_entity_mgr.getNullable<int>(owner_eid, ECS_HASH("unit__playerId"));
+      int *player__id = this->state.getEntityManager().getNullable<int>(owner_eid, ECS_HASH("unit__playerId"));
 
-      if (!player__id || *player__id == -1 || *player__id >= this->state.players.size())
+      if (!player__id || *player__id == -1 || *player__id >= this->state.getPlayers().size())
         return;
-      auto team = *this->state.players[*player__id].team.curr();
+      auto team = *this->state.getPlayers()[*player__id].team.curr();
       static std::vector<ImVec2> screen_points;
       auto &state = this->state;
       // front is earliest point
@@ -600,7 +600,7 @@ protected:
 
 #define SQUARE(x) ((x) * (x))
 
-    for (auto objs: this->state.Zones) {
+    for (auto objs: this->state.getZones()) {
 
       auto curr_obj = *objs->curr();
       if (!curr_obj || !curr_obj->area)
@@ -685,7 +685,7 @@ protected:
 
 public:
   ParserState state;
-  std::unique_ptr<IReplay> replay;
+  std::unique_ptr<replay::IReplay> replay;
 
   uint32_t replay_length_ms = 0;
   float replay_length_f = 0.f;
@@ -705,7 +705,7 @@ public:
     longest_unit_name_size = get_longest_unit_name(state);
     int teams[3] = {0, 0, 0};
     ImVec2 ret = longest_player_name_size;
-    for (const auto &player: state.players) {
+    for (const auto &player: state.getPlayers()) {
       auto team = *player.team.curr();
       G_ASSERT(team <= 3);
       teams[team]++;
@@ -725,19 +725,19 @@ public:
       ;
     this->replay_length_ms = p.timestamp_ms;
     this->replay_length_f = (float(p.timestamp_ms) / 1000.f);
-    delete rdr;
   }
 
 
-  ReplayHandler(std::unique_ptr<IReplay> rpl) : state(rpl.get()) {
-    ZoneScoped auto header = rpl->getHeader();
-    session_id_hex = fmt::format("{:#X}", header->session_id);
-    this->session_id = header->session_id;
-    std::string blk_path = header->mission_file;
+  ReplayHandler(std::unique_ptr<replay::IReplay> rpl) : state(rpl.get()) {
+    ZoneScoped;
+    auto header = rpl->getHeader();
+    session_id_hex = fmt::format("{:#X}", header.session_id);
+    this->session_id = header.session_id;
+    std::string blk_path = header.mission_file;
     if (!blk_path.empty())
       load_map_info_from_blk(blk_path);
     else {
-      std::string level_bin = header->level_path;
+      std::string level_bin = header.level_path;
       load_map_info_from_bin(level_bin);
     }
     this->replay = std::move(rpl);
@@ -908,7 +908,7 @@ public:
     }
   }
 
-  ecs::EntityId getCurrEid(MPlayer &player) {
+  ecs::EntityId getCurrEid(const MPlayer &player) {
     if (player.controlledUnitRef.curr()->index() != 0)
       return *player.controlledUnitRef.curr();
     return *player.ownedUnitRef.curr();
@@ -941,7 +941,7 @@ public:
     if constexpr (team == 1) {
       ImGui::TableNextColumn();
       draw_circle(6.0f, curr_color);
-      auto &player_data = this->state.players[index];
+      auto &player_data = this->state.getPlayers()[index];
       ImGui::TableNextColumn();
 
       ImGui::Text("%i", player_data.dummyForRoundScore.curr()->combined);
@@ -951,7 +951,7 @@ public:
       ImGui::TableNextColumn();
 
       auto owned_eid = getCurrEid(player_data);
-      auto unit__ref = this->state.g_entity_mgr.getNullable<unit::UnitRef>(owned_eid, ECS_HASH("unit__ref"));
+      auto unit__ref = this->state.getEntityManager().getNullable<unit::UnitRef>(owned_eid, ECS_HASH("unit__ref"));
       if (!unit__ref || !unit__ref->unit) {
         ImGui::TextUnformatted("<NONE>");
         ImGui::TableNextColumn();
@@ -961,7 +961,7 @@ public:
         auto name = get_unit_name_1(*unit);
         ImGui::TextUnformatted(name);
         ImGui::TableNextColumn();
-        if (state.curr_time_ms >= unit->killed_at_ms) {
+        if (state.getCurrTimeMs() >= unit->killed_at_ms) {
           draw_circle(6.0f, red);
         } else {
           draw_circle(6.0f, green);
@@ -969,16 +969,16 @@ public:
       }
     } else if constexpr (team == 2) {
       ImGui::TableNextColumn();
-      auto &player_data = this->state.players[index];
+      auto &player_data = this->state.getPlayers()[index];
       auto owned_eid = getCurrEid(player_data);
-      auto unit__ref = this->state.g_entity_mgr.getNullable<unit::UnitRef>(owned_eid, ECS_HASH("unit__ref"));
+      auto unit__ref = this->state.getEntityManager().getNullable<unit::UnitRef>(owned_eid, ECS_HASH("unit__ref"));
       if (!unit__ref || !unit__ref->unit) {
         draw_circle(6.0f, red);
         ImGui::TableNextColumn();
         ImGui::TextUnformatted("<NONE>");
       } else {
         auto unit = unit__ref->unit;
-        if (state.curr_time_ms >= unit->killed_at_ms) {
+        if (state.getCurrTimeMs() >= unit->killed_at_ms) {
           draw_circle(6.0f, red);
         } else {
           draw_circle(6.0f, green);
@@ -999,14 +999,14 @@ public:
   }
 
   void collect_sort_players(std::vector<int> &indexes_out, uint8_t team_index) {
-    for (uint8_t i = 0; i < (uint8_t) this->state.players.size(); i++) {
-      auto &curr_player = this->state.players[i];
+    for (uint8_t i = 0; i < (uint8_t) this->state.getPlayers().size(); i++) {
+      auto &curr_player = this->state.getPlayers()[i];
       auto team = *curr_player.team.curr();
       if (team == team_index) {
         indexes_out.push_back(i);
       }
     }
-    auto &players = this->state.players;
+    auto &players = this->state.getPlayers();
     std::sort(indexes_out.begin(), indexes_out.end(), [&players](auto a, auto b) {
       auto &player1_score = players[a].dummyForRoundScore.curr()->combined;
       auto &player2_score = players[b].dummyForRoundScore.curr()->combined;
@@ -1142,7 +1142,7 @@ public:
     }
   }
 
-  void drawReflectableObject(danet::ReflectableObject *robj, const char *obj_name) {
+  void drawReflectableObject(const danet::ReflectableObject *robj, const char *obj_name) {
     char name[256] = {};
     if (obj_name) {
       fmt::format_to_n(name, 256, "{}: {} ##{}", robj->getClassName(), obj_name, robj->getUID());
@@ -1162,22 +1162,22 @@ public:
   }
 
   void drawReflectableObjects() {
-    drawReflectableObject(&this->state.gen_state, nullptr);
-    drawReflectableObject(&this->state.glob_elo, nullptr);
+    drawReflectableObject(&this->state.getGeneralState(), nullptr);
+    drawReflectableObject(&this->state.getGlobalElo(), nullptr);
     if (ImGui::TreeNode(("Teams"))) {
-      for (auto &obj: this->state.teams) {
+      for (auto &obj: this->state.getTeams()) {
         drawReflectableObject(&obj, nullptr);
       }
       ImGui::TreePop();
     }
     if (ImGui::TreeNode("MPlayer Objects")) {
-      for (auto &obj: this->state.players) {
+      for (auto &obj: this->state.getPlayers()) {
         drawReflectableObject(&obj, getPlayerName(obj));
       }
       ImGui::TreePop();
     }
     if (ImGui::TreeNode("Zones")) {
-      for (auto obj: this->state.Zones) {
+      for (auto obj: this->state.getZones()) {
         if (obj->curr()) {
           // char buff[16];
           // fmt::format_to_n(buff, 16, "{:#x}", obj->getUID());
@@ -1187,7 +1187,7 @@ public:
       ImGui::TreePop();
     }
     if (ImGui::TreeNode("Areas")) {
-      for (auto obj: this->state.missionAreas2) {
+      for (auto obj: this->state.getMissionAreas2()) {
         if (obj->curr()) {
           drawReflectableObject(*obj->curr(), nullptr);
         }

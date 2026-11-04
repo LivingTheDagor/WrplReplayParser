@@ -1,5 +1,4 @@
-#ifndef MYEXTENSION_PARSERSTATE_H
-#define MYEXTENSION_PARSERSTATE_H
+#pragma once
 #include "ecs/EntityManager.h"
 #include "mpi/mpi.h"
 #include "mpi/codegen/ReflIncludes.h"
@@ -16,10 +15,20 @@
 #include "memory/dag_memBase.h"
 #include "mpi/Ballistics.h"
 #include "blockAllocator.h"
+#include "chat.h"
+#include "mpi/PositionSync.h"
+
+class PyReplayState;
 namespace unit {
   class Unit;
 }
-
+namespace parserInt {
+  class ParserShare;
+}
+namespace pybind11 {
+  template<typename type_, typename... options>
+  class class_;
+}
 struct net_delta_t {
   net_delta_t(IMemAlloc *alloc) : allocator(alloc), netDelta(5, 0xd, alloc) {}
   IMemAlloc *allocator;
@@ -36,24 +45,6 @@ struct net_delta_t {
     }
     return hist;
   }
-};
-
-enum ChatType : uint8_t {
-  Team = 0,
-  All = 1,
-  Squad = 2,
-  Direct = 3, // exists, but is currently unused from what I can tell
-};
-
-struct ChatMessage {
-  uint32_t time_ms;
-  std::string player_name; // player name
-  std::string message; // message text
-  ChatType channel = All; // what channel this message was sent on
-  bool is_local_message{}; // a message that only ur client sees (ex: chat spamming message)
-  bool is_quick_message{}; // is a message created through the quick message menu
-  std::string complaints; // this is basically useless information
-  inline bool FromBS(danet::BitStream &bs);
 };
 
 
@@ -80,6 +71,7 @@ struct ParserState {
   explicit ParserState(replay::IReplay *replay);
 
 protected:
+  void initialize(uint32_t player_count);
   template<typename... Ts>
   struct UnitAllocator {
   private:
@@ -96,29 +88,6 @@ protected:
     }
   };
 
-  void initialize(uint32_t player_couunt);
-  bool is_dtor{false};
-  StateAllocator allocator{};
-  mpi::MpiQueueObject mpi_queue{this};
-  friend mpi::MpiQueueObject;
-
-  friend mpi::IObject *mpi::ObjectDispatcher(mpi::ObjectID oid, mpi::ObjectExtUID extUid, ParserState *state);
-  friend StateRewinder;
-
-
-  // could replace with a tuple vector, basically the same thing with less space
-  std::pmr::vector<ecs::EntityId> uid_lookup{&allocator};
-  std::pmr::vector<unit::Unit *> uid_unit_lookup{&allocator};
-
-  // when we started collecting states
-  uint32_t state_update_start_time_ms{};
-  // holds all the current updates for the current time_ms
-  std::pmr::vector<RewindRef> curr_ms_rewind_refs{&allocator};
-  // used by ballisitics loader as cache
-  std::unordered_map<std::string, unit::BallisticParams> ballistics_cache;
-  std::unordered_map<std::string, std::vector<unit::BulletSet>> bullet_set_cache;
-  friend unit::BallisticParams;
-  friend unit::BulletSet;
 
 #if LDAG_DBGLEVEL > 0
   void registerStateChange(IObjectRewindState *state, uint32_t back, uint32_t curr);
@@ -128,10 +97,8 @@ protected:
 
   void beforePacket(ReplayPacket &pkt);
 
-  friend IObjectRewindState;
 
 public:
-  UnitAllocator<unit::Aircraft, unit::Tank> _unit_allocator{allocator.getMem()};
   template<class T, class... Args>
   T *_new(Args &&...args) {
     return allocator._new<T>(std::forward<Args>(args)...);
@@ -149,6 +116,66 @@ public:
       return nullptr;
     return &it->second;
   }
+
+  ecs::EntityId getUnitEid(uint16_t uid) const;
+
+  const std::pmr::vector<unit::Unit *> &getUnitLookup() const { return this->uid_unit_lookup; }
+
+  unit::Unit *getUnitObj(uint16_t uid) const;
+
+  void setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid);
+
+  void recordTeamSpawnSide(int team, const std::string &mission_name);
+
+  ~ParserState();
+
+  bool ParsePacket(ReplayPacket &pkt);
+
+  void rewindToMs(uint32_t time_ms);
+
+  bool finishedLoading() const { return this->replay_length_ms != 0xFFFFFFFF; }
+
+  uint32_t getReplayLengthMs() const { return this->replay_length_ms; }
+  uint32_t getCurrTimeMs() const { return this->curr_time_ms; }
+  float getSeaLevel() const { return this->sea_level; }
+  const auto &getPlayers() const { return this->players; }
+  const auto &getEntityManager() const { return this->g_entity_mgr; }
+  const auto &getZones() const { return this->Zones; }
+  const auto &getTeams() const { return this->teams; }
+  const auto &getChatMessages() const { return this->chatMessages; }
+  const auto &getGlobalElo() const { return this->glob_elo; }
+  const auto &getGeneralState() const { return this->gen_state; }
+  const auto &getBattleMessages() const { return this->BattleMessages; }
+  const auto &getHitAffects() const { return this->HitEffects; }
+  const auto &getHitAnalysis() const { return this->HitAnalyses; }
+  const auto &getHitDamages() const { return this->HitDamages; }
+  const auto &getHitDirections() const { return this->HitDirections; }
+  const auto &getHitExplosions() const { return this->HitExplosions; }
+  const auto &getHitOutcomes() const { return this->HitOutcomes; }
+  const auto &getAmmoEvents() const { return this->AmmoEvents; }
+  const auto &getShotEvents() const { return this->ShotEvents; }
+  const auto &getMissionAreas1() const { return this->missionAreas1; }
+  const auto &getMissionAreas2() const { return this->missionAreas2; }
+  const auto &getCurrentPacketIndex() const { return this->current_packet_index; }
+
+protected:
+  bool is_dtor{false};
+  StateAllocator allocator{};
+  mpi::MpiQueueObject mpi_queue{this};
+
+
+  // could replace with a tuple vector, basically the same thing with less space
+  std::pmr::vector<ecs::EntityId> uid_lookup{&allocator};
+  std::pmr::vector<unit::Unit *> uid_unit_lookup{&allocator};
+
+  // when we started collecting states
+  uint32_t state_update_start_time_ms{};
+  // holds all the current updates for the current time_ms
+  std::pmr::vector<RewindRef> curr_ms_rewind_refs{&allocator};
+  // used by ballisitics loader as cache
+  std::unordered_map<std::string, unit::BallisticParams> ballistics_cache;
+  std::unordered_map<std::string, std::vector<unit::BulletSet>> bullet_set_cache;
+  UnitAllocator<unit::Aircraft, unit::Tank> _unit_allocator{allocator.getMem()};
 
   uint32_t replay_length_ms = 0xFFFFFFFF;
   uint32_t curr_time_ms = 0; // the current time in the ECS / state.
@@ -184,29 +211,25 @@ public:
   std::pmr::vector<ObjectRewindState<MissionArea *, false> *> missionAreas2{get_allocator()};
 
   int current_packet_index = -1;
-
-
-  ecs::EntityId getUnitEid(uint16_t uid) const;
-
-  const std::pmr::vector<unit::Unit *> &getUnitLookup() const { return this->uid_unit_lookup; }
-
-  unit::Unit *getUnitObj(uint16_t uid) const;
-
-  void setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid);
-
-  void recordTeamSpawnSide(int team, const std::string &mission_name);
-
-  ~ParserState();
-
-  bool ParsePacket(ReplayPacket &pkt);
-
-  void rewindToMs(uint32_t time_ms);
-
-  bool finishedLoading() const { return this->replay_length_ms != 0xFFFFFFFF; }
-
-private:
   StateRewinder rewinder{this};
   std::array<uint8_t, 3> team_spawn_side_masks{};
+  friend StateRewinder;
+  friend unit::BallisticParams;
+  friend unit::BulletSet;
+  friend IObjectRewindState;
+  friend parserInt::ParserShare;
+  friend mpi::MpiQueueObject;
+  friend dataSync;
+  friend BaseExtReflectable;
+  friend MissionZone *create_zone(danet::BitStream &bs, uint8_t zone_type, ParserState *state);
+  friend MissionZone;
+  friend MissionArea;
+  friend net::CNetwork;
+  friend ecs::EntityManager;
+  friend ecs::EcsRewindEvent;
+  template<typename type_, typename... options>
+  friend class pybind11::class_;
+  friend PyReplayState;
 };
 
 template<typename T, bool do_compare, bool take_ownership, bool create_default>
@@ -321,7 +344,7 @@ void ObjectRewindState<T, do_compare, take_ownership, create_default>::checkAndP
       }
     }
   }
-  this->time_states.back().time_ms = state->curr_time_ms;
+  this->time_states.back().time_ms = state->getCurrTimeMs();
   this->state = &this->time_states.back();
   curr_index = this->time_states.size() - 1;
   if constexpr (!create_default) {
@@ -336,5 +359,3 @@ void ObjectRewindState<T, do_compare, take_ownership, create_default>::checkAndP
   this->pushBackState(state);
 #endif
 }
-
-#endif // MYEXTENSION_PARSERSTATE_H
