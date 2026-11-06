@@ -386,9 +386,22 @@ namespace danet {
       mpi::read_object_ext_uid(bs, oid, extUid);
       bs.AlignReadToByteBoundary();
       BitSize_t startPosAfterId = bs.GetReadOffset();
-      ReflectableObject *refl = (oid == mpi::INVALID_OBJECT_ID && extUid == mpi::INVALID_OBJECT_EXT_UID)
-                                  ? NULL
-                                  : static_cast<ReflectableObject *>(resolver(oid, extUid, state));
+      ReflectableObject *refl = nullptr;
+      if (!(oid == mpi::INVALID_OBJECT_ID && extUid == mpi::INVALID_OBJECT_EXT_UID)) {
+        auto &config = state->getConfig();
+        if (config.use_enabled_reflection_oids && !config.enabled_reflection_oids[oid]) {
+        } else {
+          auto ret = resolver(oid, extUid, state);
+#if LDAG_DBGLEVEL > 0
+          if (ret) {
+            // debug check to confirm our resolved objected is actually a reflectable
+            auto dyn = dynamic_cast<ReflectableObject *>(ret);
+            G_ASSERT(dyn);
+          }
+#endif
+          refl = static_cast<ReflectableObject *>(ret);
+        }
+      }
       if (refl && refl->debugWatermark != DANET_WATERMARK)
         LOG("can't resolve (or bad reflection object) {} by oid {:#x}\n", fmt::ptr(refl), oid);
       bool read_fail = false;

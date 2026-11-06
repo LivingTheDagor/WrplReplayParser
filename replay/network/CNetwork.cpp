@@ -4,6 +4,10 @@
 #include "state/ParserState.h"
 #include "consts.h"
 #include <cassert>
+#include "enet/enet.h"
+extern "C" {
+#include "lz4.h"
+}
 
 CREATE_HANDLE(handle_cnet, "CNetwork")
 namespace net {
@@ -11,6 +15,7 @@ namespace net {
 
 
   inline bool bitstream_decompress(const danet::BitStream &bs, danet::BitStream &outbs) {
+    ZoneScoped;
     if (bs.GetReadOffset() >= bs.GetNumberOfBitsUsed())
       return false;
     assert((bs.GetReadOffset() & 7) == 0);
@@ -30,7 +35,7 @@ namespace net {
   }
 
   void CNetwork::onPacket(ReplayPacket *pkt, int cur_time_ms) {
-    danet::BitStream &bs = pkt->stream;
+    ZoneScopedN("CNetwork::onPacket") danet::BitStream &bs = pkt->stream;
     auto bsTemp = danet::BitStream();
     uint8_t ptype;
     pkt->stream.Read(ptype);
@@ -48,6 +53,9 @@ namespace net {
     switch (ptype) {
       case ID_ENTITY_MSG:
       case ID_ENTITY_MSG_COMPRESSED: {
+        if (!state->getConfig().ecs_messages_enabled())
+          break;
+        ZoneScopedN("CNetwork::onPacket::ID_ENTITY_MSG");
         ecs::entity_id_t serverEid = ecs::ECS_INVALID_ENTITY_ID_VAL;
         if (!read_server_eid(serverEid, bs)) {
           EXCEPTION("Failed to read the server eid from a ID_ENTITY_MSG");
@@ -60,6 +68,7 @@ namespace net {
       }
       case ID_ENTITY_REPLICATION:
       case ID_ENTITY_REPLICATION_COMPRESSED: {
+        ZoneScopedN("CNetwork::onPacket::ID_ENTITY_REPLICATION");
         int sentTime = 0;
         if (!bs.Read(sentTime)) {
           EXCEPTION("Failed to read the time from a ID_ENTITY_REPLICATION");
@@ -88,6 +97,8 @@ namespace net {
       }
       case ID_ENTITY_CREATION:
       case ID_ENTITY_CREATION_COMPRESSED: {
+
+        ZoneScopedN("CNetwork::onPacket::ID_ENTITY_CREATION");
         const danet::BitStream *bsToRead = readCompressedIfPacketType(ID_ENTITY_CREATION_COMPRESSED);
         if (!bsToRead)
           break;
@@ -101,6 +112,8 @@ namespace net {
         break;
       }
       case ID_ENTITY_DESTRUCTION: {
+
+        ZoneScopedN("CNetwork::onPacket::ID_ENTITY_DESTRUCTION");
         if (!conn.readDestructionPacket(bs))
           EXCEPTION("Failed to read destruction packet of {} bytes", bs.GetNumberOfBytesUsed());
         break;

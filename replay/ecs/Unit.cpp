@@ -325,7 +325,8 @@ namespace unit {
     auto skel_name = getGoodSkelName(model_name);
     {
       ZoneScopedN("Unit::loadWeaponData::getTree");
-      has_tree = g_grp_manager.getTree(skel_name, geom_tree);
+      if (state->getConfig().turret_parsing_enabled())
+        has_tree = g_grp_manager.getTree(skel_name, geom_tree);
     }
     if (has_tree) {
       ZoneScopedN("Unit::loadWeaponData::makeTurretTree");

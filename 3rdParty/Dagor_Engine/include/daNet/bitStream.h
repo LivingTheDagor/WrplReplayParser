@@ -290,6 +290,11 @@ namespace danet {
       lane = swap::byte_swap(lane);
       std::memcpy(dest, &lane, bytes);
     }
+    template<size_t bits>
+    bool ReadBits(uint8_t *output) const {
+      return ReadConstBits<bits>(output);
+    }
+
     bool ReadBits(uint8_t *output, uint32_t bits) const {
       if (!bits)
         return true;
@@ -393,21 +398,7 @@ namespace danet {
       static_assert(!eastl::is_pointer_v<T> && !eastl::is_const_v<T>);
 
       constexpr auto bit_count = BYTES_TO_BITS(sizeof(T));
-      if constexpr (bit_count == 8)
-        return ReadSpecificLens<uint16_t>(t);
-      if constexpr (bit_count == 16)
-        return ReadSpecificLens<uint32_t>(t);
-      if constexpr (bit_count == 24)
-        return ReadSpecificLens<uint32_t>(t);
-      if constexpr (bit_count == 32)
-        return ReadSpecificLens<uint64_t>(t);
-      if constexpr (bit_count == 40)
-        return ReadSpecificLens<uint64_t>(t);
-      if constexpr (bit_count == 48)
-        return ReadSpecificLens<uint64_t>(t);
-      if constexpr (bit_count == 56)
-        return ReadSpecificLens<uint64_t>(t);
-      return ReadBits((uint8_t *) &t, bytes2bits(sizeof(T)));
+      return ReadConstBits<bit_count>((uint8_t *) &t);
     }
 
     template<typename T>
@@ -643,9 +634,9 @@ namespace danet {
         size_t newBytesAllocated =
           std::max(bitsAllocated ? (bitsAllocated >> 3) * 2u : 16u, bits2bytes(newBitsAllocated));
         if (!data)
-          data = (uint8_t *) malloc(newBytesAllocated);
+          data = (uint8_t *) allocator->alloc(newBytesAllocated);
         else
-          data = (uint8_t *) realloc(data, newBytesAllocated);
+          data = (uint8_t *) allocator->realloc(data, newBytesAllocated);
 
         if (size_t tailBytes = newBytesAllocated - (bitsAllocated >> 3))
           memset(data + (bitsAllocated >> 3), 0, tailBytes);
@@ -657,20 +648,58 @@ namespace danet {
     void swap(BitStream &bs);
 
   protected:
-    template<typename Tu, typename T>
-    bool ReadSpecificLens(T &t) const {
-      constexpr auto byte_count = sizeof(T);
-      constexpr auto bit_count = BYTES_TO_BITS(byte_count);
+    template<size_t bit_count>
+    bool ReadConstBits(uint8_t *out) const {
+      if constexpr (bit_count == 8)
+        return ReadSpecificLens<uint16_t, bit_count>(out);
+      if constexpr (bit_count == 16)
+        return ReadSpecificLens<uint32_t, bit_count>(out);
+      if constexpr (bit_count == 24)
+        return ReadSpecificLens<uint32_t, bit_count>(out);
+      if constexpr (bit_count == 32)
+        return ReadSpecificLens<uint64_t, bit_count>(out);
+      if constexpr (bit_count == 40)
+        return ReadSpecificLens<uint64_t, bit_count>(out);
+      if constexpr (bit_count == 48)
+        return ReadSpecificLens<uint64_t, bit_count>(out);
+      if constexpr (bit_count == 56)
+        return ReadSpecificLens<uint64_t, bit_count>(out);
+      else
+        return ReadBits(out, bit_count);
+    }
+
+
+    template<typename Tu, size_t bit_count>
+    bool ReadSpecificLens(uint8_t *out) const {
+      constexpr auto byte_count = BITS_TO_BYTES(bit_count);
       if (bit_count > bitsUsed - readOffset)
         return false;
       const uint8_t *data_ptr = GetData() + (readOffset >> 3);
       const uint32_t readmod8 = readOffset & 7;
       if (readmod8 == 0) {
-        memcpy(&t, data_ptr, byte_count);
+        memcpy(out, data_ptr, byte_count);
       } else {
-        copyShift<Tu, byte_count>(data_ptr, (uint8_t *) &t, readmod8);
+        copyShift<Tu, byte_count>(data_ptr, out, readmod8);
       }
       readOffset += bit_count;
+      return true;
+    }
+
+    template<typename T, size_t bits>
+    bool ReadLessThan8(T &t) const {
+      G_STATIC_ASSERT(bits < 8);
+      if (bits > bitsUsed - readOffset)
+        return false;
+      const uint8_t *data_ptr = GetData() + (readOffset >> 3);
+      const uint32_t readmod8 = readOffset & 7;
+      constexpr uint32_t rem = bits & 7;
+      uint8_t v = static_cast<uint8_t>(data_ptr[0] << readmod8);
+      uint8_t buff;
+      if (readmod8 + rem > 8)
+        v |= data_ptr[1] >> (8 - readmod8); // only touch next byte if needed
+      buff = v >> (8 - rem);
+      memcpy(&t, &buff, sizeof(T));
+      readOffset += bits;
       return true;
     }
 

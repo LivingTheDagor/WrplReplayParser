@@ -15,6 +15,34 @@ DEFINE_HANDLE(handle_object_dispatcher)
 
 struct ParserState;
 namespace mpi {
+  enum ExtMpiTypes {
+    FMW = 0,
+    GM = 1,
+    INF = 2,
+    T_3 = 3,
+    T_4 = 4,
+    T_5 = 5,
+    T_6 = 6,
+    T_7 = 7,
+    T_8 = 8,
+    T_9 = 9,
+    T_10 = 10,
+    T_11 = 11,
+    FM_FX = 12,
+    UFX = 13,
+    T_14 = 14,
+    T_15 = 15,
+    FM_DVM = 16, // fm and gm have it in the same place,
+    GM_DVM = 17,
+    CUD = 18,
+    T_19 = 19,
+    T_20 = 20,
+    T_21 = 21,
+    T_22 = 22,
+    T_23 = 23,
+    T_24 = 24,
+    WEAP = 25,
+  };
   enum QueuePacketTypes {
     MPI = 0x10000000,
     REFL = 0x20000000,

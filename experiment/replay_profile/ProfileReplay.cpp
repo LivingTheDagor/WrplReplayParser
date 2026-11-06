@@ -91,15 +91,16 @@ int main() {
       ParserState &state = *state_ptr;
       // std::exit(0);
       {
-
-        ZoneScopedN("Parsing Only") while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
+        ZoneScopedN("Parsing Only");
+        while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
       }
       {
         ZoneScopedN("Rewind") state.rewindToMs(0);
         state.rewindToMs(state.getReplayLengthMs());
       }
       {
-        ZoneScopedN("Object destruction") delete state_ptr;
+        ZoneScopedN("Object destruction");
+        delete state_ptr;
         rdr.reset();
       }
       {

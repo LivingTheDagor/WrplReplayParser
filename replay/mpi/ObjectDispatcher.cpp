@@ -46,32 +46,46 @@ namespace mpi {
     ZoneScoped;
     // LOG("incoming mid: 0x%x\n", mid);
     switch (mid) {
-      case MPI_PACKETS::Replication:
+      case MPI_PACKETS::Replication: {
+        if (!state->getConfig().replication_enabled())
+          return nullptr;
+        return state->_new<Message>(this, mid);
+      }
       case MPI_PACKETS::Reflection1:
       case MPI_PACKETS::Reflection2:
       case MPI_PACKETS::ReflectionNoDecompress: {
+        if (!state->getConfig().reflection_enabled())
+          return nullptr;
         return state->_new<Message>(this, mid);
         // return new Message(this, mid);
         break;
       }
       case MPI_PACKETS::Kill: {
+        if (!state->getConfig().battle_messages_enabled())
+          return nullptr;
         return state->_new<KillMessage>(this);
         /// return new KillMessage(this);
         DISPATCHER_LOGD1("KILL");
         break;
       }
       case MPI_PACKETS::Awards: {
+        if (!state->getConfig().battle_messages_enabled())
+          return nullptr;
         return state->_new<AwardMessage>(this);
         /// return new AwardMessage(this);
         DISPATCHER_LOGD1("Awards");
         break;
       }
       case MPI_PACKETS::SevereDamage: {
+        if (!state->getConfig().battle_messages_enabled())
+          return nullptr;
         return state->_new<SevereDamageMessage>(this);
         DISPATCHER_LOGD1("SevereDamage");
         break;
       }
       case MPI_PACKETS::CriticalDamage: {
+        if (!state->getConfig().battle_messages_enabled())
+          return nullptr;
         return state->_new<CriticalDamageMessage>(this);
         // return new CriticalDamageMessage(this);
         DISPATCHER_LOGD1("CriticalDamage");
@@ -79,19 +93,21 @@ namespace mpi {
       }
       case MPI_PACKETS::Tank1:
       case MPI_PACKETS::Tank2: {
+        if (!state->getConfig().GMSync_enabled())
+          return nullptr;
         DISPATCHER_LOGD1("Tank");
         return state->_new<TankMessage>(this, mid);
         // return new TankMessage(this, mid);
       }
       case MPI_PACKETS::Rocket1:
       case MPI_PACKETS::Rocket2: {
+        if (!state->getConfig().weapon_sync_enabled())
+          return nullptr;
         return state->_new<BSMessage>(this, mid);
         // return new BSMessage(this, mid);
       }
+      default: return nullptr;
     }
-    // No dispatcher for this id. Measured on a full battle: 31 such ids arrive, and not
-    // one of them is addressed to a ground vehicle - everything the server sends about a
-    // tank is already read here.
     return nullptr;
   }
 
@@ -173,34 +189,6 @@ namespace mpi {
 
   ecs::EntityId eid_from_ext_uid(uint32_t ext_uid) { return ecs::EntityId((ext_uid & 0xFF) << 0x16 | ext_uid >> 0x8); }
 
-  enum ExtMpiTypes {
-    FMW = 0,
-    GM = 1,
-    INF = 2,
-    T_3 = 3,
-    T_4 = 4,
-    T_5 = 5,
-    T_6 = 6,
-    T_7 = 7,
-    T_8 = 8,
-    T_9 = 9,
-    T_10 = 10,
-    T_11 = 11,
-    FM_FX = 12,
-    UFX = 13,
-    T_14 = 14,
-    T_15 = 15,
-    FM_DVM = 16, // fm and gm have it in the same place,
-    GM_DVM = 17,
-    CUD = 18,
-    T_19 = 19,
-    T_20 = 20,
-    T_21 = 21,
-    T_22 = 22,
-    T_23 = 23,
-    T_24 = 24,
-    WEAP = 25,
-  };
 
   IObject *MpiQueueObject::UnitRef_Dispatch(ObjectID oid, ObjectExtUID extUid, ParserState *state, bool do_queue) {
     ZoneScoped;

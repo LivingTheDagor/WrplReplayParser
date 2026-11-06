@@ -113,7 +113,9 @@ DECL_MEM(midmem); //< memory for objects that remain in memory for significant t
 DECL_MEM(uimem); //< memory for UI-related objects
 DECL_MEM(globmem);
 DECL_MEM(defaultmem); //< memory used by default (in operator new)
-
+#if !defined(__forceinline)
+#define __forceinline inline
+#endif
 /// C-style functions to provide allocation/deallocation
 __forceinline void *memalloc(size_t sz, IMemAlloc *a) { return a->alloc(sz); }
 __forceinline void *memalloc(size_t sz, IMemAlloc *a, size_t *asz) { return a->alloc(sz, asz); }

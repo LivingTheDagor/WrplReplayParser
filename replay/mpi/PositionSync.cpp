@@ -243,7 +243,7 @@ bool dataSync::FMSync(ParserState &state, danet::BitStream &bs) {
                 int temp_zig = 0;
                 RET_FAIL(bs.ReadCompressed(temp_zig));
               }
-            if (rounds_left >= 0)
+            if (state.getConfig().capture_ammo_events() && rounds_left >= 0)
               state.AmmoEvents.push_back({state.getCurrTimeMs(), unit, uint8_t(i), 0, uint32_t(rounds_left)});
           }
           uint32_t some_packed_val;
@@ -579,6 +579,7 @@ bool dataSync::ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRe
           turret_z = UNPACK_S16(extra_val, PI);
           //;LOGI("extra_val: {}", extra_val);
         }
+        // see Unit::loadWeaponData for how turret creation was disabled
         if (weap && weap->turret_desc) {
           auto turret = weap->turret_desc.get();
           turret->setData({turret_x, turret_y, turret_z});
@@ -620,7 +621,7 @@ bool dataSync::ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRe
   for (auto &t: targets) {
     RET_FAIL(t.deserialize(bs));
   }
-  if (ref->ref_1) {
+  if (ref->ref_1 && state.getConfig().turret_parsing_enabled()) {
     ref->ref_1->calculateTurretData();
     /*LOGI("");
     for (auto &weap: ref->ref_1->weapons) {

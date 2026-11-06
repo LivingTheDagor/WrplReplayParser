@@ -34,7 +34,6 @@ def vector_writer(mgr: 'DataTypeManager', datatype: DataTypeInst, name: str):
     template_type = datatype.compiled.template_args[0]
     size_type = datatype.compiled.template_args[1]
     size_name = datatype.compiled.template_args[1].datatype.reg.serialize_name(size_type)
-    print(size_type)
     varname = f"sz{mgr.counter_inc()}"
     return f"""      auto {varname} = ({size_name}){datatype.get_ref_to_child(name)}size();
 {mgr.get_ReflectionVar_writer(DataTypeInst(varname, size_type, False, 0))}
@@ -79,7 +78,7 @@ def dummyForExitZonesSettings_writer(mgr: 'DataTypeManager', datatype: DataTypeI
 
 
 def UnitId_loader(mgr: 'DataTypeManager', datatype: DataTypeInst, name: str):
-    return f"      REPL_VER(bs->ReadBits((uint8_t*)&{datatype.access_var(name)}, 0xb));"
+    return f"      REPL_VER(bs->ReadBits<0xb>((uint8_t*)&{datatype.access_var(name)}));"
 
 
 def UnitId_writer(mgr: 'DataTypeManager', datatype: DataTypeInst, name: str):

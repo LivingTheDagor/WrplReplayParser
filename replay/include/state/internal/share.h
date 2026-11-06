@@ -16,6 +16,18 @@ namespace parserInt {
     static auto &get_unit_allocator(ParserState &state) { return state._unit_allocator; }
     static auto &get_battle_messages(ParserState &state) { return state.BattleMessages; }
     static auto &get_m_players(ParserState &state) { return state.players; }
+    template<typename... Args>
+    static void recordTeamSpawnSide(ParserState &state, Args &&...args) {
+      state.recordTeamSpawnSide(std::forward<Args>(args)...);
+    }
+    template<typename... Args>
+    static void setUnitData(ParserState &state, Args &&...args) {
+      state.setUnitData(std::forward<Args>(args)...);
+    }
+    template<typename... Args>
+    static auto get_queued_data(ParserState &state, Args &&...args) {
+      return state.get_queued_data(std::forward<Args>(args)...);
+    }
     DECL_STRUCT_SHARE_FRIEND(BaseEntityES)
     DECL_STRUCT_SHARE_FRIEND(ObjectDispatcher)
     DECL_STRUCT_SHARE_FRIEND(MPlayerES)

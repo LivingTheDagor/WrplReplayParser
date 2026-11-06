@@ -31,6 +31,170 @@ namespace pybind11 {
   class class_;
 }
 
+enum DispatcherFlags {
+  Dispatch = 1,
+  Reflection = 2,
+  Both = 3,
+};
+
+struct ParserConfig {
+  struct {
+    /// do we create tank units? As in, when an tank entity arrives, do we create the unit::Tank?
+    bool load_tanks = true;
+    /// do we parse tank positions?
+    /// mpi message 0xf074 / 0xf073
+    bool enable_GMSync = true;
+    /// do we parse and load turret data?
+    bool turret_parsing = true;
+  } GMOpts;
+  bool tanks_enabled() const { return GMOpts.load_tanks; }
+  bool GMSync_enabled() const { return tanks_enabled() && GMOpts.enable_GMSync; }
+  bool turret_parsing_enabled() const { return GMOpts.turret_parsing; }
+
+  struct {
+    /// do we create aircraft units? As in, when an aircraft entity arrives, do we create the unit::Aircraft?
+    bool load_aircraft = true;
+    /// do we parse flight model data?
+    /// (see ReplayPacketType::AircraftSmall)
+    bool enable_FMSync = true;
+    /// do we capture the ammo delta from FMSync?
+    bool capture_ammo_events = true;
+  } FMOpts;
+
+  bool aircraft_enabled() const { return FMOpts.load_aircraft; }
+  bool FMSync_enabled() const { return aircraft_enabled() && FMOpts.enable_FMSync; }
+  bool capture_ammo_events() const { return FMOpts.capture_ammo_events; }
+
+  struct {
+    /// do we parse ecs packets? this included entity construction
+    /// (see ReplayPacketType::ECS)
+    bool parse_ecs = true;
+
+    /// do we parse ecs messages? (currently not implemented)
+    bool parse_ecs_message = true;
+    /// TODO: add support for selection of templates
+  } ECSOpts;
+
+  bool ecs_enabled() const { return ECSOpts.parse_ecs; }
+  bool ecs_messages_enabled() const { return ECSOpts.parse_ecs_message; }
+
+  struct {
+    /// do we parse mpi packets? this includes, GMSync, reflection, etc ...
+    /// (see ReplayPacketType::MPI)
+    bool parse_mpi = true;
+
+    /// do we parse reflection packets? this includes player state, team state, some global data, unit
+    /// reflection data, etc ...
+    /// mpi type 0xf0aa, 0xf02d, 0xd136
+    bool parse_reflection = true;
+
+
+    /// do we parse mpi replication messages? this includes stuff like capture points, bombing points, airfields, Zones,
+    /// etc...
+    /// mpi type 0xd039
+    bool parse_replication = true;
+
+    /// do we parse kill, severe damage, critical damage,and award messages?
+    /// mpi type 0xf058, 0xf157, 0xf056, 0xf078
+    bool parse_battle_message = true;
+
+    /// do we parse the weapon syncs of rockets, bombs, and torpedoes?
+    /// this also disables weapon prediction calculation that is normally applied for specific weapons that aren't
+    /// synced see mpi types 0xf11a, 0xf0db
+    bool parse_weapon_sync = true;
+  } MpiOpts;
+
+  bool mpi_enabled() const { return MpiOpts.parse_mpi; }
+  bool reflection_enabled() const { return MpiOpts.parse_reflection; }
+  bool replication_enabled() const { return MpiOpts.parse_replication; }
+  bool battle_messages_enabled() const { return MpiOpts.parse_battle_message; }
+  bool weapon_sync_enabled() const { return MpiOpts.parse_weapon_sync; }
+
+protected:
+  bool use_enabled_oids = false;
+  /// array of enabled object IDs see mpi::MpiQueueObject::ObjectDispatcher on how various oids are used
+  /// this controls both what objects can be dispatched for base mpi and reflection
+  std::array<bool, mpi::ExtMpiTypes::WEAP> enabled_oids = {true};
+
+  bool use_enabled_reflection_oids = false;
+
+  /// oid whitelist, but for reflection dispatch instead
+  std::array<bool, mpi::ExtMpiTypes::WEAP> enabled_reflection_oids = {false};
+
+  bool use_disabled_mids = false;
+  std::unordered_set<mpi::MessageID> disabled_mids{};
+
+  bool use_enabled_mids = false;
+  std::unordered_set<mpi::MessageID> enabled_mids{};
+
+  friend mpi::Message *mpi::dispatch(const danet::BitStream &bs, ParserState *state, bool copy_payload);
+  friend int danet::deserializeReflectables(danet::BitStream &bs, mpi::object_dispatcher resolver, ParserState *state);
+
+public:
+  /// wrapper around set_enabled_oids
+  /// lets you do options for unit dispatch oids
+  void set_unit_dispatch_state(bool enabled, DispatcherFlags flags);
+
+
+  /// this controls the oids that are enabled for dispatch. by default, all oids are enabled
+  /// when this is called, oid filtering is enabled. control this with set_oid_enabled_state.
+  /// @param to_enabled the list of oids to control
+  /// @param enable if the listed oids will be allowed or blocked
+  /// @param flags if you want to control oids for dispatch, reflection, or both
+  template<size_t T>
+  void set_enabled_oids(const std::array<uint8_t, T> &to_enabled, bool enable, DispatcherFlags flags);
+  /// enable or disable oid whitelist for dispatch
+  void set_oid_enabled_state(bool to_enable, DispatcherFlags flags);
+
+  /// set the mids that should be disabled, a blacklist
+  /// also turns on filtering mids by blacklist, call set_mid_disabled_state to change that
+  template<size_t T>
+  void set_disabled_mids(const std::array<mpi::MessageID, T> &to_disabled);
+  /// enable or disable mid blacklist
+  void set_mid_disabled_state(bool to_disable);
+
+  /// set the mids that should be enabled, a whitelist
+  /// also turns on filtering mids by whitelist, call set_mid_enabled_state to change that
+  template<size_t T>
+  void set_enabled_mids(const std::array<mpi::MessageID, T> &to_enabled);
+  /// enable or disable mid whitelist
+  void set_mid_enabled_state(bool to_enable);
+  /// do we parse chat packet type? (see ReplayPacketType::Chat)
+  bool parse_chat = true;
+
+  bool chat_enabled() const { return parse_chat; }
+};
+
+template<size_t T>
+void ParserConfig::set_enabled_oids(const std::array<uint8_t, T> &to_enabled, bool enable, DispatcherFlags flags) {
+  if (flags & DispatcherFlags::Dispatch)
+    use_enabled_oids = true;
+  if (flags & DispatcherFlags::Reflection)
+    use_enabled_reflection_oids = true;
+  for (size_t i = 0; i < T; i++) {
+    G_ASSERTF_AND_DO_UNHYGIENIC(to_enabled[i] < enabled_oids.size(), continue;
+                                , "invalid mpi object id {} to enable", to_enabled[i]);
+    if (flags & DispatcherFlags::Dispatch)
+      enabled_oids[to_enabled[i]] = enable;
+    if (flags & DispatcherFlags::Reflection)
+      enabled_reflection_oids[to_enabled[i]] = enable;
+  }
+}
+
+template<size_t T>
+void ParserConfig::set_disabled_mids(const std::array<mpi::MessageID, T> &to_disabled) {
+  this->use_disabled_mids = true;
+  for (size_t i = 0; i < T; i++) {
+    this->disabled_mids.insert(to_disabled[i]);
+  }
+}
+template<size_t T>
+void ParserConfig::set_enabled_mids(const std::array<mpi::MessageID, T> &to_enabled) {
+  this->use_enabled_mids = true;
+  for (size_t i = 0; i < T; i++) {
+    this->enabled_mids.insert(to_enabled[i]);
+  }
+}
 
 // used to hold the state currently being destroyed
 // unless if you somehow destroy multiple states at the same time in the same thread
@@ -68,8 +232,17 @@ protected:
 #endif
 
   void beforePacket(ReplayPacket &pkt);
+  void setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid);
+  void recordTeamSpawnSide(int team, const std::string &mission_name);
+  std::vector<mpi::MpiQueueObject::QueueData> *get_queued_data(ecs::EntityId eid) {
+    auto it = mpi_queue.dispatched_objects.find(eid);
+    if (it == mpi_queue.dispatched_objects.end())
+      return nullptr;
+    return &it->second;
+  }
 
 public:
+  bool ParsePacket(ReplayPacket &pkt);
   struct RewindRef {
     IObjectRewindState
       *state; // this assumes the memory location of ANY rewindable object will never be changed after registration
@@ -90,12 +263,6 @@ public:
   StateAllocator *get_allocator() { return &allocator; }
 
   StateAllocator::DagAllocType getMem() { return allocator.getMem(); }
-  std::vector<mpi::MpiQueueObject::QueueData> *get_queued_data(ecs::EntityId eid) {
-    auto it = mpi_queue.dispatched_objects.find(eid);
-    if (it == mpi_queue.dispatched_objects.end())
-      return nullptr;
-    return &it->second;
-  }
 
   ecs::EntityId getUnitEid(uint16_t uid) const;
 
@@ -103,13 +270,7 @@ public:
 
   unit::Unit *getUnitObj(uint16_t uid) const;
 
-  void setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid);
-
-  void recordTeamSpawnSide(int team, const std::string &mission_name);
-
   ~ParserState();
-
-  bool ParsePacket(ReplayPacket &pkt);
 
   void rewindToMs(uint32_t time_ms);
 
@@ -137,11 +298,13 @@ public:
   const auto &getMissionAreas1() const { return this->missionAreas1; }
   const auto &getMissionAreas2() const { return this->missionAreas2; }
   const auto &getCurrentPacketIndex() const { return this->current_packet_index; }
+  auto &getConfig() { return this->config; }
 
 protected:
   bool is_dtor{false};
   StateAllocator allocator{};
   mpi::MpiQueueObject mpi_queue{this};
+  ParserConfig config{};
 
 
   // could replace with a tuple vector, basically the same thing with less space

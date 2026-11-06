@@ -1,6 +1,5 @@
 #include "ecs/EntityManager.h"
 #include "ecs/componentTypesDefs.h"
-#include "network/CNetwork.h"
 #include "FileSystem.h"
 #include "init/initialize.h"
 #include "mpi/mpi.h"
@@ -120,19 +119,20 @@ int main() {
   std::string logfile_str = (conf_dir / "logfile.txt").string();
   initialize(bin_path_str, "", logfile_str);
   // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
-  std::unique_ptr<replay::IReplayReader> rdr = nullptr;
   std::unique_ptr<replay::IReplay> rpl = nullptr;
+
   if (is_server_replay) {
     fs::path t{rpl_path_str};
     rpl = std::make_unique<replay::ServerReplay>(t.string());
   } else {
     rpl = std::make_unique<replay::Replay>(rpl_path_str);
   }
-  rdr = rpl->getReplayReader();
   int idx;
   auto start = std::chrono::high_resolution_clock::now();
   {
+    std::unique_ptr<replay::IReplayReader> rdr = rpl->getReplayReader();
     ParserState state{rpl.get()};
+    state.getConfig().GMOpts.load_tanks = false;
     ReplayPacket pkt{};
     // std::exit(0);
 
