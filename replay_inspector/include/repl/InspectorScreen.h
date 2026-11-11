@@ -1178,7 +1178,7 @@ public:
     }
     if (ImGui::TreeNode("Zones")) {
       for (auto obj: this->state.getZones()) {
-        if (obj->curr()) {
+        if (obj->curr() && *obj->curr()) {
           // char buff[16];
           // fmt::format_to_n(buff, 16, "{:#x}", obj->getUID());
           drawReflectableObject(*obj->curr(), nullptr);
@@ -1188,7 +1188,7 @@ public:
     }
     if (ImGui::TreeNode("Areas")) {
       for (auto obj: this->state.getMissionAreas2()) {
-        if (obj->curr()) {
+        if (obj->curr() && *obj->curr()) {
           drawReflectableObject(*obj->curr(), nullptr);
         }
       }
