@@ -3,7 +3,7 @@
 #include "string"
 #include "daNet/bitStream.h"
 
-constexpr uint32_t CURR_MAGIC = 0x00018c28;
+constexpr uint32_t CURR_MAGIC = 0x00018c2D;
 #pragma pack(push, 1)
 struct ReplayHeader {
   uint32_t header;
