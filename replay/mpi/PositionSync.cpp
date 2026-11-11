@@ -476,8 +476,10 @@ bool ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bo
     bool bool4;
     RET_FAIL(bs.Read(bool4));
     uint8_t temp_vals_womp[4];
+    bool some_bool;
     if (bool4) {
       bs.Read(temp_vals_womp);
+      bs.Read(some_bool);
     } else {
       // some mathy logic here
     }
