@@ -88,13 +88,13 @@ namespace replay {
     cb.write(buff, sz);
   }
 
-  IReplayReader::IReplayReader(Replay &owner) { this->owner = &owner; }
+  IReplayReader::IReplayReader(IReplay &owner) : owner(owner) {}
 
-  IReplayReader::IReplayReader(ServerReplay &owner) { this->owner = &owner; }
 
   FullDecompressReplayReader::~FullDecompressReplayReader() {
     free((void *) crd.data());
-    ((Replay *) this->owner)->Data.afterParse();
+    G_ASSERT(dynamic_cast<Replay *>(&this->owner));
+    static_cast<Replay &>(this->owner).Data.afterParse();
   }
 
   bool FullDecompressReplayReader::getNextPacket(ReplayPacket &packet) {
@@ -196,22 +196,24 @@ namespace replay {
   }
 
   CompressedReplayReader::~CompressedReplayReader() {
+    G_ASSERT(dynamic_cast<Replay *>(&this->owner));
     if (this->acquired_lock)
-      ((Replay *) this->owner)->Data.afterParse();
+      static_cast<Replay &>(this->owner).Data.afterParse();
     this->reader.ceaseReading();
     delete base_reader;
   }
 
   template<bool streaming>
   bool ServerReplayReader<streaming>::load_replay() {
-    auto s_owner = (ServerReplay *) this->owner;
+    G_ASSERT(dynamic_cast<ServerReplay *>(&this->owner));
+    auto &s_owner = static_cast<ServerReplay &>(this->owner);
     this->curr_reader.reset();
-    if (this->replay_index >= s_owner->replay_files.size())
+    if (this->replay_index >= s_owner.replay_files.size())
       return false;
     if constexpr (streaming) {
-      this->curr_reader = s_owner->replay_files[replay_index]->getCompressedReplayReader();
+      this->curr_reader = s_owner.replay_files[replay_index]->getCompressedReplayReader();
     } else {
-      this->curr_reader = s_owner->replay_files[replay_index]->getReplayReader();
+      this->curr_reader = s_owner.replay_files[replay_index]->getReplayReader();
     }
     ++this->replay_index;
     return true;

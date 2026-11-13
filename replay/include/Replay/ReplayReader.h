@@ -15,12 +15,11 @@ namespace replay {
 
   class IReplayReader {
   protected:
-    IReplay *owner;
-    IReplayReader(Replay &owner);
-    IReplayReader(ServerReplay &owner);
+    IReplay &owner;
+    explicit IReplayReader(IReplay &owner);
 
   public:
-    virtual ~IReplayReader() {}
+    virtual ~IReplayReader() = default;
     virtual bool getNextPacket(ReplayPacket &packet) = 0;
   };
 
