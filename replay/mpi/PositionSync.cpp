@@ -56,9 +56,9 @@ bool SensorsControlStates::deserialize(danet::BitStream &bs) {
       int16_t v;
       RET_FAIL(bs.Read(v));
       some_data_1 = netutils::UNPACKS<int16_t>(v, PI);
-      RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_2), 0x60));
-      RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_5),
-                           0x60)); // ok for some fucking reason some_data_6 is a float here
+      RET_FAIL(bs.ReadBits<0x60>(reinterpret_cast<uint8_t *>(&some_data_2)));
+      RET_FAIL(bs.ReadBits<0x60>(
+        reinterpret_cast<uint8_t *>(&some_data_5))); // ok for some fucking reason some_data_6 is a float here
       RET_FAIL(bs.Read(field147_0xa8));
       break;
     }
@@ -69,7 +69,7 @@ bool SensorsControlStates::deserialize(danet::BitStream &bs) {
     case 4: {
       bool stuff_is_read = bs.ReadBit();
       if (stuff_is_read) {
-        RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_1), 0x60));
+        RET_FAIL(bs.ReadBits<0x60>(reinterpret_cast<uint8_t *>(&some_data_1)));
       }
       break;
     }
@@ -77,12 +77,12 @@ bool SensorsControlStates::deserialize(danet::BitStream &bs) {
   }
   bool stores_vec_thang = bs.ReadBit();
   if (stores_vec_thang) {
-    RET_FAIL(bs.ReadBits(&field132_0x84, 6));
+    RET_FAIL(bs.ReadBits<6>(&field132_0x84));
     field4_0x4.resize(field132_0x84);
     for (int i = 0; i < field132_0x84; i++) {
       RET_FAIL(bs.Read(field4_0x4[i]));
     }
-    RET_FAIL(bs.ReadBits(&field133_0x85, 6));
+    RET_FAIL(bs.ReadBits<6>(&field133_0x85));
   }
   return true;
 }
@@ -207,7 +207,7 @@ bool dataSync::FMSync(ParserState &state, danet::BitStream &bs) {
             bool unk1 = bs.ReadBit();
             bool unk2 = bs.ReadBit();
             uint8_t count = 0;
-            bs.ReadBits(&count, 4);
+            bs.ReadBits<4>(&count);
             // std::vector<uint32_t>
             dag::Vector<bool, StateAllocator::DagAllocType> temp_bits(state.getMem());
             temp_bits.reserve(count);
@@ -262,7 +262,7 @@ bool dataSync::FMSync(ParserState &state, danet::BitStream &bs) {
           uint64_t
             val_5; // holds lots of important data, more like a char[7] instead of a uint64_t, data is read as bytes
           bs.AlignReadToByteBoundary();
-          bs.ReadBits(reinterpret_cast<uint8_t *>(&val_5), 0x38);
+          bs.ReadBits<0x38>(reinterpret_cast<uint8_t *>(&val_5));
           uint8_t number_of_engines;
           bs.Read(number_of_engines);
           if (number_of_engines > 0xf)
@@ -316,7 +316,7 @@ bool dataSync::FMSync(ParserState &state, danet::BitStream &bs) {
           if (counterMeasuresCount > 0)
             bs.Read(counter_measures_v);
           uint8_t targetsNum = 0;
-          bs.ReadBits(&targetsNum, 4);
+          bs.ReadBits<4>(&targetsNum);
           RET_FAIL(targetsNum <= TARGETS_NUM);
           std::pmr::vector<TargetDesignationControlState> targets{targetsNum, state.get_allocator()};
           for (auto &t: targets) {
@@ -515,12 +515,12 @@ bool dataSync::ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRe
 
       RET_FAIL(bs.Read(some_vals[1]));
       RET_FAIL(bs.Read(some_vals[2]));
-      RET_FAIL(bs.ReadBits(&(some_vals[3]), 5));
-      RET_FAIL(bs.ReadBits(&(some_vals[4]), 4));
-      RET_FAIL(bs.ReadBits(&(some_vals[5]), 4));
-      RET_FAIL(bs.ReadBits(&(some_vals[6]), 2));
-      RET_FAIL(bs.ReadBits(&(some_vals[7]), 3));
-      RET_FAIL(bs.ReadBits(&(some_vals[8]), 4));
+      RET_FAIL(bs.ReadBits<5>(&(some_vals[3])));
+      RET_FAIL(bs.ReadBits<4>(&(some_vals[4])));
+      RET_FAIL(bs.ReadBits<4>(&(some_vals[5])));
+      RET_FAIL(bs.ReadBits<2>(&(some_vals[6])));
+      RET_FAIL(bs.ReadBits<3>(&(some_vals[7])));
+      RET_FAIL(bs.ReadBits<4>(&(some_vals[8])));
     }
 
     if (bs.ReadBit()) {
@@ -616,7 +616,7 @@ bool dataSync::ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRe
     RET_FAIL(c.deserialize(bs));
   }
   uint8_t targetsNum = 0;
-  RET_FAIL(bs.ReadBits(&targetsNum, 4));
+  RET_FAIL(bs.ReadBits<4>(&targetsNum));
   RET_FAIL(targetsNum <= 8);
   thread_local std::vector<TargetDesignationControlState> targets{};
   targets.resize(targetsNum);
@@ -669,7 +669,7 @@ bool dataSync::GMSync(ParserState &state, danet::BitStream &bs) {
       bool bool4;
       RET_FAIL(bs.Read(bool2)); // some weird flag setting based on bool value at unit + 0x90
       if (bs.ReadBit()) {
-        RET_FAIL(bs.ReadBits(&some_val_idk, 4));
+        RET_FAIL(bs.ReadBits<4>(&some_val_idk));
       }
       RET_FAIL(bs.Read(ref.val2));
       RET_FAIL(bs.Read(ref.val3));

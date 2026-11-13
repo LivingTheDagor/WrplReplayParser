@@ -302,7 +302,7 @@ namespace mpi {
         ok = body.Read(present);
         if (ok && present) {
           uint8_t nibble = 0, pair = 0;
-          ok = skip_bit(body) && skip_bit(body) && body.ReadBits(&nibble, 4) && body.ReadBits(&pair, 2);
+          ok = skip_bit(body) && skip_bit(body) && body.ReadBits<4>(&nibble) && body.ReadBits<2>(&pair);
           if (ok)
             outcome.changed_parts.push_back(i);
         }
