@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.29)
 set(CMAKE_CXX_STANDARD 23)
 project(WrplReplayParser LANGUAGES C CXX)
 
 if (POLICY CMP0069)
     cmake_policy(SET CMP0069 NEW)
 endif ()
-
+cmake_policy(SET CMP0156 NEW)
 # ok look I have to do this for whatever reason to make MSVC works, it generates alot of ugly cli warnings but I don't feel like fixing it
 if (MSVC)
     # Enable the CMAKE_MSVC_RUNTIME_LIBRARY variable

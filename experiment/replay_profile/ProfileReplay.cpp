@@ -68,13 +68,15 @@ int main() {
   initialize(bin_path_str, "", logfile_str);
   // g_log_handler.start_thread();
   // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
-  IReplayReader *rdr = nullptr;
-  IReplay *rpl = nullptr;
+  std::unique_ptr<replay::IReplayReader> rdr = nullptr;
+  replay::IReplay *rpl = nullptr;
   double timer_sum = 0.0;
   {
-    ZoneScopedN("Replay Load") if (is_server_replay) { rpl = new ServerReplay(rpl_path_str); }
-    else {
-      rpl = new Replay(rpl_path_str);
+    ZoneScopedN("Replay Load");
+    if (is_server_replay) {
+      rpl = new replay::ServerReplay(rpl_path_str);
+    } else {
+      rpl = new replay::Replay(rpl_path_str);
     }
   }
   int timer_count = 25;
@@ -89,16 +91,17 @@ int main() {
       ParserState &state = *state_ptr;
       // std::exit(0);
       {
-
-        ZoneScopedN("Parsing Only") while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
+        ZoneScopedN("Parsing Only");
+        while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
       }
       {
         ZoneScopedN("Rewind") state.rewindToMs(0);
-        state.rewindToMs(state.replay_length_ms);
+        state.rewindToMs(state.getReplayLengthMs());
       }
       {
-        ZoneScopedN("Object destruction") delete state_ptr;
-        delete rdr;
+        ZoneScopedN("Object destruction");
+        delete state_ptr;
+        rdr.reset();
       }
       {
         ZoneScopedN("End Stuff") auto ended = std::chrono::high_resolution_clock::now();

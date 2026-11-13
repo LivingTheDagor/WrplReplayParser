@@ -53,7 +53,7 @@ void initialize(const std::string &game_path, const std::string &grp_dir, const 
   register_default_sigsev_handler();
   register_listener(&mpi::base);
   file_mgr.add_mount(game_path);
-  mpi::register_object_dispatcher(&mpi::ObjectDispatcher);
+  mpi::register_object_dispatcher(&mpi::MpiQueueObject::ObjectDispatcher);
   std::string p1 = ("aces.vromfs.bin");
   std::string p2 = ("game.vromfs.bin");
   std::string p3 = ("mis.vromfs.bin");

@@ -34,16 +34,30 @@ bool ChatMessage::FromBS(danet::BitStream &bs) {
   ok &= bs.Read(complaints);
   return ok;
 }
+void ParserConfig::set_unit_dispatch_state(bool enabled, DispatcherFlags flags) {
+  std::array<uint8_t, 9> oids = {mpi::ExtMpiTypes::CUD, mpi::ExtMpiTypes::FM_DVM, mpi::ExtMpiTypes::FM_FX,
+                                 mpi::ExtMpiTypes::FMW, mpi::ExtMpiTypes::GM,     mpi::ExtMpiTypes::GM_DVM,
+                                 mpi::ExtMpiTypes::INF, mpi::ExtMpiTypes::UFX,    mpi::ExtMpiTypes::WEAP};
+  set_enabled_oids(oids, enabled, flags);
+}
+void ParserConfig::set_oid_enabled_state(bool to_enable, DispatcherFlags flags) {
+  if (flags & DispatcherFlags::Dispatch)
+    use_enabled_oids = to_enable;
+  if (flags & DispatcherFlags::Reflection)
+    use_enabled_reflection_oids = to_enable;
+}
+void ParserConfig::set_mid_disabled_state(bool to_disable) { this->use_disabled_mids = to_disable; }
+void ParserConfig::set_mid_enabled_state(bool to_enable) { this->use_enabled_mids = to_enable; }
 ParserState::ParserState(uint32_t player_count) { initialize(player_count); }
-ParserState::ParserState(IReplay *replay) {
+ParserState::ParserState(replay::IReplay *replay) {
   auto header = replay->getHeader();
-  if (!header)
+  if (!replay->isValid())
     EXCEPTION("Invalid Replay: header is not available");
-  initialize(header->player_count);
-  this->sea_level = read_sea_level(header->level_path);
+  initialize(header.player_count);
+  this->sea_level = read_sea_level(header.level_path);
 }
 void ParserState::initialize(uint32_t player_count) {
-  G_ASSERT(this->players.size() == 0);
+  G_ASSERT(this->players.empty());
   this->players.reserve(player_count);
   for (size_t i = 0; i < player_count; i++) {
     this->players.emplace_back(this, (mpi::ObjectID) ((0xe << 0xb) + i));
@@ -67,7 +81,8 @@ void ParserState::registerStateChange(IObjectRewindState *state) {
 
 class StateUpdateEvent : public IRewindEvent {
 public:
-  StateUpdateEvent(ParserState *state, std::pmr::vector<RewindRef> &states) : states(state->get_allocator()) {
+  StateUpdateEvent(ParserState *state, std::pmr::vector<ParserState::RewindRef> &states) :
+    states(state->get_allocator()) {
     this->states = std::move(states);
   }
   ~StateUpdateEvent() override = default;
@@ -92,7 +107,7 @@ public:
   }
 
 private:
-  std::pmr::vector<RewindRef> states;
+  std::pmr::vector<ParserState::RewindRef> states;
 };
 
 void ParserState::beforePacket(ReplayPacket &pkt) {
@@ -193,10 +208,13 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       break;
     }
     case ReplayPacketType::AircraftSmall: {
-      FMSync(*this, pkt.stream);
+      if (config.FMSync_enabled())
+        dataSync::FMSync(*this, pkt.stream);
       break;
     }
     case ReplayPacketType::Chat: {
+      if (!config.chat_enabled())
+        break;
       this->chatMessages.resize(this->chatMessages.size() + 1);
       auto &chat_msg = this->chatMessages.back();
       chat_msg.FromBS(pkt.stream);
@@ -204,6 +222,8 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       break;
     }
     case ReplayPacketType::MPI: {
+      if (!config.mpi_enabled())
+        break;
       ZoneScopedN("MPI Dispatch");
       auto m = mpi::dispatch(pkt.stream, this, false);
       if (m != nullptr) {
@@ -219,7 +239,8 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       break;
     }
     case ReplayPacketType::ECS: {
-      conn.onPacket(&pkt, pkt.timestamp_ms);
+      if (config.ecs_enabled())
+        conn.onPacket(&pkt, pkt.timestamp_ms);
       break;
     }
     case ReplayPacketType::Snapshot: break;

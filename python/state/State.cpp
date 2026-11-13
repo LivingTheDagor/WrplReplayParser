@@ -88,9 +88,9 @@ void PyReplayState::include(py::module_ &m) {
 
   py::class_<ParserState>(m, "ParserState")
     .def(py::init<>())
-    .def(py::init<IReplay *>())
-    .def(py::init<Replay *>())
-    .def(py::init<ServerReplay *>())
+    .def(py::init<replay::IReplay *>())
+    .def(py::init<replay::Replay *>())
+    .def(py::init<replay::ServerReplay *>())
     .def_readonly("mgr", &ParserState::g_entity_mgr)
     .def("getUnitEid", &ParserState::getUnitEid, py::arg("uid"))
     .def("getUnitRef", &ParserState::getUnitObj, py::arg("uid"), py::keep_alive<0, 1>())
@@ -111,8 +111,7 @@ void PyReplayState::include(py::module_ &m) {
     .def_readonly("current_packet_index", &ParserState::current_packet_index)
     .def_readonly("chat_messages", &ParserState::chatMessages)
     .def_readonly("battle_messages", &ParserState::BattleMessages)
-    .def_readonly("hit_effects", &ParserState::HitEffects,
-                  "0xF0E9, one record per hit including harmless ones")
+    .def_readonly("hit_effects", &ParserState::HitEffects, "0xF0E9, one record per hit including harmless ones")
     .def_readonly("hit_analysis", &ParserState::HitAnalyses,
                   "0xF15F, hit camera record; sent twice per hit and not for every hit")
     .def_readonly("hit_damage", &ParserState::HitDamages,
@@ -127,11 +126,10 @@ void PyReplayState::include(py::module_ &m) {
                   "Rounds left in a barrel: 0xF0BD for a ground vehicle, the aircraft sync for a plane. "
                   "A step down is that many rounds fired. The aircraft one rides every update, so values "
                   "repeat; a ground vehicle only sends it on a change.")
-    .def_readonly("shots", &ParserState::ShotEvents,
-                  "0xF0B1 single shot, 0xF01B / 0xF01C trigger down and up")
+    .def_readonly("shots", &ParserState::ShotEvents, "0xF0B1 single shot, 0xF01B / 0xF01C trigger down and up")
     .def(
       "LoadFromReader",
-      [](ParserState &state, IReplayReader &rdr, const std::function<void(ReplayPacket *)> &func) {
+      [](ParserState &state, replay::IReplayReader &rdr, const std::function<void(ReplayPacket *)> &func) {
         // the temporary exists for the entire call of this function, unlike __iter__
         // auto rdr = py_reader.cast<IReplayReader*>();
         py::gil_scoped_release release;
@@ -183,8 +181,7 @@ void PyReplayState::include(py::module_ &m) {
     .def("collect_all_bombs", [](ParserState &state) { return collect_all_bombs(state); })
     .def("collect_all_payloads", [](ParserState &state) { return collect_all_payloads(state); })
     .def("collect_all_torpedoes", [](ParserState &state) { return collect_all_torpedoes(state); })
-    .def("collect_all_jettisoned",
-         [](ParserState &state) { return collect_all_jettisoned(state); });
+    .def("collect_all_jettisoned", [](ParserState &state) { return collect_all_jettisoned(state); });
 }
 
 PyReplayState py_replay_state{};

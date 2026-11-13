@@ -468,7 +468,7 @@ class DataTypeManager:
                 f.write(chooser + "\n")
             f.write("}")
 
-            parsed_types = set()
+            parsed_types = []
             with open(f"{codegen_header_path}/forwardDeclarations.h", "w") as f:
                 write_header(f)
                 f.write("#pragma once\n\n")
@@ -478,14 +478,13 @@ class DataTypeManager:
                     name = compiled.datatype.reg.serialize_name(compiled)
                     if name in parsed_types:
                         continue
-                    parsed_types.add(name)
+                    parsed_types.append(name)
                     f.write(f"extern template class danet::ReflectionVar<{name}>;\n")
 
             with open(f"{codegen_header_path}/declarations.h", "w") as f:
                 write_header(f)
                 f.write("#pragma once\n\n")
                 f.write("// DO NOT INCLUDE THIS, ONLY TO BE INCLUDED IN reflection.cpp\n")
-
                 for compiled in parsed_types:
                     f.write(f"template class danet::ReflectionVar<{compiled}>;\n")
 

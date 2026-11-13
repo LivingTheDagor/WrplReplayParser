@@ -1,19 +1,10 @@
-
-
 #pragma once
-#ifndef MYEXTENSION_CNETWORK_H
-#define MYEXTENSION_CNETWORK_H
 extern "C" {
-#include "lz4.h"
+typedef struct _ENetPeer ENetPeer;
 }
 #include "Replay/ReplayStructs.h"
 #include "utils.h"
 #include "network/Connection.h"
-#ifdef _ECS_CODEGEN
-struct ENetPeer {};
-#else
-#include "enet/enet.h"
-#endif
 DEFINE_HANDLE(handle_cnet)
 #define CNET_LOGI(format_, ...)  ELOGI(handle_cnet, format_, __VA_ARGS__)
 #define CNET_LOGD1(format_, ...) ELOGD1(handle_cnet, format_, __VA_ARGS__)
@@ -48,6 +39,3 @@ namespace net {
 } // namespace net
 
 void force_link_cnet();
-
-
-#endif // MYEXTENSION_CNETWORK_H

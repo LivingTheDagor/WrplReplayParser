@@ -467,7 +467,7 @@ namespace ecs {
 
     inline bool doesEntityExist(EntityId e) const { return entDescs.doesEntityExist(e); }
 
-    template_t getEntityTemplateId(EntityId &eid) {
+    template_t getEntityTemplateId(EntityId &eid) const {
       template_t t;
       entDescs.getEntityTemplateId(eid, t);
       return t;
@@ -480,7 +480,7 @@ namespace ecs {
 
     bool entityHasComponent(EntityId eid, component_index_t index) const;
 
-    void *getNullable(EntityId eid, HashedConstString component) {
+    void *getNullable(EntityId eid, HashedConstString component) const {
       if (!this->entDescs.doesEntityExist(eid))
         return nullptr;
       auto cidx = this->data_state->dataComponents.getIndex(component.hash);
@@ -492,7 +492,7 @@ namespace ecs {
     }
 
     template<class T>
-    inline T *getNullable(EntityId eid, HashedConstString component) {
+    inline T *getNullable(EntityId eid, HashedConstString component) const {
       return (T *) this->getNullable(eid, component);
     }
 
@@ -522,7 +522,7 @@ namespace ecs {
 
     void collectComponentInfo(EntityId eid, std::vector<std::pair<ComponentInfo *, DataComponent *>> &comps);
 
-    std::string_view getEntityTemplateName(EntityId &eid) {
+    std::string_view getEntityTemplateName(EntityId &eid) const {
       template_t t = getEntityTemplateId(eid);
       if (t == INVALID_TEMPLATE_INDEX)
         return "";

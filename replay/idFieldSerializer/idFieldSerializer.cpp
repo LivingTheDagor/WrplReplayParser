@@ -46,7 +46,7 @@ uint32_t readSize(const danet::BitStream &from) {
   bool ok = true;
   uint8_t hdr = 0;
 
-  ok &= from.ReadBits(&hdr, 3);
+  ok &= from.ReadBits<3>(&hdr);
   if (!ok)
     return 0;
 

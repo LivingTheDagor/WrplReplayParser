@@ -4,7 +4,7 @@
 //
 #pragma once
 
-#include <string.h>
+#include <cstring>
 #include "cstdint"
 template<typename T, std::size_t N>
 constexpr std::size_t countof(T const (&)[N]) {

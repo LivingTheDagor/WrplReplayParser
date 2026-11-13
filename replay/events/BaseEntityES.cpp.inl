@@ -3,18 +3,41 @@
 #include "Unit.h"
 #include "ecs/query/coreEvents.h"
 #include "ecs/ecsCodegen.h"
+#include "state/internal/share.h"
+
+struct SHARE_STRUCT(BaseEntityES) {
+  static auto &get_unit_allocator(ParserState &state) { return parserInt::ParserShare::get_unit_allocator(state); }
+  static auto &get_mgr(ParserState &state) { return parserInt::ParserShare::get_ecs(state); }
+  template<typename... Args>
+  static void recordTeamSpawnSide(ParserState &state, Args &&...a) {
+    parserInt::ParserShare::recordTeamSpawnSide(state, std::forward<Args>(a)...);
+  }
+  template<typename... Args>
+  static void setUnitData(ParserState &state, Args &&...a) {
+    parserInt::ParserShare::setUnitData(state, std::forward<Args>(a)...);
+  }
+  template<typename... Args>
+  static auto get_queued_data(ParserState &state, Args &&...a) {
+    return parserInt::ParserShare::get_queued_data(state, std::forward<Args>(a)...);
+  }
+};
+
+struct alias : public SHARE_STRUCT(BaseEntityES) {};
 
 static void team_spawn_side_es(const ecs::EventEntityCreated &, const ecs::string &unit__missionName, const int &team,
                                ecs::EntityManager &manager) {
-  manager.owned_by->recordTeamSpawnSide(team, unit__missionName);
+  alias::recordTeamSpawnSide(*manager.owned_by, team, unit__missionName);
 }
 
 static void on_tank_appear_es(const ecs::EventEntityCreated &evt,
                               const HeavyVehicleModelStorageComponent &unit_storage__tank, const int &uid,
                               unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
   G_ASSERT(unit__ref.unit == nullptr);
-  unit__ref.unit =
-    &manager.owned_by->_unit_allocator.allocateOne<unit::Tank>(manager.owned_by, static_cast<uint16_t>(uid));
+  auto config = manager.owned_by->getConfig();
+  if (!config.tanks_enabled())
+    return;
+  auto &alloc = alias::get_unit_allocator(*manager.owned_by);
+  unit__ref.unit = &alloc.allocateOne<unit::Tank>(manager.owned_by, static_cast<uint16_t>(uid));
   G_ASSERT_LOG(unit__ref.unit->LoadFromStorage(unit_storage__tank), "Failed to load tank with uid {}", uid);
 }
 
@@ -22,8 +45,11 @@ static void on_aircraft_appear_es(const ecs::EventEntityCreated &evt,
                                   const FlightModelWrapStorageComponent &unit_storage__aircraft, const int &uid,
                                   unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
   G_ASSERT(unit__ref.unit == nullptr);
-  unit__ref.unit =
-    &manager.owned_by->_unit_allocator.allocateOne<unit::Aircraft>(manager.owned_by, static_cast<uint16_t>(uid));
+  auto config = manager.owned_by->getConfig();
+  if (!config.aircraft_enabled())
+    return;
+  auto &alloc = alias::get_unit_allocator(*manager.owned_by);
+  unit__ref.unit = &alloc.allocateOne<unit::Aircraft>(manager.owned_by, static_cast<uint16_t>(uid));
   G_ASSERT_LOG(unit__ref.unit->LoadFromStorage(unit_storage__aircraft), "Failed to load aircraft with uid {}", uid);
 }
 
@@ -49,7 +75,7 @@ static void uid_entity_es(const ecs::EventEntityCreatedBasic &evt, const ecs::En
   auto state = manager.owned_by;
   uint16_t unit_id = uid & 0x7FF;
   G_ASSERT(state->getUnitEid(unit_id) == ecs::INVALID_ENTITY_ID);
-  state->setUnitData(unit_id, unit__ref.unit, eid);
+  alias::setUnitData(*state, unit_id, unit__ref.unit, eid);
   if (unit__ref.unit) {
     unit__ref.unit->curr_eid = eid;
   }
@@ -61,7 +87,7 @@ static void uid_entity_es(const ecs::EventEntityDestroyedBasic &evt, unit::UnitR
   auto state = manager.owned_by;
   uint16_t unit_id = uid & 0x7FF;
   G_ASSERT(state->getUnitEid(unit_id) != ecs::INVALID_ENTITY_ID);
-  state->setUnitData(unit_id, nullptr, ecs::INVALID_ENTITY_ID);
+  alias::setUnitData(*state, unit_id, nullptr, ecs::INVALID_ENTITY_ID);
   if (unit__ref.unit) {
     unit__ref.unit->curr_eid = evt.get<0>();
     if (evt.get<1>()) {
@@ -75,8 +101,8 @@ ECS_REQUIRE(ecs::Tag playerUnit)
 static void iterate_all_units_ecs_query(ecs::EntityManager &manager, Callable c);
 
 void iterate_all_units(ParserState &state) {
-  iterate_all_units_ecs_query(state.g_entity_mgr, [](const unit::UnitRef &unit__ref, const ecs::string &unit__className,
-                                                     const ecs::EntityId eid) {
+  iterate_all_units_ecs_query(alias::get_mgr(state), [](const unit::UnitRef &unit__ref,
+                                                        const ecs::string &unit__className, const ecs::EntityId eid) {
     if (unit__ref.unit) {
       auto &unit = *unit__ref.unit;
       // log_ext("", 0, DEFAULT_SINK_HANDLER, LOGLEVEL::INFO, fmt::format("{}, {}", unit__ref.unit->uid,
@@ -95,7 +121,7 @@ void iterate_all_units(ParserState &state) {
 std::vector<unit::Unit *> collect_all_units(ParserState &state) {
   std::vector<unit::Unit *> units{};
   iterate_all_units_ecs_query(
-    state.g_entity_mgr,
+    alias::get_mgr(state),
     [&units](const unit::UnitRef &unit__ref, const ecs::string &unit__className, const ecs::EntityId eid) {
       if (unit__ref.unit && !unit__ref.unit->positions.history().empty()) {
         units.push_back(unit__ref.unit);
@@ -111,7 +137,7 @@ static void on_unit_appear_mpi_es(const ecs::EventEntityCreated &evt, const ecs:
                                   const unit::UnitRef &unit__ref, ecs::EntityManager &manager) {
   ParserState &state = *manager.owned_by;
   // LOGI("attempting to complete queued dispatch for eid: {:#x}", eid.get_handle());
-  auto data = state.get_queued_data(eid);
+  auto data = alias::get_queued_data(state, eid);
   // let's only dispatch when we have both the unit and data
   if (unit__ref.unit && data) {
     for (auto &queue_obj: *data) {

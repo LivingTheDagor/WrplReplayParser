@@ -36,7 +36,6 @@ private:
 
   friend ParserState;
 };
-struct RewindRef;
 
 class IObjectRewindState {
 public:

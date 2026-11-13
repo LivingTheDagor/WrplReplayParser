@@ -50,14 +50,14 @@ public:
   assert_failed_ext(file, line, func, expr_str, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__))
 
 
-#define G_ASSERT_EX(expression, expr_str)                                \
+#define G_ASSERT_EX_BASE(expression, expr_str)                           \
   do {                                                                   \
     const bool g_assert_result_ = !!(expression);                        \
     if (DAGOR_UNLIKELY(!g_assert_result_))                               \
       assert_failed_ext(__FILE__, __LINE__, __FUNCTION__, expr_str, ""); \
   } while (0)
 
-#define G_ASSERTF_EX(expression, expr_str, fmt, ...)                                             \
+#define G_ASSERTF_EX_BASE(expression, expr_str, fmt, ...)                                        \
   do {                                                                                           \
     const bool g_assert_result_ = !!(expression);                                                \
     if (DAGOR_UNLIKELY(!g_assert_result_))                                                       \
@@ -69,16 +69,21 @@ public:
 
 
 #if LDAG_DBGLEVEL > 0
+#define G_ASSERT_EX(expression, expr_str) G_ASSERT_EX_BASE(expression, expr_str)
+#define G_ASSERTF_EX(expression, expr_str, fmt, ...) \
+  G_ASSERTF_EX_BASE(expression, expr_str, fmt __VA_OPT__(, ) __VA_ARGS__)
 #define G_ASSERT(expression)            G_ASSERT_EX(expression, #expression)
 #define G_ASSERTF(expression, fmt, ...) G_ASSERTF_EX(expression, #expression, fmt __VA_OPT__(, ) __VA_ARGS__)
 #else
-#define G_ASSERT(expression)            ((void) (expression))
-#define G_ASSERTF(expression, fmt, ...) ((void) (expression))
+#define G_ASSERT_EX(expression, expr_str)            ((void) expression)
+#define G_ASSERTF_EX(expression, expr_str, fmt, ...) ((void) expression)
+#define G_ASSERT(expression)                         ((void) (expression))
+#define G_ASSERTF(expression, fmt, ...)              ((void) (expression))
 #endif
 
-#define G_CHECK(expression) G_ASSERTF_EX(expression, #expression, "CHECK FAILED")
+#define G_CHECK(expression) G_ASSERTF_EX_BASE(expression, #expression, "CHECK FAILED")
 #define G_CHECKF(expression, fmt, ...) \
-  G_ASSERTF_EX(expression, #expression, "CHECK FAILED" fmt __VA_OPT__(, ) __VA_ARGS__)
+  G_ASSERTF_EX_BASE(expression, #expression, "CHECK FAILED" fmt __VA_OPT__(, ) __VA_ARGS__)
 
 #define G_CHECK_EQ(a, b) G_CHECKF((a) == (b), "CHECK_EQ FAILED: {} != {}", a, b)
 
@@ -195,8 +200,6 @@ public:
 #else
 #define G_DEBUG_BREAK ((void) 0)
 #endif
-
-#undef LDAG_DBGLEVEL
 
 #define G_LOGERR_AND_DO(expression, action, ...) \
   if (DAGOR_UNLIKELY(!(expression))) {           \

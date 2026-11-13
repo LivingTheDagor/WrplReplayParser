@@ -318,7 +318,7 @@ namespace danet {
         continue;
       }
       v->handler->reserveOneV();
-      //v->setNewVar(state->curr_time_ms);
+      // v->setNewVar(state->curr_time_ms);
       G_ASSERT(v->coder);
       int out = (*v->coder)(DANET_REFLECTION_OP_DECODE, v, this, &bs, state);
       if (!out) {
@@ -331,7 +331,7 @@ namespace danet {
       }
       if (bs.GetReadOffset() - ppp != idFieldSerializer.getFieldSize(j)) {
         if (out != 2) {
-          LOGE("{}", ((float) state->curr_time_ms) / 1000);
+          LOGE("{}", ((float) state->getCurrTimeMs()) / 1000);
           LOGE("(REFLECTION) Invalid parsed size for var '{}', needed {} but parsed {}", v->getVarName(),
                idFieldSerializer.getFieldSize(j), bs.GetReadOffset() - ppp);
         }
@@ -386,9 +386,22 @@ namespace danet {
       mpi::read_object_ext_uid(bs, oid, extUid);
       bs.AlignReadToByteBoundary();
       BitSize_t startPosAfterId = bs.GetReadOffset();
-      ReflectableObject *refl = (oid == mpi::INVALID_OBJECT_ID && extUid == mpi::INVALID_OBJECT_EXT_UID)
-                                  ? NULL
-                                  : static_cast<ReflectableObject *>(resolver(oid, extUid, state));
+      ReflectableObject *refl = nullptr;
+      if (!(oid == mpi::INVALID_OBJECT_ID && extUid == mpi::INVALID_OBJECT_EXT_UID)) {
+        auto &config = state->getConfig();
+        if (config.use_enabled_reflection_oids && !config.enabled_reflection_oids[oid]) {
+        } else {
+          auto ret = resolver(oid, extUid, state);
+#if LDAG_DBGLEVEL > 0
+          if (ret) {
+            // debug check to confirm our resolved objected is actually a reflectable
+            auto dyn = dynamic_cast<ReflectableObject *>(ret);
+            G_ASSERT(dyn);
+          }
+#endif
+          refl = static_cast<ReflectableObject *>(ret);
+        }
+      }
       if (refl && refl->debugWatermark != DANET_WATERMARK)
         LOG("can't resolve (or bad reflection object) {} by oid {:#x}\n", fmt::ptr(refl), oid);
       bool read_fail = false;
@@ -475,11 +488,10 @@ namespace danet {
   template<typename T>
   constexpr reflection_var_encoder ReflectionVar<T>::getCoder() {
     if constexpr (HasValidEncoder<T>::value)
-    //G_STATIC_ASSERT(HasValidEncoder<T>::value);
+      // G_STATIC_ASSERT(HasValidEncoder<T>::value);
       return DefaultEncoderChooser<T>::coder;
     return DefaultEncoderChooser<void>::coder;
   }
-
 
 
   template<typename T>
@@ -488,7 +500,7 @@ namespace danet {
     if (!doDraw)
       return;
     uint32_t index = 0;
-    for (auto & st : this->history()) {
+    for (auto &st: this->history()) {
       auto str = toStringImpl<T>(&st.data, 0);
       renderer->DrawIndex(index, st.time_ms, str);
       index++;
@@ -502,7 +514,7 @@ namespace danet {
   }
   template<typename T>
   void ReflectionVar<T>::init(const char *name, ReflectionVarMeta *next, uint8_t pid, reflection_var_encoder coder,
-  uint16_t bits) {
+                              uint16_t bits) {
     this->name = name;
     this->next = next;
     this->persistentId = pid;
@@ -516,20 +528,25 @@ namespace danet {
   }
   template<typename T>
   ReflectionVar<T>::ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid,
-  reflection_var_encoder coder_) : ReflectionVarMeta() {
+                                  reflection_var_encoder coder_) :
+    ReflectionVarMeta() {
     init(name, next, pid, coder_);
   }
   template<typename T>
-  ReflectionVar<T>::ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count) : ReflectionVarMeta() {
+  ReflectionVar<T>::ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count) :
+    ReflectionVarMeta() {
     init(name, next, pid, getCoder(), bit_count);
   }
   template<typename T>
   ReflectionVar<T>::ReflectionVar(const char *name, ReflectionVarMeta *next, uint8_t pid, uint16_t bit_count,
-  reflection_var_encoder coder_) : ReflectionVarMeta() {
+                                  reflection_var_encoder coder_) :
+    ReflectionVarMeta() {
     init(name, next, pid, coder_, bit_count);
   }
   template<typename T>
-  const T *ReflectionVar<T>::Get() const { return this->curr(); }
+  const T *ReflectionVar<T>::Get() const {
+    return this->curr();
+  }
 }; // namespace danet
 
 #include "mpi/codegen/declarations.h"

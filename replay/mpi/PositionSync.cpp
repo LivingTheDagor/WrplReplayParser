@@ -1,4 +1,4 @@
-#include "state/ParserState.h"
+#include "state/internal/share.h"
 #include "mpi/PositionSync.h"
 #include "Unit.h"
 #include "daNet/dag_netUtils.h"
@@ -6,6 +6,7 @@
 
 bool separateServerSideDetection_g = true;
 bool resyncSaclosGuidanceParams = true; // actually known to be true, hopefully
+
 
 #define RET_FAIL(op) G_ASSERT_RETURN((op), false);
 bool SensorsControlStates::deserialize(danet::BitStream &bs) {
@@ -55,9 +56,9 @@ bool SensorsControlStates::deserialize(danet::BitStream &bs) {
       int16_t v;
       RET_FAIL(bs.Read(v));
       some_data_1 = netutils::UNPACKS<int16_t>(v, PI);
-      RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_2), 0x60));
-      RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_5),
-                           0x60)); // ok for some fucking reason some_data_6 is a float here
+      RET_FAIL(bs.ReadBits<0x60>(reinterpret_cast<uint8_t *>(&some_data_2)));
+      RET_FAIL(bs.ReadBits<0x60>(
+        reinterpret_cast<uint8_t *>(&some_data_5))); // ok for some fucking reason some_data_6 is a float here
       RET_FAIL(bs.Read(field147_0xa8));
       break;
     }
@@ -68,7 +69,7 @@ bool SensorsControlStates::deserialize(danet::BitStream &bs) {
     case 4: {
       bool stuff_is_read = bs.ReadBit();
       if (stuff_is_read) {
-        RET_FAIL(bs.ReadBits(reinterpret_cast<uint8_t *>(&some_data_1), 0x60));
+        RET_FAIL(bs.ReadBits<0x60>(reinterpret_cast<uint8_t *>(&some_data_1)));
       }
       break;
     }
@@ -76,12 +77,12 @@ bool SensorsControlStates::deserialize(danet::BitStream &bs) {
   }
   bool stores_vec_thang = bs.ReadBit();
   if (stores_vec_thang) {
-    RET_FAIL(bs.ReadBits(&field132_0x84, 6));
+    RET_FAIL(bs.ReadBits<6>(&field132_0x84));
     field4_0x4.resize(field132_0x84);
     for (int i = 0; i < field132_0x84; i++) {
       RET_FAIL(bs.Read(field4_0x4[i]));
     }
-    RET_FAIL(bs.ReadBits(&field133_0x85, 6));
+    RET_FAIL(bs.ReadBits<6>(&field133_0x85));
   }
   return true;
 }
@@ -167,7 +168,7 @@ void DeserializeSeekerData(danet::BitStream &bs) {
   return;
 }
 
-bool FMSync(ParserState &state, danet::BitStream &bs) {
+bool dataSync::FMSync(ParserState &state, danet::BitStream &bs) {
   ZoneScoped;
   uint16_t uid = 0;
   do {
@@ -206,7 +207,7 @@ bool FMSync(ParserState &state, danet::BitStream &bs) {
             bool unk1 = bs.ReadBit();
             bool unk2 = bs.ReadBit();
             uint8_t count = 0;
-            bs.ReadBits(&count, 4);
+            bs.ReadBits<4>(&count);
             // std::vector<uint32_t>
             dag::Vector<bool, StateAllocator::DagAllocType> temp_bits(state.getMem());
             temp_bits.reserve(count);
@@ -242,8 +243,8 @@ bool FMSync(ParserState &state, danet::BitStream &bs) {
                 int temp_zig = 0;
                 RET_FAIL(bs.ReadCompressed(temp_zig));
               }
-            if (rounds_left >= 0)
-              state.AmmoEvents.push_back({state.curr_time_ms, unit, uint8_t(i), 0, uint32_t(rounds_left)});
+            if (state.getConfig().capture_ammo_events() && rounds_left >= 0)
+              state.AmmoEvents.push_back({state.getCurrTimeMs(), unit, uint8_t(i), 0, uint32_t(rounds_left)});
           }
           uint32_t some_packed_val;
           uint32_t vals_4;
@@ -261,7 +262,7 @@ bool FMSync(ParserState &state, danet::BitStream &bs) {
           uint64_t
             val_5; // holds lots of important data, more like a char[7] instead of a uint64_t, data is read as bytes
           bs.AlignReadToByteBoundary();
-          bs.ReadBits(reinterpret_cast<uint8_t *>(&val_5), 0x38);
+          bs.ReadBits<0x38>(reinterpret_cast<uint8_t *>(&val_5));
           uint8_t number_of_engines;
           bs.Read(number_of_engines);
           if (number_of_engines > 0xf)
@@ -315,7 +316,7 @@ bool FMSync(ParserState &state, danet::BitStream &bs) {
           if (counterMeasuresCount > 0)
             bs.Read(counter_measures_v);
           uint8_t targetsNum = 0;
-          bs.ReadBits(&targetsNum, 4);
+          bs.ReadBits<4>(&targetsNum);
           RET_FAIL(targetsNum <= TARGETS_NUM);
           std::pmr::vector<TargetDesignationControlState> targets{targetsNum, state.get_allocator()};
           for (auto &t: targets) {
@@ -347,16 +348,6 @@ bool FMSync(ParserState &state, danet::BitStream &bs) {
   return true;
 }
 
-struct TankRef {
-  unit::Unit *ref_1 = nullptr; // + 0.0 always matches
-  unit::Unit *ref_2 = nullptr; // + 0x8 needs to not match flags 0x10 and 0x1800
-  bool val1 = false;
-  bool val2 = false;
-  bool val3 = false;
-  uint8_t turret_count = 0;
-};
-
-
 struct SubVehicleDynData {
   Quat quat;
   float f4;
@@ -383,7 +374,7 @@ struct SubVehicleDynData {
 };
 
 
-bool ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bool is_from_compress) {
+bool dataSync::ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bool is_from_compress) {
   ZoneScoped;
   if (!ref->ref_1) {
     G_ASSERT(is_from_compress);
@@ -524,12 +515,12 @@ bool ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bo
 
       RET_FAIL(bs.Read(some_vals[1]));
       RET_FAIL(bs.Read(some_vals[2]));
-      RET_FAIL(bs.ReadBits(&(some_vals[3]), 5));
-      RET_FAIL(bs.ReadBits(&(some_vals[4]), 4));
-      RET_FAIL(bs.ReadBits(&(some_vals[5]), 4));
-      RET_FAIL(bs.ReadBits(&(some_vals[6]), 2));
-      RET_FAIL(bs.ReadBits(&(some_vals[7]), 3));
-      RET_FAIL(bs.ReadBits(&(some_vals[8]), 4));
+      RET_FAIL(bs.ReadBits<5>(&(some_vals[3])));
+      RET_FAIL(bs.ReadBits<4>(&(some_vals[4])));
+      RET_FAIL(bs.ReadBits<4>(&(some_vals[5])));
+      RET_FAIL(bs.ReadBits<2>(&(some_vals[6])));
+      RET_FAIL(bs.ReadBits<3>(&(some_vals[7])));
+      RET_FAIL(bs.ReadBits<4>(&(some_vals[8])));
     }
 
     if (bs.ReadBit()) {
@@ -590,6 +581,7 @@ bool ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bo
           turret_z = UNPACK_S16(extra_val, PI);
           //;LOGI("extra_val: {}", extra_val);
         }
+        // see Unit::loadWeaponData for how turret creation was disabled
         if (weap && weap->turret_desc) {
           auto turret = weap->turret_desc.get();
           turret->setData({turret_x, turret_y, turret_z});
@@ -624,14 +616,14 @@ bool ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bo
     RET_FAIL(c.deserialize(bs));
   }
   uint8_t targetsNum = 0;
-  RET_FAIL(bs.ReadBits(&targetsNum, 4));
+  RET_FAIL(bs.ReadBits<4>(&targetsNum));
   RET_FAIL(targetsNum <= 8);
   thread_local std::vector<TargetDesignationControlState> targets{};
   targets.resize(targetsNum);
   for (auto &t: targets) {
     RET_FAIL(t.deserialize(bs));
   }
-  if (ref->ref_1) {
+  if (ref->ref_1 && state.getConfig().turret_parsing_enabled()) {
     ref->ref_1->calculateTurretData();
     /*LOGI("");
     for (auto &weap: ref->ref_1->weapons) {
@@ -652,7 +644,7 @@ bool ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bo
 }
 
 
-bool GMSync(ParserState &state, danet::BitStream &bs) {
+bool dataSync::GMSync(ParserState &state, danet::BitStream &bs) {
   ZoneScoped;
   uint16_t uid_lower;
   uint16_t uid_upper;
@@ -677,7 +669,7 @@ bool GMSync(ParserState &state, danet::BitStream &bs) {
       bool bool4;
       RET_FAIL(bs.Read(bool2)); // some weird flag setting based on bool value at unit + 0x90
       if (bs.ReadBit()) {
-        RET_FAIL(bs.ReadBits(&some_val_idk, 4));
+        RET_FAIL(bs.ReadBits<4>(&some_val_idk));
       }
       RET_FAIL(bs.Read(ref.val2));
       RET_FAIL(bs.Read(ref.val3));
@@ -755,15 +747,15 @@ bool GMSync(ParserState &state, danet::BitStream &bs) {
 // and jettisoned were asked for by nobody at all, which cost such a store its whole
 // trajectory.
 static Rocket *getAnyStoreImpl(ParserState &state, ecs::EntityId eid) {
-  if (auto *r = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("rocket_component")))
+  if (auto *r = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("rocket_component")))
     return r;
-  if (auto *b = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("bomb_component")))
+  if (auto *b = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("bomb_component")))
     return b;
-  if (auto *p = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("payload_component")))
+  if (auto *p = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("payload_component")))
     return p;
-  if (auto *j = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("jettisoned_component")))
+  if (auto *j = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("jettisoned_component")))
     return j;
-  return state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("torpedo_component"));
+  return state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("torpedo_component"));
 }
 
 static Rocket *getAnyStore(ParserState &state, ecs::EntityId eid, StoreType actual) {
@@ -775,28 +767,27 @@ static Rocket *getAnyStore(ParserState &state, ecs::EntityId eid, StoreType actu
 
 
 Rocket *getRocket(ParserState &state, ecs::EntityId eid) {
-  if (auto *r = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("rocket_component")))
+  if (auto *r = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("rocket_component")))
     return r;
   return getAnyStore(state, eid, StoreType::Rocket);
 }
 
 
 Rocket *getBomb(ParserState &state, ecs::EntityId eid) {
-  if (auto *b = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("bomb_component")))
+  if (auto *b = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("bomb_component")))
     return b;
   return getAnyStore(state, eid, StoreType::Bomb);
 }
 
 
 Rocket *getTorpedo(ParserState &state, ecs::EntityId eid) {
-  if (auto *t = state.g_entity_mgr.getNullable<Rocket>(eid, ECS_HASH("torpedo_component")))
+  if (auto *t = state.getEntityManager().getNullable<Rocket>(eid, ECS_HASH("torpedo_component")))
     return t;
   return getAnyStore(state, eid, StoreType::Torpedo);
 }
 
-typedef Rocket *(*get_weapon_cb)(ParserState &state, ecs::EntityId eid);
 
-bool ParseWeapon(ParserState &state, const danet::BitStream &bs, get_weapon_cb cb) {
+bool dataSync::ParseWeapon(ParserState &state, const danet::BitStream &bs, get_weapon_cb cb) {
   bool bool1, bool2;
   RET_FAIL(bs.Read(bool1));
   RET_FAIL(bs.Read(bool2));
@@ -937,7 +928,7 @@ bool ParseWeapon(ParserState &state, const danet::BitStream &bs, get_weapon_cb c
 }
 
 int count = 0;
-bool WeaponSync(ParserState &state, danet::BitStream &bs) {
+bool dataSync::WeaponSync(ParserState &state, danet::BitStream &bs) {
   count++;
   ZoneScoped;
   uint8_t rocket_count;
