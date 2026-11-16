@@ -159,6 +159,19 @@ void PyReplay::include(py::module_ &m) {
 
   py::class_<replay::ServerReplayReader<false>, replay::IReplayReader> ____(sub, "FullDecompressServerReplayReader");
 
+  py::enum_<replay::ReplayErrors>(sub, "ReplayErrors")
+    .value("None", replay::ReplayErrors::NONE)
+    .value("BAD_HEADER", replay::ReplayErrors::BAD_HEADER)
+    .value("BAD_MAGIC", replay::ReplayErrors::BAD_MAGIC)
+    .value("BAD_FILE", replay::ReplayErrors::BAD_FILE)
+    .value("MISSING_FILE", replay::ReplayErrors::MISSING_FILE)
+    .value("MISSING_DIRECTORY", replay::ReplayErrors::MISSING_DIRECTORY)
+    .value("BAD_HDR_BLK", replay::ReplayErrors::BAD_HDR_BLK)
+    .value("BAD_FTR_BLK", replay::ReplayErrors::BAD_FTR_BLK);
+
+  m.def("lookupReplayError", &replay::lookupError, py::arg("error"),
+        "returns a string description of the replay error code");
+
   py::class_<replay::IReplay>(sub, "IReplay")
     .def_property_readonly(
       "headerBlk", [](replay::IReplay &self) { return DataBlockRO(&self.getHeaderBlk()); },
@@ -171,7 +184,9 @@ void PyReplay::include(py::module_ &m) {
     .def("getCompressedReplayReader", &replay::IReplay::getCompressedReplayReader,
          py::return_value_policy::take_ownership, py::keep_alive<0, 1>())
     .def_property_readonly("header", &replay::IReplay::getHeader, py::return_value_policy::reference_internal)
-    .def_property_readonly("isValid", &replay::IReplay::isValid);
+    .def_property_readonly("isValid", &replay::IReplay::isValid)
+    .def_property_readonly("error", &replay::IReplay::lastError)
+    .def_property_readonly("errorCode", &replay::IReplay::lastErrorCode);
 
   py::class_<replay::Replay, replay::IReplay>(sub, "Replay").def(py::init<const std::string &>());
 

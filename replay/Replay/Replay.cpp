@@ -1,3 +1,5 @@
+#include <ranges>
+
 #include "Replay/Replay.h"
 #include "filesystem"
 #include "dag_assert.h"
@@ -33,14 +35,16 @@ namespace replay {
   // ...
   std::unique_ptr<IReplayReader> Replay::getReplayReader() {
     ZoneScopedN("Replay::getReplayReader");
-    G_ASSERTF_RETURN(this->isValid(), {}, "Invalid Replay: {}", this->Data.getFileName());
+    G_ASSERTF_RETURN(this->isValid(), {}, "Invalid Replay: {}; reason: {}", this->Data.getFileName(),
+                     this->lastError());
     // the ctor of FullDecompressReplayReader is not visible to std::make_unique
     return std::unique_ptr<FullDecompressReplayReader>(new FullDecompressReplayReader(*this));
   }
 
   std::unique_ptr<IReplayReader> Replay::getCompressedReplayReader() {
     ZoneScopedN("Replay::getCompressedReplayReader");
-    G_ASSERTF_RETURN(this->isValid(), {}, "Invalid Replay: {}", this->Data.getFileName());
+    G_ASSERTF_RETURN(this->isValid(), {}, "Invalid Replay: {}; reason: {}", this->Data.getFileName(),
+                     this->lastError());
     std::span<uint8_t> data;
     IBaseLoad *rdr = nullptr;
     {
@@ -221,8 +225,8 @@ namespace replay {
   }
   bool ServerReplay::hasFooterBlk() {
 
-    for (auto it = replay_files.rbegin(); it != replay_files.rend(); ++it) {
-      auto &blk = (*it)->getFooterBlk();
+    for (auto &replay_file: std::views::reverse(replay_files)) {
+      auto &blk = replay_file->getFooterBlk();
       if (&blk != &IReplay::invalid_blk) {
         return true;
       }
@@ -230,8 +234,8 @@ namespace replay {
     return false;
   }
   const DataBlock &ServerReplay::getFooterBlk() {
-    for (auto it = replay_files.rbegin(); it != replay_files.rend(); ++it) {
-      auto &blk = (*it)->getFooterBlk();
+    for (auto &replay_file: std::views::reverse(replay_files)) {
+      auto &blk = replay_file->getFooterBlk();
       if (&blk != &IReplay::invalid_blk) {
         return blk;
       }
