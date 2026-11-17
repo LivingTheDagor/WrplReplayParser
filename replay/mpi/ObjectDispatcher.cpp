@@ -292,6 +292,8 @@ namespace mpi {
         return MpiQueueObject::UnitRef_Dispatch(oid, extUid, state, true);
       case 3: break;
       case 5: {
+        if (!state->config.MpiOpts.parse_replication)
+          break;
         // LOGE("Getting Zone with id {}", count);
         if (count < state->Zones.size()) {
           return *state->Zones[count]->curr();
@@ -335,6 +337,8 @@ namespace mpi {
         EXCEPTION("Invalid team index");
       }
       case 0x16: {
+        if (!state->config.MpiOpts.parse_replication)
+          break;
         if (count < state->missionAreas2.size()) {
           auto var = *state->missionAreas2[count]->curr();
           if (!var)
