@@ -650,6 +650,9 @@ namespace danet {
   protected:
     template<size_t bit_count>
     bool ReadConstBits(uint8_t *out) const {
+      static_assert(bit_count > 0);
+      if constexpr (bit_count < 8)
+        return ReadLessThan8<uint8_t, bit_count>(*out);
       if constexpr (bit_count == 8)
         return ReadSpecificLens<uint16_t, bit_count>(out);
       if constexpr (bit_count == 16)

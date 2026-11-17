@@ -26,7 +26,6 @@ void initialize_wrapper(const std::string &VromfsPath, const std::string &grp_pa
 
 void PyReplayState::include(py::module_ &m) {
   DO_INCLUDE()
-  py_replay_state.include(m);
   py_codegen_objects.include(m);
   py_battle_messages.include(m);
   py_unit.include(m);
@@ -121,21 +120,22 @@ void PyReplayState::include(py::module_ &m) {
     .def("set_oid_enabled_state", &ParserConfig::set_oid_enabled_state, py::arg("to_enable"), py::arg("flags"))
     .def("set_mid_enabled_state", &ParserConfig::set_mid_enabled_state, py::arg("to_enable"))
     .def("set_mid_disabled_state", &ParserConfig::set_mid_disabled_state, py::arg("to_disable"))
-    .def("set_enabled_oids",
-         [](ParserConfig &config, const std::vector<uint8_t> &to_enabled, bool enable, DispatcherFlags flags) {
-           config.set_enabled_oids(to_enabled, enable, flags);
-         },
-         py::arg("to_enabled"), py::arg("enable"), py::arg("flags"))
-    .def("set_disabled_mids",
-         [](ParserConfig &config, const std::vector<mpi::MessageID> &to_disabled) {
-           config.set_disabled_mids(to_disabled);
-         },
-         py::arg("to_disabled"))
-    .def("set_enabled_mids",
-         [](ParserConfig &config, const std::vector<mpi::MessageID> &to_enabled) {
-           config.set_enabled_mids(to_enabled);
-         },
-         py::arg("to_enabled"));
+    .def(
+      "set_enabled_oids",
+      [](ParserConfig &config, const std::vector<uint8_t> &to_enabled, bool enable, DispatcherFlags flags) {
+        config.set_enabled_oids(to_enabled, enable, flags);
+      },
+      py::arg("to_enabled"), py::arg("enable"), py::arg("flags"))
+    .def(
+      "set_disabled_mids",
+      [](ParserConfig &config, const std::vector<mpi::MessageID> &to_disabled) {
+        config.set_disabled_mids(to_disabled);
+      },
+      py::arg("to_disabled"))
+    .def(
+      "set_enabled_mids",
+      [](ParserConfig &config, const std::vector<mpi::MessageID> &to_enabled) { config.set_enabled_mids(to_enabled); },
+      py::arg("to_enabled"));
 
   py::class_<ParserState>(m, "ParserState")
     .def(py::init<>())
