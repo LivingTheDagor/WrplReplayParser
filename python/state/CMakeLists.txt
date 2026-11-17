@@ -15,3 +15,6 @@ target_include_directories(PyState PRIVATE
         "${BASE_DIR}/replay/include"
         "${BASE_DIR}/python/include"
 )
+if (MINGW)
+    target_compile_options(PyState PRIVATE -Wa,-mbig-obj)
+endif ()

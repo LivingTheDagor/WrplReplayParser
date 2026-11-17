@@ -1,14 +1,19 @@
-#include "state/ParserState.h"
+#include "state/internal/share.h"
 #include "ecs/componentTypesDefs.h"
 #include "Unit.h"
 #include "ecs/query/coreEvents.h"
 #include "ecs/ecsCodegen.h"
+struct SHARE_STRUCT(RocketryES) {
+  static auto &Manager(ParserState &state) { return parserInt::ParserShare::get_ecs(state); }
+};
+
+struct alias : public SHARE_STRUCT(RocketryES) {};
 
 namespace unit {
   void buildBallisticArc(ParserState &state, Rocket &store, bool powered, float sea_level);
 }
-static void on_rocket_appear_es(const ecs::EventEntityCreated &evt, const ecs::EntityId eid,
-                                Rocket &rocket_component, ecs::EntityManager &manager) {
+static void on_rocket_appear_es(const ecs::EventEntityCreated &evt, const ecs::EntityId eid, Rocket &rocket_component,
+                                ecs::EntityManager &manager) {
   rocket_component.type = StoreType::Rocket;
   rocket_component.created_at_ms = *manager.curr_time_ms;
   rocket_component.eid = eid;
@@ -18,7 +23,7 @@ static void on_rocket_disappear_es(const ecs::EventEntityDestroyedBasic &evt, Ro
                                    ecs::EntityManager &manager) {
   if (evt.get<1>()) {
     rocket_component.destroyed_at_ms = *manager.curr_time_ms;
-    unit::buildBallisticArc(*manager.owned_by, rocket_component, /*powered*/ true, manager.owned_by->sea_level);
+    unit::buildBallisticArc(*manager.owned_by, rocket_component, /*powered*/ true, manager.owned_by->getSeaLevel());
   }
 }
 
@@ -34,7 +39,7 @@ static void on_bomb_disappear_es(const ecs::EventEntityDestroyedBasic &evt, Bomb
   if (evt.get<1>()) {
 
     bomb_component.destroyed_at_ms = *manager.curr_time_ms;
-    unit::buildBallisticArc(*manager.owned_by, bomb_component, /*powered*/ true, manager.owned_by->sea_level);
+    unit::buildBallisticArc(*manager.owned_by, bomb_component, /*powered*/ true, manager.owned_by->getSeaLevel());
   }
 }
 
@@ -75,7 +80,8 @@ static void on_jettisoned_disappear_es(const ecs::EventEntityDestroyedBasic &evt
                                        ecs::EntityManager &manager) {
   if (evt.get<1>()) {
     jettisoned_component.destroyed_at_ms = *manager.curr_time_ms;
-    unit::buildBallisticArc(*manager.owned_by, jettisoned_component, /*powered*/ false, manager.owned_by->sea_level);
+    unit::buildBallisticArc(*manager.owned_by, jettisoned_component, /*powered*/ false,
+                            manager.owned_by->getSeaLevel());
   }
 }
 
@@ -90,8 +96,8 @@ static void iterate_all_rockets_ecs_query(ecs::EntityManager &manager, Callable 
 // dropping it here would throw away the only record of it.
 std::vector<Rocket *> collect_all_rockets(ParserState &state) {
   std::vector<Rocket *> rockets;
-  iterate_all_rockets_ecs_query(state.g_entity_mgr, [&rockets, &state](Rocket &rocket_component) {
-    unit::buildBallisticArc(state, rocket_component, /*powered*/ true, state.sea_level);
+  iterate_all_rockets_ecs_query(alias::Manager(state), [&rockets, &state](Rocket &rocket_component) {
+    unit::buildBallisticArc(state, rocket_component, /*powered*/ true, state.getSeaLevel());
     rockets.push_back(&rocket_component);
   });
   return rockets;
@@ -104,9 +110,8 @@ static void iterate_all_torpedoes_ecs_query(ecs::EntityManager &manager, Callabl
 // in water.
 std::vector<Torpedo *> collect_all_torpedoes(ParserState &state) {
   std::vector<Torpedo *> torpedoes;
-  iterate_all_torpedoes_ecs_query(state.g_entity_mgr, [&torpedoes](Torpedo &torpedo_component) {
-    torpedoes.push_back(&torpedo_component);
-  });
+  iterate_all_torpedoes_ecs_query(
+    alias::Manager(state), [&torpedoes](Torpedo &torpedo_component) { torpedoes.push_back(&torpedo_component); });
   return torpedoes;
 }
 
@@ -120,9 +125,8 @@ std::vector<Payload *> collect_all_payloads(ParserState &state) {
   // No arc for a payload: it hangs on the pylon from spawn, so integrating from its
   // creation to its removal would draw a battle long free fall from the spawn point.
   // A tank that is actually let go becomes a Jettisoned store and gets its arc there.
-  iterate_all_payloads_ecs_query(state.g_entity_mgr, [&payloads](Payload &payload_component) {
-    payloads.push_back(&payload_component);
-  });
+  iterate_all_payloads_ecs_query(alias::Manager(state),
+                                 [&payloads](Payload &payload_component) { payloads.push_back(&payload_component); });
   return payloads;
 }
 
@@ -131,9 +135,8 @@ static void iterate_all_jettisoned_ecs_query(ecs::EntityManager &manager, Callab
 
 std::vector<Jettisoned *> collect_all_jettisoned(ParserState &state) {
   std::vector<Jettisoned *> jettisoned;
-  iterate_all_jettisoned_ecs_query(state.g_entity_mgr,
-                                   [&jettisoned, &state](Jettisoned &jettisoned_component) {
-    unit::buildBallisticArc(state, jettisoned_component, /*powered*/ false, state.sea_level);
+  iterate_all_jettisoned_ecs_query(alias::Manager(state), [&jettisoned, &state](Jettisoned &jettisoned_component) {
+    unit::buildBallisticArc(state, jettisoned_component, /*powered*/ false, state.getSeaLevel());
     jettisoned.push_back(&jettisoned_component);
   });
   return jettisoned;
@@ -144,8 +147,8 @@ static void iterate_all_bombs_ecs_query(ecs::EntityManager &manager, Callable c)
 
 std::vector<Bomb *> collect_all_bombs(ParserState &state) {
   std::vector<Bomb *> bombs;
-  iterate_all_bombs_ecs_query(state.g_entity_mgr, [&bombs, &state](Bomb &bomb_component) {
-    unit::buildBallisticArc(state, bomb_component, /*powered*/ true, state.sea_level);
+  iterate_all_bombs_ecs_query(alias::Manager(state), [&bombs, &state](Bomb &bomb_component) {
+    unit::buildBallisticArc(state, bomb_component, /*powered*/ true, state.getSeaLevel());
     bombs.push_back(&bomb_component);
   });
   return bombs;

@@ -202,6 +202,22 @@ namespace mpi {
     if (obj_dispatcher && read_object_ext_uid(bs, oid, extUid) && bs.Read(mid)) {
       // LOG("MPI Dispatch: oid: {:#x}; extUid: {:#x}; mid: {:#x};", oid, extUid, mid);
       // mpi_data[oid][mid] += 1; used for packet
+      auto &config = state->getConfig();
+      if (config.use_enabled_mids) {
+        if (!config.enabled_mids.contains(mid)) {
+          return nullptr;
+        }
+      }
+      if (config.use_disabled_mids) {
+        if (config.disabled_mids.contains(mid)) {
+          return nullptr;
+        }
+      }
+
+      if (config.use_enabled_oids) {
+        if (!config.enabled_oids[oid])
+          return nullptr;
+      }
       IObject *o = dispatch_object(oid, extUid, state);
       if (o) {
         Message *m = (mid != INVALID_MESSAGE_ID) ? o->dispatchMpiMessage(mid) : nullptr;

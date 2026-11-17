@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.29)
 set(CMAKE_CXX_STANDARD 23)
 project(WrplReplayParser LANGUAGES C CXX)
 
 if (POLICY CMP0069)
     cmake_policy(SET CMP0069 NEW)
 endif ()
-
+cmake_policy(SET CMP0156 NEW)
 # ok look I have to do this for whatever reason to make MSVC works, it generates alot of ugly cli warnings but I don't feel like fixing it
 if (MSVC)
     # Enable the CMAKE_MSVC_RUNTIME_LIBRARY variable
@@ -142,6 +142,7 @@ if (PARSER_INCLUDE_EXPERIMENTING_DIRS)
     add_subdirectory(debugging)
     add_subdirectory(ClogDecryptor)
     add_subdirectory(experiment)
+    add_subdirectory(tools)
     if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/hidden")
         add_subdirectory(hidden)
     endif ()

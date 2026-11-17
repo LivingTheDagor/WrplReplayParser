@@ -100,7 +100,7 @@ void download_replay_internal(downloadFileCtx *ctx, uint64_t session_id) {
 
 struct ReplayPath {
   fs::path dir_path;
-  Replay *rpl;
+  replay::Replay *rpl;
   std::string pretty_name{};
 };
 
@@ -121,7 +121,7 @@ struct WindowMgr {
   char path[1024];
   char download[100];
 
-  void check_internal(std::unique_ptr<IReplay> rpl) {
+  void check_internal(std::unique_ptr<replay::IReplay> rpl) {
     if (!rpl->isValid()) {
       error_message = "Invalid Replay File";
       show_error_popup = true;
@@ -131,9 +131,11 @@ struct WindowMgr {
   }
 
 
-  void add_folder(const std::string &folder_path) { check_internal(std::make_unique<ServerReplay>(folder_path)); }
+  void add_folder(const std::string &folder_path) {
+    check_internal(std::make_unique<replay::ServerReplay>(folder_path));
+  }
 
-  void add_file(const std::string &file_path) { check_internal(std::make_unique<Replay>(file_path)); }
+  void add_file(const std::string &file_path) { check_internal(std::make_unique<replay::Replay>(file_path)); }
 
   WindowMgr() {
     memset(path, 0, sizeof(path));
@@ -152,14 +154,14 @@ struct WindowMgr {
     for (auto &entry: fs::directory_iterator(dir)) {
       if (entry.is_directory()) {
         auto rpl_path = fmt::format("{}\\0000.wrpl", entry.path().string());
-        auto rpl = new Replay(rpl_path);
+        auto rpl = new replay::Replay(rpl_path);
         if (!rpl->isValid()) {
           delete rpl;
           continue;
         }
-        auto session_id = rpl->getHeader()->session_id;
-        if (rpl->is_valid && replay_session_ids.find(session_id) == replay_session_ids.end()) {
-          replay_dirs.push_back({entry.path(), rpl, fmt::format("{}; {}", session_id, rpl->header.mission_name)});
+        auto session_id = rpl->getHeader().session_id;
+        if (rpl->isValid() && replay_session_ids.find(session_id) == replay_session_ids.end()) {
+          replay_dirs.push_back({entry.path(), rpl, fmt::format("{}; {}", session_id, rpl->getHeader().mission_name)});
           replay_session_ids.insert(session_id);
         } else {
           delete rpl;
@@ -267,7 +269,7 @@ struct WindowMgr {
 
         ImGui::TextUnformatted("Saved Replays:");
         for (auto &rpl_st: replay_dirs) {
-          ImGui::PushID((int) rpl_st.rpl->header.session_id);
+          ImGui::PushID((int) rpl_st.rpl->getHeader().session_id);
           if (ImGui::Button("Open Replay")) {
             add_folder(rpl_st.dir_path.string());
           }

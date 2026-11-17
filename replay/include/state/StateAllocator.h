@@ -16,7 +16,7 @@ class StateAllocator : public std::pmr::memory_resource {
     }
     ~StateDagAlloc() {
 #if USE_MI_HEAP == 1
-      mi_heap_delete(heap);
+      mi_heap_destroy(heap);
 #endif
     }
     void destroy() override {}

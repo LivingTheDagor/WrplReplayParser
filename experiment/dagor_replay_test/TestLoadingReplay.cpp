@@ -1,6 +1,5 @@
 #include "ecs/EntityManager.h"
 #include "ecs/componentTypesDefs.h"
-#include "network/CNetwork.h"
 #include "FileSystem.h"
 #include "init/initialize.h"
 #include "mpi/mpi.h"
@@ -120,28 +119,29 @@ int main() {
   std::string logfile_str = (conf_dir / "logfile.txt").string();
   initialize(bin_path_str, "", logfile_str);
   // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
-  IReplayReader *rdr = nullptr;
-  IReplay *rpl = nullptr;
+  std::unique_ptr<replay::IReplay> rpl = nullptr;
+
   if (is_server_replay) {
     fs::path t{rpl_path_str};
-    rpl = new ServerReplay(t.string());
+    rpl = std::make_unique<replay::ServerReplay>(t.string());
   } else {
-    rpl = new Replay(rpl_path_str);
+    rpl = std::make_unique<replay::Replay>(rpl_path_str);
   }
-  rdr = rpl->getReplayReader();
   int idx;
   auto start = std::chrono::high_resolution_clock::now();
   {
-    ParserState state{rpl};
+    std::unique_ptr<replay::IReplayReader> rdr = rpl->getReplayReader();
+    ParserState state{rpl.get()};
+    state.getConfig().GMOpts.load_tanks = false;
     ReplayPacket pkt{};
     // std::exit(0);
 
     while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
-    for (auto &plr: state.players) {
+    for (auto &plr: state.getPlayers()) {
       auto owned_eid = *plr.ownedUnitRef.Get();
       std::string *vehicle = nullptr;
       if (owned_eid != ecs::INVALID_ENTITY_ID) {
-        vehicle = state.g_entity_mgr.getNullable<ecs::string>(owned_eid, ECS_HASH("unit__className"));
+        vehicle = state.getEntityManager().getNullable<ecs::string>(owned_eid, ECS_HASH("unit__className"));
       }
       if (vehicle)
         LOGE("player_id: {}; playerName: {}; team: {}; vehicle: {}", plr.uid.Get()->account_id, plr.uid.Get()->name,
@@ -150,7 +150,7 @@ int main() {
         LOGE("Name: {}; team: {}; no_vehicle", plr.uid.Get()->name, *plr.team.Get());
     }
     iterate_all_units(state);
-    idx = state.current_packet_index;
+    idx = state.getCurrentPacketIndex();
     /*
     auto heap_ptr = state.get_allocator()->get_heap_ptr();
     std::cout << mi_stats_as_json(&heap_ptr->stats, 0, NULL) << std::endl;
@@ -158,8 +158,6 @@ int main() {
     state.rewindToMs(105620);
     state.rewindToMs(157507);
     state.rewindToMs(156777);
-    delete rdr;
-    delete rpl;
   }
   auto ended = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> duration = ended - start;

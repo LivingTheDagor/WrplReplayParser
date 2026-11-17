@@ -83,7 +83,7 @@ namespace danet {
       bs->WriteBits(reinterpret_cast<uint8_t *>(data), BYTES_TO_BITS(UID_SIZE));
       return true;
     } else if (op == DANET_REFLECTION_OP_DECODE) {
-      REPL_VER(bs->ReadBits(reinterpret_cast<uint8_t *>(data), BYTES_TO_BITS(UID_SIZE)));
+      REPL_VER(bs->ReadBits<BYTES_TO_BITS(UID_SIZE)>(reinterpret_cast<uint8_t *>(data)));
       return true;
     }
     return false;

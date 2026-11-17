@@ -14,7 +14,6 @@ target_link_libraries(dagor_rpl_test
         dagECS::dagECS
         INIT::INIT
         Replay::Replay
-        ZLIB::ZLIB
         ParserState::ParserState
         Translate::Translate
         # mimalloc

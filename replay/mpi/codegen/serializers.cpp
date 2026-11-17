@@ -559,7 +559,7 @@ namespace danet {
       REPL_VER(bs->Read(sz26));
       data->resize(sz26);
       for(auto & v : *(data)) {
-        REPL_VER(bs->ReadBits((uint8_t*)&v, 0xb));
+        REPL_VER(bs->ReadBits<0xb>((uint8_t*)&v));
       }
       return true;
     }
@@ -583,7 +583,7 @@ namespace danet {
       REPL_VER(bs->Read(sz28));
       data->resize(sz28);
       for(auto & v : *(data)) {
-        REPL_VER(bs->ReadBits((uint8_t*)&v.uid, 0xb));
+        REPL_VER(bs->ReadBits<0xb>((uint8_t*)&v.uid));
         REPL_VER(bs->Read(v.thang));
       }
       return true;

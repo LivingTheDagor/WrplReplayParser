@@ -306,7 +306,7 @@ danet::ReplicatedObject *MissionArea::createReplicatedObject(danet::BitStream &b
   x->tm = tm;
   x->markVarWithFlag(&x->areaFlags, RVF_CALL_HANDLER_FORCE, true);
   REPLICATION_LOGD3("MissionArea({}) v1: {}; v2: {}; v3: {}; v5: {}; v6: {}; v7: {}",
-                    ((double) state->curr_time_ms) / 1000.0, v1, index, v3, x->tm.toString(0), index_2, v7);
+                    ((double) state->getCurrTimeMs()) / 1000.0, v1, index, v3, x->tm.toString(0), index_2, v7);
   auto idx = index_2 & 0x7FF;
   grow(state->missionAreas2, state, idx + 1);
   grow(state->missionAreas1, state, index + 1);

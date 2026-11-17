@@ -1,0 +1,2 @@
+.wrpl filter=lfs diff=lfs merge=lfs -text
+*.wrpl filter=lfs diff=lfs merge=lfs -text

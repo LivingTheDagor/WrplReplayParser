@@ -1,8 +1,5 @@
 #ifndef MYEXTENSION_CONNECTION_H
 #define MYEXTENSION_CONNECTION_H
-extern "C" {
-#include "lz4.h"
-}
 #include "ecs/EntityManager.h"
 #include "daNet/bitStream.h"
 #include "utils.h"

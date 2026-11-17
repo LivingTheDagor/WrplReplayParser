@@ -73,7 +73,7 @@ namespace mpi {
     Quat camera_circle_quat{}; // where camera is pointing
     Point3 camera_offset{}; // camera offset from commander hatch or smg
     Point3 gun_circle_norm_vector{}; // normalized vector of where the gun circle is pointing
-    uint8_t some_val{};
+    uint16_t some_val{};
     float some_magnitude{};
     bool tracking_weapon{};
     ecs::EntityId weapon_eid{};

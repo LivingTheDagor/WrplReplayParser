@@ -1,4 +1,4 @@
-#include "state/ParserState.h"
+#include "state/internal/share.h"
 #include "ecs/componentTypesDefs.h"
 #include "Unit.h"
 #include "ecs/query/coreEvents.h"
@@ -8,7 +8,11 @@
 #include "imgui.h"
 #endif
 #include "tracy/Tracy.hpp"
+struct SHARE_STRUCT(drawUnits) {
+  static auto &EntityManager(ParserState &state) { return parserInt::ParserShare::get_ecs(state); }
+};
 
+struct alias : public SHARE_STRUCT(drawUnits) {};
 template<typename Callable>
 ECS_REQUIRE(ecs::Tag playerUnit, ecs::Tag unit_tag__tank)
 static void iterate_all_tanks_ecs_query(ecs::EntityManager &manager, Callable c);
@@ -19,7 +23,8 @@ static void iterate_all_aircraft_ecs_query(ecs::EntityManager &manager, Callable
 
 void iterate_all_tanks(ParserState &state, on_unit_cb_t &on_unit) {
   ZoneScoped;
-  iterate_all_tanks_ecs_query(state.g_entity_mgr,
+  iterate_all_tanks_ecs_query(
+    alias::EntityManager(state),
     [&on_unit](const unit::UnitRef &unit__ref, const int unit__playerId, ecs::EntityManager &manager) {
       if (unit__playerId != -1 && unit__ref.unit && !unit__ref.unit->positions.history().empty()) {
         auto unit = unit__ref.unit;
@@ -32,7 +37,8 @@ void iterate_all_tanks(ParserState &state, on_unit_cb_t &on_unit) {
 
 void iterate_all_aircraft(ParserState &state, on_unit_cb_t &on_unit) {
   ZoneScoped;
-  iterate_all_aircraft_ecs_query(state.g_entity_mgr,
+  iterate_all_aircraft_ecs_query(
+    alias::EntityManager(state),
     [&on_unit](const unit::UnitRef &unit__ref, const int unit__playerId, ecs::EntityManager &manager) {
       // drones have pids of -1
       if (unit__ref.unit && !unit__ref.unit->positions.history().empty()) {
@@ -59,7 +65,7 @@ static void iterate_all_player_units_ecs_query(ecs::EntityManager &manager, Call
 
 ImVec2 get_longest_unit_name(ParserState &state) {
   ImVec2 ret{};
-  iterate_all_player_units_ecs_query(state.g_entity_mgr, [&ret](const unit::UnitRef &unit__ref) {
+  iterate_all_player_units_ecs_query(alias::EntityManager(state), [&ret](const unit::UnitRef &unit__ref) {
     if (unit__ref.unit) {
       auto unit_name = get_unit_name_1(*unit__ref.unit);
       if (unit_name == nullptr || unit_name == "")
@@ -80,7 +86,7 @@ static void iterate_all_rockets_ecs_query(ecs::EntityManager &manager, Callable 
 
 
 void iterate_all_rockets(ParserState &state, on_rocket_cb_t &on_weapon) {
-  ZoneScoped iterate_all_rockets_ecs_query(state.g_entity_mgr,
+  ZoneScoped iterate_all_rockets_ecs_query(alias::EntityManager(state),
                                            [&on_weapon](const Rocket &rocket_component, ecs::EntityManager &manager) {
                                              if (!rocket_component.positions.history().empty()) {
                                                if (rocket_component.destroyed_at_ms > *manager.curr_time_ms &&
@@ -96,13 +102,13 @@ template<typename Callable>
 static void iterate_all_bombs_ecs_query(ecs::EntityManager &manager, Callable c);
 
 void iterate_all_bombs(ParserState &state, on_bomb_cb_t &on_weapon) {
-  ZoneScoped iterate_all_bombs_ecs_query(state.g_entity_mgr,
+  ZoneScoped iterate_all_bombs_ecs_query(alias::EntityManager(state),
                                          [&on_weapon](const Bomb &bomb_component, ecs::EntityManager &manager) {
-     if (!bomb_component.positions.history().empty()) {
-       if (bomb_component.destroyed_at_ms > *manager.curr_time_ms &&
-           *manager.curr_time_ms >= bomb_component.created_at_ms) {
-         on_weapon(bomb_component);
-       }
-     }
-   });
+                                           if (!bomb_component.positions.history().empty()) {
+                                             if (bomb_component.destroyed_at_ms > *manager.curr_time_ms &&
+                                                 *manager.curr_time_ms >= bomb_component.created_at_ms) {
+                                               on_weapon(bomb_component);
+                                             }
+                                           }
+                                         });
 }

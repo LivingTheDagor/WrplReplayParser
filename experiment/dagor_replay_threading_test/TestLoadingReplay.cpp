@@ -47,8 +47,8 @@ void thread_replay(std::string &path, int thread_count, bool is_server_replay) {
   auto worker = [&](int id) {
     ZoneScopedN("Worker Run");
     ParserState *state_ptr = nullptr;
-    IReplay *rpl = nullptr;
-    IReplayReader *rdr = nullptr;
+    replay::IReplay *rpl = nullptr;
+    std::unique_ptr<replay::IReplayReader> rdr = nullptr;
     // sync_point.arrive_and_wait(); // block until all threads are ready
     std::cout << fmt::format("Thread {} started!\n", id);
     auto start = std::chrono::high_resolution_clock::now();
@@ -56,9 +56,9 @@ void thread_replay(std::string &path, int thread_count, bool is_server_replay) {
 
       if (is_server_replay) {
         fs::path t{path};
-        rpl = new ServerReplay(t.string());
+        rpl = new replay::ServerReplay(t.string());
       } else {
-        rpl = new Replay(path);
+        rpl = new replay::Replay(path);
       }
       ZoneScopedN("Create Reader and State");
       state_ptr = new ParserState(rpl);
@@ -74,13 +74,12 @@ void thread_replay(std::string &path, int thread_count, bool is_server_replay) {
       while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
     }
 
-    delete rdr;
     delete rpl;
     auto ended = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double, std::milli> duration = ended - start;
     std::cout << fmt::format("thread {} profile time: {}; packet count: {}\n", id, duration.count(),
-                             state_ptr->current_packet_index);
+                             state_ptr->getCurrentPacketIndex());
     delete state_ptr;
   };
   std::vector<std::jthread> threads;

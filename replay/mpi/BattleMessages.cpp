@@ -291,7 +291,7 @@ namespace mpi {
 
 
   bool IBattleMessage::readPayload(ParserState *state) {
-    this->time_ms = state->curr_time_ms;
+    this->time_ms = state->getCurrTimeMs();
     return true;
   }
 }
