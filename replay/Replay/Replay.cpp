@@ -350,6 +350,7 @@ namespace replay {
   }*/
   template<bool streamWrite>
   void ReplayWriter<streamWrite>::write(const ReplayPacket &pkt) {
+    ZoneScopedN("ReplayWriter::write");
     struct __attribute__((packed)) {
       uint16_t packet_type;
       uint32_t time_ms;

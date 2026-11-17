@@ -7,6 +7,7 @@
 #include "ioSys/dag_memIo.h"
 #include "ReplayReader.h"
 #include "daNet/daNetTypes.h"
+#include "ioSys/dag_zstdIo.h"
 
 namespace replay {
   enum class ReplayErrors {
