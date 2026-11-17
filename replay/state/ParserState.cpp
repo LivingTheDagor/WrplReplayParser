@@ -48,6 +48,31 @@ void ParserConfig::set_oid_enabled_state(bool to_enable, DispatcherFlags flags) 
 }
 void ParserConfig::set_mid_disabled_state(bool to_disable) { this->use_disabled_mids = to_disable; }
 void ParserConfig::set_mid_enabled_state(bool to_enable) { this->use_enabled_mids = to_enable; }
+
+
+void ParserConfig::set_enabled_oids(std::span<const uint8_t> to_enabled, bool enable, DispatcherFlags flags) {
+  if (flags & DispatcherFlags::Dispatch)
+    use_enabled_oids = true;
+  if (flags & DispatcherFlags::Reflection)
+    use_enabled_reflection_oids = true;
+  for (const auto oid: to_enabled) {
+    G_ASSERTF_AND_DO_UNHYGIENIC(oid < enabled_oids.size(), continue;, "invalid mpi object id {} to enable", oid);
+    if (flags & DispatcherFlags::Dispatch)
+      enabled_oids[oid] = enable;
+    if (flags & DispatcherFlags::Reflection)
+      enabled_reflection_oids[oid] = enable;
+  }
+}
+
+void ParserConfig::set_disabled_mids(std::span<const mpi::MessageID> to_disabled) {
+  this->use_disabled_mids = true;
+  this->disabled_mids.insert(to_disabled.begin(), to_disabled.end());
+}
+void ParserConfig::set_enabled_mids(std::span<const mpi::MessageID> to_enabled) {
+  this->use_enabled_mids = true;
+  this->enabled_mids.insert(to_enabled.begin(), to_enabled.end());
+}
+
 ParserState::ParserState(uint32_t player_count) { initialize(player_count); }
 ParserState::ParserState(replay::IReplay *replay) {
   auto header = replay->getHeader();

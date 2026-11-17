@@ -85,6 +85,57 @@ void PyReplayState::include(py::module_ &m) {
 
   bind_readonly_vector_no_contain<std::vector<ChatMessage>>(m, "ChatMessageList");
   bind_readonly_vector_no_contain<std::vector<const mpi::IBattleMessage *>>(m, "IBattleMessageList");
+  py::class_<ParserConfig::_GMOpts>(m, "GMOpts")
+    .def_readwrite("load_tanks", &ParserConfig::_GMOpts::load_tanks)
+    .def_readwrite("enable_GMSync", &ParserConfig::_GMOpts::enable_GMSync)
+    .def_readwrite("turret_parsing", &ParserConfig::_GMOpts::turret_parsing);
+
+  py::class_<ParserConfig::_FMOpts>(m, "FMOpts")
+    .def_readwrite("load_aircraft", &ParserConfig::_FMOpts::load_aircraft)
+    .def_readwrite("enable_FMSync", &ParserConfig::_FMOpts::enable_FMSync)
+    .def_readwrite("capture_ammo_events", &ParserConfig::_FMOpts::capture_ammo_events);
+
+  py::class_<ParserConfig::_ECSOpts>(m, "ECSOpts")
+    .def_readwrite("parse_ecs", &ParserConfig::_ECSOpts::parse_ecs)
+    .def_readwrite("parse_ecs_message", &ParserConfig::_ECSOpts::parse_ecs_message);
+
+  py::class_<ParserConfig::_MpiOpts>(m, "MpiOpts")
+    .def_readwrite("parse_mpi", &ParserConfig::_MpiOpts::parse_mpi)
+    .def_readwrite("parse_reflection", &ParserConfig::_MpiOpts::parse_reflection)
+    .def_readwrite("parse_replication", &ParserConfig::_MpiOpts::parse_replication)
+    .def_readwrite("parse_battle_message", &ParserConfig::_MpiOpts::parse_battle_message)
+    .def_readwrite("parse_weapon_sync", &ParserConfig::_MpiOpts::parse_weapon_sync);
+
+  py::enum_<DispatcherFlags>(m, "DispatcherFlags")
+    .value("Dispatch", DispatcherFlags::Dispatch)
+    .value("Reflection", DispatcherFlags::Reflection)
+    .value("Both", DispatcherFlags::Both);
+
+  py::class_<ParserConfig>(m, "ParserConfig")
+    .def_readwrite<>("GMOpts", &ParserConfig::GMOpts)
+    .def_readwrite<>("FMOpts", &ParserConfig::FMOpts)
+    .def_readwrite<>("ECSOpts", &ParserConfig::ECSOpts)
+    .def_readwrite<>("MpiOpts", &ParserConfig::MpiOpts)
+    .def_readwrite<>("parse_chat", &ParserConfig::parse_chat)
+    .def("set_unit_dispatch_state", &ParserConfig::set_unit_dispatch_state, py::arg("enabled"), py::arg("flags"))
+    .def("set_oid_enabled_state", &ParserConfig::set_oid_enabled_state, py::arg("to_enable"), py::arg("flags"))
+    .def("set_mid_enabled_state", &ParserConfig::set_mid_enabled_state, py::arg("to_enable"))
+    .def("set_mid_disabled_state", &ParserConfig::set_mid_disabled_state, py::arg("to_disable"))
+    .def("set_enabled_oids",
+         [](ParserConfig &config, const std::vector<uint8_t> &to_enabled, bool enable, DispatcherFlags flags) {
+           config.set_enabled_oids(to_enabled, enable, flags);
+         },
+         py::arg("to_enabled"), py::arg("enable"), py::arg("flags"))
+    .def("set_disabled_mids",
+         [](ParserConfig &config, const std::vector<mpi::MessageID> &to_disabled) {
+           config.set_disabled_mids(to_disabled);
+         },
+         py::arg("to_disabled"))
+    .def("set_enabled_mids",
+         [](ParserConfig &config, const std::vector<mpi::MessageID> &to_enabled) {
+           config.set_enabled_mids(to_enabled);
+         },
+         py::arg("to_enabled"));
 
   py::class_<ParserState>(m, "ParserState")
     .def(py::init<>())
@@ -92,6 +143,7 @@ void PyReplayState::include(py::module_ &m) {
     .def(py::init<replay::Replay *>())
     .def(py::init<replay::ServerReplay *>())
     .def_readonly("mgr", &ParserState::g_entity_mgr)
+    .def_readwrite("getParserConfig", &ParserState::config)
     .def("getUnitEid", &ParserState::getUnitEid, py::arg("uid"))
     .def("getUnitRef", &ParserState::getUnitObj, py::arg("uid"), py::keep_alive<0, 1>())
     .def_readonly("players", &ParserState::players)

@@ -18,6 +18,7 @@
 #include "chat.h"
 #include "mpi/PositionSync.h"
 #include "internal/net_delta.h"
+#include <span>
 
 class PyReplayState;
 namespace unit {
@@ -38,7 +39,7 @@ enum DispatcherFlags {
 };
 
 struct ParserConfig {
-  struct {
+  struct _GMOpts {
     /// do we create tank units? As in, when an tank entity arrives, do we create the unit::Tank?
     bool load_tanks = true;
     /// do we parse tank positions?
@@ -51,7 +52,7 @@ struct ParserConfig {
   bool GMSync_enabled() const { return tanks_enabled() && GMOpts.enable_GMSync; }
   bool turret_parsing_enabled() const { return GMOpts.turret_parsing; }
 
-  struct {
+  struct _FMOpts {
     /// do we create aircraft units? As in, when an aircraft entity arrives, do we create the unit::Aircraft?
     bool load_aircraft = true;
     /// do we parse flight model data?
@@ -65,7 +66,7 @@ struct ParserConfig {
   bool FMSync_enabled() const { return aircraft_enabled() && FMOpts.enable_FMSync; }
   bool capture_ammo_events() const { return FMOpts.capture_ammo_events; }
 
-  struct {
+  struct _ECSOpts {
     /// do we parse ecs packets? this included entity construction
     /// (see ReplayPacketType::ECS)
     bool parse_ecs = true;
@@ -78,7 +79,7 @@ struct ParserConfig {
   bool ecs_enabled() const { return ECSOpts.parse_ecs; }
   bool ecs_messages_enabled() const { return ECSOpts.parse_ecs_message; }
 
-  struct {
+  struct _MpiOpts {
     /// do we parse mpi packets? this includes, GMSync, reflection, etc ...
     /// (see ReplayPacketType::MPI)
     bool parse_mpi = true;
@@ -141,22 +142,19 @@ public:
   /// @param to_enabled the list of oids to control
   /// @param enable if the listed oids will be allowed or blocked
   /// @param flags if you want to control oids for dispatch, reflection, or both
-  template<size_t T>
-  void set_enabled_oids(const std::array<uint8_t, T> &to_enabled, bool enable, DispatcherFlags flags);
+  void set_enabled_oids(std::span<const uint8_t> to_enabled, bool enable, DispatcherFlags flags);
   /// enable or disable oid whitelist for dispatch
   void set_oid_enabled_state(bool to_enable, DispatcherFlags flags);
 
   /// set the mids that should be disabled, a blacklist
   /// also turns on filtering mids by blacklist, call set_mid_disabled_state to change that
-  template<size_t T>
-  void set_disabled_mids(const std::array<mpi::MessageID, T> &to_disabled);
+  void set_disabled_mids(std::span<const mpi::MessageID> to_disabled);
   /// enable or disable mid blacklist
   void set_mid_disabled_state(bool to_disable);
 
   /// set the mids that should be enabled, a whitelist
   /// also turns on filtering mids by whitelist, call set_mid_enabled_state to change that
-  template<size_t T>
-  void set_enabled_mids(const std::array<mpi::MessageID, T> &to_enabled);
+  void set_enabled_mids(std::span<const mpi::MessageID> to_enabled);
   /// enable or disable mid whitelist
   void set_mid_enabled_state(bool to_enable);
   /// do we parse chat packet type? (see ReplayPacketType::Chat)
@@ -165,36 +163,6 @@ public:
   bool chat_enabled() const { return parse_chat; }
 };
 
-template<size_t T>
-void ParserConfig::set_enabled_oids(const std::array<uint8_t, T> &to_enabled, bool enable, DispatcherFlags flags) {
-  if (flags & DispatcherFlags::Dispatch)
-    use_enabled_oids = true;
-  if (flags & DispatcherFlags::Reflection)
-    use_enabled_reflection_oids = true;
-  for (size_t i = 0; i < T; i++) {
-    G_ASSERTF_AND_DO_UNHYGIENIC(to_enabled[i] < enabled_oids.size(), continue;
-                                , "invalid mpi object id {} to enable", to_enabled[i]);
-    if (flags & DispatcherFlags::Dispatch)
-      enabled_oids[to_enabled[i]] = enable;
-    if (flags & DispatcherFlags::Reflection)
-      enabled_reflection_oids[to_enabled[i]] = enable;
-  }
-}
-
-template<size_t T>
-void ParserConfig::set_disabled_mids(const std::array<mpi::MessageID, T> &to_disabled) {
-  this->use_disabled_mids = true;
-  for (size_t i = 0; i < T; i++) {
-    this->disabled_mids.insert(to_disabled[i]);
-  }
-}
-template<size_t T>
-void ParserConfig::set_enabled_mids(const std::array<mpi::MessageID, T> &to_enabled) {
-  this->use_enabled_mids = true;
-  for (size_t i = 0; i < T; i++) {
-    this->enabled_mids.insert(to_enabled[i]);
-  }
-}
 
 // used to hold the state currently being destroyed
 // unless if you somehow destroy multiple states at the same time in the same thread
