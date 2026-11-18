@@ -85,7 +85,8 @@ int main() {
     ZoneScopedN("loop") { ZoneScopedN("GetReader") rdr = rpl->getReplayReader(); }
 
     {
-      ZoneScopedN("Parsing Overall") ReplayPacket pkt{};
+      ZoneScopedN("Parsing Overall");
+      replay::ReplayPacket pkt{};
       ParserState *state_ptr = nullptr;
       { ZoneScopedN("ParseState::ParserState") state_ptr = new ParserState{rpl}; }
       ParserState &state = *state_ptr;

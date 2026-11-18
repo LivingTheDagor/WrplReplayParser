@@ -68,7 +68,7 @@ void thread_replay(std::string &path, int thread_count, bool is_server_replay) {
 
     ParserState &state = *state_ptr;
 
-    auto pkt = ReplayPacket();
+    replay::ReplayPacket pkt{};
     {
       ZoneScopedN("Parsing");
       while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}

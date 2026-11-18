@@ -133,7 +133,7 @@ int main() {
     std::unique_ptr<replay::IReplayReader> rdr = rpl->getReplayReader();
     ParserState state{rpl.get()};
     state.getConfig().GMOpts.load_tanks = false;
-    ReplayPacket pkt{};
+    replay::ReplayPacket pkt{};
     // std::exit(0);
 
     while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}

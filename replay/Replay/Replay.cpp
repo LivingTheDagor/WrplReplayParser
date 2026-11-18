@@ -7,11 +7,11 @@
 #include "zstd.h"
 #include "zstd_errors.h"
 
-std::string packet_names[]{"End", "Start", "Aircraft", "Chat", "MPI", "NextSegment", "ECS", "Snapshot", "ECS_Msg_Sync"};
 
 namespace fs = std::filesystem;
 
 namespace replay {
+  std::string packet_names[]{"End", "Start", "Aircraft", "Chat", "MPI", "NextSegment", "ECS", "Snapshot", "ECS_Msg_Sync"};
   ReplayHeader IReplay::invalid_header{};
   DataBlock IReplay::invalid_blk{};
 

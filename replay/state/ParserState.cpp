@@ -135,7 +135,7 @@ private:
   std::pmr::vector<ParserState::RewindRef> states;
 };
 
-void ParserState::beforePacket(ReplayPacket &pkt) {
+void ParserState::beforePacket(replay::ReplayPacket &pkt) {
   if (pkt.timestamp_ms > this->state_update_start_time_ms) {
     if (!this->curr_ms_rewind_refs.empty()) {
       auto evt = this->_new<StateUpdateEvent>(this, this->curr_ms_rewind_refs);
@@ -219,25 +219,25 @@ ParserState::~ParserState() {
   _delete(g_entity_mgr.curr_event);
 }
 
-bool ParserState::ParsePacket(ReplayPacket &pkt) {
+bool ParserState::ParsePacket(replay::ReplayPacket &pkt) {
   ZoneScoped;
   beforePacket(pkt);
   curr_time_ms = pkt.timestamp_ms;
   current_packet_index++;
   switch (pkt.type) {
-    case ReplayPacketType::EndMarker: {
+    case replay::ReplayPacketType::EndMarker: {
       replay_length_ms = pkt.timestamp_ms;
       return false;
     }
-    case ReplayPacketType::StartMarker: {
+    case replay::ReplayPacketType::StartMarker: {
       break;
     }
-    case ReplayPacketType::AircraftSmall: {
+    case replay::ReplayPacketType::AircraftSmall: {
       if (config.FMSync_enabled())
         dataSync::FMSync(*this, pkt.stream);
       break;
     }
-    case ReplayPacketType::Chat: {
+    case replay::ReplayPacketType::Chat: {
       if (!config.chat_enabled())
         break;
       this->chatMessages.resize(this->chatMessages.size() + 1);
@@ -246,7 +246,7 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       chat_msg.time_ms = this->curr_time_ms;
       break;
     }
-    case ReplayPacketType::MPI: {
+    case replay::ReplayPacketType::MPI: {
       if (!config.mpi_enabled())
         break;
       ZoneScopedN("MPI Dispatch");
@@ -258,18 +258,18 @@ bool ParserState::ParsePacket(ReplayPacket &pkt) {
       }
       break;
     }
-    case ReplayPacketType::NextSegment: {
+    case replay::ReplayPacketType::NextSegment: {
       return true;
       // LOG("NextSegment");
       break;
     }
-    case ReplayPacketType::ECS: {
+    case replay::ReplayPacketType::ECS: {
       if (config.ecs_enabled())
         conn.onPacket(&pkt, pkt.timestamp_ms);
       break;
     }
-    case ReplayPacketType::Snapshot: break;
-    case ReplayPacketType::ReplayHeaderInfo: break;
+    case replay::ReplayPacketType::Snapshot: break;
+    case replay::ReplayPacketType::ReplayHeaderInfo: break;
   }
   return true;
 }

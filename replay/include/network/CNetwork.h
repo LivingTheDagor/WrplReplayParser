@@ -27,7 +27,7 @@ namespace net {
   public:
     CNetwork(ParserState *state);
 
-    void onPacket(ReplayPacket *pkt, int cur_time_ms);
+    void onPacket(replay::ReplayPacket *pkt, int cur_time_ms);
     void setPeer(ENetPeer *peer_) { this->peer = peer_; }
     void clearPeer() { this->peer = nullptr; }
 

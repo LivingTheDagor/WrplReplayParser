@@ -14,11 +14,11 @@ int main(int argc, char *argv[]) {
     LOGE("Invalid server replay: {}", rpl.lastError());
     return 1;
   }
-  ReplayPacket pkt;
+  replay::ReplayPacket pkt;
   auto rdr = rpl.getReplayReader();
   auto writer = replay::ReplayWriter<false>(rpl);
   while (rdr->getNextPacket(pkt)) {
-    if (pkt.type == ReplayPacketType::NextSegment)
+    if (pkt.type == replay::ReplayPacketType::NextSegment)
       continue;
     writer.write(pkt);
   }
