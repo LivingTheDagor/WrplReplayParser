@@ -85,7 +85,7 @@ if (PYTHON_VERSION_TO_USE)
     set(PythonLibs_FIND_VERSION ${PYTHON_VERSION_TO_USE})
 endif ()
 
-option(PARSER_ENABLE_TESTS "include tests in library" OFF) # currently no tests, is a TODO
+option(PARSER_ENABLE_TESTS "include tests in library" OFF)
 option(PARSER_ENABLE_PYTHON_BINDINGS "include python bindings in library" OFF)
 option(PARSER_ENABLE_INSPECTOR "include replay inspector in library" OFF)
 # curl and openSSL can be a PITA to set up, and its only used for downloading replays, so not really required

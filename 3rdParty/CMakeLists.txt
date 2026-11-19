@@ -43,3 +43,14 @@ if (PARSER_ENABLE_TESTS)
     add_subdirectory(catch2)
     add_subdirectory(doctest)
 endif ()
+
+add_subdirectory(lua)
+add_subdirectory(sol3)
+
+# this is done because daslang is very big and only needed for specific tooling usage.
+# if I end up integrating daslang into the parser, then it will be added.
+
+# if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/hidden")
+#     add_subdirectory(hidden)
+#     set(DASLANG_FOUND TRUE)
+# endif ()

@@ -291,12 +291,12 @@ namespace replay {
   struct _optionalZstd<true> {
     ZstdSaveCB writer;
 
-    explicit _optionalZstd(IGenSave &save) : writer(save, 9) {}
+    explicit _optionalZstd(IGenSave &save, uint32_t compression_level) : writer(save, compression_level) {}
   };
 
   template<>
   struct _optionalZstd<false> {
-    explicit _optionalZstd(IGenSave &save) {}
+    explicit _optionalZstd(IGenSave &save, uint32_t compression_level) {}
   };
 
   template<typename T>
@@ -346,11 +346,11 @@ namespace replay {
     }
   };
 
-  template<bool streamWrite>
+  template<bool streamWrite, uint32_t compression_level=10>
   class ReplayWriter {
 
     DynamicMemGeneralSaveCB base_cb;
-    _optionalZstd<streamWrite> zstd_cb{base_cb};
+    _optionalZstd<streamWrite> zstd_cb{base_cb, compression_level};
     uint32_t curr_time_ms = 0;
 
 
@@ -383,12 +383,15 @@ namespace replay {
     ReplayHeader header;
     DataBlock header_blk;
     DataBlock footer_blk;
+
     ReplayWriter(IReplay &rpl) {
       G_ASSERT(rpl.isValid());
       header = rpl.getHeader();
       header_blk = rpl.getHeaderBlk();
       footer_blk = rpl.getFooterBlk();
     }
+
+    ReplayWriter(std::unique_ptr<IReplay> &rpl) : ReplayWriter{*rpl} {}
     ~ReplayWriter() {
       if constexpr (streamWrite)
         zstd_cb.writer.finish();
