@@ -52,7 +52,10 @@ int main() {
   }
 #endif
   std::string logfile_str = (conf_dir / "logfile.txt").string();
-  initialize(bin_path_str, "", logfile_str);
+  InitOptions opts{};
+  opts.game_path = bin_path_str;
+  opts.logfile_path = logfile_str;
+  initialize(opts);
   g_log_handler->start_thread();
   // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
   std::unique_ptr<replay::IReplayReader> rdr = nullptr;

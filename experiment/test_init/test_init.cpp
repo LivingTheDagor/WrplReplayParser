@@ -44,7 +44,8 @@ int main() {
   std::string bin_path_str = bin_path;
 #endif
   G_UNUSED(bin_is_linux_path);
-  initialize(bin_path_str);
+  InitOptions opts{bin_path_str};
+  initialize(opts);
 
   ParserState state{};
   return 0;
