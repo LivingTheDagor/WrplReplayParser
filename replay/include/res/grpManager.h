@@ -13,7 +13,7 @@ struct GrpData;
 class FullFileLoadCB;
 class IGenLoad;
 struct GrpRef {
-  std::unique_ptr<GrpData> data;
+  GrpDataPtr data;
   fs::path path;
 
   GrpRef(IGenLoad &cb, fs::path p);

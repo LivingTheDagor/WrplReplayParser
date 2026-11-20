@@ -17,13 +17,12 @@ void GrpData::patchData() {
 
 char *GrpData::dumpBase() const { return ((char *) this) - sizeof(GrpHeader); }
 
-std::unique_ptr<GrpData> parseGrp(IGenLoad &crd) {
+GrpDataPtr parseGrp(IGenLoad &crd) {
   ZoneScoped;
   GrpHeader hdr{};
   crd.readInto(hdr);
   G_ASSERT(hdr.label == _MAKE4C('GRP2'));
-  std::unique_ptr<GrpData> data;
-  data = std::unique_ptr<GrpData>(static_cast<GrpData *>(malloc(hdr.fullDataSize)));
+  GrpDataPtr data = GrpDataPtr(static_cast<GrpData *>(stdmem->alloc(hdr.fullDataSize)));;
   crd.read(data.get(), (int) hdr.fullDataSize);
   data->patchDescOnly(hdr.label);
   data->patchData();

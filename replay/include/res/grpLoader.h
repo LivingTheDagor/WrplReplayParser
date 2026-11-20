@@ -37,11 +37,17 @@ struct GrpData {
   PatchableTab<ResEntry> resTable;
   PatchableTab<ResData> resData;
 
-  char *dumpBase() const;
+  [[nodiscard]] char *dumpBase() const;
   void patchDescOnly(uint32_t hdr_label);
   void patchData();
-  const char *getName(int idx) const { return nameMap[idx] != -1 ? dumpBase() + nameMap[idx] : NULL; }
+  const char *getName(int idx) const { return nameMap[idx] != -1 ? dumpBase() + nameMap[idx] : nullptr; }
 };
+
+struct GrpDataDeleter {
+  void operator()(GrpData *p) const noexcept { stdmem->free(p); }
+};
+
+using GrpDataPtr = std::unique_ptr<GrpData, GrpDataDeleter>;
 
 
 struct GrpHeader {
@@ -51,4 +57,4 @@ struct GrpHeader {
   uint32_t restFileSize;
 };
 
-std::unique_ptr<GrpData> parseGrp(IGenLoad &crd);
+GrpDataPtr parseGrp(IGenLoad &crd);

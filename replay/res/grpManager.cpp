@@ -117,8 +117,7 @@ bool grpManager::getTree(const std::string &name, GeomNodeTree &load_into) {
 GrpRef::GrpRef(IGenLoad &cb, fs::path p) : data(parseGrp(cb)), path(std::move(p)) {}
 FullFileLoadCB GrpRef::getCb() {
   ZoneScopedN("grpRef2::getCb");
-  FullFileLoadCB cb{path.string()};
-  return cb;
+  return FullFileLoadCB{path.string()};
 }
 std::span<uint8_t> DataRef::getLoadData() {
   ZoneScopedN("DataRef::getLoadData");
