@@ -61,7 +61,9 @@ void initialize(const InitOptions &options) {
   LOGI("init started");
   has_init = true;
   ZoneScoped;
-  translate::add_allowed_language(Languages::English);
+  for (const auto lang: options.allowed_languages) {
+    translate::add_allowed_language(lang);
+  }
   file_mgr.add_mount(options.game_path);
   std::future<void> grp_init;
   // VROMFs vfrs{"content/base/res/grp_hdr.vromfs.bin"};

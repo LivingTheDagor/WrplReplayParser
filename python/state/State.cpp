@@ -18,9 +18,8 @@ std::vector<Payload *> collect_all_payloads(ParserState &state);
 std::vector<Torpedo *> collect_all_torpedoes(ParserState &state);
 std::vector<Jettisoned *> collect_all_jettisoned(ParserState &state);
 
-void initialize_wrapper(const std::string &VromfsPath, const std::string &grp_path, const std::string &logfile_path,
-                        bool fonts = false, bool lang = true, bool mis = true) {
-  std::thread t(initialize, VromfsPath, grp_path, logfile_path, fonts, lang, mis);
+void initialize_wrapper(InitOptions &options) {
+  std::thread t(initialize, options);
   t.join();
 }
 
@@ -59,9 +58,41 @@ void PyReplayState::include(py::module_ &m) {
   bind_readonly_vector_no_contain<dag::Vector<ObjectRewindState<MissionZone *, false, true>>>(
     m, "MissionZoneHistoryList2");
 
-  m.def("initialize", &initialize_wrapper, py::arg("VromfsPath"), py::arg("grp_path") = "",
-        py::arg("logfile_path") = "", py::arg("fonts") = false, py::arg("lang") = true, py::arg("mis") = true,
-        "Initialize the ReplayParser with the given VromfsPath and logfile path.");
+  py::class_<GrpConfig>(m, "GrpConfig")
+    .def(py::init<>())
+    .def_readwrite("load_root", &GrpConfig::load_root)
+    .def_readwrite("load_aircrafts", &GrpConfig::load_aircrafts)
+    .def_readwrite("load_characters", &GrpConfig::load_characters)
+    .def_readwrite("load_equipment", &GrpConfig::load_equipment)
+    .def_readwrite("load_ships", &GrpConfig::load_ships)
+    .def_readwrite("load_tanks", &GrpConfig::load_tanks);
+
+  py::class_<InitOptions>(m, "InitOptions")
+    .def(
+      py::init<std::string>(), py::arg("game_path"),
+      "game_path is the path to the folder holding vromfs, this can usually just be the warthunder install directory")
+    .def_readwrite(
+      "game_path", &InitOptions::game_path,
+      "game_path is the path to the folder holding vromfs, this can usually just be the warthunder install directory")
+    .def_readwrite("grp_dir", &InitOptions::grp_dir,
+                   "grp_dir is the path to the folder holding grp_hdr.vromfs.bin. if not specified, it will assume the "
+                   "path is where it is in warthunder install")
+    .def_readwrite(
+      "load_grps", &InitOptions::load_grps,
+      "if true, will load the grp_hdr.vromfs.bin and parse the grp files. if false, will not load grp files")
+    .def_readwrite("grp_config", &InitOptions::grp_config,
+                   "grp_config is the configuration for which grp files to load. by default, only tanks are loaded")
+    .def_readwrite("logfile_path", &InitOptions::logfile_path,
+                   "logfile_path is the path to the logfile. if empty, will not log to file")
+    .def_readwrite("fonts", &InitOptions::fonts,
+                   "if true, will mount the ui/fonts.vromfs.bin. if false, will not load fonts")
+    .def_readwrite("lang", &InitOptions::lang, "if true, will mount the lang.vromfs.bin. if false, will not load lang")
+    .def_readwrite("mis", &InitOptions::mis, "if true, will mount the mis.vromfs.bin. if false, will not load mis")
+    .def_readwrite("allowed_languages", &InitOptions::allowed_languages,
+                   "allowed_languages is the list of allowed languages. if not set, then will load all languages");
+
+  m.def("initialize", &initialize_wrapper, py::arg("options"),
+        "Initialize the ReplayParser with the given InitOptions. game_path is required");
   m.def("g_log_flush", []() {
     g_log_handler->wait_until_empty();
     g_log_handler->flush_all();
@@ -181,7 +212,7 @@ void PyReplayState::include(py::module_ &m) {
     .def_readonly("shots", &ParserState::ShotEvents, "0xF0B1 single shot, 0xF01B / 0xF01C trigger down and up")
     .def(
       "LoadFromReader",
-      [](ParserState &state, replay::IReplayReader &rdr, const std::function<void(ReplayPacket *)> &func) {
+      [](ParserState &state, replay::IReplayReader &rdr, const std::function<void(replay::ReplayPacket *)> &func) {
         // the temporary exists for the entire call of this function, unlike __iter__
         // auto rdr = py_reader.cast<IReplayReader*>();
         py::gil_scoped_release release;
@@ -190,7 +221,7 @@ void PyReplayState::include(py::module_ &m) {
           // this is done purely so python signal handler doesn't come into play and so my signal handler dumps
           // stacktrace although, this does make exception handling more complicated (python cant handle exceptions
           // thrown from another thread
-          ReplayPacket pkt{};
+          replay::ReplayPacket pkt{};
           bool cont = true;
           if (func) {
             py::gil_scoped_acquire gil;

@@ -17,6 +17,8 @@ struct InitOptions {
   bool fonts = false;
   bool lang = true;
   bool mis = true;
+  // if any entries, then only these languages will be loaded. if empty, all languages will be loaded
+  std::vector<Languages> allowed_languages{};
 };
 
 void initialize(const InitOptions &options);
