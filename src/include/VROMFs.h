@@ -117,9 +117,6 @@ class VROMFs {
 public:
   explicit VROMFs(const std::string &fName);
 
-  // construct a vromfs with no data, has param to prevent being a default constructor
-  explicit VROMFs(bool dummy);
-
   bool parseFileToDatablock(File &file, DataBlock &blk) {
     // auto data = file.readRaw();
     if (file.getExtension() != ".blk") {

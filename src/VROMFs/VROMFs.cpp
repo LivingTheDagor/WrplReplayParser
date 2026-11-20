@@ -45,11 +45,6 @@ VROMFs::VROMFs(const std::string &fName) : fileName(fName), dir(fileName) {
 
   parse_raw_vromfs_data(f2);
 }
-VROMFs::VROMFs(bool dummy) : dir(Directory("vromfs")) {
-  ZoneScoped;
-  raw_data = std::make_shared<std::vector<char>>(0);
-  size = 0;
-}
 
 bool VROMFs::load_raw_vromfs_data(IGenLoad &reader) {
   ZoneScoped;

@@ -9,19 +9,6 @@
 
 namespace fs = std::filesystem;
 
-/*struct grpRef {
-  GrpData *grp;
-  FullFileLoadCB cb;
-  grpRef(const fs::path &name) : grp(nullptr), cb{name.string()} {
-    ZoneScopedN("grpRef::grpRef");
-    grp = parseGrp(cb);
-  }
-  ~grpRef() {
-    ZoneScopedN("grpRef::~grpRef");
-    free(grp);
-  }
-};*/
-
 bool doesItemApply(std::string_view item) {
   ZoneScoped;
   // The visual skeleton, which carries the turret nodes, and the damage one, whose
@@ -55,7 +42,6 @@ void grpManager::load_files_from_dir(const fs::path &root, const Directory &dir)
       auto file = index->getFile(index);
       std::string_view name_only{f.first.c_str(), f.first.size() - strlen(".grpcache.bin")};
       LFileGeneralLoadCB cb{file.get()};
-      // auto grp_data = GrpRef{cb, root / fmt::format("{}.grp", name_only)};
       auto &grp_data = this->data.getNext(cb, root / fmt::format("{}.grp", name_only));
       G_ASSERT(fs::exists(grp_data.path));
       auto grp = grp_data.data.get();
@@ -71,13 +57,6 @@ void grpManager::load_files_from_dir(const fs::path &root, const Directory &dir)
         G_ASSERT(entry.classId == GeomNodeTreeGameResClassId);
         auto &ref = this->refs.getNext(&grp_data, rd);
         this->res_map[name] = &ref;
-        // size_t item_size = getEntrySize(grp, rd, grp_data.cb.fileHandle->length());
-        // void *ptr = malloc(item_size);
-        // grp_data.cb.seekto(entry.offset);
-        // grp_data.cb.read(ptr, (int) item_size);
-        // this->data.push_back(ptr);
-        // this->res_map[name] = {this->data.size() - 1, item_size, entry.classId};
-        //  LOGI("loaded skeleton: {} from grp: {}", name, file.string());
       }
     }
   }
@@ -120,34 +99,6 @@ void grpManager::initialize(const fs::path &fs_path, const GrpConfig &config) {
     if (tanks_dir)
       load_files_from_dir(fs_path / "tanks", *tanks_dir);
   }
-  /*for (const auto &fs_entry: fs::directory_iterator(fs_path)) {
-    ZoneScopedN("grpManager::initialize::parse_fs_entry");
-    if (fs_entry.is_regular_file()) {
-      const fs::path &file = fs_entry.path();
-      if (file.extension() == ".grp") {
-        auto &grp_data = this->data.getNext(cb, file);
-        auto grp = grp_data.grp;
-        const ResData *rd = grp->resData.data(), *rd_end = rd + grp->resData.size();
-        for (; rd != rd_end; rd++) {
-          auto name = grp->getName(rd->resId);
-          if (!doesItemApply(name))
-            continue;
-          auto &entry = grp->resTable[rd->resId];
-          G_ASSERT(entry.classId == rd->classId);
-          // for now, we are only parsing this, so lets make sure of that
-          // our previous 'doesItemApply' should make this not happen anyways
-          G_ASSERT(entry.classId == GeomNodeTreeGameResClassId);
-          size_t item_size = getEntrySize(grp, rd, grp_data.cb.fileHandle->length());
-          void *ptr = malloc(item_size);
-          grp_data.cb.seekto(entry.offset);
-          grp_data.cb.read(ptr, (int) item_size);
-          this->data.push_back(ptr);
-          this->res_map[name] = {this->data.size() - 1, item_size, entry.classId};
-          // LOGI("loaded skeleton: {} from grp: {}", name, file.string());
-        }
-      }
-    }
-  }*/
 }
 grpManager::~grpManager() {}
 bool grpManager::getTree(const std::string &name, GeomNodeTree &load_into) {
@@ -157,7 +108,7 @@ bool grpManager::getTree(const std::string &name, GeomNodeTree &load_into) {
     return false;
   }
   auto data_ = entry->second->getLoadData();
-  // G_ASSERT(entry->second.class_id == GeomNodeTreeGameResClassId);
+  G_ASSERT(entry->second->res->classId == GeomNodeTreeGameResClassId);
   MemGeneralLoadCB cb{data_.data(), static_cast<int>(data_.size())};
   load_into.load(cb);
   return true;
@@ -181,17 +132,17 @@ std::span<uint8_t> DataRef::getLoadData() {
 
       auto size = cb.fileHandle->length();
       auto grp = parent->data.get();
-      auto &entry = grp->resTable[res_id->resId];
-      G_ASSERT(entry.classId == res_id->classId);
+      auto &entry = grp->resTable[res->resId];
+      G_ASSERT(entry.classId == res->classId);
       // for now, we are only parsing this, so lets make sure of that
       // our previous 'doesItemApply' should make this not happen anyways
       G_ASSERT(entry.classId == GeomNodeTreeGameResClassId);
-      size_t item_size = getEntrySize(grp, res_id, size);
+      size_t item_size = getEntrySize(grp, res, size);
       cb.seekto(entry.offset);
       raw_data = std::make_unique<uint8_t[]>(item_size);
       cb.read(raw_data.get(), (int) item_size);
       data_len.store(item_size, std::memory_order_release);
-      return {raw_data.get(), (size_t) item_size};
+      return {raw_data.get(), item_size};
     }
   }
   return {raw_data.get(), (size_t) len};

@@ -26,8 +26,8 @@ struct DataRef {
   std::atomic<int64_t> data_len = -1; // -1 means not loaded
   std::mutex write_lock;
   GrpRef *parent;
-  const ResData *res_id;
-  DataRef(GrpRef *parent_, const ResData *res_id_) : parent(parent_), res_id(res_id_) {}
+  const ResData *res;
+  DataRef(GrpRef *parent_, const ResData *res_id_) : parent(parent_), res(res_id_) {}
   std::span<uint8_t> getLoadData();
 };
 
