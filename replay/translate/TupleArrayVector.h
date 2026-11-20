@@ -1,19 +1,24 @@
 #pragma once
 #include "array"
 #include "vector"
+#include "memory/dag_memBase.h"
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <new>
 #include <utility>
 
 template<typename T, std::size_t count, T default_value>
 class TupleArrayVector {
-  std::array<T *, count> ptrArray; // an array of pointers to each sub array
+  std::array<T *, count> ptrArray{}; // an array of pointers to each sub array
   // these elements are only used purely for resize ops, which for my current use case won't occur often
   uint32_t Count{}; // sub array length in element count
   uint32_t Capacity{}; // sub array capacity in element count
   T *data = nullptr;
 
+  static T *allocateData(size_t elementCount);
+  static void deallocateData(T *ptr, size_t elementCount) noexcept;
   void calculatePtrArray(T *ptr, uint32_t capacity);
 
   /// handles resize operation
@@ -57,16 +62,50 @@ public:
 
 template<typename T, std::size_t count, T default_value>
 void TupleArrayVector<T, count, default_value>::calculatePtrArray(T *ptr, uint32_t capacity) {
+  if (!ptr) {
+    ptrArray.fill(nullptr);
+    return;
+  }
   for (size_t i = 0; i < count; i++) {
     ptrArray[i] = ptr + (i * capacity);
   }
 }
 
 template<typename T, std::size_t count, T default_value>
+T *TupleArrayVector<T, count, default_value>::allocateData(size_t elementCount) {
+  if (elementCount == 0)
+    return nullptr;
+
+  const size_t bytes = elementCount * sizeof(T);
+  void *storage =
+    alignof(T) > alignof(std::max_align_t) ? midmem->allocAligned(bytes, alignof(T)) : midmem->alloc(bytes);
+
+  T *elements = static_cast<T *>(storage);
+  size_t constructed = 0;
+  for (; constructed < elementCount; ++constructed)
+    ::new (static_cast<void *>(elements + constructed)) T;
+
+  return elements;
+}
+
+template<typename T, std::size_t count, T default_value>
+void TupleArrayVector<T, count, default_value>::deallocateData(T *ptr, size_t elementCount) noexcept {
+  if (!ptr)
+    return;
+
+  for (size_t i = elementCount; i > 0; --i)
+    ptr[i - 1].~T();
+  if (alignof(T) > alignof(std::max_align_t))
+    midmem->freeAligned(ptr);
+  else
+    midmem->free(ptr);
+}
+
+template<typename T, std::size_t count, T default_value>
 void TupleArrayVector<T, count, default_value>::allocateAndMove(uint32_t newCapacity) {
   if (newCapacity == Capacity)
     return;
-  T *newData = new T[newCapacity * count];
+  T *newData = allocateData(static_cast<size_t>(newCapacity) * count);
   std::array<T *, count> oldPtrArray = ptrArray;
   calculatePtrArray(newData, newCapacity);
 
@@ -93,7 +132,7 @@ void TupleArrayVector<T, count, default_value>::allocateAndMove(uint32_t newCapa
     }
   }
 
-  delete[] data;
+  deallocateData(data, static_cast<size_t>(Capacity) * count);
   data = newData;
   Capacity = newCapacity;
 }
@@ -156,7 +195,7 @@ TupleArrayVector<T, count, default_value>::TupleArrayVector(size_t start_element
 }
 template<typename T, std::size_t count, T default_value>
 TupleArrayVector<T, count, default_value>::~TupleArrayVector() {
-  delete[] data;
+  deallocateData(data, static_cast<size_t>(Capacity) * count);
   data = nullptr;
   Count = 0;
   Capacity = 0;
@@ -175,7 +214,7 @@ template<typename T, std::size_t count, T default_value>
 TupleArrayVector<T, count, default_value> &
 TupleArrayVector<T, count, default_value>::operator=(TupleArrayVector &&other) noexcept {
   if (this != &other) {
-    delete[] data;
+    deallocateData(data, static_cast<size_t>(Capacity) * count);
 
     ptrArray = other.ptrArray;
     Count = other.Count;

@@ -117,8 +117,6 @@ class VROMFs {
 public:
   explicit VROMFs(const std::string &fName);
 
-  explicit VROMFs(const std::string &fName, std::shared_ptr<Directory> &dir);
-
   bool parseFileToDatablock(File &file, DataBlock &blk) {
     // auto data = file.readRaw();
     if (file.getExtension() != ".blk") {

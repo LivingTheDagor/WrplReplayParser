@@ -38,8 +38,8 @@ int64_t VromfsFile::read_impl(void *ptr, size_t length) {
 
 VROMFs::VROMFs(const std::string &fName) : fileName(fName), dir(fileName) {
   ZoneScoped;
-  FullFileLoadCB f{fName.c_str()};
-  if (!load_raw_vromfs_data(f))
+  FullFileLoadCB f{fName};
+  if (!f.fileHandle || !load_raw_vromfs_data(f))
     return;
   InPlaceMemLoadCB f2(raw_data->data(), (int) size);
 

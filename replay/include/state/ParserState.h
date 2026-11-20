@@ -199,7 +199,7 @@ protected:
   void registerStateChange(IObjectRewindState *state);
 #endif
 
-  void beforePacket(ReplayPacket &pkt);
+  void beforePacket(replay::ReplayPacket &pkt);
   void setUnitData(uint16_t uid, unit::Unit *unit, ecs::EntityId eid);
   void recordTeamSpawnSide(int team, const std::string &mission_name);
   std::vector<mpi::MpiQueueObject::QueueData> *get_queued_data(ecs::EntityId eid) {
@@ -210,7 +210,7 @@ protected:
   }
 
 public:
-  bool ParsePacket(ReplayPacket &pkt);
+  bool ParsePacket(replay::ReplayPacket &pkt);
   struct RewindRef {
     IObjectRewindState
       *state; // this assumes the memory location of ANY rewindable object will never be changed after registration

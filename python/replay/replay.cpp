@@ -5,11 +5,11 @@
 #include "memory.h"
 #include "modules/bytes_to_span.h"
 struct IReplayReaderIterInto {
-  ReplayPacket *into;
+  replay::ReplayPacket *into;
   py::object py_reader_ref; // done to keep a py ref so tempory py object doesnt go out of scope during iteration
   replay::IReplayReader *rdr;
 
-  IReplayReaderIterInto(py::object py_reader, ReplayPacket *pkt) :
+  IReplayReaderIterInto(py::object py_reader, replay::ReplayPacket *pkt) :
     into(pkt), py_reader_ref(std::move(py_reader)), rdr(py_reader_ref.cast<replay::IReplayReader *>()) {}
 };
 
@@ -32,9 +32,9 @@ auto build_replay_writer(py::module_ &m, const std::string &name) {
       "footerBlk", [](replay::ReplayWriter<streaming> &self) { return DataBlockRW(&self.footer_blk); },
       [](replay::ReplayWriter<streaming> &self, const DataBlockRW &blk) { self.footer_blk = *blk.ptr(); },
       py::return_value_policy::reference_internal)
-    .def("write", [](replay::ReplayWriter<streaming> &self, const ReplayPacket &pkt) { self.write(pkt); })
+    .def("write", [](replay::ReplayWriter<streaming> &self, const replay::ReplayPacket &pkt) { self.write(pkt); })
     .def("write",
-         [](replay::ReplayWriter<streaming> &self, const py::bytes &data, uint32_t time_ms, ReplayPacketType type) {
+         [](replay::ReplayWriter<streaming> &self, const py::bytes &data, uint32_t time_ms, replay::ReplayPacketType type) {
            auto spn = bytes_to_span(data);
            self.write(spn.data(), spn.size(), time_ms, type);
          })
@@ -60,73 +60,73 @@ void PyReplay::include(py::module_ &m) {
   py_bitstream.include(m);
   py::module_ sub = m.def_submodule("replay", "exposes various replay file loading and manipulating apis");
 
-  py::enum_<ReplayPacketType>(sub, "ReplayPacketTypes")
-    .value("EndMarker", ReplayPacketType::EndMarker)
-    .value("StartMarker", ReplayPacketType::StartMarker)
-    .value("Aircraft", ReplayPacketType::AircraftSmall)
-    .value("Chat", ReplayPacketType::Chat)
-    .value("Mpi", ReplayPacketType::MPI)
-    .value("NextSegment", ReplayPacketType::NextSegment)
-    .value("ECS", ReplayPacketType::ECS)
-    .value("Snapshot", ReplayPacketType::Snapshot)
-    .value("ReplayHeaderInfo", ReplayPacketType::ReplayHeaderInfo);
+  py::enum_<replay::ReplayPacketType>(sub, "ReplayPacketTypes")
+    .value("EndMarker", replay::ReplayPacketType::EndMarker)
+    .value("StartMarker", replay::ReplayPacketType::StartMarker)
+    .value("Aircraft", replay::ReplayPacketType::AircraftSmall)
+    .value("Chat", replay::ReplayPacketType::Chat)
+    .value("Mpi", replay::ReplayPacketType::MPI)
+    .value("NextSegment", replay::ReplayPacketType::NextSegment)
+    .value("ECS", replay::ReplayPacketType::ECS)
+    .value("Snapshot", replay::ReplayPacketType::Snapshot)
+    .value("ReplayHeaderInfo", replay::ReplayPacketType::ReplayHeaderInfo);
 
-  py::class_<ReplayPacket>(sub, "ReplayPacket")
+  py::class_<replay::ReplayPacket>(sub, "ReplayPacket")
     .def(py::init<>())
-    .def_readonly("type", &ReplayPacket::type)
-    .def_readonly("data", &ReplayPacket::stream)
-    .def_readonly("time_ms", &ReplayPacket::timestamp_ms);
+    .def_readonly("type", &replay::ReplayPacket::type)
+    .def_readonly("data", &replay::ReplayPacket::stream)
+    .def_readonly("time_ms", &replay::ReplayPacket::timestamp_ms);
 
-  py::class_<ReplayHeader>(sub, "ReplayHeader")
-    .def_readonly("header", &ReplayHeader::header)
-    .def_readonly("magic", &ReplayHeader::magic)
+  py::class_<replay::ReplayHeader>(sub, "ReplayHeader")
+    .def_readonly("header", &replay::ReplayHeader::header)
+    .def_readonly("magic", &replay::ReplayHeader::magic)
     .def_property(
-      "level_path", [](const ReplayHeader &header) { return getStr(header.level_path); },
-      [](ReplayHeader &header, const std::string_view val) { writeInto(val, header.level_path); })
+      "level_path", [](const replay::ReplayHeader &header) { return getStr(header.level_path); },
+      [](replay::ReplayHeader &header, const std::string_view val) { writeInto(val, header.level_path); })
     .def_property(
-      "mission_file", [](const ReplayHeader &header) { return getStr(header.mission_file); },
-      [](ReplayHeader &header, const std::string_view val) { writeInto(val, header.mission_file); })
+      "mission_file", [](const replay::ReplayHeader &header) { return getStr(header.mission_file); },
+      [](replay::ReplayHeader &header, const std::string_view val) { writeInto(val, header.mission_file); })
     .def_property(
-      "mission_name", [](const ReplayHeader &header) { return getStr(header.mission_name); },
-      [](ReplayHeader &header, const std::string_view val) { writeInto(val, header.mission_name); })
+      "mission_name", [](const replay::ReplayHeader &header) { return getStr(header.mission_name); },
+      [](replay::ReplayHeader &header, const std::string_view val) { writeInto(val, header.mission_name); })
     .def_property(
-      "environment", [](const ReplayHeader &header) { return getStr(header.environment); },
-      [](ReplayHeader &header, const std::string_view val) { writeInto(val, header.environment); })
+      "environment", [](const replay::ReplayHeader &header) { return getStr(header.environment); },
+      [](replay::ReplayHeader &header, const std::string_view val) { writeInto(val, header.environment); })
     .def_property(
-      "weather", [](const ReplayHeader &header) { return getStr(header.weather); },
-      [](ReplayHeader &header, const std::string_view val) { writeInto(val, header.weather); })
-    .def_readonly("footer_blk_offset", &ReplayHeader::footer_blk_offset)
-    .def_readwrite("difficulty_part_1", &ReplayHeader::difficulty_part_1)
-    .def_readwrite("difficulty_part_2", &ReplayHeader::difficulty_part_2)
-    .def_readwrite("SessionType", &ReplayHeader::SessionType)
-    .def_readwrite("player_count", &ReplayHeader::player_count)
-    .def_readwrite("session_id", &ReplayHeader::session_id)
-    .def_readwrite("replay_part_number", &ReplayHeader::replay_part_number)
-    .def_readwrite("unk1", &ReplayHeader::unk1)
-    .def_readwrite("segmentLengthSec", &ReplayHeader::segmentLengthSec)
-    .def_readwrite("skiesInitialRandomSeed", &ReplayHeader::skiesInitialRandomSeed)
-    .def_readonly("settings_blk_size", &ReplayHeader::settings_blk_size)
-    .def_readwrite("isWorldWar", &ReplayHeader::isWorldWar)
-    .def_readwrite("start_time", &ReplayHeader::start_time)
-    .def_readwrite("time_limit", &ReplayHeader::time_limit)
-    .def_readwrite("score_limit", &ReplayHeader::score_limit)
-    .def_readwrite("killLimit", &ReplayHeader::killLimit)
-    .def_readwrite("gameType", &ReplayHeader::gameType)
-    .def_readwrite("restoreType", &ReplayHeader::restoreType)
-    .def_readwrite("playerNo", &ReplayHeader::playerNo)
-    .def_readwrite("numAttempts", &ReplayHeader::numAttempts)
-    .def_readwrite("isAttempts", &ReplayHeader::isAttempts)
-    .def_readwrite("isLimitedAmmo", &ReplayHeader::isLimitedAmmo)
-    .def_readwrite("isLimitedFuel", &ReplayHeader::isLimitedFuel)
-    .def_readwrite("gameMode", &ReplayHeader::gameMode)
+      "weather", [](const replay::ReplayHeader &header) { return getStr(header.weather); },
+      [](replay::ReplayHeader &header, const std::string_view val) { writeInto(val, header.weather); })
+    .def_readonly("footer_blk_offset", &replay::ReplayHeader::footer_blk_offset)
+    .def_readwrite("difficulty_part_1", &replay::ReplayHeader::difficulty_part_1)
+    .def_readwrite("difficulty_part_2", &replay::ReplayHeader::difficulty_part_2)
+    .def_readwrite("SessionType", &replay::ReplayHeader::SessionType)
+    .def_readwrite("player_count", &replay::ReplayHeader::player_count)
+    .def_readwrite("session_id", &replay::ReplayHeader::session_id)
+    .def_readwrite("replay_part_number", &replay::ReplayHeader::replay_part_number)
+    .def_readwrite("unk1", &replay::ReplayHeader::unk1)
+    .def_readwrite("segmentLengthSec", &replay::ReplayHeader::segmentLengthSec)
+    .def_readwrite("skiesInitialRandomSeed", &replay::ReplayHeader::skiesInitialRandomSeed)
+    .def_readonly("settings_blk_size", &replay::ReplayHeader::settings_blk_size)
+    .def_readwrite("isWorldWar", &replay::ReplayHeader::isWorldWar)
+    .def_readwrite("start_time", &replay::ReplayHeader::start_time)
+    .def_readwrite("time_limit", &replay::ReplayHeader::time_limit)
+    .def_readwrite("score_limit", &replay::ReplayHeader::score_limit)
+    .def_readwrite("killLimit", &replay::ReplayHeader::killLimit)
+    .def_readwrite("gameType", &replay::ReplayHeader::gameType)
+    .def_readwrite("restoreType", &replay::ReplayHeader::restoreType)
+    .def_readwrite("playerNo", &replay::ReplayHeader::playerNo)
+    .def_readwrite("numAttempts", &replay::ReplayHeader::numAttempts)
+    .def_readwrite("isAttempts", &replay::ReplayHeader::isAttempts)
+    .def_readwrite("isLimitedAmmo", &replay::ReplayHeader::isLimitedAmmo)
+    .def_readwrite("isLimitedFuel", &replay::ReplayHeader::isLimitedFuel)
+    .def_readwrite("gameMode", &replay::ReplayHeader::gameMode)
     .def_property(
-      "chapterName", [](const ReplayHeader &header) { return getStr(header.chapterName); },
-      [](ReplayHeader &header, const std::string_view val) { writeInto(val, header.chapterName); })
+      "chapterName", [](const replay::ReplayHeader &header) { return getStr(header.chapterName); },
+      [](replay::ReplayHeader &header, const std::string_view val) { writeInto(val, header.chapterName); })
     .def_property(
-      "battle_kill_streak", [](const ReplayHeader &header) { return getStr(header.battle_kill_streak); },
-      [](ReplayHeader &header, const std::string_view val) { writeInto(val, header.battle_kill_streak); })
-    .def_readwrite("snapshotPeriodSec", &ReplayHeader::snapshotPeriodSec)
-    .def_readwrite("gameVersion", &ReplayHeader::gameVersion);
+      "battle_kill_streak", [](const replay::ReplayHeader &header) { return getStr(header.battle_kill_streak); },
+      [](replay::ReplayHeader &header, const std::string_view val) { writeInto(val, header.battle_kill_streak); })
+    .def_readwrite("snapshotPeriodSec", &replay::ReplayHeader::snapshotPeriodSec)
+    .def_readwrite("gameVersion", &replay::ReplayHeader::gameVersion);
 
   py::class_<IReplayReaderIterInto>(sub, "IReplayReaderIterInto")
     .def("__iter__", [](IReplayReaderIterInto &rdr) { return rdr; })
@@ -141,11 +141,11 @@ void PyReplay::include(py::module_ &m) {
     .def("getNextPacket", &replay::IReplayReader::getNextPacket)
     .def(
       "iterInto",
-      [](const py::object &rdr, ReplayPacket &pkt) { return std::make_unique<IReplayReaderIterInto>(rdr, &pkt); },
+      [](const py::object &rdr, replay::ReplayPacket &pkt) { return std::make_unique<IReplayReaderIterInto>(rdr, &pkt); },
       py::keep_alive<0, 2>())
     .def("__iter__", [](replay::IReplayReader &rdr) -> replay::IReplayReader & { return rdr; })
     .def("__next__", [](replay::IReplayReader &rdr) {
-      auto pkt = std::make_unique<ReplayPacket>();
+      auto pkt = std::make_unique<replay::ReplayPacket>();
       if (rdr.getNextPacket(*pkt.get()))
         return pkt;
       pkt.reset();

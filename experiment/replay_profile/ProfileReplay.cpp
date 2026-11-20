@@ -65,29 +65,33 @@ int main() {
   }
 #endif
   std::string logfile_str = (conf_dir / "logfile.txt").string();
-  initialize(bin_path_str, "", logfile_str);
+  InitOptions options{};
+  options.game_path = bin_path_str;
+  options.logfile_path = logfile_str;
+  initialize(options);
   // g_log_handler.start_thread();
   // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
-  std::unique_ptr<replay::IReplayReader> rdr = nullptr;
-  replay::IReplay *rpl = nullptr;
+  std::unique_ptr<replay::IReplay> rpl = nullptr;
   double timer_sum = 0.0;
   {
     ZoneScopedN("Replay Load");
     if (is_server_replay) {
-      rpl = new replay::ServerReplay(rpl_path_str);
+      rpl = std::make_unique<replay::ServerReplay>(rpl_path_str);
     } else {
-      rpl = new replay::Replay(rpl_path_str);
+      rpl = std::make_unique<replay::Replay>(rpl_path_str);
     }
   }
   int timer_count = 25;
+  std::unique_ptr<replay::IReplayReader> rdr = nullptr;
   for (int i = 0; i < timer_count; i++) {
     auto start = std::chrono::high_resolution_clock::now();
     ZoneScopedN("loop") { ZoneScopedN("GetReader") rdr = rpl->getReplayReader(); }
 
     {
-      ZoneScopedN("Parsing Overall") ReplayPacket pkt{};
+      ZoneScopedN("Parsing Overall");
+      replay::ReplayPacket pkt{};
       ParserState *state_ptr = nullptr;
-      { ZoneScopedN("ParseState::ParserState") state_ptr = new ParserState{rpl}; }
+      { ZoneScopedN("ParseState::ParserState") state_ptr = new ParserState{rpl.get()}; }
       ParserState &state = *state_ptr;
       // std::exit(0);
       {
@@ -120,7 +124,6 @@ int main() {
 
   std::cout << "Average time: " << (timer_sum / (double) (timer_count)) << std::endl;
 
-  delete rpl;
 
   // auto ptr = &mpi::players;
   // for(auto &data : mpi::mpi_data)
@@ -138,5 +141,6 @@ int main() {
   // ecs::g_entity_mgr->debugPrintEntities();
   // rpl.HeaderBlk.printBlock(0, std::cout);
   // ecs::g_entity_mgr->getTemplateDB()->DebugPrint();
+  rdr.reset();
   return 0;
 }

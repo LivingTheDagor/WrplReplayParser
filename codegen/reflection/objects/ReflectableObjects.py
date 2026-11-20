@@ -169,10 +169,10 @@ class BaseExtReflectable(ReflectableObject):
     lastContactTime = Var("float", 31)
     lastContactTimeRel = Var("float", 14)
     allowBailout = Var("bool", 43)
-    repairAssistee = Var("uint16_t", 15)  # actually a uid
-    repairAssistant = Var("uint16_t", 16)
-    extinguishAssistee = Var("uint16_t", 45)
-    extinguishAssistant = Var("uint16_t", 46)
+    repairAssistee = Var("ecs::EntityId", 15)  # actually a uid
+    repairAssistant = Var("ecs::EntityId", 16)
+    extinguishAssistee = Var("ecs::EntityId", 45)
+    extinguishAssistant = Var("ecs::EntityId", 46)
     invulnerable = Var("bool", 17)
     enableGunners = Var("uint8_t", 18)
     enableCiwsGunners = Var("uint8_t", 64)

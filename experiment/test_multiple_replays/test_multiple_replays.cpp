@@ -52,11 +52,13 @@ int main() {
   }
 #endif
   std::string logfile_str = (conf_dir / "logfile.txt").string();
-  initialize(bin_path_str, "", logfile_str);
+  InitOptions opts{};
+  opts.game_path = bin_path_str;
+  opts.logfile_path = logfile_str;
+  initialize(opts);
   g_log_handler->start_thread();
   // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
-  IReplayReader *rdr = nullptr;
-  IReplay *rpl = nullptr;
+  std::unique_ptr<replay::IReplayReader> rdr = nullptr;
   std::string repl_1 = R"(D:\SteamLibrary\steamapps\common\War Thunder\Replays\#2026.05.09 03.04.41.wrpl)";
   std::string repl_2 = R"(D:\SteamLibrary\steamapps\common\War Thunder\Replays\#2026.05.09 11.16.58.wrpl)";
 #ifdef _TARGET_PC_LINUX
@@ -64,14 +66,12 @@ int main() {
   repl_2 = convert_os_path_to_wsl2(repl_2);
 #endif
 
-  Replay rpl1{repl_1};
+  replay::Replay rpl1{repl_1};
   rdr = rpl1.getReplayReader();
-  delete rdr;
 
 
-  Replay rpl2{repl_2};
+  replay::Replay rpl2{repl_2};
   rdr = rpl1.getReplayReader();
-  ReplayPacket pkt{};
-  delete rdr;
+  replay::ReplayPacket pkt{};
   return 0;
 }

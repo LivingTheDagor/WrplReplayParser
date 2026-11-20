@@ -68,7 +68,7 @@ void thread_replay(std::string &path, int thread_count, bool is_server_replay) {
 
     ParserState &state = *state_ptr;
 
-    auto pkt = ReplayPacket();
+    replay::ReplayPacket pkt{};
     {
       ZoneScopedN("Parsing");
       while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}
@@ -112,7 +112,10 @@ int main() {
   }
 #endif
   std::string logfile_str = (conf_dir / "logfile.txt").string();
-  initialize(bin_path_str, "", logfile_str);
+  InitOptions options{};
+  options.game_path = bin_path_str;
+  options.logfile_path = logfile_str;
+  initialize(options);
   // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
   constexpr int num_threads = 10;
   // checkMemory();

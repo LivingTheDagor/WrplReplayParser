@@ -720,7 +720,7 @@ public:
 
   virtual void loadReplay() {
     ZoneScoped auto rdr = replay->getReplayReader();
-    ReplayPacket p{};
+    replay::ReplayPacket p{};
     while (rdr->getNextPacket(p) && this->state.ParsePacket(p))
       ;
     this->replay_length_ms = p.timestamp_ms;

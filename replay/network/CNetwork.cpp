@@ -34,7 +34,7 @@ namespace net {
     return true;
   }
 
-  void CNetwork::onPacket(ReplayPacket *pkt, int cur_time_ms) {
+  void CNetwork::onPacket(replay::ReplayPacket *pkt, int cur_time_ms) {
     ZoneScopedN("CNetwork::onPacket");
     danet::BitStream &bs = pkt->stream;
     auto bsTemp = danet::BitStream();

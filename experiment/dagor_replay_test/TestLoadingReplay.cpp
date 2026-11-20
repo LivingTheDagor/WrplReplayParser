@@ -117,7 +117,10 @@ int main() {
   }
 #endif
   std::string logfile_str = (conf_dir / "logfile.txt").string();
-  initialize(bin_path_str, "", logfile_str);
+  InitOptions options{};
+  options.game_path = bin_path_str;
+  options.logfile_path = logfile_str;
+  initialize(options);
   // auto t = ecs::g_ecs_data->getTemplateDB()->getTemplate("attachable_wear_fast_sf_helmet_item");
   std::unique_ptr<replay::IReplay> rpl = nullptr;
 
@@ -132,8 +135,8 @@ int main() {
   {
     std::unique_ptr<replay::IReplayReader> rdr = rpl->getReplayReader();
     ParserState state{rpl.get()};
-    state.getConfig().GMOpts.load_tanks = false;
-    ReplayPacket pkt{};
+    // state.getConfig().GMOpts.load_tanks = false;
+    replay::ReplayPacket pkt{};
     // std::exit(0);
 
     while (rdr->getNextPacket(pkt) && state.ParsePacket(pkt)) {}

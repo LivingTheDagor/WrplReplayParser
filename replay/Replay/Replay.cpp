@@ -7,11 +7,12 @@
 #include "zstd.h"
 #include "zstd_errors.h"
 
-std::string packet_names[]{"End", "Start", "Aircraft", "Chat", "MPI", "NextSegment", "ECS", "Snapshot", "ECS_Msg_Sync"};
 
 namespace fs = std::filesystem;
 
 namespace replay {
+  std::string packet_names[]{"End",         "Start", "Aircraft", "Chat",        "MPI",
+                             "NextSegment", "ECS",   "Snapshot", "ECS_Msg_Sync"};
   ReplayHeader IReplay::invalid_header{};
   DataBlock IReplay::invalid_blk{};
 
@@ -348,8 +349,8 @@ namespace replay {
     auto &cb = getWriter();
     cb.write(tmp_data.data(), tmp_cb.tell());
   }*/
-  template<bool streamWrite>
-  void ReplayWriter<streamWrite>::write(const ReplayPacket &pkt) {
+  template<bool streamWrite, uint32_t compression_level>
+  void ReplayWriter<streamWrite, compression_level>::write(const ReplayPacket &pkt) {
     ZoneScopedN("ReplayWriter::write");
     struct __attribute__((packed)) {
       uint16_t packet_type;
@@ -371,22 +372,25 @@ namespace replay {
     curr_time_ms = pkt.timestamp_ms;
   }
 
-  template<bool streamWrite>
-  std::span<uint8_t> ReplayWriter<streamWrite>::getCompressedData(std::vector<uint8_t> &storage) {
+  template<bool streamWrite, uint32_t compression_level>
+  std::span<uint8_t> ReplayWriter<streamWrite, compression_level>::getCompressedData(std::vector<uint8_t> &storage) {
+    ZoneScopedN("ReplayWriter::getCompressedData");
     if constexpr (streamWrite) {
       zstd_cb.writer.finish();
       return std::span<uint8_t>{(uint8_t *) base_cb.data(), (size_t) base_cb.tell()};
     } else {
       storage.resize(zstd_compress_bound(base_cb.tell()));
-      auto compressed_size = zstd_compress(storage.data(), storage.size(), base_cb.data(), base_cb.tell(), 18);
+      auto compressed_size =
+        zstd_compress(storage.data(), storage.size(), base_cb.data(), base_cb.tell(), compression_level);
       storage.resize(compressed_size);
       storage.shrink_to_fit();
       return storage;
     }
   }
 
-  template<bool streamWrite>
-  owned_span<uint8_t> ReplayWriter<streamWrite>::createReplay() {
+  template<bool streamWrite, uint32_t compression_level>
+  owned_span<uint8_t> ReplayWriter<streamWrite, compression_level>::createReplay() {
+    ZoneScopedN("ReplayWriter::createReplay");
     DynamicMemGeneralSaveCB final_cb{};
     final_cb.writeObj(header); // temp write, will be written over later
     uint32_t curr_offs, future_offs;
