@@ -368,7 +368,11 @@ int main(int argc, char *argv[]) {
 
   // std::string log_file = (conf_dir / "logfile.txt").string();
   std::string log_file = "logfile.txt";
-  initialize(bin_path_str, "", log_file, true);
+  InitOptions options{};
+  options.game_path = bin_path_str;
+  options.logfile_path = log_file;
+  options.fonts = true;
+  initialize(options);
   g_log_handler->start_thread();
   LOG("SDL video drivers:");
   for (int i = 0; i < SDL_GetNumVideoDrivers(); i++) {

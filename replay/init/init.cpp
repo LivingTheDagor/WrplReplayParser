@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread>
 #include "FileSystem.h"
+#include "VROMFs.h"
 #include "ecs/componentTypesDefs.h"
 #include "init/initialize.h"
 #include "mpi/ObjectDispatcher.h"
@@ -9,6 +10,7 @@
 #include "state/ParserState.h"
 #include "translate.h"
 #include "res/grpManager.h"
+#include <future>
 
 size_t get_state_pulls();
 
@@ -32,75 +34,152 @@ void print_all_files_full_paths(const fs::path &root = fs::current_path()) {
     }
   }
 }
+
+std::shared_future<void> load_vromfs_async(const std::string &vromfs_path, bool required) {
+  if (!file_mgr.getFile(vromfs_path)) {
+    G_CHECKF(!required, "{} does not exist", vromfs_path);
+    return {};
+  }
+  return std::async(std::launch::async, [vromfs_path] {
+    TracyMessage(vromfs_path.c_str(), vromfs_path.size());
+    auto vromfs = std::make_unique<VROMFs>(vromfs_path);
+    file_mgr.addVromfs(std::move(vromfs));
+  });
+}
+
+namespace translate {
+  void add_allowed_language(Languages lang);
+}
+
 static bool has_init = false;
 // runs basic init steps
-void initialize(const std::string &game_path, const std::string &grp_dir, const std::string &logfile_path, bool fonts,
-                bool lang, bool mis) {
+void initialize(const InitOptions &options) {
   if (has_init)
     return;
   g_log_handler.initialize();
+  file_mgr.in_init = true;
   LOGI("init started");
   has_init = true;
   ZoneScoped;
-  if (grp_dir.empty()) {
-    g_grp_manager.initialize((fs::path) game_path / "content" / "base" / "res" / "tanks");
-  } else {
-    g_grp_manager.initialize(grp_dir);
+  translate::add_allowed_language(Languages::English);
+  file_mgr.add_mount(options.game_path);
+  std::future<void> grp_init;
+  // VROMFs vfrs{"content/base/res/grp_hdr.vromfs.bin"};
+  // auto dir = vfrs.getDirectory();
+  // auto tanks = dir.getDirectory("tanks");
+  // auto idx = tanks->getFile("ussr_zsu_57_2.grpcache.bin");
+  // auto raw = idx->getFile(idx)->readRaw();
+  //  dir.print(0);
+  if (options.load_grps) {
+    const fs::path grp_path =
+      options.grp_dir.empty() ? fs::path(options.game_path) / "content" / "base" / "res" : fs::path(options.grp_dir);
+
+    grp_init = std::async(std::launch::async, [grp_path] { g_grp_manager.initialize(grp_path); });
   }
-  if (!logfile_path.empty())
-    g_log_handler->set_default_sink_logfile(logfile_path);
+
+  if (!options.logfile_path.empty())
+    g_log_handler->set_default_sink_logfile(options.logfile_path);
   g_log_handler->start_thread();
   register_default_sigsev_handler();
   register_listener(&mpi::base);
-  file_mgr.add_mount(game_path);
   mpi::register_object_dispatcher(&mpi::MpiQueueObject::ObjectDispatcher);
-  std::string p1 = ("aces.vromfs.bin");
-  std::string p2 = ("game.vromfs.bin");
-  std::string p3 = ("mis.vromfs.bin");
-  std::string p4 = ("lang.vromfs.bin");
-  std::string p5 = ("char.vromfs.bin");
-  if (fonts) {
-    std::string p6 = ("ui/fonts.vromfs.bin");
-    G_CHECKF(file_mgr.mountVromfs(p6), "{} does not exist", p6);
+  // p1, p2, and p5 are required, p3 and p4 are optional
+
+  const std::string aces_v = ("aces.vromfs.bin");
+  const std::string game_v = ("game.vromfs.bin");
+  const std::string mis_v = ("mis.vromfs.bin");
+  const std::string lang_v = ("lang.vromfs.bin");
+  const std::string char_v = ("char.vromfs.bin");
+  const std::string fonts_v = ("ui/fonts.vromfs.bin");
+  std::shared_future<void> lang_future;
+  std::shared_future<void> font_future;
+  if (options.fonts) {
+    font_future = load_vromfs_async(fonts_v, false);
   }
-  G_CHECKF(file_mgr.mountVromfs(p1), "{} does not exist", p1);
-  G_CHECKF(file_mgr.mountVromfs(p2), "{} does not exist", p2);
-  G_CHECKF(file_mgr.mountVromfs(p5), "{} does not exist", p5);
-  if (mis)
-    file_mgr.mountVromfs(p3); // optional
-  if (lang)
-    TranslationAllowed = file_mgr.mountVromfs(p4);
+  if (options.lang) {
+    lang_future = load_vromfs_async(lang_v, false);
+    if (lang_future.valid()) {
+      TranslationAllowed = true;
+    }
+  }
+  auto aces_future = load_vromfs_async(aces_v, true);
+
+  std::shared_future<void> mis_future;
+  if (options.mis)
+    mis_future = load_vromfs_async(mis_v, false);
+
+  auto game_future = load_vromfs_async(game_v, true);
+  auto char_future = load_vromfs_async(char_v, true);
+
+  std::future<void> translate_future{};
+  std::shared_future<void> g_ecs_future{};
+  std::future<void> blk_future{};
   if (TranslationAllowed) {
-    ZoneScopedN("translate");
-    translate::load_csv("lang/units_modifications.csv");
-    translate::load_csv("lang/units.csv");
-    translate::load_csv("lang/units_weaponry.csv");
-    // Damage model parts are named here, under armor_class/<part>: driver, engine,
-    // transmission, ammo, fuel_tank, cannon_breech and the rest of what a hit breaks.
-    translate::load_csv("lang/menu.csv");
-    // Awards, under streaks/<award>: the battle feed names them by id alone.
-    translate::load_csv("lang/unlocks_streaks.csv");
-    // The belt a gun comes with carries no block of its own and so no name of its own,
-    // but the game does name it: modification/default_bullets, which it shows as
-    // Default. That key lives here and nowhere else.
-    translate::load_csv("lang/menu_options.csv");
-    translate::load_csv("lang/missions_locations.csv");
-    translate::load_csv("lang/missions_dynamic.csv");
-    translate::load_csv("lang/missions_versus.csv");
-    // Death reasons live here, under death/<reason>. KillMessage carries an index into
-    // this list rather than a name, so the list is read in file order as well.
-    translate::load_csv("lang/ui.csv");
-    mpi::loadDeathReasons();
-    file_mgr.unmountVromfs("lang.vromfs.bin");
+    translate_future = std::async(std::launch::async, [&lang_future] {
+      G_ASSERT(lang_future.valid());
+      lang_future.get();
+      ZoneScopedN("translate");
+      translate::load_csv("lang/units_modifications.csv");
+      translate::load_csv("lang/units.csv");
+      translate::load_csv("lang/units_weaponry.csv");
+      // Damage model parts are named here, under armor_class/<part>: driver, engine,
+      // transmission, ammo, fuel_tank, cannon_breech and the rest of what a hit breaks.
+      translate::load_csv("lang/menu.csv");
+      // Awards, under streaks/<award>: the battle feed names them by id alone.
+      translate::load_csv("lang/unlocks_streaks.csv");
+      // The belt a gun comes with carries no block of its own and so no name of its own,
+      // but the game does name it: modification/default_bullets, which it shows as
+      // Default. That key lives here and nowhere else.
+      translate::load_csv("lang/menu_options.csv");
+      translate::load_csv("lang/missions_locations.csv");
+      translate::load_csv("lang/missions_dynamic.csv");
+      translate::load_csv("lang/missions_versus.csv");
+      // Death reasons live here, under death/<reason>. KillMessage carries an index into
+      // this list rather than a name, so the list is read in file order as well.
+      translate::load_csv("lang/ui.csv");
+      mpi::loadDeathReasons();
+    });
   }
   hello();
   force_link_replication();
   force_link_cnet();
-  ecs::g_ecs_data.initialize();
-  G_ASSERT(dblk::load(ecs::g_ecs_data->wp_cost, "config/wpcost.blk"));
-  G_ASSERT(dblk::load(ecs::g_ecs_data->unit_tags, "config/unittags.blk"));
+
+  g_ecs_future = std::async(std::launch::async, [&aces_future, &game_future] {
+    G_ASSERT(game_future.valid());
+    G_ASSERT(aces_future.valid());
+    game_future.get();
+    aces_future.get();
+    ecs::g_ecs_data.initialize();
+  });
+  blk_future = std::async(std::launch::async, [&char_future, &g_ecs_future] {
+    G_ASSERT(char_future.valid());
+    char_future.get();
+    DataBlock wp_cost{};
+    DataBlock unit_tags{};
+    G_ASSERT(dblk::load(wp_cost, "config/wpcost.blk"));
+    G_ASSERT(dblk::load(unit_tags, "config/unittags.blk"));
+    G_ASSERT(g_ecs_future.valid());
+    g_ecs_future.get();
+    ecs::g_ecs_data->wp_cost = std::move(wp_cost);
+    ecs::g_ecs_data->unit_tags = std::move(unit_tags);
+  });
   // mpi::players.hello();
   size_t pull_val = get_state_pulls();
   G_UNUSED(pull_val);
+  if (translate_future.valid())
+    translate_future.get();
+  if (g_ecs_future.valid())
+    g_ecs_future.get();
+  if (blk_future.valid())
+    blk_future.get();
+
+  if (mis_future.valid())
+    mis_future.get();
+  if (grp_init.valid())
+    grp_init.get();
+  if (font_future.valid())
+    font_future.get();
+  file_mgr.in_init = false;
+  file_mgr.unmountVromfs("lang.vromfs.bin");
   LOGI("init finished");
 }

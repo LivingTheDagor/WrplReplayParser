@@ -38,12 +38,17 @@ int64_t VromfsFile::read_impl(void *ptr, size_t length) {
 
 VROMFs::VROMFs(const std::string &fName) : fileName(fName), dir(fileName) {
   ZoneScoped;
-  FullFileLoadCB f{fName.c_str()};
-  if (!load_raw_vromfs_data(f))
+  FullFileLoadCB f{fName};
+  if (!f.fileHandle || !load_raw_vromfs_data(f))
     return;
   InPlaceMemLoadCB f2(raw_data->data(), (int) size);
 
   parse_raw_vromfs_data(f2);
+}
+VROMFs::VROMFs(bool dummy) : dir(Directory("vromfs")) {
+  ZoneScoped;
+  raw_data = std::make_shared<std::vector<char>>(0);
+  size = 0;
 }
 
 bool VROMFs::load_raw_vromfs_data(IGenLoad &reader) {

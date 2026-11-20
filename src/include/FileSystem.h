@@ -251,6 +251,8 @@ public:
   DummyOStream() = default;
 };
 
+class grpManager;
+
 class Directory : public FSObject {
 private:
   struct ObjAdder {
@@ -428,6 +430,7 @@ public:
   }
 
   void getFilesInDirectory(std::vector<FileIndex *> &files) {
+    files.reserve(this->objects.size());
     for (const auto &entry: this->objects) {
       auto obj = entry.second;
       if (!obj) {
@@ -451,6 +454,7 @@ public:
   }
 
 protected:
+  friend grpManager;
   bool addFSObject(const std::shared_ptr<FSObject> &f, ObjAdder &path) {
     if (path.isEnd()) {
       return addFSObject(f);
@@ -467,6 +471,7 @@ protected:
 };
 
 class VROMFs;
+struct InitOptions;
 
 struct FileManager {
   bool mountVromfs(const std::string &vromfsPath);
@@ -475,6 +480,8 @@ struct FileManager {
     auto str = vromfsPath.string();
     return mountVromfs(str);
   }
+
+  void addVromfs(std::unique_ptr<VROMFs> &&vromfs);
 
   bool unmountVromfs(const std::string &vromfs_name);
 
@@ -495,12 +502,16 @@ struct FileManager {
 
   ~FileManager();
 
-private:
+protected:
   SmartFSHandle getObject(const fs::path &path);
 
   std::vector<fs::path> real_fs_mounts;
   std::unordered_map<fs::path, Directory> mounted_vromfs{};
-  std::vector<VROMFs *> loaded_vromfs;
+  std::vector<std::unique_ptr<VROMFs>> loaded_vromfs;
+  std::mutex init_mutex;
+  bool in_init = false;
+
+  friend void initialize(const InitOptions &options);
 };
 
 extern FileManager file_mgr;

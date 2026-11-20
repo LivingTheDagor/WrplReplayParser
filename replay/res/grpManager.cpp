@@ -1,13 +1,15 @@
 #include "res/grpManager.h"
 
+#include "VROMFs.h"
 #include "res/grpLoader.h"
 #include <filesystem>
 #include <iostream>
+#include <utility>
 #include "tracy/Tracy.hpp"
 
 namespace fs = std::filesystem;
 
-struct grpRef {
+/*struct grpRef {
   GrpData *grp;
   FullFileLoadCB cb;
   grpRef(const fs::path &name) : grp(nullptr), cb{name.string()} {
@@ -18,7 +20,7 @@ struct grpRef {
     ZoneScopedN("grpRef::~grpRef");
     free(grp);
   }
-};
+};*/
 
 bool doesItemApply(std::string_view item) {
   ZoneScoped;
@@ -41,19 +43,89 @@ size_t getEntrySize(GrpData *data, const ResData *curr, size_t file_size) {
 }
 
 
+void grpManager::load_files_from_dir(const fs::path &root, const Directory &dir) {
+  ZoneScoped;
+  for (auto &f: dir.objects) {
+    if (f.second->getFSObjectType() == isFile) {
+      if (!f.first.ends_with(".grpcache.bin"))
+        continue;
+      auto index = std::dynamic_pointer_cast<FileIndex>(f.second);
+      if (!index)
+        continue;
+      auto file = index->getFile(index);
+      std::string_view name_only{f.first.c_str(), f.first.size() - strlen(".grpcache.bin")};
+      LFileGeneralLoadCB cb{file.get()};
+      // auto grp_data = GrpRef{cb, root / fmt::format("{}.grp", name_only)};
+      auto &grp_data = this->data.getNext(cb, root / fmt::format("{}.grp", name_only));
+      G_ASSERT(fs::exists(grp_data.path));
+      auto grp = grp_data.data.get();
+      const ResData *rd = grp->resData.data(), *rd_end = rd + grp->resData.size();
+      for (; rd != rd_end; rd++) {
+        auto name = grp->getName(rd->resId);
+        if (!doesItemApply(name))
+          continue;
+        auto &entry = grp->resTable[rd->resId];
+        G_ASSERT(entry.classId == rd->classId);
+        // for now, we are only parsing this, so lets make sure of that
+        // our previous 'doesItemApply' should make this not happen anyways
+        G_ASSERT(entry.classId == GeomNodeTreeGameResClassId);
+        auto &ref = this->refs.getNext(&grp_data, rd);
+        this->res_map[name] = &ref;
+        // size_t item_size = getEntrySize(grp, rd, grp_data.cb.fileHandle->length());
+        // void *ptr = malloc(item_size);
+        // grp_data.cb.seekto(entry.offset);
+        // grp_data.cb.read(ptr, (int) item_size);
+        // this->data.push_back(ptr);
+        // this->res_map[name] = {this->data.size() - 1, item_size, entry.classId};
+        //  LOGI("loaded skeleton: {} from grp: {}", name, file.string());
+      }
+    }
+  }
+}
 grpManager::grpManager() {}
-void grpManager::initialize(const fs::path &fs_path) {
+void grpManager::initialize(const fs::path &fs_path, const GrpConfig &config) {
   ZoneScopedN("grpManager::initialize");
   if (!fs::exists(fs_path)) {
     LOGE("grpManager::initialize: path does not exist: {}", fs_path.string());
     return;
   }
-  for (const auto &fs_entry: fs::directory_iterator(fs_path)) {
+  auto vromfs_path = fs_path / "grp_hdr.vromfs.bin";
+  VROMFs grp_vromfs{vromfs_path.string()};
+  auto dir = grp_vromfs.getDirectory();
+  if (config.load_root) {
+    load_files_from_dir(fs_path, dir);
+  }
+  if (config.load_aircrafts) {
+    auto aircrafts_dir = dir.getDirectory("aircrafts");
+    if (aircrafts_dir)
+      load_files_from_dir(fs_path / "aircrafts", *aircrafts_dir);
+  }
+  if (config.load_characters) {
+    auto characters_dir = dir.getDirectory("characters");
+    if (characters_dir)
+      load_files_from_dir(fs_path / "characters", *characters_dir);
+  }
+  if (config.load_equipment) {
+    auto equipment_dir = dir.getDirectory("equipment");
+    if (equipment_dir)
+      load_files_from_dir(fs_path / "equipment", *equipment_dir);
+  }
+  if (config.load_ships) {
+    auto ships_dir = dir.getDirectory("ships");
+    if (ships_dir)
+      load_files_from_dir(fs_path / "ships", *ships_dir);
+  }
+  if (config.load_tanks) {
+    auto tanks_dir = dir.getDirectory("tanks");
+    if (tanks_dir)
+      load_files_from_dir(fs_path / "tanks", *tanks_dir);
+  }
+  /*for (const auto &fs_entry: fs::directory_iterator(fs_path)) {
     ZoneScopedN("grpManager::initialize::parse_fs_entry");
     if (fs_entry.is_regular_file()) {
       const fs::path &file = fs_entry.path();
       if (file.extension() == ".grp") {
-        grpRef grp_data{file};
+        auto &grp_data = this->data.getNext(cb, file);
         auto grp = grp_data.grp;
         const ResData *rd = grp->resData.data(), *rd_end = rd + grp->resData.size();
         for (; rd != rd_end; rd++) {
@@ -75,22 +147,53 @@ void grpManager::initialize(const fs::path &fs_path) {
         }
       }
     }
-  }
+  }*/
 }
-grpManager::~grpManager() {
-  for (auto d: this->data) {
-    free(d);
-  }
-}
+grpManager::~grpManager() {}
 bool grpManager::getTree(const std::string &name, GeomNodeTree &load_into) {
+  ZoneScopedN("grpManager::getTree");
   auto entry = this->res_map.find(name);
   if (entry == this->res_map.end()) {
     return false;
   }
-  G_ASSERT(entry->second.class_id == GeomNodeTreeGameResClassId);
-  MemGeneralLoadCB cb{this->data[entry->second.index], static_cast<int>(entry->second.size)};
+  auto data_ = entry->second->getLoadData();
+  // G_ASSERT(entry->second.class_id == GeomNodeTreeGameResClassId);
+  MemGeneralLoadCB cb{data_.data(), static_cast<int>(data_.size())};
   load_into.load(cb);
   return true;
 }
 
+GrpRef::GrpRef(IGenLoad &cb, fs::path p) : data(parseGrp(cb)), path(std::move(p)) {}
+FullFileLoadCB GrpRef::getCb() {
+  ZoneScopedN("grpRef2::getCb");
+  FullFileLoadCB cb{path.string()};
+  return cb;
+}
+std::span<uint8_t> DataRef::getLoadData() {
+  ZoneScopedN("DataRef::getLoadData");
+  int64_t len = data_len.load(std::memory_order_acquire);
+  if (len == -1) {
+    std::lock_guard<std::mutex> lock(write_lock);
+    len = data_len.load(std::memory_order_relaxed);
+    if (len == -1) {
+
+      FullFileLoadCB cb = parent->getCb();
+
+      auto size = cb.fileHandle->length();
+      auto grp = parent->data.get();
+      auto &entry = grp->resTable[res_id->resId];
+      G_ASSERT(entry.classId == res_id->classId);
+      // for now, we are only parsing this, so lets make sure of that
+      // our previous 'doesItemApply' should make this not happen anyways
+      G_ASSERT(entry.classId == GeomNodeTreeGameResClassId);
+      size_t item_size = getEntrySize(grp, res_id, size);
+      cb.seekto(entry.offset);
+      raw_data = std::make_unique<uint8_t[]>(item_size);
+      cb.read(raw_data.get(), (int) item_size);
+      data_len.store(item_size, std::memory_order_release);
+      return {raw_data.get(), (size_t) item_size};
+    }
+  }
+  return {raw_data.get(), (size_t) len};
+}
 grpManager g_grp_manager{};

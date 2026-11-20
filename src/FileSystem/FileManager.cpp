@@ -9,7 +9,9 @@ bool FileManager::mountVromfs(const std::string &vromfsPath) {
   auto file = this->getFile(vromfsPath);
   if (!file)
     return false;
-  // TODO: implement move constructor for VROMFs
+  std::unique_lock<std::mutex> lock(this->init_mutex, std::defer_lock);
+  if (this->in_init)
+    lock.lock();
   this->loaded_vromfs.emplace_back(new VROMFs(vromfsPath));
   return true;
 }
@@ -52,15 +54,14 @@ void FileManager::find_vromfs_files_in_folder(std::vector<fs::path> &out_list, c
   }
 }
 
-FileManager::~FileManager() {
-  for (auto vromfs: this->loaded_vromfs) {
-    delete vromfs;
-  }
-  this->loaded_vromfs.clear();
-}
+FileManager::~FileManager() { this->loaded_vromfs.clear(); }
 
+// will be used async
 SmartFSHandle FileManager::getObject(const fs::path &path) {
-  for (auto vromfs: this->loaded_vromfs) {
+  std::unique_lock<std::mutex> lock(this->init_mutex, std::defer_lock);
+  if (this->in_init)
+    lock.lock();
+  for (auto &vromfs: this->loaded_vromfs) {
     SmartFSHandle curr_ptr;
     for (const auto &p: path) {
       if (!curr_ptr) {
@@ -77,11 +78,20 @@ SmartFSHandle FileManager::getObject(const fs::path &path) {
   return nullptr;
 }
 
+void FileManager::addVromfs(std::unique_ptr<VROMFs> &&vromfs) {
+  std::unique_lock<std::mutex> lock(this->init_mutex, std::defer_lock);
+  if (this->in_init)
+    lock.lock();
+  this->loaded_vromfs.emplace_back(std::move(vromfs));
+}
+
 bool FileManager::unmountVromfs(const std::string &vromfs_name) {
   ZoneScoped;
+  std::unique_lock<std::mutex> lock(this->init_mutex, std::defer_lock);
+  if (this->in_init)
+    lock.lock();
   for (auto it = this->loaded_vromfs.begin(); it != this->loaded_vromfs.end(); ++it) {
     if ((*it)->getName() == vromfs_name) {
-      delete *it;
       this->loaded_vromfs.erase(it);
       return true;
     }
@@ -116,8 +126,7 @@ std::unique_ptr<File> FileManager::loadRealFsFile(const fs::path &path) {
 
 std::unique_ptr<File> FileManager::loadVromfsFile(const fs::path &path) {
   ZoneScopedN("FileManager::loadVromfsFile");
-  if (this->loaded_vromfs.empty())
-    return nullptr;
+
   SmartFSHandle file = getObject(path);
   if (!file || file->getFSObjectType() != isFile)
     return nullptr;

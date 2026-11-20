@@ -3,8 +3,11 @@
 #include "StringTableAllocator.h"
 #include "EASTL/bonus/tuple_vector.h"
 #include "ioSys/dag_fileIo.h"
+#include "memory/dag_genMemAlloc.h"
 #include "util/dag_hash.h"
 #include "util/dag_hashedKeyMap.h"
+
+#include <unordered_set>
 namespace translate {
   class LargeStringTableAllocator : public StringTableAllocator {
   public:
@@ -39,6 +42,8 @@ namespace translate {
 
     std::vector<char> temp_string_storage{};
 
+    std::unordered_set<Languages> allowed_languages{};
+
   public:
     const char *get_value(translate_index_t index, Languages lang);
 
@@ -47,6 +52,8 @@ namespace translate {
     bool loadCsvFull(std::string_view filename);
 
     int getColForLang(char *buffer, int len, const char *lang);
+
+    void addAllowedLanguage(Languages lang) { allowed_languages.insert(lang); }
 
     ~translate_table_t() = default;
   } TranslatorTable;
@@ -71,6 +78,7 @@ namespace translate {
     return hashToIndex.findOr(hash, INVALID_TRANSLATE_INDEX);
   }
 
+  void add_allowed_language(Languages lang) { TranslatorTable.addAllowedLanguage(lang); }
 
   const char *localize(std::string_view value, Languages lang, ReturnPolicy return_policy) {
     // does key exist?
@@ -104,7 +112,10 @@ namespace translate {
   std::string lastFileNameForDebug = "";
 
 
-  void load_csv(std::string_view path) { ZoneScoped auto buffer = TranslatorTable.loadCsvFull(path); }
+  void load_csv(std::string_view path) {
+    ZoneScoped;
+    auto buffer = TranslatorTable.loadCsvFull(path);
+  }
 
   static inline int parseCsvString(const char *&p, char *out, bool key) {
     int len = 0;
@@ -196,8 +207,7 @@ namespace translate {
 
 
   std::vector<std::string> collect_keys(std::string_view filename, std::string_view prefix) {
-    ZoneScoped
-    std::vector<std::string> out;
+    ZoneScoped std::vector<std::string> out;
     FullFileLoadCB cb{filename};
     if (!cb.fileHandle)
       return out;
@@ -264,6 +274,8 @@ namespace translate {
   }
 
   bool translate_table_t::parseCsvV2Full(char *buffer, int len, dag::ConstSpan<int> lang_col, bool skip_first) {
+    ZoneScoped;
+
     int numRows = 0;
     int max_col = -1;
     for (int i = 0; i < lang_col.size(); i++)
@@ -292,27 +304,31 @@ namespace translate {
 
     char *tmp_buf = buffer;
 
-    for (int i = 0; i < len; ++i) {
-      if (buffer[i] == quoteSymbol && i + 1 < len && buffer[i + 1] == quoteSymbol)
-        i++;
-      else if (buffer[i] == quoteSymbol && i + 1 < len && buffer[i + 1] != quoteSymbol)
-        while ((++i) + 1 < len)
-          if (buffer[i] == quoteSymbol) {
-            if (buffer[i + 1] == quoteSymbol) {
-              i++;
-              continue; // ignore double quote symbol
-            } else
-              break;
-          }
+    {
+      ZoneScopedN("parseCsvV2Full::count_rows");
+      for (int i = 0; i < len; ++i) {
+        if (buffer[i] == quoteSymbol && i + 1 < len && buffer[i + 1] == quoteSymbol)
+          i++;
+        else if (buffer[i] == quoteSymbol && i + 1 < len && buffer[i + 1] != quoteSymbol)
+          while ((++i) + 1 < len)
+            if (buffer[i] == quoteSymbol) {
+              if (buffer[i + 1] == quoteSymbol) {
+                i++;
+                continue; // ignore double quote symbol
+              } else
+                break;
+            }
 
-      if (buffer[i] == '\r' || buffer[i] == '\n') {
-        if (buffer[i] == '\r' && i + 1 < len && buffer[i + 1] == '\n')
-          ++i;
-        ++numRows;
-        if (numRows == 1)
-          tmp_buf = &buffer[i + 1];
+        if (buffer[i] == '\r' || buffer[i] == '\n') {
+          if (buffer[i] == '\r' && i + 1 < len && buffer[i + 1] == '\n')
+            ++i;
+          ++numRows;
+          if (numRows == 1)
+            tmp_buf = &buffer[i + 1];
+        }
       }
     }
+
     // V2: skip first row
     if (skip_first) {
       len -= (tmp_buf - buffer);
@@ -412,6 +428,7 @@ namespace translate {
   }
 
   bool translate_table_t::loadCsvFull(std::string_view filename) {
+    ZoneScoped;
     FullFileLoadCB cb{filename};
     if (!cb.fileHandle)
       return false;
@@ -419,9 +436,9 @@ namespace translate {
     auto len = cb.fileHandle->length();
     if (len == -1)
       return false;
-    auto buffer = (char *) malloc(len + 2);
+    auto buffer = (char *) tmpmem->alloc(len + 2);
     if (cb.tryRead(buffer, len) != len) {
-      free(buffer);
+      tmpmem->free(buffer);
       return false;
     }
     ((char *) buffer)[len] = '\n';
@@ -432,12 +449,16 @@ namespace translate {
     std::vector<int> lang_col;
     lang_col.resize(fullLangList.size() - 1);
     for (int i = 0; i < lang_col.size(); i++) {
+      if (!allowed_languages.empty() && !allowed_languages.contains(static_cast<Languages>(i + 1))) {
+        lang_col[i] = -1;
+        continue;
+      }
       lang_col[i] = getColForLang(buffer, len, fullLangList[i + 1]);
       G_ASSERT_LOG(lang_col[i] >= 0, "Language '{}' not found. in file {}", fullLangList[i + 1], filename);
     }
 
     bool result = parseCsvV2Full(buffer, len, lang_col);
-    free(buffer);
+    tmpmem->free(buffer);
     return result;
   }
 
