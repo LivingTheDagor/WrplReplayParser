@@ -32,10 +32,10 @@ public:
   danet::ReflectionVar<float> lastContactTime{"lastContactTime", &lastContactTimeRel, 31};
   danet::ReflectionVar<float> lastContactTimeRel{"lastContactTimeRel", &allowBailout, 14};
   danet::ReflectionVar<bool> allowBailout{"allowBailout", &repairAssistee, 43};
-  danet::ReflectionVar<uint16_t> repairAssistee{"repairAssistee", &repairAssistant, 15};
-  danet::ReflectionVar<uint16_t> repairAssistant{"repairAssistant", &extinguishAssistee, 16};
-  danet::ReflectionVar<uint16_t> extinguishAssistee{"extinguishAssistee", &extinguishAssistant, 45};
-  danet::ReflectionVar<uint16_t> extinguishAssistant{"extinguishAssistant", &invulnerable, 46};
+  danet::ReflectionVar<ecs::EntityId> repairAssistee{"repairAssistee", &repairAssistant, 15};
+  danet::ReflectionVar<ecs::EntityId> repairAssistant{"repairAssistant", &extinguishAssistee, 16};
+  danet::ReflectionVar<ecs::EntityId> extinguishAssistee{"extinguishAssistee", &extinguishAssistant, 45};
+  danet::ReflectionVar<ecs::EntityId> extinguishAssistant{"extinguishAssistant", &invulnerable, 46};
   danet::ReflectionVar<bool> invulnerable{"invulnerable", &enableGunners, 17};
   danet::ReflectionVar<uint8_t> enableGunners{"enableGunners", &enableCiwsGunners, 18};
   danet::ReflectionVar<uint8_t> enableCiwsGunners{"enableCiwsGunners", &vulnerableByUnitUId, 64};
