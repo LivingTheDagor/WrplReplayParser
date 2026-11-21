@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <unordered_map>
+#include <mutex>
 #include "state/ParserState.h"
 
 namespace unit {
@@ -245,7 +246,15 @@ namespace unit {
     // leaves the first level as the container itself: the Pantsir's TKB-1055 stayed
     // 170mm_tkb_1055_container, which has no name of its own and no turret.
     //
-    // readd caching if needed
+    // The result only depends on the game files, and every spawn of a unit resolves the same
+    // weapons again (each try is a vromfs load and a blk parse), so keep it for the process.
+    static std::mutex resolved_mtx;
+    static std::unordered_map<std::string, std::string> resolved;
+    {
+      std::lock_guard lock(resolved_mtx);
+      if (auto it = resolved.find(blk_val); it != resolved.end())
+        return it->second;
+    }
     std::string out = blk_val;
     // A container pointing at itself would recurse forever, and nothing in the game
     // files rules that out.
@@ -258,7 +267,10 @@ namespace unit {
         break;
       out = next;
     }
-    // resolved.emplace(blk_val, out);
+    {
+      std::lock_guard lock(resolved_mtx);
+      resolved.emplace(blk_val, out);
+    }
     return out;
   }
 
