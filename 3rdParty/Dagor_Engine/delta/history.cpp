@@ -49,6 +49,36 @@ namespace net {
       return result;
     }
 
+    uint32_t apply_compressed_patch_into(const uint8_t *base, uint32_t base_size,
+                                         const danet::BitStream &compressed_delta, danet::BitStream &out) {
+      ZoneScoped;
+      static thread_local danet::BitStream delta{};
+      net::delta::decompress(compressed_delta, delta);
+      const uint32_t size = delta.GetNumberOfBytesUsed();
+      const bool inPlace = out.GetData() == base && base != nullptr;
+      out.SetWriteOffset(0);
+      out.reserveBits(BYTES_TO_BITS(size));
+      if (inPlace)
+        base = out.GetData(); // reserveBits may have moved the buffer; the bytes are the same
+      const uint32_t common = std::min(base_size, size);
+      uint8_t *dst = out.GetData();
+      const uint8_t *d = delta.GetData();
+      if (inPlace) {
+        for (uint32_t i = 0; i < common; ++i)
+          dst[i] ^= d[i];
+      } else {
+        uint8_t *__restrict o = dst;
+        const uint8_t *__restrict b = base;
+        const uint8_t *__restrict dd = d;
+        for (uint32_t i = 0; i < common; ++i)
+          o[i] = b[i] ^ dd[i];
+      }
+      if (size > common)
+        memcpy(dst + common, d + common, size - common);
+      out.SetWriteOffset(BYTES_TO_BITS(size));
+      return size;
+    }
+
     void History::clear() {
       for (int i = 0; i < HIST_MAX; ++i)
         pack[i].Reset();

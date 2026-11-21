@@ -64,6 +64,9 @@ namespace net {
     };
 
     struct ReadResult {
+      /// The decoded packet. It does not own its bytes: for a full packet it points into the stream given to
+      /// readDelta, for a delta into the history slot of that packet. Valid until the next readDelta on the
+      /// same history (or until the input stream goes away).
       danet::BitStream bs;
       bool ok = false;
       bool isResetNeeded = false;
