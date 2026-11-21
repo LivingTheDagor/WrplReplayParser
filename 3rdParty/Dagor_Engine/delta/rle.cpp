@@ -315,14 +315,41 @@ namespace net::delta {
     // whole source bytes: one lookup per byte (two codes). `state` is kept as state * 256 here.
     {
       uint32_t stateOfs = 0;
-      for (int i = 0; i < limit - 1; ++i) {
+      const int wholeBytes = limit - 1;
+      int i = 0;
+      while (i < wholeBytes) {
+        // Main loop, no data-dependent branch: store the pending word, keep the bits of its unfinished
+        // byte, add the next source byte. Whether a step crosses a 64-bit word is close to random (it
+        // mispredicted about every second source byte), so nothing here depends on it. Needs room for
+        // the 8-byte store, and steps of at most 56 bits (everything but the 78-bit zero run of KI8).
+        if constexpr (std::endian::native == std::endian::little) {
+          while (i < wholeBytes && outBytes + 16 <= maxOriginalSize) {
+            memcpy(dst + outBytes, &acc, 8);
+            const uint32_t doneBytes = nbits >> 3;
+            outBytes += doneBytes;
+            acc >>= doneBytes * 8;
+            nbits &= 7;
+            const uint32_t e = RLE0_BYTE_STEPS[stateOfs + src[i]];
+            const uint32_t total = (e >> RLE0_TOTAL_SHIFT) & RLE0_TOTAL_MASK;
+            if (DAGOR_UNLIKELY(total > 56))
+              break;
+            stateOfs = e >> RLE0_NEXT_SHIFT;
+            acc |= uint64_t((e >> RLE0_VAL_SHIFT) & RLE0_VAL_MASK) << (nbits + (e & RLE0_PRE_MASK));
+            nbits += total;
+            ++i;
+          }
+          if (i >= wholeBytes)
+            break;
+        }
+        // general step for one source byte: a step of more than 56 bits, or the end of the output buffer
         const uint32_t e = RLE0_BYTE_STEPS[stateOfs + src[i]];
+        ++i;
         stateOfs = e >> RLE0_NEXT_SHIFT;
         const uint32_t pre = e & RLE0_PRE_MASK;
         const uint64_t val = (e >> RLE0_VAL_SHIFT) & RLE0_VAL_MASK;
         const uint32_t total = (e >> RLE0_TOTAL_SHIFT) & RLE0_TOTAL_MASK;
         const uint32_t end = nbits + total;
-        if (DAGOR_LIKELY(end < 64)) {
+        if (end < 64) {
           acc |= val << (nbits + pre);
           nbits = end;
           continue;
