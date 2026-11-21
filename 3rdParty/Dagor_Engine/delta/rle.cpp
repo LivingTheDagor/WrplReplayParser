@@ -4,6 +4,7 @@
 #include <daNet/delta/rle.h>
 #include <bit>
 #include <cstring>
+#include <array>
 #include <dag_assert.h>
 #include <daNet/daNetTypes.h>
 #include "Logger.h"
@@ -190,6 +191,44 @@ namespace net::delta {
   }
 
 
+  namespace {
+    // One step of the rle0ki decoder per 4-bit code: what it appends (value, bit count) and the next
+    // state. State 0 is "normal", states 1..4 are "inside KI8" with super = state - 1. Values are
+    // at most 4 bits (two units, the first in the low bits); a zero run is value 0 with its length.
+    struct Rle0Step {
+      uint8_t value;
+      uint8_t bits;
+      uint8_t next;
+    };
+    constexpr std::array<Rle0Step, 5 * 16> make_rle0_steps() {
+      std::array<Rle0Step, 5 * 16> t{};
+      for (int state = 0; state < 5; ++state)
+        for (int nib = 0; nib < 16; ++nib) {
+          const int v0 = nib & TWO_BITS_MASK;
+          const int v1 = (nib >> TWO_BITS_SHIFT) & TWO_BITS_MASK;
+          Rle0Step &e = t[state * 16 + nib];
+          if (state == 0) {
+            switch (v0) {
+              case RLE0_ZR0: e = {0, uint8_t(2 * (v1 + ZR0_BASE_VAL)), 0}; break;
+              case RLE0_ZR1: e = {0, uint8_t(2 * (v1 + ZR1_BASE_VAL)), 0}; break;
+              case RLE0_KI6: e = {uint8_t(v1), 2, uint8_t(1 + v1)}; break;
+              case RLE0_KI2: e = {uint8_t(v1), 2, 0}; break;
+            }
+          } else {
+            const int super = state - 1;
+            if (super == 0 && v0 == 0 && v1 == 0)
+              e = {0, 2 * 39, 0};
+            else
+              e = {uint8_t(v0 | (v1 << 2)), 4, 0};
+          }
+        }
+      return t;
+    }
+    constexpr std::array<Rle0Step, 5 * 16> RLE0_STEPS = make_rle0_steps();
+  } // namespace
+
+  // Table-driven form of the decoder that was here before (same output and the same -1 cases):
+  // each 4-bit code is one table lookup instead of a switch with a lambda per unit.
   int rle0ki_decompress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice) {
     ZoneScoped;
     uint8_t *dst = dstSlice.data();
@@ -207,15 +246,16 @@ namespace net::delta {
     if (maxOriginalSize == 0)
       return -1;
 
-    uint64_t acc = 0; // pending units, low bits first
-    uint32_t nbits = 0; // bits pending in acc, may run past 64 inside a zero run
+    uint64_t acc = 0; // pending bits, low bits first
+    uint32_t nbits = 0; // bits pending in acc, always < 64 between steps
     size_t outBytes = 0;
     bool overflow = false;
+    uint32_t state = 0;
 
     auto flush8 = [&]() {
       if (outBytes + 8 <= maxOriginalSize) {
         if constexpr (std::endian::native == std::endian::little)
-          memcpy(dst + outBytes, &acc, 8); // same bytes as the loop below, in one store
+          memcpy(dst + outBytes, &acc, 8);
         else
           for (int b = 0; b < 8; ++b)
             dst[outBytes + b] = uint8_t(acc >> (8 * b));
@@ -224,56 +264,36 @@ namespace net::delta {
       }
       outBytes += 8;
     };
-    auto putUnit = [&](uint32_t v) {
-      acc |= uint64_t(v) << nbits;
-      nbits += 2;
-      if (nbits == 64) {
+    auto step = [&](uint32_t nib) {
+      const Rle0Step e = RLE0_STEPS[state * 16 + nib];
+      state = e.next;
+      acc |= uint64_t(e.value) << nbits;
+      const uint32_t before = nbits;
+      nbits += e.bits;
+      if (DAGOR_UNLIKELY(nbits >= 64)) {
         flush8();
-        acc = 0;
-        nbits = 0;
-      }
-    };
-    auto putZeros = [&](uint32_t num) {
-      nbits += 2 * num;
-      while (nbits >= 64) {
-        flush8();
-        acc = 0; // every bit after the first word is a zero of this run
+        // what did not fit: the high units of a 2-unit value (nbits is even, so at most one unit),
+        // and zeros for the rest of a zero run
+        acc = before ? uint64_t(e.value) >> (64 - before) : 0;
         nbits -= 64;
-      }
-    };
-
-    int code = -1;
-    int super = -1;
-    for (int i = 0; i < limit; ++i) {
-      const int klim = i != limit - 1 || parity == RLE0_PARITY_YES ? 2 : 1;
-      const uint8_t byte = src[i];
-      for (int k = 0; k < klim; ++k) {
-        const uint32_t v0 = (byte >> (k * RLE0_FOUR)) & TWO_BITS_MASK;
-        const uint32_t v1 = (byte >> (TWO_BITS_SHIFT + k * RLE0_FOUR)) & TWO_BITS_MASK;
-
-        if (code != RLE0_KI8)
-          code = (int) v0;
-
-        switch (code) {
-          case RLE0_ZR0: putZeros(v1 + ZR0_BASE_VAL); break;
-          case RLE0_ZR1: putZeros(v1 + ZR1_BASE_VAL); break;
-          case RLE0_KI6:
-            code = RLE0_KI8;
-            super = (int) v1;
-            putUnit(v1);
-            break;
-          case RLE0_KI2: putUnit(v1); break;
-          case RLE0_KI8:
-            code = -1;
-            if (super == 0 && v0 == 0 && v1 == 0)
-              putZeros(39);
-            else {
-              putUnit(v0);
-              putUnit(v1);
-            }
-            break;
+        while (nbits >= 64) {
+          flush8();
+          acc = 0;
+          nbits -= 64;
         }
       }
+    };
+
+    for (int i = 0; i < limit - 1; ++i) {
+      const uint8_t byte = src[i];
+      step(byte & 15);
+      step(byte >> 4);
+    }
+    if (limit > 0) {
+      const uint8_t byte = src[limit - 1];
+      step(byte & 15);
+      if (parity == RLE0_PARITY_YES)
+        step(byte >> 4);
     }
 
     const size_t tail = (nbits + 7) / 8;
