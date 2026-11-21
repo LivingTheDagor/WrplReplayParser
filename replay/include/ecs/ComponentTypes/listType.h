@@ -2,7 +2,7 @@
 
 #ifndef WTFILEUTILS_LISTTYPE_H
 #define WTFILEUTILS_LISTTYPE_H
-#include "eastl/vector.h"
+#include "EASTL/vector.h"
 
 namespace ecs {
   class EntityComponentRef;

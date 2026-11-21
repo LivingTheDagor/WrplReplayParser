@@ -2,7 +2,7 @@
 #define MYEXTENSION_COMPONENTSMAP_H
 
 #include "ecs/typesAndLimits.h"
-#include "ecs/Component.h"
+#include "ecs/component.h"
 #include "ecs/DataComponents.h"
 #include "dag_assert.h"
 #include <map>

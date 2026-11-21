@@ -2,7 +2,7 @@
 
 #ifndef WTFILEUTILS_ARRAYTYPE_H
 #define WTFILEUTILS_ARRAYTYPE_H
-#include "eastl/vector.h"
+#include "EASTL/vector.h"
 
 
 namespace ecs {
