@@ -121,7 +121,8 @@ void PyReplayState::include(py::module_ &m) {
   py::class_<ParserConfig::_GMOpts>(m, "GMOpts")
     .def_readwrite("load_tanks", &ParserConfig::_GMOpts::load_tanks)
     .def_readwrite("enable_GMSync", &ParserConfig::_GMOpts::enable_GMSync)
-    .def_readwrite("turret_parsing", &ParserConfig::_GMOpts::turret_parsing);
+    .def_readwrite("turret_parsing", &ParserConfig::_GMOpts::turret_parsing)
+    .def_readwrite("skip_sync_without_unit", &ParserConfig::_GMOpts::skip_sync_without_unit);
 
   py::class_<ParserConfig::_FMOpts>(m, "FMOpts")
     .def_readwrite("load_aircraft", &ParserConfig::_FMOpts::load_aircraft)

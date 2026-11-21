@@ -47,10 +47,16 @@ struct ParserConfig {
     bool enable_GMSync = true;
     /// do we parse and load turret data?
     bool turret_parsing = true;
+    /// Off by default. When on, a ground-model sync for a vehicle that exists as an entity but has no unit
+    /// object here (ships: nothing reads their sync data) is skipped without decoding its delta, and the delta
+    /// history of that uid is dropped. This is most of the parse time of a naval battle. The price: if a unit
+    /// object appears for the same uid later, its syncs cannot be read until the server sends a full packet.
+    bool skip_sync_without_unit = false;
   } GMOpts;
   bool tanks_enabled() const { return GMOpts.load_tanks; }
   bool GMSync_enabled() const { return tanks_enabled() && GMOpts.enable_GMSync; }
   bool turret_parsing_enabled() const { return GMOpts.turret_parsing; }
+  bool skip_sync_without_unit() const { return GMOpts.skip_sync_without_unit; }
 
   struct _FMOpts {
     /// do we create aircraft units? As in, when an aircraft entity arrives, do we create the unit::Aircraft?

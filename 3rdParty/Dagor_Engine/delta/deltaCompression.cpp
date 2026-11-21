@@ -141,6 +141,26 @@ namespace net {
     return d < 1u << (bits - 1u);
   }
 
+  bool DeltaComp::skipDelta(const danet::BitStream &data) const {
+    // the same header as readDelta
+    bool ok = true;
+    uint32_t packetNoDelta = 0;
+    uint32_t nextPacketNo = 0;
+    uint16_t compressedSize = 0;
+    bool fullDiff = false;
+    ok &= data.Read(fullDiff);
+    ok &= data.ReadBits(reinterpret_cast<uint8_t *>(&packetNoDelta), historyBits);
+    ok &= data.ReadBits(reinterpret_cast<uint8_t *>(&nextPacketNo), indexBits);
+    ok &= data.ReadCompressed(compressedSize);
+#if VALIDATE_COMPRESSION_HASH
+    uint32_t srvHash = 0u;
+    ok &= data.Read(srvHash);
+#endif
+    data.AlignReadToByteBoundary();
+    data.SetReadOffset(BYTES_TO_BITS(BITS_TO_BYTES(data.GetReadOffset()) + compressedSize));
+    return ok;
+  }
+
   DeltaComp::ReadResult DeltaComp::readDelta(const danet::BitStream &data, History *history) {
     ZoneScoped;
     bool ok = true;
