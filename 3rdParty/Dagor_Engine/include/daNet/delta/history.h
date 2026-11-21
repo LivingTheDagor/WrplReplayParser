@@ -56,9 +56,10 @@ namespace net
                                      IMemAlloc *allocator);
     /// Same result bytes as apply_compressed_patch, written straight into `out` (reusing its buffer) with no
     /// temporary stream. `base`/`base_size` are the base version's bytes; `out` may be the stream that owns
-    /// `base` (patch in place). Returns the size of the result in bytes.
+    /// `base` (patch in place). Returns the size of the result in bytes. The buffer of `out` is made
+    /// `padding` bytes larger than the result (bytes that may be loaded, with no defined value).
     uint32_t apply_compressed_patch_into(const uint8_t *base, uint32_t base_size, const danet::BitStream &compressed_delta,
-                                         danet::BitStream &out);
+                                         danet::BitStream &out, uint32_t padding = 0);
 
   } // namespace delta
 

@@ -50,14 +50,15 @@ namespace net {
     }
 
     uint32_t apply_compressed_patch_into(const uint8_t *base, uint32_t base_size,
-                                         const danet::BitStream &compressed_delta, danet::BitStream &out) {
+                                         const danet::BitStream &compressed_delta, danet::BitStream &out,
+                                         uint32_t padding) {
       ZoneScoped;
       static thread_local danet::BitStream delta{};
       net::delta::decompress(compressed_delta, delta);
       const uint32_t size = delta.GetNumberOfBytesUsed();
       const bool inPlace = out.GetData() == base && base != nullptr;
       out.SetWriteOffset(0);
-      out.reserveBits(BYTES_TO_BITS(size));
+      out.reserveBits(BYTES_TO_BITS(size + padding));
       if (inPlace)
         base = out.GetData(); // reserveBits may have moved the buffer; the bytes are the same
       const uint32_t common = std::min(base_size, size);

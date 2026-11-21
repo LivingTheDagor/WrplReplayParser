@@ -8,6 +8,9 @@
 #include <cstdint>
 #include <math/dag_adjpow2.h>
 #include <daNet/bitStream.h>
+#include <daNet/bitCursor.h>
+
+#define VALIDATE_COMPRESSION_HASH 0 // NOTE: used for debug only, changing this changes protocol
 
 namespace net {
 
@@ -63,6 +66,31 @@ namespace net {
       uint32_t lastSentPacketTotalNo = 0;
     };
 
+    /// The fields in front of the packed bytes of one delta packet.
+    struct DeltaHeader {
+      bool fullDiff = false;
+      uint32_t packetNoDelta = 0;
+      uint32_t nextPacketNo = 0;
+      uint16_t compressedSize = 0;
+#if VALIDATE_COMPRESSION_HASH
+      uint32_t srvHash = 0u;
+#endif
+    };
+
+    /// What applyDelta gives back: the bytes of the decoded packet and the same flags as ReadResult.
+    /// The bytes are the history slot of that packet: not owned, valid until the next packet for the
+    /// same history, and followed by at least PADDING bytes that may be loaded (danet::PaddedBitCursor).
+    struct DeltaView {
+      static constexpr uint32_t PADDING = 8;
+      const uint8_t *data = nullptr;
+      uint32_t sizeBytes = 0;
+      bool ok = false;
+      bool isResetNeeded = false;
+      bool isOutOfOrder = false;
+      bool isFullDiff = false;
+      uint32_t confirmPacketNo = 0;
+    };
+
     struct ReadResult {
       /// The decoded packet. It does not own its bytes: for a full packet it points into the stream given to
       /// readDelta, for a delta into the history slot of that packet. Valid until the next readDelta on the
@@ -85,10 +113,45 @@ namespace net {
 
     void writeDelta(danet::BitStream &bs, History &history, State &state, bool reliable_channel, bool use_cache = true);
     ReadResult readDelta(const danet::BitStream &bs, History *history);
-    /// Move the read position of `bs` past one delta packet without decoding it. Returns false when the
+
+    /// Read the header of one delta packet and move `data` (a BitStream or a BitCursor) past the packet.
+    /// `compressed` is set to the packed bytes, h.compressedSize of them. Returns false when a header
+    /// field cannot be read.
+    template<typename Stream>
+    BITCURSOR_INLINE bool readDeltaHeader(Stream &data, DeltaHeader &h, const uint8_t *&compressed) const {
+      bool ok = true;
+      ok &= data.Read(h.fullDiff);
+      ok &= data.ReadBits(reinterpret_cast<uint8_t *>(&h.packetNoDelta), historyBits);
+      ok &= data.ReadBits(reinterpret_cast<uint8_t *>(&h.nextPacketNo), indexBits);
+      ok &= data.ReadCompressed(h.compressedSize);
+#if VALIDATE_COMPRESSION_HASH
+      ok &= data.Read(h.srvHash);
+#endif
+      data.AlignReadToByteBoundary();
+      compressed = data.GetData() + BITS_TO_BYTES(data.GetReadOffset());
+      data.SetReadOffset(BYTES_TO_BITS(BITS_TO_BYTES(data.GetReadOffset()) + h.compressedSize));
+      return ok;
+    }
+    /// The part of readDelta after the header: bring `history` up to the packet and decode it.
+    DeltaView applyDelta(const DeltaHeader &h, const uint8_t *compressed, History *history);
+    /// readDelta without a stream object for the result.
+    template<typename Stream>
+    BITCURSOR_INLINE DeltaView readDeltaView(Stream &data, History *history) {
+      DeltaHeader h;
+      const uint8_t *compressed = nullptr;
+      if (!readDeltaHeader(data, h, compressed) || history == nullptr)
+        return {};
+      return applyDelta(h, compressed, history);
+    }
+    /// Move the read position of `data` past one delta packet without decoding it. Returns false when the
     /// packet header cannot be read. The history of the sender is not updated, so it cannot be used for
     /// later deltas: the caller has to drop it.
-    bool skipDelta(const danet::BitStream &bs) const;
+    template<typename Stream>
+    BITCURSOR_INLINE bool skipDelta(Stream &data) const {
+      DeltaHeader h;
+      const uint8_t *compressed = nullptr;
+      return readDeltaHeader(data, h, compressed);
+    }
 
     void writeConfirm(danet::BitStream &bs, const ReadResult &result);
     bool readConfirm(const danet::BitStream &bs, const History *history, State *state);

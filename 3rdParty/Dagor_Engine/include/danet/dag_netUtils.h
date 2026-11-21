@@ -91,14 +91,28 @@ namespace netutils {
     return float(((double) s) / get_maxs(T()) * _max);
   }
 
+  // The error report of unpacks_dbg. Out of line: with the log call in it unpacks_dbg is too large to be
+  // inlined, and then even a call whose result is not used stays (it may log).
   template<typename T>
-  inline float unpacks_dbg(T s, float _max, const char *fn, const char *file, int l, const char *msg = "") {
-    G_LOGERR_AND_DO(s != get_invalid_s(T()), return -_max, "{}({}) : failed to unpack val={} in {}() msg:'{}'", file, l,
-                    s, fn, msg);
+#if defined(__GNUC__)
+  __attribute__((noinline, cold))
+#elif defined(_MSC_VER)
+  __declspec(noinline)
+#endif
+  void unpacks_dbg_failed(T s, const char *fn, const char *file, int l, const char *msg) {
+    LOGE("{}({}) : failed to unpack val={} in {}() msg:'{}'", file, l, s, fn, msg);
     G_UNUSED(fn);
     G_UNUSED(file);
     G_UNUSED(l);
     G_UNUSED(msg);
+  }
+
+  template<typename T>
+  inline float unpacks_dbg(T s, float _max, const char *fn, const char *file, int l, const char *msg = "") {
+    if (DAGOR_UNLIKELY(s == get_invalid_s(T()))) {
+      unpacks_dbg_failed(s, fn, file, l, msg);
+      return -_max;
+    }
     return UNPACKS(s, _max);
   }
 

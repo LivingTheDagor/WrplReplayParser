@@ -67,6 +67,9 @@ struct SensorsControlStates {
   float field147_0xa8;
 
   bool deserialize(danet::BitStream &bs);
+  /// deserialize for any stream type with the read calls of danet::BitStream (defined in PositionSync.cpp)
+  template<typename Stream>
+  bool deserializeFrom(Stream &bs);
 };
 
 struct TargetDesignationControlState {
@@ -88,6 +91,9 @@ struct TargetDesignationControlState {
   uint32_t v15;
 
   bool deserialize(danet::BitStream &bs);
+  /// deserialize for any stream type with the read calls of danet::BitStream (defined in PositionSync.cpp)
+  template<typename Stream>
+  bool deserializeFrom(Stream &bs);
 };
 
 struct CounterMeasuresControlState {
@@ -95,6 +101,9 @@ struct CounterMeasuresControlState {
   uint8_t v2;
 
   bool deserialize(danet::BitStream &bs);
+  /// deserialize for any stream type with the read calls of danet::BitStream (defined in PositionSync.cpp)
+  template<typename Stream>
+  bool deserializeFrom(Stream &bs);
 };
 
 enum UnitType : uint8_t {

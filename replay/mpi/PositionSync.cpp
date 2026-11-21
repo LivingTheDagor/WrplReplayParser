@@ -2,6 +2,7 @@
 #include "mpi/PositionSync.h"
 #include "Unit.h"
 #include "daNet/dag_netUtils.h"
+#include "daNet/bitCursor.h"
 #include "math/dag_mathAng.h"
 
 bool separateServerSideDetection_g = true;
@@ -9,7 +10,22 @@ bool resyncSaclosGuidanceParams = true; // actually known to be true, hopefully
 
 
 #define RET_FAIL(op) G_ASSERT_RETURN((op), false);
-bool SensorsControlStates::deserialize(danet::BitStream &bs) {
+// netutils::read_vector for any stream type
+template<typename Stream>
+static BITCURSOR_INLINE bool read_vector_from(Stream &bs, Point3 &pos, float max) {
+  int16_t x = 0;
+  int16_t y = 0;
+  int16_t z = 0;
+  bool done = bs.Read(x);
+  done &= bs.Read(y);
+  done &= bs.Read(z);
+  if (done)
+    pos.set(netutils::UNPACKS<int16_t>(x, max), netutils::UNPACKS<int16_t>(y, max), netutils::UNPACKS<int16_t>(z, max));
+  return done;
+}
+
+template<typename Stream>
+BITCURSOR_INLINE bool SensorsControlStates::deserializeFrom(Stream &bs) {
   first_bool = bs.ReadBit();
   uint8_t sensor_type;
   bs.Read(sensor_type);
@@ -56,8 +72,8 @@ bool SensorsControlStates::deserialize(danet::BitStream &bs) {
       int16_t v;
       RET_FAIL(bs.Read(v));
       some_data_1 = netutils::UNPACKS<int16_t>(v, PI);
-      RET_FAIL(bs.ReadBits<0x60>(reinterpret_cast<uint8_t *>(&some_data_2)));
-      RET_FAIL(bs.ReadBits<0x60>(
+      RET_FAIL(bs.template ReadBits<0x60>(reinterpret_cast<uint8_t *>(&some_data_2)));
+      RET_FAIL(bs.template ReadBits<0x60>(
         reinterpret_cast<uint8_t *>(&some_data_5))); // ok for some fucking reason some_data_6 is a float here
       RET_FAIL(bs.Read(field147_0xa8));
       break;
@@ -69,7 +85,7 @@ bool SensorsControlStates::deserialize(danet::BitStream &bs) {
     case 4: {
       bool stuff_is_read = bs.ReadBit();
       if (stuff_is_read) {
-        RET_FAIL(bs.ReadBits<0x60>(reinterpret_cast<uint8_t *>(&some_data_1)));
+        RET_FAIL(bs.template ReadBits<0x60>(reinterpret_cast<uint8_t *>(&some_data_1)));
       }
       break;
     }
@@ -77,18 +93,19 @@ bool SensorsControlStates::deserialize(danet::BitStream &bs) {
   }
   bool stores_vec_thang = bs.ReadBit();
   if (stores_vec_thang) {
-    RET_FAIL(bs.ReadBits<6>(&field132_0x84));
+    RET_FAIL(bs.template ReadBits<6>(&field132_0x84));
     field4_0x4.resize(field132_0x84);
     for (int i = 0; i < field132_0x84; i++) {
       RET_FAIL(bs.Read(field4_0x4[i]));
     }
-    RET_FAIL(bs.ReadBits<6>(&field133_0x85));
+    RET_FAIL(bs.template ReadBits<6>(&field133_0x85));
   }
   return true;
 }
 
 
-bool TargetDesignationControlState::deserialize(danet::BitStream &bs) {
+template<typename Stream>
+BITCURSOR_INLINE bool TargetDesignationControlState::deserializeFrom(Stream &bs) {
   RET_FAIL(bs.Read(v1));
   RET_FAIL(bs.Read(v2));
   v3 = bs.ReadBit();
@@ -98,7 +115,7 @@ bool TargetDesignationControlState::deserialize(danet::BitStream &bs) {
   write_compressed = bs.ReadBit();
   if (write_compressed) {
     RET_FAIL(bs.Read(v6));
-    RET_FAIL(netutils::read_vector(bs, v9, 4000.0f));
+    RET_FAIL(read_vector_from(bs, v9, 4000.0f));
   } else {
     RET_FAIL(bs.Read(v7));
     RET_FAIL(bs.Read(v9));
@@ -128,11 +145,16 @@ bool TargetDesignationControlState::deserialize(danet::BitStream &bs) {
   return true;
 }
 
-bool CounterMeasuresControlState::deserialize(danet::BitStream &bs) {
+template<typename Stream>
+BITCURSOR_INLINE bool CounterMeasuresControlState::deserializeFrom(Stream &bs) {
   RET_FAIL(bs.Read(v1));
   RET_FAIL(bs.Read(v2));
   return true;
 }
+
+bool SensorsControlStates::deserialize(danet::BitStream &bs) { return deserializeFrom(bs); }
+bool TargetDesignationControlState::deserialize(danet::BitStream &bs) { return deserializeFrom(bs); }
+bool CounterMeasuresControlState::deserialize(danet::BitStream &bs) { return deserializeFrom(bs); }
 std::vector<std::string> unit::getUnitTagsBlk(const DataBlock *blk) {
   if (!blk)
     return {};
@@ -156,7 +178,8 @@ std::vector<std::string> unit::getUnitTagsName(std::string_view &name) {
 G_STATIC_ASSERT(sizeof(TargetDesignationControlState) == 0x50);
 
 
-void DeserializeSeekerData(danet::BitStream &bs) {
+template<typename Stream>
+static BITCURSOR_INLINE void DeserializeSeekerData(Stream &bs) {
   // this will probably never be implemented unless if I actually go through and try to understand what this complex
   // bullshit is
   uint32_t val;
@@ -355,7 +378,8 @@ struct SubVehicleDynData {
   float f6;
   Point3 some_position_maybe;
 
-  bool deserialize(danet::BitStream &bs) {
+  template<typename Stream>
+  BITCURSOR_INLINE bool deserialize(Stream &bs) {
     Point3 euler;
     std::array<int16_t, 3> euler_bits;
     bool ok = true;
@@ -374,7 +398,11 @@ struct SubVehicleDynData {
 };
 
 
-bool dataSync::ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRef *ref, bool is_from_compress) {
+// The position of the stream is kept in locals while a message is parsed (see danet::BitCursor): the
+// two *Impl functions are compiled into the functions after them, which copy the cursor in and store
+// it back.
+BITCURSOR_INLINE bool dataSync::ParseVehicleInfoImpl(ParserState &state, danet::PaddedBitCursor &bs, TankRef *ref,
+                                                     bool is_from_compress) {
   ZoneScoped;
   if (!ref->ref_1) {
     G_ASSERT(is_from_compress);
@@ -601,7 +629,7 @@ bool dataSync::ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRe
   thread_local std::vector<SensorsControlStates> states{};
   states.resize(sensorsCount);
   for (auto &sensor: states) {
-    RET_FAIL(sensor.deserialize(bs));
+    RET_FAIL(sensor.deserializeFrom(bs));
   }
   if (sensorsCount > 0) {
     uint8_t some_weird_val;
@@ -613,7 +641,7 @@ bool dataSync::ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRe
   thread_local std::vector<CounterMeasuresControlState> counterMeasures{};
   counterMeasures.resize(counterMeasuresCount);
   for (auto &c: counterMeasures) {
-    RET_FAIL(c.deserialize(bs));
+    RET_FAIL(c.deserializeFrom(bs));
   }
   uint8_t targetsNum = 0;
   RET_FAIL(bs.ReadBits<4>(&targetsNum));
@@ -621,7 +649,7 @@ bool dataSync::ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRe
   thread_local std::vector<TargetDesignationControlState> targets{};
   targets.resize(targetsNum);
   for (auto &t: targets) {
-    RET_FAIL(t.deserialize(bs));
+    RET_FAIL(t.deserializeFrom(bs));
   }
   if (ref->ref_1 && state.getConfig().turret_parsing_enabled()) {
     ref->ref_1->calculateTurretData();
@@ -644,7 +672,15 @@ bool dataSync::ParseVehicleInfo(ParserState &state, danet::BitStream &bs, TankRe
 }
 
 
-bool dataSync::GMSync(ParserState &state, danet::BitStream &bs) {
+bool dataSync::ParseVehicleInfo(ParserState &state, danet::PaddedBitCursor &bs, TankRef *ref,
+                                bool is_from_compress) {
+  danet::PaddedBitCursor cursor = bs;
+  const bool ret = ParseVehicleInfoImpl(state, cursor, ref, is_from_compress);
+  bs = cursor;
+  return ret;
+}
+
+BITCURSOR_INLINE bool dataSync::GMSyncImpl(ParserState &state, danet::BitCursor &bs) {
   ZoneScoped;
   uint16_t uid_lower;
   uint16_t uid_upper;
@@ -692,16 +728,24 @@ bool dataSync::GMSync(ParserState &state, danet::BitStream &bs) {
           RET_FAIL(state.NetDelta.netDelta.skipDelta(bs));
         } else if (isCompressed) {
           auto &hist = state.NetDelta.getHistory(uid_lower);
-          auto res = state.NetDelta.netDelta.readDelta(bs, &hist);
+          auto res = state.NetDelta.netDelta.readDeltaView(bs, &hist);
           if (res.ok) {
-            bool ret = ParseVehicleInfo(state, res.bs, &ref, true);
+            danet::PaddedBitCursor res_bs{res.data, BYTES_TO_BITS(res.sizeBytes)};
+            bool ret = ParseVehicleInfo(state, res_bs, &ref, true);
             if (ret == false && ref.ref_1 != nullptr) {
               LOGE("Failed to parse info for ground unit {} of uid {}", ref.ref_1->unit_name, ref.ref_1->uid);
             }
           }
         } else {
           bs.AlignReadToByteBoundary();
-          ParseVehicleInfo(state, bs, &ref, false);
+          // ParseVehicleInfo reads padded bytes: give it a padded copy of the rest of the message
+          const uint32_t rest_bits = bs.GetNumberOfUnreadBits();
+          std::vector<uint8_t> rest(BITS_TO_BYTES(rest_bits) + 8);
+          if (rest_bits)
+            memcpy(rest.data(), bs.GetData() + BITS_TO_BYTES(bs.GetReadOffset()), BITS_TO_BYTES(rest_bits));
+          danet::PaddedBitCursor uncompressed_bs{rest.data(), rest_bits};
+          ParseVehicleInfo(state, uncompressed_bs, &ref, false);
+          bs.SetReadOffset(bs.GetReadOffset() + uncompressed_bs.GetReadOffset());
           G_ASSERT(false);
         }
         bool bool7;
@@ -748,6 +792,13 @@ bool dataSync::GMSync(ParserState &state, danet::BitStream &bs) {
     }
   }
   return true;
+}
+
+bool dataSync::GMSync(ParserState &state, danet::BitStream &bs) {
+  danet::BitCursor cursor{bs};
+  const bool ret = GMSyncImpl(state, cursor);
+  cursor.writeBack(bs);
+  return ret;
 }
 
 // A store leaving a pylon can be registered as any of these four, and which one it

@@ -8,8 +8,6 @@
 #include <daNet/delta/history.h>
 
 
-#define VALIDATE_COMPRESSION_HASH 0 // NOTE: used for debug only, changing this changes protocol
-
 namespace net {
 
   DeltaComp::DeltaComp(uint32_t history_bits, uint32_t index_bits, IMemAlloc *allocator) :
@@ -141,49 +139,30 @@ namespace net {
     return d < 1u << (bits - 1u);
   }
 
-  bool DeltaComp::skipDelta(const danet::BitStream &data) const {
-    // the same header as readDelta
-    bool ok = true;
-    uint32_t packetNoDelta = 0;
-    uint32_t nextPacketNo = 0;
-    uint16_t compressedSize = 0;
-    bool fullDiff = false;
-    ok &= data.Read(fullDiff);
-    ok &= data.ReadBits(reinterpret_cast<uint8_t *>(&packetNoDelta), historyBits);
-    ok &= data.ReadBits(reinterpret_cast<uint8_t *>(&nextPacketNo), indexBits);
-    ok &= data.ReadCompressed(compressedSize);
-#if VALIDATE_COMPRESSION_HASH
-    uint32_t srvHash = 0u;
-    ok &= data.Read(srvHash);
-#endif
-    data.AlignReadToByteBoundary();
-    data.SetReadOffset(BYTES_TO_BITS(BITS_TO_BYTES(data.GetReadOffset()) + compressedSize));
-    return ok;
-  }
-
   DeltaComp::ReadResult DeltaComp::readDelta(const danet::BitStream &data, History *history) {
     ZoneScoped;
-    bool ok = true;
-    uint32_t packetNoDelta = 0;
-    uint32_t nextPacketNo = 0;
-    uint16_t compressedSize = 0;
-    bool fullDiff = false;
-    ok &= data.Read(fullDiff);
-    ok &= data.ReadBits(reinterpret_cast<uint8_t *>(&packetNoDelta), historyBits);
-    ok &= data.ReadBits(reinterpret_cast<uint8_t *>(&nextPacketNo), indexBits);
-    ok &= data.ReadCompressed(compressedSize);
-#if VALIDATE_COMPRESSION_HASH
-    uint32_t srvHash = 0u;
-    ok &= data.Read(srvHash);
-#endif
-    data.AlignReadToByteBoundary();
-    danet::BitStream compressedDelta(data.GetData() + BITS_TO_BYTES(data.GetReadOffset()), compressedSize, false);
-    data.SetReadOffset(BYTES_TO_BITS(BITS_TO_BYTES(data.GetReadOffset()) + compressedSize));
-    if (history == nullptr || !ok)
-      return {};
+    const DeltaView view = readDeltaView(data, history);
+    ReadResult result;
+    result.ok = view.ok;
+    result.isResetNeeded = view.isResetNeeded;
+    result.isOutOfOrder = view.isOutOfOrder;
+    result.isFullDiff = view.isFullDiff;
+    result.confirmPacketNo = view.confirmPacketNo;
+    if (view.ok) {
+      danet::BitStream bytes(view.data, view.sizeBytes, false);
+      result.bs.swap(bytes);
+    }
+    return result;
+  }
+
+  DeltaComp::DeltaView DeltaComp::applyDelta(const DeltaHeader &h, const uint8_t *compressed, History *history) {
+    const bool fullDiff = h.fullDiff;
+    const uint32_t packetNoDelta = h.packetNoDelta;
+    const uint32_t nextPacketNo = h.nextPacketNo;
+    const danet::BitStream compressedDelta(compressed, h.compressedSize, false);
 
     G_ASSERT(packetNoDelta < history->baseHist.size());
-    ReadResult result;
+    DeltaView result;
     const uint32_t basePacketNo = nextPacketNo - packetNoDelta;
     const uint32_t basePacketIdx = basePacketNo & (history->baseHist.size() - 1u);
     const uint32_t nextPacketIdx = nextPacketNo & (history->baseHist.size() - 1u);
@@ -244,17 +223,17 @@ namespace net {
     danet::BitStream &to = history->baseHist[nextPacketIdx];
     if (fullDiff) {
       to.SetWriteOffset(0);
+      to.reserveBits(BYTES_TO_BITS(compressedDelta.GetNumberOfBytesUsed() + DeltaView::PADDING));
       write_aligned_bytes(to, compressedDelta.GetData(), compressedDelta.GetNumberOfBytesUsed());
     } else {
-      net::delta::apply_compressed_patch_into(baseData, baseSize, compressedDelta, to);
+      net::delta::apply_compressed_patch_into(baseData, baseSize, compressedDelta, to, DeltaView::PADDING);
     }
-    danet::BitStream patchedView(to.GetData(), to.GetNumberOfBytesUsed(), false);
-    danet::BitStream &resultData = fullDiff ? compressedDelta : patchedView;
+    result.data = to.GetData();
+    result.sizeBytes = to.GetNumberOfBytesUsed();
 
 #if VALIDATE_COMPRESSION_HASH
-    const uint32_t clientHash =
-      mem_hash_fnv1a(reinterpret_cast<const char *>(resultData.GetData()), resultData.GetNumberOfBytesUsed());
-    G_ASSERT(srvHash == clientHash);
+    const uint32_t clientHash = mem_hash_fnv1a(reinterpret_cast<const char *>(result.data), result.sizeBytes);
+    G_ASSERT(h.srvHash == clientHash);
 #endif
 
     // store result
@@ -262,7 +241,6 @@ namespace net {
     if (history->curPacketNo == nextPacketNo)
       history->stats.lastCompressedDataSizeBytes = compressedDelta.GetNumberOfBytesUsed();
     result.ok = true;
-    result.bs.swap(resultData);
     result.isFullDiff = fullDiff;
     result.confirmPacketNo = fullDiff ? nextPacketNo : history->curPacketNo;
     return result;
