@@ -222,11 +222,27 @@ namespace replay {
       return false;
     if constexpr (streaming) {
       this->curr_reader = s_owner.replay_files[replay_index]->getCompressedReplayReader();
+      ++this->replay_index;
     } else {
-      this->curr_reader = s_owner.replay_files[replay_index]->getReplayReader();
+      // take the part decoded ahead (get() rethrows what its decode threw), then start on the one after it
+      if (this->next_reader.valid())
+        this->curr_reader = this->next_reader.get();
+      else
+        this->curr_reader = s_owner.replay_files[replay_index]->getReplayReader();
+      ++this->replay_index;
+      if (this->replay_index < s_owner.replay_files.size()) {
+        Replay *next = s_owner.replay_files[this->replay_index].get();
+        this->next_reader = std::async(std::launch::async, [next]() { return next->getReplayReader(); });
+      }
     }
-    ++this->replay_index;
     return true;
+  }
+
+  template<bool streaming>
+  ServerReplayReader<streaming>::~ServerReplayReader() {
+    // a part still being decoded ahead must finish before the replay it reads from can go away
+    if (this->next_reader.valid())
+      this->next_reader.wait();
   }
 
   template<bool streaming>

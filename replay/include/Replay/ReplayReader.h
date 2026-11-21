@@ -3,6 +3,8 @@
 #include "ioSys/dag_io.h"
 #include "ioSys/dag_zlibIo.h"
 #include "ioSys/dag_zstdIo.h"
+#include <future>
+#include <memory>
 
 namespace replay {
   uint32_t getPacketSize(IGenLoad &cb);
@@ -58,10 +60,14 @@ namespace replay {
   class ServerReplayReader : public IReplayReader {
     uint32_t replay_index = 0;
     std::unique_ptr<IReplayReader> curr_reader;
+    /// Non-streaming reader only: the reader of part `replay_index`, being built (file read + zstd decode) on
+    /// another thread while the current part is parsed. Each part is its own Replay object, so the task
+    /// shares nothing with the part being read.
+    std::future<std::unique_ptr<IReplayReader>> next_reader;
     bool load_replay();
 
   public:
-    ~ServerReplayReader() override = default;
+    ~ServerReplayReader() override;
 
     explicit ServerReplayReader(ServerReplay &replay);
     bool getNextPacket(ReplayPacket &packet) override;

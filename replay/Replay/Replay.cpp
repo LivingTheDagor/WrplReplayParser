@@ -65,6 +65,7 @@ namespace replay {
 
   std::span<uint8_t> Replay::FileReplayData::getData(Replay *rpl) {
     ZoneScopedN("FileReplayData::getData");
+    std::lock_guard lock(this->data_mutex);
     this->ref_count++;
     if (!this->zstd_data.empty()) {
       return this->zstd_data;
@@ -76,7 +77,7 @@ namespace replay {
   }
 
   void Replay::FileReplayData::afterParse() {
-
+    std::lock_guard lock(this->data_mutex);
     G_ASSERT(ref_count > 0);
     ref_count--;
     if (ref_count == 0)

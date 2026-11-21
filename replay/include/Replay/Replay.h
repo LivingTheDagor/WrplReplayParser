@@ -1,6 +1,7 @@
 
 
 #pragma once
+#include <mutex>
 #include "ReplayStructs.h"
 #include "ioSys/dag_dataBlock.h"
 #include "ioSys/dag_fileIo.h"
@@ -134,6 +135,7 @@ namespace replay {
       FullFileLoadCB reader;
       std::vector<uint8_t> zstd_data{};
       uint32_t ref_count = 0; // how many readers are using this data?
+      std::mutex data_mutex; // getData/afterParse may run on the decode-ahead thread of a server replay reader
 
       explicit FileReplayData(const std::string &path) : reader(path) {}
 
