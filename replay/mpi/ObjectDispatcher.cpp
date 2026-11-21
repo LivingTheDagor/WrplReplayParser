@@ -187,7 +187,9 @@ namespace mpi {
     }
   }
 
-  ecs::EntityId eid_from_ext_uid(uint32_t ext_uid) { return ecs::EntityId((ext_uid & 0xFF) << 0x16 | ext_uid >> 0x8); }
+  // queued data is keyed by the same eid UnitRef_Dispatch looks the unit up with, so
+  // on_unit_appear_mpi_es finds it when the entity is created
+  static ecs::EntityId eid_from_ext_uid(uint32_t ext_uid) { return ecs::EntityId(ext_uid); }
 
 
   IObject *MpiQueueObject::UnitRef_Dispatch(ObjectID oid, ObjectExtUID extUid, ParserState *state, bool do_queue) {
@@ -196,7 +198,7 @@ namespace mpi {
       EXCEPTION("dispatch: extended mpi uid is not set for object of type {}", oid >> 0xb);
     }
 
-    auto eid = ecs::EntityId(extUid);
+    auto eid = eid_from_ext_uid(extUid);
     unit::UnitRef *ref = nullptr;
     {
       ZoneScopedN("unit::UnitRef_getNullable");
