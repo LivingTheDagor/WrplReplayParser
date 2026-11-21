@@ -402,7 +402,7 @@ namespace ecs {
       auto findices = (eid.index() <= RESERVED_EID_RANGE) ? ((eid.index() < nextReservedIndex) ? &freeIndicesReserved : nullptr)
                                                                   : &freeIndices;
       if(findices)
-        findices->push_back((entity_id_t)eid);
+        findices->push_back(eid.index());
     }
 
     return true;
@@ -594,19 +594,15 @@ namespace ecs {
     auto &freed_deque = reserved ? freeIndicesReserved : freeIndices;
     unsigned idx;
     if(!freed_deque.empty()) {
-      alloc_idx:
       idx = freed_deque.front();
       G_ASSERT(idx < entDescs.size());
       freed_deque.pop_front();
-    } {
-      if(!reserved) {
-        idx = entDescs.push_back();
-      }
-      else if(DAGOR_LIKELY(nextReservedIndex <= RESERVED_EID_RANGE))
-        idx = nextReservedIndex++;
-      else {
-        goto alloc_idx;
-      }
+    } else if(!reserved) {
+      idx = entDescs.push_back();
+    } else if(DAGOR_LIKELY(nextReservedIndex <= RESERVED_EID_RANGE)) {
+      idx = nextReservedIndex++;
+    } else {
+      EXCEPTION("allocateOneEid: reserved eid range is used up and no reserved index is free");
     }
     G_ASSERT(generation <= 255);
     auto gen = generation >= 0 ? (uint8_t) generation : entDescs[idx].generation;

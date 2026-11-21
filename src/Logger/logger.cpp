@@ -3,6 +3,7 @@
 #include "thread"
 #include "ioSys/dag_dataBlock.h"
 #include <chrono>
+#include <cstdio>
 #if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
 #endif
@@ -31,6 +32,12 @@ uint64_t get_current_time_ms() {
 }
 
 void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL level, std::string &&message) {
+  if (!g_log_handler.init_state()) {
+    // no handler yet: going through g_log_handler would assert, and the assert logs again (#12)
+    if (level == LOGLEVEL::ERROR_)
+      std::fprintf(stderr, "%s(%d): %s\n", func.c_str(), line, message.c_str());
+    return;
+  }
   g_log_handler->add_logmessage(fmt::format("{}({}): {}", func, line, message), level, sink);
 }
 
@@ -58,8 +65,10 @@ void assert_failed_ext(const char *file, int line, const char *function, const c
   }
   auto stackTrace = cpptrace::generate_trace().to_string();
   LOGE("{}", stackTrace);
-  g_log_handler->wait_until_empty();
-  g_log_handler->flush_all();
+  if (g_log_handler.init_state()) {
+    g_log_handler->wait_until_empty();
+    g_log_handler->flush_all();
+  }
 #if defined(__EMSCRIPTEN__)
   emscripten_force_exit(EXIT_FAILURE);
 #endif

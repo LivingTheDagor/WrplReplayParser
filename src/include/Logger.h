@@ -425,12 +425,12 @@ void log_ext(const std::string &func, int line, sink_handle_t sink, LOGLEVEL lev
 
 #define LOG_FMT_EXT_CHECK(sink, level, format_, ...)                                                   \
   do {                                                                                                 \
-    if (g_log_handler->sink_dbg_lvl_allowed(sink, level)) {                                            \
+    if (g_log_handler.init_state() && g_log_handler->sink_dbg_lvl_allowed(sink, level)) {              \
       (log_ext(__FUNCTION__, __LINE__, sink, level, fmt::format(format_ __VA_OPT__(, ) __VA_ARGS__))); \
     }                                                                                                  \
   } while (0)
 
-#define SINK_LOG_ALLOWED(sink, level) (g_log_handler->sink_dbg_lvl_allowed(sink, level))
+#define SINK_LOG_ALLOWED(sink, level) (g_log_handler.init_state() && g_log_handler->sink_dbg_lvl_allowed(sink, level))
 // #define ONLY_ERROR_LOGGING 1
 #ifdef ONLY_ERROR_LOGGING
 #define LOGI(format_, ...)

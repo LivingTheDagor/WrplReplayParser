@@ -2,7 +2,7 @@
 
 #include "typesAndLimits.h"
 #include "ecs/componentTypes.h"
-#include "ecs/Component.h"
+#include "ecs/component.h"
 #include "ecs/ComponentRef.h"
 #include "ecs/DataComponents.h"
 #include "onDemandInit.h"
