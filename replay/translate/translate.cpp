@@ -1,3 +1,4 @@
+#include <array>
 #include "TupleArrayVector.h"
 #include "translate.h"
 #include "StringTableAllocator.h"
@@ -117,6 +118,17 @@ namespace translate {
     auto buffer = TranslatorTable.loadCsvFull(path);
   }
 
+  namespace {
+    // characters parseCsvString has to look at one by one; everything else is copied as it is
+    constexpr std::array<bool, 256> make_csv_special() {
+      std::array<bool, 256> t{};
+      t[0] = t[(unsigned char) '"'] = t[(unsigned char) ';'] = t[(unsigned char) '\r'] = t[(unsigned char) '\n'] =
+        t[(unsigned char) '\\'] = true;
+      return t;
+    }
+    constexpr std::array<bool, 256> CSV_SPECIAL = make_csv_special();
+  } // namespace
+
   static inline int parseCsvString(const char *&p, char *out, bool key) {
     int len = 0;
 
@@ -130,6 +142,22 @@ namespace translate {
     }
 
     while (*p) {
+      // a run of plain characters: none of them can end the field or start an escape
+      {
+        const char *run = p;
+        while (!CSV_SPECIAL[(unsigned char) *p])
+          ++p;
+        if (p != run) {
+          const size_t n = size_t(p - run);
+          if (out) {
+            memcpy(out, run, n);
+            out += n;
+          }
+          len += (int) n;
+          if (!*p)
+            break;
+        }
+      }
       if (quoted) {
         if (*p == '"') {
           ++p;
@@ -340,6 +368,8 @@ namespace translate {
 
     const char *ptr = buffer;
     this->indexToOffs.reserve(this->indexToOffs.size() + numRows);
+    if (temp_string_storage.size() < size_t(len) + 16)
+      temp_string_storage.resize(size_t(len) + 16);
     for (int i = 0; i < numRows; ++i) {
       static char key_buffer[MAX_KEY_LEN];
       const char *p = ptr;
@@ -384,11 +414,10 @@ namespace translate {
         if (bmap_col[langColNo] < 0 || skip_key)
           l = parseCsvString(ptr, NULL, false);
         else {
-          p = ptr;
-          l = parseCsvString(p, NULL, false);
-          temp_string_storage.resize(l + 1);
+          // one pass: a field never decodes to more bytes than it has in the file, and the scratch
+          // buffer was sized to the whole file above
           char *text = temp_string_storage.data();
-          parseCsvString(ptr, text, false);
+          l = parseCsvString(ptr, text, false);
           if (l != 0) {
             // lets only add an element when there is actual data
             auto &curr_allocator = this->get_allocator((Languages) (langColNo + 1));
