@@ -16,13 +16,15 @@ namespace net {
       uint32_t lowerLimit = std::min(size0, size1);
       uint32_t upperLimit = std::max(size0, size1);
 
-      danet::BitStream ret{upperLimit, allocator};
-      for (uint32_t i = 0; i < lowerLimit; ++i)
-        *(ret.GetData() + i) = *(buf0.GetData() + i) ^ *(buf1.GetData() + i);
-
+      // start from a copy of the longer buffer (its bytes past lowerLimit are the result as they are),
+      // then XOR the common part in place: one pass, and no zero fill of the new buffer first
       const danet::BitStream &src = size1 < size0 ? buf0 : buf1;
-      for (uint32_t i = lowerLimit; i < upperLimit; ++i)
-        *(ret.GetData() + i) = *(src.GetData() + i);
+      const danet::BitStream &other = size1 < size0 ? buf1 : buf0;
+      danet::BitStream ret{src.GetData(), upperLimit, true, allocator};
+      uint8_t *__restrict out = ret.GetData();
+      const uint8_t *__restrict in = other.GetData();
+      for (uint32_t i = 0; i < lowerLimit; ++i)
+        out[i] ^= in[i];
 
       ret.SetWriteOffset(BYTES_TO_BITS(upperLimit));
       return ret;

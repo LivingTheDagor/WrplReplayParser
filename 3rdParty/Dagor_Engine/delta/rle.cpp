@@ -2,6 +2,8 @@
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 
 #include <daNet/delta/rle.h>
+#include <bit>
+#include <cstring>
 #include <dag_assert.h>
 #include <daNet/daNetTypes.h>
 #include "Logger.h"
@@ -212,8 +214,11 @@ namespace net::delta {
 
     auto flush8 = [&]() {
       if (outBytes + 8 <= maxOriginalSize) {
-        for (int b = 0; b < 8; ++b)
-          dst[outBytes + b] = uint8_t(acc >> (8 * b));
+        if constexpr (std::endian::native == std::endian::little)
+          memcpy(dst + outBytes, &acc, 8); // same bytes as the loop below, in one store
+        else
+          for (int b = 0; b < 8; ++b)
+            dst[outBytes + b] = uint8_t(acc >> (8 * b));
       } else {
         overflow = true;
       }
