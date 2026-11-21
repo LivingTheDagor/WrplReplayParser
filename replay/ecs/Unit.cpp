@@ -324,15 +324,33 @@ namespace unit {
     turret_desc = std::make_unique<TurretDesc>(head_node, gun_node);
   }
 
+  // The unit blk only depends on the game files and is only read here, but every spawn of a unit loaded
+  // it again (vromfs zstd stream + blk parse). Keep one parsed copy per path for the process.
+  // Returns nullptr when the file does not load. The blocks are never modified or freed.
+  static const DataBlock *load_unit_blk_cached(const std::string &path) {
+    static std::mutex cache_mtx;
+    static std::unordered_map<std::string, std::unique_ptr<DataBlock>> cache;
+    std::lock_guard lock(cache_mtx);
+    auto it = cache.find(path);
+    if (it == cache.end()) {
+      auto loaded = std::make_unique<DataBlock>();
+      if (!dblk::load(*loaded, path))
+        loaded.reset();
+      it = cache.emplace(path, std::move(loaded)).first;
+    }
+    return it->second.get();
+  }
+
   void Unit::loadWeaponData(const std::string &path) {
     ZoneScopedN("Unit::loadWeaponData");
     if (this->unit_name == "dummy_plane") // fuck the bitch
       return;
-    DataBlock blk{};
-    if (!dblk::load(blk, path)) {
+    const DataBlock *cached_blk = load_unit_blk_cached(path);
+    if (!cached_blk) {
       LOGE("failed to load unit blk for unit {}", this->unit_name);
       return;
     }
+    const DataBlock &blk = *cached_blk;
     auto model_name = blk.getStr("model", "");
     auto skel_name = getGoodSkelName(model_name);
     {
