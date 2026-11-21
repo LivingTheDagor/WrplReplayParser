@@ -225,6 +225,34 @@ namespace net::delta {
       return t;
     }
     constexpr std::array<Rle0Step, 5 * 16> RLE0_STEPS = make_rle0_steps();
+
+    // Two steps (one source byte) folded into one entry, per entry state:
+    //   bits 0..6   zero bits in front of the value
+    //   bits 7..12  the value (at most 6 bits; whatever follows it inside `total` is zero)
+    //   bits 13..19 total bits appended (at most 78 + 20)
+    //   bits 20..   next state * 256, ready to be added to the next source byte
+    constexpr uint32_t RLE0_PRE_MASK = 127, RLE0_VAL_SHIFT = 7, RLE0_VAL_MASK = 63, RLE0_TOTAL_SHIFT = 13,
+                       RLE0_TOTAL_MASK = 127, RLE0_NEXT_SHIFT = 20;
+    constexpr std::array<uint32_t, 5 * 256> make_rle0_byte_steps() {
+      std::array<uint32_t, 5 * 256> t{};
+      for (uint32_t state = 0; state < 5; ++state)
+        for (uint32_t byte = 0; byte < 256; ++byte) {
+          const Rle0Step a = RLE0_STEPS[state * 16 + (byte & 15)];
+          const Rle0Step b = RLE0_STEPS[a.next * 16 + (byte >> 4)];
+          uint32_t pre = 0, val = 0;
+          if (a.value == 0) {
+            val = b.value;
+            pre = b.value ? a.bits : 0;
+          } else {
+            val = uint32_t(a.value) | (uint32_t(b.value) << a.bits);
+          }
+          const uint32_t total = uint32_t(a.bits) + b.bits;
+          t[state * 256 + byte] =
+            pre | (val << RLE0_VAL_SHIFT) | (total << RLE0_TOTAL_SHIFT) | ((uint32_t(b.next) * 256) << RLE0_NEXT_SHIFT);
+        }
+      return t;
+    }
+    constexpr std::array<uint32_t, 5 * 256> RLE0_BYTE_STEPS = make_rle0_byte_steps();
   } // namespace
 
   // Table-driven form of the decoder that was here before (same output and the same -1 cases):
@@ -284,10 +312,43 @@ namespace net::delta {
       }
     };
 
-    for (int i = 0; i < limit - 1; ++i) {
-      const uint8_t byte = src[i];
-      step(byte & 15);
-      step(byte >> 4);
+    // whole source bytes: one lookup per byte (two codes). `state` is kept as state * 256 here.
+    {
+      uint32_t stateOfs = 0;
+      for (int i = 0; i < limit - 1; ++i) {
+        const uint32_t e = RLE0_BYTE_STEPS[stateOfs + src[i]];
+        stateOfs = e >> RLE0_NEXT_SHIFT;
+        const uint32_t pre = e & RLE0_PRE_MASK;
+        const uint64_t val = (e >> RLE0_VAL_SHIFT) & RLE0_VAL_MASK;
+        const uint32_t total = (e >> RLE0_TOTAL_SHIFT) & RLE0_TOTAL_MASK;
+        const uint32_t end = nbits + total;
+        if (DAGOR_LIKELY(end < 64)) {
+          acc |= val << (nbits + pre);
+          nbits = end;
+          continue;
+        }
+        // crosses a 64-bit boundary: zeros in front, then the value, then the zeros behind it
+        uint32_t pos = nbits + pre;
+        while (pos >= 64) {
+          flush8();
+          acc = 0;
+          pos -= 64;
+        }
+        acc |= val << pos;
+        uint32_t rest = pos + (total - pre);
+        if (rest >= 64) {
+          flush8();
+          acc = pos ? val >> (64 - pos) : 0; // the part of the value that did not fit
+          rest -= 64;
+          while (rest >= 64) {
+            flush8();
+            acc = 0;
+            rest -= 64;
+          }
+        }
+        nbits = rest;
+      }
+      state = stateOfs >> 8;
     }
     if (limit > 0) {
       const uint8_t byte = src[limit - 1];
