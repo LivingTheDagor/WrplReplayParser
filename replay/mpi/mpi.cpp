@@ -215,7 +215,7 @@ namespace mpi {
       }
 
       if (config.use_enabled_oids) {
-        if (!config.enabled_oids[oid])
+        if (!config.enabled_oids[oid >> 0xb])
           return nullptr;
       }
       IObject *o = dispatch_object(oid, extUid, state);
