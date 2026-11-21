@@ -281,10 +281,44 @@ namespace danet {
       return true;
     }
 #endif
+#if defined(BITSTREAM_TESTS)
     template<typename T, size_t bytes>
-    static inline void copyShift(const uint8_t *src, uint8_t *dest, uint32_t shift) {
+    static inline void copyShiftOld(const uint8_t *src, uint8_t *dest, uint32_t shift) {
       T lane = 0;
       std::memcpy(&lane, src, bytes + 1);
+      lane = swap::byte_swap(lane);
+      lane <<= shift;
+      lane = swap::byte_swap(lane);
+      std::memcpy(dest, &lane, bytes);
+    }
+#endif
+    // n source bytes as one value (same bytes as a memcpy into a zeroed integer), built from 4, 2 and 1
+    // byte loads. A memcpy of 3 or 5 bytes into the lane goes through the stack as two narrow stores
+    // followed by one wide load, which cannot be store-forwarded and stalls every unaligned read.
+    template<size_t n>
+    static inline uint64_t loadBytes(const uint8_t *src) {
+      if constexpr (n >= 8) {
+        uint64_t v;
+        std::memcpy(&v, src, 8);
+        return v;
+      } else if constexpr (n >= 4) {
+        uint32_t v;
+        std::memcpy(&v, src, 4);
+        return uint64_t(v) | (loadBytes<n - 4>(src + 4) << 32);
+      } else if constexpr (n >= 2) {
+        uint16_t v;
+        std::memcpy(&v, src, 2);
+        return uint64_t(v) | (loadBytes<n - 2>(src + 2) << 16);
+      } else if constexpr (n == 1) {
+        return src[0];
+      } else {
+        return 0;
+      }
+    }
+    template<typename T, size_t bytes>
+    static inline void copyShift(const uint8_t *src, uint8_t *dest, uint32_t shift) {
+      G_STATIC_ASSERT(bytes + 1 <= sizeof(T));
+      T lane = (T) loadBytes<bytes + 1>(src);
       lane = swap::byte_swap(lane);
       lane <<= shift; // == read_rem
       lane = swap::byte_swap(lane);
