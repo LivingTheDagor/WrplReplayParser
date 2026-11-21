@@ -54,6 +54,11 @@ namespace net
     danet::BitStream get_compressed_delta(const danet::BitStream &base_version, const danet::BitStream &new_ver, IMemAlloc *allocator);
     danet::BitStream apply_compressed_patch(const danet::BitStream &base_version, const danet::BitStream &compressed_delta,
                                      IMemAlloc *allocator);
+    /// Same result bytes as apply_compressed_patch, written straight into `out` (reusing its buffer) with no
+    /// temporary stream. `base`/`base_size` are the base version's bytes; `out` may be the stream that owns
+    /// `base` (patch in place). Returns the size of the result in bytes.
+    uint32_t apply_compressed_patch_into(const uint8_t *base, uint32_t base_size, const danet::BitStream &compressed_delta,
+                                         danet::BitStream &out);
 
   } // namespace delta
 

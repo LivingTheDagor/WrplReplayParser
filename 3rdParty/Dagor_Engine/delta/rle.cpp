@@ -2,6 +2,9 @@
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 
 #include <daNet/delta/rle.h>
+#include <bit>
+#include <cstring>
+#include <array>
 #include <dag_assert.h>
 #include <daNet/daNetTypes.h>
 #include "Logger.h"
@@ -188,6 +191,72 @@ namespace net::delta {
   }
 
 
+  namespace {
+    // One step of the rle0ki decoder per 4-bit code: what it appends (value, bit count) and the next
+    // state. State 0 is "normal", states 1..4 are "inside KI8" with super = state - 1. Values are
+    // at most 4 bits (two units, the first in the low bits); a zero run is value 0 with its length.
+    struct Rle0Step {
+      uint8_t value;
+      uint8_t bits;
+      uint8_t next;
+    };
+    constexpr std::array<Rle0Step, 5 * 16> make_rle0_steps() {
+      std::array<Rle0Step, 5 * 16> t{};
+      for (int state = 0; state < 5; ++state)
+        for (int nib = 0; nib < 16; ++nib) {
+          const int v0 = nib & TWO_BITS_MASK;
+          const int v1 = (nib >> TWO_BITS_SHIFT) & TWO_BITS_MASK;
+          Rle0Step &e = t[state * 16 + nib];
+          if (state == 0) {
+            switch (v0) {
+              case RLE0_ZR0: e = {0, uint8_t(2 * (v1 + ZR0_BASE_VAL)), 0}; break;
+              case RLE0_ZR1: e = {0, uint8_t(2 * (v1 + ZR1_BASE_VAL)), 0}; break;
+              case RLE0_KI6: e = {uint8_t(v1), 2, uint8_t(1 + v1)}; break;
+              case RLE0_KI2: e = {uint8_t(v1), 2, 0}; break;
+            }
+          } else {
+            const int super = state - 1;
+            if (super == 0 && v0 == 0 && v1 == 0)
+              e = {0, 2 * 39, 0};
+            else
+              e = {uint8_t(v0 | (v1 << 2)), 4, 0};
+          }
+        }
+      return t;
+    }
+    constexpr std::array<Rle0Step, 5 * 16> RLE0_STEPS = make_rle0_steps();
+
+    // Two steps (one source byte) folded into one entry, per entry state:
+    //   bits 0..6   zero bits in front of the value
+    //   bits 7..12  the value (at most 6 bits; whatever follows it inside `total` is zero)
+    //   bits 13..19 total bits appended (at most 78 + 20)
+    //   bits 20..   next state * 256, ready to be added to the next source byte
+    constexpr uint32_t RLE0_PRE_MASK = 127, RLE0_VAL_SHIFT = 7, RLE0_VAL_MASK = 63, RLE0_TOTAL_SHIFT = 13,
+                       RLE0_TOTAL_MASK = 127, RLE0_NEXT_SHIFT = 20;
+    constexpr std::array<uint32_t, 5 * 256> make_rle0_byte_steps() {
+      std::array<uint32_t, 5 * 256> t{};
+      for (uint32_t state = 0; state < 5; ++state)
+        for (uint32_t byte = 0; byte < 256; ++byte) {
+          const Rle0Step a = RLE0_STEPS[state * 16 + (byte & 15)];
+          const Rle0Step b = RLE0_STEPS[a.next * 16 + (byte >> 4)];
+          uint32_t pre = 0, val = 0;
+          if (a.value == 0) {
+            val = b.value;
+            pre = b.value ? a.bits : 0;
+          } else {
+            val = uint32_t(a.value) | (uint32_t(b.value) << a.bits);
+          }
+          const uint32_t total = uint32_t(a.bits) + b.bits;
+          t[state * 256 + byte] =
+            pre | (val << RLE0_VAL_SHIFT) | (total << RLE0_TOTAL_SHIFT) | ((uint32_t(b.next) * 256) << RLE0_NEXT_SHIFT);
+        }
+      return t;
+    }
+    constexpr std::array<uint32_t, 5 * 256> RLE0_BYTE_STEPS = make_rle0_byte_steps();
+  } // namespace
+
+  // Table-driven form of the decoder that was here before (same output and the same -1 cases):
+  // each 4-bit code is one table lookup instead of a switch with a lambda per unit.
   int rle0ki_decompress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice) {
     ZoneScoped;
     uint8_t *dst = dstSlice.data();
@@ -205,70 +274,114 @@ namespace net::delta {
     if (maxOriginalSize == 0)
       return -1;
 
-    uint64_t acc = 0; // pending units, low bits first
-    uint32_t nbits = 0; // bits pending in acc, may run past 64 inside a zero run
+    uint64_t acc = 0; // pending bits, low bits first
+    uint32_t nbits = 0; // bits pending in acc, always < 64 between steps
     size_t outBytes = 0;
     bool overflow = false;
+    uint32_t state = 0;
 
     auto flush8 = [&]() {
       if (outBytes + 8 <= maxOriginalSize) {
-        for (int b = 0; b < 8; ++b)
-          dst[outBytes + b] = uint8_t(acc >> (8 * b));
+        if constexpr (std::endian::native == std::endian::little)
+          memcpy(dst + outBytes, &acc, 8);
+        else
+          for (int b = 0; b < 8; ++b)
+            dst[outBytes + b] = uint8_t(acc >> (8 * b));
       } else {
         overflow = true;
       }
       outBytes += 8;
     };
-    auto putUnit = [&](uint32_t v) {
-      acc |= uint64_t(v) << nbits;
-      nbits += 2;
-      if (nbits == 64) {
+    auto step = [&](uint32_t nib) {
+      const Rle0Step e = RLE0_STEPS[state * 16 + nib];
+      state = e.next;
+      acc |= uint64_t(e.value) << nbits;
+      const uint32_t before = nbits;
+      nbits += e.bits;
+      if (DAGOR_UNLIKELY(nbits >= 64)) {
         flush8();
-        acc = 0;
-        nbits = 0;
-      }
-    };
-    auto putZeros = [&](uint32_t num) {
-      nbits += 2 * num;
-      while (nbits >= 64) {
-        flush8();
-        acc = 0; // every bit after the first word is a zero of this run
+        // what did not fit: the high units of a 2-unit value (nbits is even, so at most one unit),
+        // and zeros for the rest of a zero run
+        acc = before ? uint64_t(e.value) >> (64 - before) : 0;
         nbits -= 64;
-      }
-    };
-
-    int code = -1;
-    int super = -1;
-    for (int i = 0; i < limit; ++i) {
-      const int klim = i != limit - 1 || parity == RLE0_PARITY_YES ? 2 : 1;
-      const uint8_t byte = src[i];
-      for (int k = 0; k < klim; ++k) {
-        const uint32_t v0 = (byte >> (k * RLE0_FOUR)) & TWO_BITS_MASK;
-        const uint32_t v1 = (byte >> (TWO_BITS_SHIFT + k * RLE0_FOUR)) & TWO_BITS_MASK;
-
-        if (code != RLE0_KI8)
-          code = (int) v0;
-
-        switch (code) {
-          case RLE0_ZR0: putZeros(v1 + ZR0_BASE_VAL); break;
-          case RLE0_ZR1: putZeros(v1 + ZR1_BASE_VAL); break;
-          case RLE0_KI6:
-            code = RLE0_KI8;
-            super = (int) v1;
-            putUnit(v1);
-            break;
-          case RLE0_KI2: putUnit(v1); break;
-          case RLE0_KI8:
-            code = -1;
-            if (super == 0 && v0 == 0 && v1 == 0)
-              putZeros(39);
-            else {
-              putUnit(v0);
-              putUnit(v1);
-            }
-            break;
+        while (nbits >= 64) {
+          flush8();
+          acc = 0;
+          nbits -= 64;
         }
       }
+    };
+
+    // whole source bytes: one lookup per byte (two codes). `state` is kept as state * 256 here.
+    {
+      uint32_t stateOfs = 0;
+      const int wholeBytes = limit - 1;
+      int i = 0;
+      while (i < wholeBytes) {
+        // Main loop, no data-dependent branch: store the pending word, keep the bits of its unfinished
+        // byte, add the next source byte. Whether a step crosses a 64-bit word is close to random (it
+        // mispredicted about every second source byte), so nothing here depends on it. Needs room for
+        // the 8-byte store, and steps of at most 56 bits (everything but the 78-bit zero run of KI8).
+        if constexpr (std::endian::native == std::endian::little) {
+          while (i < wholeBytes && outBytes + 16 <= maxOriginalSize) {
+            memcpy(dst + outBytes, &acc, 8);
+            const uint32_t doneBytes = nbits >> 3;
+            outBytes += doneBytes;
+            acc >>= doneBytes * 8;
+            nbits &= 7;
+            const uint32_t e = RLE0_BYTE_STEPS[stateOfs + src[i]];
+            const uint32_t total = (e >> RLE0_TOTAL_SHIFT) & RLE0_TOTAL_MASK;
+            if (DAGOR_UNLIKELY(total > 56))
+              break;
+            stateOfs = e >> RLE0_NEXT_SHIFT;
+            acc |= uint64_t((e >> RLE0_VAL_SHIFT) & RLE0_VAL_MASK) << (nbits + (e & RLE0_PRE_MASK));
+            nbits += total;
+            ++i;
+          }
+          if (i >= wholeBytes)
+            break;
+        }
+        // general step for one source byte: a step of more than 56 bits, or the end of the output buffer
+        const uint32_t e = RLE0_BYTE_STEPS[stateOfs + src[i]];
+        ++i;
+        stateOfs = e >> RLE0_NEXT_SHIFT;
+        const uint32_t pre = e & RLE0_PRE_MASK;
+        const uint64_t val = (e >> RLE0_VAL_SHIFT) & RLE0_VAL_MASK;
+        const uint32_t total = (e >> RLE0_TOTAL_SHIFT) & RLE0_TOTAL_MASK;
+        const uint32_t end = nbits + total;
+        if (end < 64) {
+          acc |= val << (nbits + pre);
+          nbits = end;
+          continue;
+        }
+        // crosses a 64-bit boundary: zeros in front, then the value, then the zeros behind it
+        uint32_t pos = nbits + pre;
+        while (pos >= 64) {
+          flush8();
+          acc = 0;
+          pos -= 64;
+        }
+        acc |= val << pos;
+        uint32_t rest = pos + (total - pre);
+        if (rest >= 64) {
+          flush8();
+          acc = pos ? val >> (64 - pos) : 0; // the part of the value that did not fit
+          rest -= 64;
+          while (rest >= 64) {
+            flush8();
+            acc = 0;
+            rest -= 64;
+          }
+        }
+        nbits = rest;
+      }
+      state = stateOfs >> 8;
+    }
+    if (limit > 0) {
+      const uint8_t byte = src[limit - 1];
+      step(byte & 15);
+      if (parity == RLE0_PARITY_YES)
+        step(byte >> 4);
     }
 
     const size_t tail = (nbits + 7) / 8;

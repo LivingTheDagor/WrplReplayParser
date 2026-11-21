@@ -64,6 +64,9 @@ namespace net {
     };
 
     struct ReadResult {
+      /// The decoded packet. It does not own its bytes: for a full packet it points into the stream given to
+      /// readDelta, for a delta into the history slot of that packet. Valid until the next readDelta on the
+      /// same history (or until the input stream goes away).
       danet::BitStream bs;
       bool ok = false;
       bool isResetNeeded = false;
@@ -82,6 +85,10 @@ namespace net {
 
     void writeDelta(danet::BitStream &bs, History &history, State &state, bool reliable_channel, bool use_cache = true);
     ReadResult readDelta(const danet::BitStream &bs, History *history);
+    /// Move the read position of `bs` past one delta packet without decoding it. Returns false when the
+    /// packet header cannot be read. The history of the sender is not updated, so it cannot be used for
+    /// later deltas: the caller has to drop it.
+    bool skipDelta(const danet::BitStream &bs) const;
 
     void writeConfirm(danet::BitStream &bs, const ReadResult &result);
     bool readConfirm(const danet::BitStream &bs, const History *history, State *state);

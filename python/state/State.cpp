@@ -89,7 +89,10 @@ void PyReplayState::include(py::module_ &m) {
     .def_readwrite("lang", &InitOptions::lang, "if true, will mount the lang.vromfs.bin. if false, will not load lang")
     .def_readwrite("mis", &InitOptions::mis, "if true, will mount the mis.vromfs.bin. if false, will not load mis")
     .def_readwrite("allowed_languages", &InitOptions::allowed_languages,
-                   "allowed_languages is the list of allowed languages. if not set, then will load all languages");
+                   "allowed_languages is the list of allowed languages. if not set, then will load all languages")
+    .def_readwrite("tune_malloc", &InitOptions::tune_malloc,
+                   "glibc only, process wide: grow the malloc heap in large steps and keep freed memory, which avoids "
+                   "most page faults of a parse. default true; set false to leave malloc settings alone");
 
   m.def("initialize", &initialize_wrapper, py::arg("options"),
         "Initialize the ReplayParser with the given InitOptions. game_path is required");
@@ -118,7 +121,8 @@ void PyReplayState::include(py::module_ &m) {
   py::class_<ParserConfig::_GMOpts>(m, "GMOpts")
     .def_readwrite("load_tanks", &ParserConfig::_GMOpts::load_tanks)
     .def_readwrite("enable_GMSync", &ParserConfig::_GMOpts::enable_GMSync)
-    .def_readwrite("turret_parsing", &ParserConfig::_GMOpts::turret_parsing);
+    .def_readwrite("turret_parsing", &ParserConfig::_GMOpts::turret_parsing)
+    .def_readwrite("skip_sync_without_unit", &ParserConfig::_GMOpts::skip_sync_without_unit);
 
   py::class_<ParserConfig::_FMOpts>(m, "FMOpts")
     .def_readwrite("load_aircraft", &ParserConfig::_FMOpts::load_aircraft)

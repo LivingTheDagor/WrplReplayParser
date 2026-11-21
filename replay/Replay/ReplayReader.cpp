@@ -3,6 +3,7 @@
 #include "Replay/ReplayReader.h"
 #include "utils.h"
 #include "dag_assert.h"
+#define ZSTD_STATIC_LINKING_ONLY // ZSTD_decompressBound
 #include "zstd.h"
 #include "zstd_errors.h"
 
@@ -126,6 +127,15 @@ namespace replay {
     auto zstd_data = replay.getData();
     auto decomp_size = (size_t) (((double) zstd_data.size()) * expected_multiply_size);
     const size_t max_decomp_size = zstd_data.size() * MAX_REPLAY_COMPRESSION_RATIO;
+    // The parts are written as streams, so the frame header has no content size and the guess above
+    // is often too small; then the whole part was decoded again into a buffer twice as large.
+    // ZSTD_decompressBound walks the block headers and gives a size that always fits, so the part
+    // is decoded once. Pages of the buffer that are not written are never touched.
+    {
+      const unsigned long long bound = ZSTD_decompressBound(zstd_data.data(), zstd_data.size());
+      if (bound != ZSTD_CONTENTSIZE_ERROR && bound > decomp_size)
+        decomp_size = (size_t) std::min<unsigned long long>(bound, max_decomp_size);
+    }
     size_t dest_len = 0;
     uint8_t *ptr = nullptr;
     ZSTD_ErrorCode zstd_err = ZSTD_error_dstSize_tooSmall;
@@ -212,11 +222,27 @@ namespace replay {
       return false;
     if constexpr (streaming) {
       this->curr_reader = s_owner.replay_files[replay_index]->getCompressedReplayReader();
+      ++this->replay_index;
     } else {
-      this->curr_reader = s_owner.replay_files[replay_index]->getReplayReader();
+      // take the part decoded ahead (get() rethrows what its decode threw), then start on the one after it
+      if (this->next_reader.valid())
+        this->curr_reader = this->next_reader.get();
+      else
+        this->curr_reader = s_owner.replay_files[replay_index]->getReplayReader();
+      ++this->replay_index;
+      if (this->replay_index < s_owner.replay_files.size()) {
+        Replay *next = s_owner.replay_files[this->replay_index].get();
+        this->next_reader = std::async(std::launch::async, [next]() { return next->getReplayReader(); });
+      }
     }
-    ++this->replay_index;
     return true;
+  }
+
+  template<bool streaming>
+  ServerReplayReader<streaming>::~ServerReplayReader() {
+    // a part still being decoded ahead must finish before the replay it reads from can go away
+    if (this->next_reader.valid())
+      this->next_reader.wait();
   }
 
   template<bool streaming>

@@ -11,6 +11,9 @@
 #include "translate.h"
 #include "res/grpManager.h"
 #include <future>
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
 
 size_t get_state_pulls();
 
@@ -56,6 +59,14 @@ static bool has_init = false;
 void initialize(const InitOptions &options) {
   if (has_init)
     return;
+#if defined(__GLIBC__)
+  if (options.tune_malloc) {
+    // see InitOptions::tune_malloc. Done first, so the allocations of init profit as well.
+    mallopt(M_TOP_PAD, 64 << 20);
+    mallopt(M_MMAP_THRESHOLD, 32 << 20);
+    mallopt(M_TRIM_THRESHOLD, 256 << 20);
+  }
+#endif
   g_log_handler.initialize();
   file_mgr.in_init = true;
   LOGI("init started");

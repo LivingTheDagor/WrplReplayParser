@@ -289,9 +289,26 @@ namespace danet {
     ReflectionVarMeta *v = varList.head;
     {
       ZoneScopedN("ReflectableObject::varCollection");
+      // The ids of a packet come in the order of the var list far more often than not, so look for each one
+      // from where the previous one was found and wrap around once, instead of walking the list from its
+      // head for every var. Ids are unique per object, so this finds the same var.
+      ReflectionVarMeta *hint = varList.head;
       for (uint16_t j = 0; (uint32_t) j < numVars; ++j) {
-        v = getVarByPersistentId(idFieldSerializer.getFieldId(j));
+        const int id = idFieldSerializer.getFieldId(j);
+        v = nullptr;
+        for (ReflectionVarMeta *m = hint; m; m = m->next)
+          if (id == m->persistentId) {
+            v = m;
+            break;
+          }
+        if (!v)
+          for (ReflectionVarMeta *m = varList.head; m != hint; m = m->next)
+            if (id == m->persistentId) {
+              v = m;
+              break;
+            }
         if (v) {
+          hint = v->next ? v->next : varList.head;
           G_ASSERT((v->flags & RVF_NEED_DESERIALIZE) == 0);
           v->flags |= RVF_NEED_DESERIALIZE; // mark vars that we going to deserialize
           // LOG("%s; ", v->name);

@@ -313,7 +313,13 @@ public:
 
   ~log_handler() {
     this->destructing = true;
-    this->running = false;
+    {
+      // the consumer sleeps on cv for up to 100 ms when the queue is empty: change `running` under its
+      // mutex and wake it, or the join below waits out the rest of that sleep on every process exit
+      std::lock_guard<std::mutex> lock(cv_mtx);
+      this->running = false;
+    }
+    cv.notify_all();
     if (this->logger_thread.joinable())
       logger_thread.join();
     this->thread_exists = false;

@@ -680,7 +680,17 @@ bool dataSync::GMSync(ParserState &state, danet::BitStream &bs) {
         RET_FAIL(bs.Read(ref.val1));
         RET_FAIL(bs.Read(ref.turret_count));
         RET_FAIL(bs.Read(isCompressed));
-        if (isCompressed) {
+        if (isCompressed && !ref.ref_1 && curr_unit != ecs::INVALID_ENTITY_ID &&
+            state.getConfig().skip_sync_without_unit()) {
+          // ParserConfig::GMOpts::skip_sync_without_unit: nothing reads this vehicle's sync, so do not
+          // decode it. Its history is not kept up from here on, so make every slot invalid: a later
+          // delta for this uid then fails for lack of a base instead of patching a stale one.
+          auto &hist = state.NetDelta.getHistory(uid_lower);
+          for (auto &slot: hist.baseHist)
+            slot.SetWriteOffset(0);
+          hist.stats.isHistoryBroken = true;
+          RET_FAIL(state.NetDelta.netDelta.skipDelta(bs));
+        } else if (isCompressed) {
           auto &hist = state.NetDelta.getHistory(uid_lower);
           auto res = state.NetDelta.netDelta.readDelta(bs, &hist);
           if (res.ok) {

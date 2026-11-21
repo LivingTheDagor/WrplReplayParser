@@ -39,12 +39,44 @@ namespace net {
     danet::BitStream apply_compressed_patch(const danet::BitStream &base_version,
                                             const danet::BitStream &compressed_delta, IMemAlloc *allocator) {
       ZoneScoped;
-      danet::BitStream delta{allocator};
+      // the decoded delta only lives until diff_impl has read it: reuse one buffer per thread,
+      // so its 10x reserve is not allocated and zero filled for every patch
+      static thread_local danet::BitStream delta{};
       net::delta::decompress(compressed_delta, delta);
       danet::BitStream result = diff_impl(base_version, delta, allocator);
       result.SetWriteOffset(delta.GetWriteOffset());
       result.AlignWriteToByteBoundary();
       return result;
+    }
+
+    uint32_t apply_compressed_patch_into(const uint8_t *base, uint32_t base_size,
+                                         const danet::BitStream &compressed_delta, danet::BitStream &out) {
+      ZoneScoped;
+      static thread_local danet::BitStream delta{};
+      net::delta::decompress(compressed_delta, delta);
+      const uint32_t size = delta.GetNumberOfBytesUsed();
+      const bool inPlace = out.GetData() == base && base != nullptr;
+      out.SetWriteOffset(0);
+      out.reserveBits(BYTES_TO_BITS(size));
+      if (inPlace)
+        base = out.GetData(); // reserveBits may have moved the buffer; the bytes are the same
+      const uint32_t common = std::min(base_size, size);
+      uint8_t *dst = out.GetData();
+      const uint8_t *d = delta.GetData();
+      if (inPlace) {
+        for (uint32_t i = 0; i < common; ++i)
+          dst[i] ^= d[i];
+      } else {
+        uint8_t *__restrict o = dst;
+        const uint8_t *__restrict b = base;
+        const uint8_t *__restrict dd = d;
+        for (uint32_t i = 0; i < common; ++i)
+          o[i] = b[i] ^ dd[i];
+      }
+      if (size > common)
+        memcpy(dst + common, d + common, size - common);
+      out.SetWriteOffset(BYTES_TO_BITS(size));
+      return size;
     }
 
     void History::clear() {

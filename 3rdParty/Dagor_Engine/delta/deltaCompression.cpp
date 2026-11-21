@@ -141,6 +141,26 @@ namespace net {
     return d < 1u << (bits - 1u);
   }
 
+  bool DeltaComp::skipDelta(const danet::BitStream &data) const {
+    // the same header as readDelta
+    bool ok = true;
+    uint32_t packetNoDelta = 0;
+    uint32_t nextPacketNo = 0;
+    uint16_t compressedSize = 0;
+    bool fullDiff = false;
+    ok &= data.Read(fullDiff);
+    ok &= data.ReadBits(reinterpret_cast<uint8_t *>(&packetNoDelta), historyBits);
+    ok &= data.ReadBits(reinterpret_cast<uint8_t *>(&nextPacketNo), indexBits);
+    ok &= data.ReadCompressed(compressedSize);
+#if VALIDATE_COMPRESSION_HASH
+    uint32_t srvHash = 0u;
+    ok &= data.Read(srvHash);
+#endif
+    data.AlignReadToByteBoundary();
+    data.SetReadOffset(BYTES_TO_BITS(BITS_TO_BYTES(data.GetReadOffset()) + compressedSize));
+    return ok;
+  }
+
   DeltaComp::ReadResult DeltaComp::readDelta(const danet::BitStream &data, History *history) {
     ZoneScoped;
     bool ok = true;
@@ -180,9 +200,10 @@ namespace net {
     }
     history->pushDbgPacketHistory(nextPacketNo);
 
-    danet::BitStream decompressedData =
-      !fullDiff ? net::delta::apply_compressed_patch(baseVersion, compressedDelta, allocator) : danet::BitStream();
-    danet::BitStream &resultData = fullDiff ? compressedDelta : decompressedData;
+    // The patch is applied further down, straight into the new base version. Take the base bytes now:
+    // advancing curPacketNo below only resets write offsets, it does not touch or move the bytes.
+    const uint8_t *const baseData = baseVersion.GetData();
+    const uint32_t baseSize = baseVersion.GetNumberOfBytesUsed();
 
     bool isInOrder =
       is_idx_less_then(history->curPacketNo, nextPacketNo, indexBits); // if nextPacketNo is greater than curPacketNo
@@ -218,12 +239,17 @@ namespace net {
       history->curPacketNo = nextPacketNo;
     }
 
-    // copy data to new base version
-    {
-      danet::BitStream &to = history->baseHist[nextPacketIdx];
+    // new base version: a copy of the full packet, or base ^ delta written in place (no temporary stream,
+    // no second copy). The result handed back is a view of this slot.
+    danet::BitStream &to = history->baseHist[nextPacketIdx];
+    if (fullDiff) {
       to.SetWriteOffset(0);
-      write_aligned_bytes(to, resultData.GetData(), resultData.GetNumberOfBytesUsed());
+      write_aligned_bytes(to, compressedDelta.GetData(), compressedDelta.GetNumberOfBytesUsed());
+    } else {
+      net::delta::apply_compressed_patch_into(baseData, baseSize, compressedDelta, to);
     }
+    danet::BitStream patchedView(to.GetData(), to.GetNumberOfBytesUsed(), false);
+    danet::BitStream &resultData = fullDiff ? compressedDelta : patchedView;
 
 #if VALIDATE_COMPRESSION_HASH
     const uint32_t clientHash =
