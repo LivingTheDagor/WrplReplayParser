@@ -389,7 +389,7 @@ namespace danet {
       ReflectableObject *refl = nullptr;
       if (!(oid == mpi::INVALID_OBJECT_ID && extUid == mpi::INVALID_OBJECT_EXT_UID)) {
         auto &config = state->getConfig();
-        if (config.use_enabled_reflection_oids && !config.enabled_reflection_oids[oid]) {
+        if (config.use_enabled_reflection_oids && !config.enabled_reflection_oids[oid >> 0xb]) {
         } else {
           auto ret = resolver(oid, extUid, state);
 #if LDAG_DBGLEVEL > 0

@@ -10,7 +10,7 @@ Use _ecs_query(Callable fn); with lambda functions instead of direct perform_que
 Search for examples with "_ecs_query" keyword.
 */
 
-#include <ecs/entityManager.h>
+#include <ecs/EntityManager.h>
 
 namespace ecs {
   // use min_quant of more than 0 for parallel for execution (each job will take ata least min_quant of data)

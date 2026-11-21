@@ -1,6 +1,6 @@
 add_library(BitStream
         STATIC
-        BitStream.cpp
+        bitStream.cpp
 )
 add_library(BS::BS ALIAS BitStream)
 

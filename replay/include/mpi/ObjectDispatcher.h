@@ -43,6 +43,9 @@ namespace mpi {
     T_24 = 24,
     WEAP = 25,
   };
+  /// number of object types: the type is oid >> 11, which is 5 bits
+  constexpr size_t EXT_MPI_TYPE_COUNT = 32;
+
   enum QueuePacketTypes {
     MPI = 0x10000000,
     REFL = 0x20000000,

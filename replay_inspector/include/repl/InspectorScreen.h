@@ -1,5 +1,5 @@
 #pragma once
-#include "repl/InspectorECS.h"
+#include "repl/inspectorECS.h"
 
 #include "imgui.h"
 #include "stb_image.h"
