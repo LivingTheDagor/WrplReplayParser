@@ -177,12 +177,12 @@ namespace danet {
     uint32_t GetNumberOfBytesUsed(void) const { return bits2bytes(bitsUsed); }
     uint32_t GetReadOffset() const { return readOffset; }
     void SetReadOffset(uint32_t newReadOffset) const { readOffset = newReadOffset; }
-    uint32_t GetNumberOfUnreadBits() const { return bitsUsed - readOffset; }
+    uint32_t GetNumberOfUnreadBits() const { return readOffset < bitsUsed ? bitsUsed - readOffset : 0; }
     uint32_t GetNumberOfAllocatedBits() const { return bitsAllocated; }
     uint8_t *GetData() { return data; }
     const uint8_t *GetData() const { return data; }
     std::span<uint8_t> getSlice() const { return std::span<uint8_t>(data, GetNumberOfBytesUsed()); }
-    void IgnoreBits(uint32_t bits) const { readOffset += std::min(bits, bitsUsed - readOffset); }
+    void IgnoreBits(uint32_t bits) const { readOffset += std::min(bits, GetNumberOfUnreadBits()); }
     void IgnoreBytes(uint32_t bytes) const { IgnoreBits(bytes2bits(bytes)); }
     void SetWriteOffset(uint32_t offs) { bitsUsed = offs; }
     void SetUnalignedWriteOffset(uint32_t offs) { bitsUsed = offs; }
@@ -675,7 +675,7 @@ namespace danet {
     template<typename Tu, size_t bit_count>
     bool ReadSpecificLens(uint8_t *out) const {
       constexpr auto byte_count = BITS_TO_BYTES(bit_count);
-      if (bit_count > bitsUsed - readOffset)
+      if (readOffset > bitsUsed || bit_count > bitsUsed - readOffset) // bitsUsed - readOffset wraps otherwise
         return false;
       const uint8_t *data_ptr = GetData() + (readOffset >> 3);
       const uint32_t readmod8 = readOffset & 7;
@@ -691,7 +691,7 @@ namespace danet {
     template<typename T, size_t bits>
     bool ReadLessThan8(T &t) const {
       G_STATIC_ASSERT(bits < 8);
-      if (bits > bitsUsed - readOffset)
+      if (readOffset > bitsUsed || bits > bitsUsed - readOffset) // bitsUsed - readOffset wraps otherwise
         return false;
       const uint8_t *data_ptr = GetData() + (readOffset >> 3);
       const uint32_t readmod8 = readOffset & 7;
