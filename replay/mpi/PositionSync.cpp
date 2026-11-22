@@ -680,6 +680,41 @@ bool dataSync::ParseVehicleInfo(ParserState &state, danet::PaddedBitCursor &bs, 
   return ret;
 }
 
+// Not inlined on purpose. GMSync has more live values than there are registers and kept the counter of this
+// loop in memory (a store and a load of it per turret). Here a record is a handful of instructions, and the
+// usual one (count 1) is a predicted branch: the position of the next record does not have to wait for the
+// count of this one to be loaded.
+#if defined(__GNUC__)
+__attribute__((noinline))
+#elif defined(_MSC_VER)
+__declspec(noinline)
+#endif
+dataSync::AmmoSkip dataSync::skipAmmoRecords(const uint8_t *data, uint32_t bits_used, uint32_t offset,
+                                             uint32_t max_records) {
+  uint32_t done = 0;
+  while (done < max_records && offset <= bits_used && bits_used - offset >= 97) {
+    if (DAGOR_UNLIKELY((data[offset >> 3] & (0x80u >> (offset & 7))) == 0)) {
+      offset += 1; // no record for this turret
+      ++done;
+      continue;
+    }
+    // the count: 8 bits that start 73 bits in. At least 16 more bits follow them, so both bytes exist.
+    const uint32_t at = offset + 73;
+    const uint32_t two = (uint32_t(data[at >> 3]) << 8) | data[(at >> 3) + 1];
+    const uint32_t count = (two >> (8 - (at & 7))) & 0xFF;
+    if (DAGOR_LIKELY(count == 1)) {
+      offset += 97;
+    } else {
+      const uint32_t size = 81 + 16 * count;
+      if (bits_used - offset < size)
+        break; // the last values are cut off
+      offset += size;
+    }
+    ++done;
+  }
+  return {offset, done};
+}
+
 BITCURSOR_INLINE bool dataSync::GMSyncImpl(ParserState &state, danet::BitCursor &bs) {
   ZoneScoped;
   uint16_t uid_lower;
@@ -758,6 +793,16 @@ BITCURSOR_INLINE bool dataSync::GMSyncImpl(ParserState &state, danet::BitCursor 
         RET_FAIL(bs.Read(bool8));
         if (bool8 && ref.turret_count > 0) { // maybe has_shot_gun???
           for (int i = 0; i < ref.turret_count; i++) {
+            {
+              // none of this is used: step over all the records that are whole (see skipAmmoRecords). The
+              // reads below are for what is left, at the very end of a stream.
+              const AmmoSkip skipped = skipAmmoRecords(bs.GetData(), bs.GetNumberOfBitsUsed(), bs.GetReadOffset(),
+                                                       uint32_t(ref.turret_count - i));
+              bs.SetReadOffset(skipped.offset);
+              i += (int) skipped.records;
+              if (i >= ref.turret_count)
+                break;
+            }
             bool t1;
             RET_FAIL(bs.Read(t1));
             if (t1) {

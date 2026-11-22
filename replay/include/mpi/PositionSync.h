@@ -13,6 +13,18 @@ struct dataSync {
   static bool GMSync(ParserState &state, danet::BitStream &bs);
   static bool WeaponSync(ParserState &state, danet::BitStream &bs);
 
+  struct AmmoSkip {
+    uint32_t offset; ///< bit position behind the records that were stepped over
+    uint32_t records; ///< how many records that was
+  };
+  /// The ammunition block of a ground-model sync has one record per turret: a single 0 bit, or a 1 bit,
+  /// 72 bits, a count (8 bits) and `count` 16-bit values. Nothing in it is used, it only has to be stepped
+  /// over, and a ship has up to 160 turrets in every sync.
+  /// Steps over the records at bit `offset` of `data` (`bits_used` bits long), at most `max_records` of them,
+  /// as long as a record is whole and starts at least 97 bits before the end. What it leaves is for the
+  /// reads of GMSync, one field at a time, which also deal with a stream that ends inside a record.
+  static AmmoSkip skipAmmoRecords(const uint8_t *data, uint32_t bits_used, uint32_t offset, uint32_t max_records);
+
 private:
   struct TankRef {
     unit::Unit *ref_1 = nullptr; // + 0.0 always matches
