@@ -186,8 +186,12 @@ namespace replay {
         dest_len = zstd_ret;
         zstd_err = ZSTD_error_no_error;
       }
-      if (zstd_err != ZSTD_error_no_error && zstd_err != ZSTD_error_dstSize_tooSmall)
+      if (zstd_err != ZSTD_error_no_error && zstd_err != ZSTD_error_dstSize_tooSmall) {
+        // the destructor does not run for a constructor that throws: give back the buffer and the data ref here
+        free(ptr);
+        replay.Data.afterParse();
         EXCEPTION("Failed to decompress zstd block: {}", ZSTD_getErrorName(zstd_err));
+      }
       decomp_size *= 2;
     }
     // The compressed bytes are not read again: let them go now (a file replay frees them when no reader holds
