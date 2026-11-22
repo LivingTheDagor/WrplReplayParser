@@ -1,5 +1,7 @@
 #pragma once
 #include "memory/dag_genMemAlloc.h"
+#include <cstddef>
+#include <cstdlib>
 #include <memory_resource>
 #include <new>
 #if USE_MI_HEAP == 1 && defined(__linux__)
@@ -129,20 +131,34 @@ class StateAllocator : public std::pmr::memory_resource {
 public:
   using DagAllocType = StateDagAlloc *;
 
+  /// Objects of the state. Always from the state heap, never through the size-dependent mmap path of
+  /// do_allocate: _delete is often called through a base pointer (battle messages, rewind events), so the
+  /// size it could pass would be the size of the base, not of the object.
   template<class T, class... Args>
   T *_new(Args &&...args) {
-    void *mem = do_allocate(sizeof(T), alignof(T));
+#if USE_MI_HEAP == 1
+    void *mem = mi_heap_malloc_aligned(dagAlloc.heap, sizeof(T), alignof(T));
+#else
+    static_assert(alignof(T) <= alignof(std::max_align_t), "over-aligned type without USE_MI_HEAP");
+    void *mem = ::malloc(sizeof(T));
+#endif
+    if (!mem)
+      throw std::bad_alloc();
     return new (mem) T(std::forward<Args>(args)...);
   }
 
+  /// T may be a base of the object made by _new (it must then have a virtual destructor). The size is not
+  /// used: the block is freed by address alone.
   template<class T>
   void _delete(const T *ptr) {
-    if (ptr) {
-      if (!ptr)
-        return;
-      std::destroy_at(ptr);
-      do_deallocate(static_cast<void *>(const_cast<T *>(ptr)), sizeof(T), alignof(T));
-    }
+    if (!ptr)
+      return;
+    std::destroy_at(ptr);
+#if USE_MI_HEAP == 1
+    mi_free(const_cast<T *>(ptr));
+#else
+    ::free(const_cast<T *>(ptr));
+#endif
   }
   StateAllocator() = default;
   ~StateAllocator() override = default;
