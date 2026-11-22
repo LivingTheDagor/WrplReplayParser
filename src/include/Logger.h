@@ -314,8 +314,7 @@ public:
   ~log_handler() {
     this->destructing = true;
     {
-      // the consumer sleeps on cv for up to 100 ms when the queue is empty: change `running` under its
-      // mutex and wake it, or the join below waits out the rest of that sleep on every process exit
+      // change `running` under the mutex and wake the consumer, or the join waits out its 100 ms sleep
       std::lock_guard<std::mutex> lock(cv_mtx);
       this->running = false;
     }

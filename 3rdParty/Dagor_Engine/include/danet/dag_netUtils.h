@@ -93,8 +93,7 @@ namespace netutils {
     return float(((double) s) / get_maxs(T()) * _max);
   }
 
-  // The error report of unpacks_dbg. Out of line: with the log call in it unpacks_dbg is too large to be
-  // inlined, and then even a call whose result is not used stays (it may log).
+  // Error report of unpacks_dbg, out of line so that unpacks_dbg is small enough to inline.
   template<typename T>
 #if defined(__GNUC__)
   __attribute__((noinline, cold))
@@ -157,11 +156,9 @@ namespace netutils {
   unsigned int pack_velocity(const Point3 &vel, float max_vel);
   void unpack_velocity(unsigned int packed, Point3 &vel, float max_vel);
 
-  /// UNPACKS for a `_max` that is the same on every call: one multiplication instead of a division and a
-  /// multiplication (the division is the slow part, and a sync has ten or more of these).
-  /// s * (_max / maxs) is not the same computation as s / maxs * _max, so the factor is only used when it
-  /// gives the bits of UNPACKS for every value T can hold. That is checked when the object is made: all 2^16
-  /// values take about 0.1 ms. For a `_max` that fails the check the calls divide, like UNPACKS.
+  /// UNPACKS for a fixed `_max`: one multiplication by a precomputed factor, no division.
+  /// The constructor checks that the factor gives the bits of UNPACKS for every value of T;
+  /// if it does not, the calls divide like UNPACKS.
   template<typename T>
   class FixedUnpackS {
   public:

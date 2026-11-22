@@ -51,7 +51,7 @@ namespace replay {
     std::vector<PacketRef> packets;
     size_t next_packet = 0;
     std::unique_ptr<IPartSidecar> sidecar;
-    /// the next packet from the decoded bytes (what getNextPacket was before the list)
+    /// the next packet, read from the decoded bytes
     bool readPacket(ReplayPacket &packet);
     // expected_multiply_size is the expected compression ratio of the replay
     explicit FullDecompressReplayReader(Replay &replay, double expected_multiply_size = 3);
@@ -83,9 +83,8 @@ namespace replay {
   class ServerReplayReader : public IReplayReader {
     uint32_t replay_index = 0;
     std::unique_ptr<IReplayReader> curr_reader;
-    /// Non-streaming reader only: the reader of part `replay_index`, being built (file read + zstd decode) on
-    /// another thread while the current part is parsed. Each part is its own Replay object, so the task
-    /// shares nothing with the part being read.
+    /// Non-streaming reader only: the reader of part `replay_index`, built (file read + zstd decode) on
+    /// another thread while the current part is parsed. Each part is its own Replay object.
     std::future<std::unique_ptr<IReplayReader>> next_reader;
     size_t next_reader_index = 0; ///< the part next_reader is for
     bool load_replay();

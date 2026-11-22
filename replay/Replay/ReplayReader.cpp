@@ -98,10 +98,8 @@ namespace replay {
   IReplayReader::IReplayReader(IReplay &owner) : owner(owner) {}
 
 
-  // The part decoded ahead has all the time the current part takes; the parser and the threads that read the
-  // syncs of the current part ahead of it (mpi/GMSyncPrescan.h) are waited for now. On Linux a thread has a
-  // nice value of its own: at 10 it leaves them the cores they need, and still gets a fair share when other
-  // processes keep the cores busy. Elsewhere it runs at the normal priority.
+  // The part decoded ahead has the whole current part to finish; the parser and its prescan threads
+  // (mpi/GMSyncPrescan.h) are waited for now. Nice 10 (Linux, per thread) gives them the cores first.
   static void decode_ahead_priority() {
 #if defined(__linux__)
     setpriority(PRIO_PROCESS, (id_t) syscall(SYS_gettid), 10);
@@ -123,9 +121,7 @@ namespace replay {
       return false;
     const PacketRef &ref = packets[next_packet++];
 #if defined(__GNUC__)
-    // The packets are no longer read one after the other from start to end (the sizes are not, and the data of
-    // a ground-model sync that was read ahead is not either), so the start of a packet is not in the cache by
-    // itself any more: ask for the one after the next.
+    // Packet starts are not read in address order, so prefetch the one after the next.
     if (next_packet + 1 < packets.size())
       __builtin_prefetch(crd.data() + packets[next_packet + 1].offset);
 #endif
@@ -277,8 +273,7 @@ namespace replay {
       std::future<std::unique_ptr<IReplayReader>> ahead; // this part, when it was decoded ahead
       if (this->next_reader.valid() && this->next_reader_index == index)
         ahead = std::move(this->next_reader);
-      // Start on the part after this one before taking this one: at the very start that is part 1 on its
-      // thread while part 0 is decoded here, instead of one after the other.
+      // Start decoding the next part before taking this one, so part 1 decodes while part 0 does.
       if (!this->next_reader.valid() && index + 1 < s_owner.replay_files.size()) {
         Replay *next = s_owner.replay_files[index + 1].get();
         this->next_reader = std::async(std::launch::async, [next]() {

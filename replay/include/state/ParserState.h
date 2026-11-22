@@ -418,8 +418,8 @@ T *ObjectRewindState<T, do_compare, take_ownership, create_default>::reserveOne(
   G_ASSERT(!hasReserved);
   hasReserved = true;
 #endif
-  // Long histories double instead of growing by half (the vector's own policy): every growth copies the
-  // whole history, and one sample per sync adds up to hundreds of thousands of samples per unit.
+  // Long histories double: every growth copies the whole history, and a unit can have
+  // hundreds of thousands of samples.
   if (this->time_states.size() == this->time_states.capacity() && this->time_states.size() >= 256)
     this->time_states.reserve(this->time_states.size() * 2);
   auto back = &this->time_states.push_back();

@@ -87,11 +87,9 @@ namespace unit {
 
     // Nodes are stored in tree index order, so parents always precede children — one forward pass is sufficient.
     //
-    // The angles are written and read back within a few instructions here and around this call (setData before,
-    // push_curr_state after), which is slow when a load does not match the stores it has to come from: a
-    // Point3 is copied as 8 + 4 bytes, and that 8-byte load has to wait for the cache when x and y were stored
-    // as two floats. So: the angles of the node done last stay in locals (a turret, then its gun), every field
-    // is loaded on its own, and x and y are stored together in one 8-byte store. Same values, same bytes.
+    // The angles are stored and loaded again within a few instructions, and a load that does not match
+    // its stores stalls. So the angles of the last node stay in locals, each field is loaded on its own,
+    // and x and y are stored with one 8-byte store.
     unsigned last_idx = ~0u;
     float last_x = 0.f, last_y = 0.f, last_z = 0.f;
     for (uint16_t node_idx: useful_order) {
@@ -357,8 +355,7 @@ namespace unit {
     turret_desc = std::make_unique<TurretDesc>(head_node, gun_node);
   }
 
-  // The unit blk only depends on the game files and is only read here, but every spawn of a unit loaded
-  // it again (vromfs zstd stream + blk parse). Keep one parsed copy per path for the process.
+  // The unit blk depends only on the game files: keep one parsed copy per path for the process.
   // Returns nullptr when the file does not load. The blocks are never modified or freed.
   static const DataBlock *load_unit_blk_cached(const std::string &path) {
     static std::mutex cache_mtx;

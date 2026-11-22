@@ -732,10 +732,8 @@ bool dataSync::ParseVehicleInfo(ParserState &state, danet::PaddedBitCursor &bs, 
   return ret;
 }
 
-// Not inlined on purpose. GMSync has more live values than there are registers and kept the counter of this
-// loop in memory (a store and a load of it per turret). Here a record is a handful of instructions, and the
-// usual one (count 1) is a predicted branch: the position of the next record does not have to wait for the
-// count of this one to be loaded.
+// Not inlined on purpose: inside GMSync the loop counter stays in memory. Here a record is a few
+// instructions, and the usual one (count 1) is a predicted branch.
 #if defined(__GNUC__)
 __attribute__((noinline))
 #elif defined(_MSC_VER)

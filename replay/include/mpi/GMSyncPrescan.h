@@ -8,12 +8,9 @@ struct net_delta_t;
 
 /// Ground-model syncs, read ahead of the parser.
 ///
-/// Most of the work of a sync does not need the parser: finding the vehicles in the message and unpacking the
-/// delta packet of each (rle0ki) depend on the bytes of the message only. With this on, every decoded part of
-/// a replay gets a thread that does that for its sync messages, from the last message of the part towards the
-/// first, while the parser works from the first towards the last. A message the thread has finished costs the
-/// parser one XOR per vehicle; a message it has not reached (or the two meeting in the middle) is read by the
-/// parser itself, as before. The parser never waits, and the results are the same bytes either way.
+/// Finding the vehicles of a sync message and unpacking their deltas depend only on the message bytes.
+/// A thread per decoded part does that from the last message towards the first, while the parser goes
+/// forwards and reads itself what the thread has not reached. The parser never waits; same results.
 namespace gmsync {
   /// one vehicle of a message
   struct PrescanRec {
@@ -75,16 +72,14 @@ namespace gmsync {
     bool result = false; ///< what GMSync returns
   };
 
-  /// The message whose sync data is `data`/`bits`, read all the way for `nd`, or nullptr: then go on with
-  /// lookup() / the parser's own walk, which find `nd` as they need it.
+  /// The message whose sync data is `data`/`bits`, read all the way for `nd`, or nullptr: then use
+  /// lookup() / the parser's own walk.
   ///
-  /// The first call for a part (from the thread that parses) gives the part a second thread that goes through
-  /// its sync messages from the first to the last and does all of GMSync that does not need the state: it
-  /// brings the histories of `nd` up to date and reads the vehicle data. While it runs, nothing else may use
-  /// the histories of `nd`; the parser takes the messages in order (and waits for one that is not done yet).
-  /// The thread stops at a message it cannot read (data that is not delta packed), and when the parser does
-  /// not take a message in order (or `inline_only` is true, see ParserConfig skip_sync_without_unit): then
-  /// `nd` is set to what the parser has taken so far and this returns nullptr for the rest of the part.
+  /// The first call for a part (from the parsing thread) starts a thread that runs the state-free part of
+  /// GMSync over its messages in order, updating the histories of `nd`; nothing else may use them meanwhile.
+  /// It stops at a message it cannot read, when the parser takes a message out of order, or when
+  /// `inline_only` is set (ParserConfig skip_sync_without_unit): `nd` is then set to what the parser has
+  /// taken, and this returns nullptr for the rest of the part.
   const ReadyMsg *take(net_delta_t &nd, const replay::IPartSidecar *sidecar, const uint8_t *data, uint32_t bits,
                        bool inline_only);
 

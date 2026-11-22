@@ -292,9 +292,8 @@ namespace danet {
       std::memcpy(dest, &lane, bytes);
     }
 #endif
-    // n source bytes as one value (same bytes as a memcpy into a zeroed integer), built from 4, 2 and 1
-    // byte loads. A memcpy of 3 or 5 bytes into the lane goes through the stack as two narrow stores
-    // followed by one wide load, which cannot be store-forwarded and stalls every unaligned read.
+    // n source bytes as one value, from 4, 2 and 1 byte loads: a 3 or 5 byte memcpy into the lane
+    // is two narrow stores and one wide load, which cannot be store-forwarded.
     template<size_t n>
     static inline uint64_t loadBytes(const uint8_t *src) {
       if constexpr (n >= 8) {
@@ -406,8 +405,8 @@ namespace danet {
       return true;
     }
 
-    /// Read(BitStream &) without the copy: `bs` becomes a view of the bytes inside this stream (same size and
-    /// content as the copy would have). It does not own them, so it is only valid while this stream's data is.
+    /// Like Read(BitStream &), but `bs` becomes a view of the bytes inside this stream. It does not own them:
+    /// valid only while this stream's data is.
     bool ReadView(BitStream &bs) const {
       uint32_t numberOfBitsUsed;
       if (!ReadCompressed(numberOfBitsUsed))

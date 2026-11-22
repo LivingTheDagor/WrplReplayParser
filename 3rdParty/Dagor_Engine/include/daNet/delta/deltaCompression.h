@@ -77,9 +77,9 @@ namespace net {
 #endif
     };
 
-    /// What applyDelta gives back: the bytes of the decoded packet and the same flags as ReadResult.
-    /// The bytes are the history slot of that packet: not owned, valid until the next packet for the
-    /// same history, and followed by at least PADDING bytes that may be loaded (danet::PaddedBitCursor).
+    /// Result of applyDelta: the decoded packet bytes and the ReadResult flags. The bytes are the history slot
+    /// of the packet: not owned, valid until the next packet of that history, followed by at least PADDING
+    /// loadable bytes (danet::PaddedBitCursor).
     struct DeltaView {
       static constexpr uint32_t PADDING = 8;
       const uint8_t *data = nullptr;
@@ -92,9 +92,8 @@ namespace net {
     };
 
     struct ReadResult {
-      /// The decoded packet. It does not own its bytes: for a full packet it points into the stream given to
-      /// readDelta, for a delta into the history slot of that packet. Valid until the next readDelta on the
-      /// same history (or until the input stream goes away).
+      /// The decoded packet, not owned: it points into the input stream (full packet) or the history slot (delta).
+      /// Valid until the next readDelta on the same history.
       danet::BitStream bs;
       bool ok = false;
       bool isResetNeeded = false;
@@ -133,9 +132,7 @@ namespace net {
       return ok;
     }
     /// The part of readDelta after the header: bring `history` up to the packet and decode it.
-    /// `unpacked` (when not nullptr) are the bytes the packed delta unpacks to (net::delta::rle0ki_decompress
-    /// into a buffer of 10 times h.compressedSize), `unpacked_size` of them, for a caller that did that
-    /// already. Not used for a full packet.
+    /// `unpacked`/`unpacked_size`: the delta already unpacked by the caller, or nullptr. Unused for a full packet.
     DeltaView applyDelta(const DeltaHeader &h, const uint8_t *compressed, History *history,
                          const uint8_t *unpacked = nullptr, uint32_t unpacked_size = 0);
     /// readDelta without a stream object for the result.

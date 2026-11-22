@@ -378,8 +378,7 @@ namespace danet {
     // tell to object that we done
     onAfterVarsDeserialization();
 
-    // reset service flags: they are only ever set here, on the vars of this packet (the two hooks above are
-    // not overridden anywhere), so there is no need to touch every var of the object
+    // reset service flags: only the vars of this packet can have them set
     for (uint16_t j = 0; j < numVars; ++j)
       if (varsToRead[j])
         varsToRead[j]->flags &= ~(RVF_DESERIALIZED | RVF_NEED_DESERIALIZE);

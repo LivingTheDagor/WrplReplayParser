@@ -106,8 +106,7 @@ void ParserState::registerStateChange(IObjectRewindState *state) {
 
 class StateUpdateEvent : public IRewindEvent {
 public:
-  // An exact-size copy. The list of the state is not moved out: it keeps its buffer for the next timestamp
-  // instead of growing from nothing again (1, 2, 4, ... elements) every time.
+  // An exact-size copy: the list of the state keeps its buffer for the next timestamp.
   StateUpdateEvent(ParserState *state, const std::pmr::vector<ParserState::RewindRef> &states) :
     states(states.begin(), states.end(), state->get_allocator()) {}
   ~StateUpdateEvent() override = default;

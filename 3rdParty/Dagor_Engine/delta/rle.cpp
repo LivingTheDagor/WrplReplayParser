@@ -318,10 +318,8 @@ namespace net::delta {
       const int wholeBytes = limit - 1;
       int i = 0;
       while (i < wholeBytes) {
-        // Main loop, no data-dependent branch: store the pending word, keep the bits of its unfinished
-        // byte, add the next source byte. Whether a step crosses a 64-bit word is close to random (it
-        // mispredicted about every second source byte), so nothing here depends on it. Needs room for
-        // the 8-byte store, and steps of at most 56 bits (everything but the 78-bit zero run of KI8).
+        // Main loop, branch-free: whether a step crosses a 64-bit word is close to random. Needs room for
+        // the 8-byte store, and steps of at most 56 bits (all but the 78-bit zero run of KI8).
         if constexpr (std::endian::native == std::endian::little) {
           while (i < wholeBytes && outBytes + 16 <= maxOriginalSize) {
             memcpy(dst + outBytes, &acc, 8);

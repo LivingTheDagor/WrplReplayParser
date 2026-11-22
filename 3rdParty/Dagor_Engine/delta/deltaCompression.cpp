@@ -180,8 +180,7 @@ namespace net {
     }
     history->pushDbgPacketHistory(nextPacketNo);
 
-    // The patch is applied further down, straight into the new base version. Take the base bytes now:
-    // advancing curPacketNo below only resets write offsets, it does not touch or move the bytes.
+    // Take the base bytes now: advancing curPacketNo below only resets write offsets, the bytes stay.
     const uint8_t *const baseData = baseVersion.GetData();
     const uint32_t baseSize = baseVersion.GetNumberOfBytesUsed();
 
@@ -219,8 +218,8 @@ namespace net {
       history->curPacketNo = nextPacketNo;
     }
 
-    // new base version: a copy of the full packet, or base ^ delta written in place (no temporary stream,
-    // no second copy). The result handed back is a view of this slot.
+    // new base version: a copy of the full packet, or base ^ delta written in place.
+    // The result is a view of this slot.
     danet::BitStream &to = history->baseHist[nextPacketIdx];
     if (fullDiff) {
       to.SetWriteOffset(0);

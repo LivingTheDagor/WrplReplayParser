@@ -50,10 +50,8 @@ namespace gmsync {
       }
     };
 
-    // The prescan only helps while a core has nothing better to do. When the parser and the thread that
-    // decodes the next part already fill the cores there are, a third thread at the same priority takes
-    // time from the parser, the one everything waits for. On Linux a thread can have a nice value of its
-    // own: at 19 it gets what the others leave. Elsewhere it runs at the normal priority.
+    // The prescan only helps on an idle core: at nice 19 (Linux, per thread) it gets what the parser and
+    // the decoder leave.
     void yield_to_other_threads() {
 #if defined(__linux__)
       setpriority(PRIO_PROCESS, (id_t) syscall(SYS_gettid), 19);
@@ -68,9 +66,8 @@ namespace gmsync {
 #endif
     }
 
-    // The history thread and the parser wait for each other often, a message at a time. On the same core one
-    // of them waits for the other's time slice to end (milliseconds), so keep the history thread off the core
-    // the parser was on when it started (when the process may use more than that one).
+    // The history thread and the parser wait for each other per message; on one core that costs a time
+    // slice, so keep the history thread off the parser's core (when there is another).
     void keep_off_cpu(int cpu) {
 #if defined(__linux__)
       if (cpu < 0 || cpu >= CPU_SETSIZE)
@@ -146,9 +143,7 @@ namespace gmsync {
         if (mode == Mode::Unbound) {
           if (nd.gmsync_link)
             nd.gmsync_link->recover(); // a part that is still bound to it: should not happen
-          // Not worth a thread: a part with few syncs, or when the thread could not keep up with the parser in
-          // a part not long ago (ships: a lot of data per vehicle, little else to parse). Then the parser does
-          // it, as without the thread.
+          // No thread for a part with few syncs, or shortly after a part where the thread could not keep up.
           const bool paused = nd.gmsync_pause > 0;
           if (paused)
             nd.gmsync_pause--;
@@ -165,9 +160,8 @@ namespace gmsync {
           return nullptr;
         }
         if (mode == Mode::Starting) {
-          // The thread has not started yet (a new thread can take a while to get a core): the parser reads
-          // the messages itself until the thread is there, then hands the histories over at the message it
-          // is at.
+          // The thread has not started yet: the parser reads the messages itself, and hands the histories over
+          // at its current message once the thread is there.
           uint32_t at = next;
           while (at < msgs.size() && msgs[at].data < data)
             ++at;
@@ -191,16 +185,14 @@ namespace gmsync {
         const uint32_t at = next;
         uint32_t v = histProgress.load(std::memory_order_acquire);
         if ((v & ~FINISHED) <= at && !(v & FINISHED)) {
-          // The thread does not keep up (ships: a lot of data per vehicle, and little else for the parser to
-          // do): stop it, the parser goes on faster by itself. (What the thread did past this message is set
-          // back, see recover.)
+          // The thread does not keep up (ships): stop it, the parser is faster alone (see recover).
           if (++waits >= 64 && size_t(waits) * 16 > size_t(at - startAt)) {
             recover();
             return nullptr;
           }
         }
-        // The thread is a message or so ahead at worst: spin, without giving the core away (a thread that does
-        // can wait a whole scheduler tick, milliseconds, to get it back). After a while, sleep.
+        // The thread is a message or so ahead at worst: spin without yielding (getting the core back can
+        // take a scheduler tick), then sleep.
         for (uint32_t spin = 0; (v & ~FINISHED) <= at && !(v & FINISHED); spin++) {
           if (spin < (1u << 16))
             cpu_relax();
@@ -509,8 +501,7 @@ namespace gmsync {
       Mode mode = Mode::Unbound; ///< parsing thread
       uint32_t next = 0; ///< the message the parser takes next; parsing thread
       net_delta_t *bound = nullptr;
-      // The histories where the thread starts, to set them back to (recover). Only what a history is made of
-      // when it is read: the used bytes of every slot, not the memory behind them, which is a lot more.
+      // The histories where the thread starts, for recover: only the used bytes of every slot.
       struct HistSnap {
         uint32_t firstSlot, slots;
         uint32_t curPacketTotalNo, curPacketNo;

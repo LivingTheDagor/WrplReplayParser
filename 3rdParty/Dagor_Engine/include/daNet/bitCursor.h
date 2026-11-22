@@ -11,23 +11,17 @@
 #endif
 
 namespace danet {
-  /// A read position over the bytes of a BitStream that lives in locals of the caller.
+  /// A read position over the bytes of a BitStream, held in locals of the caller.
   ///
-  /// BitStream keeps its read offset in the object, and every value it reads is stored through a
-  /// uint8_t pointer, which may alias that object: the offset, the size and the data pointer are
-  /// loaded again for every read and the offset is stored back. A cursor is a plain local with no
-  /// address taken, so all of that stays in registers, and a read is one 8-byte load and two shifts
-  /// with no branch on the bit alignment. Keep it that way: every call here is inlined, and a cursor
-  /// that is passed by reference to a function that is not inlined is back in memory.
+  /// BitStream reads through a uint8_t pointer that may alias it, so its offset, size and data pointer are
+  /// reloaded on every read. A cursor with no address taken stays in registers. Keep every call here inlined:
+  /// a cursor passed by reference to a call that is not inlined is back in memory.
   ///
-  /// The calls have the names and the results of the BitStream calls: the same bits end up in the
-  /// same bytes, a checked read that does not fit fails without moving the position, and array reads
-  /// stop at the first element that does not fit. One thing differs: bits past the last byte of the
-  /// stream read as 0. BitStream::ReadBit() reads whatever byte the offset points at.
+  /// Reads give the same results as the BitStream calls of the same name, except that bits past the last
+  /// byte of the stream read as 0.
   ///
-  /// Padded = true is for bytes that are followed by at least 8 more bytes that may be loaded (their
-  /// values do not matter). Reads then load 8 bytes at the position without looking at how far the
-  /// end is.
+  /// Padded = true: the bytes are followed by at least 8 more loadable bytes, so reads load 8 bytes at the
+  /// position without an end check.
   template<bool Padded>
   class BitCursorT {
   public:
@@ -122,9 +116,8 @@ namespace danet {
     // readOffset <= bitsUsed && bits <= bitsUsed - readOffset, as one compare
     BITCURSOR_INLINE bool fits(uint32_t bits) const { return uint64_t(readOffset) + bits <= bitsUsed; }
 
-    // The stream from the read position on, first bit in the top bit: at least 57 bits of it. Only for a
-    // position inside the stream. Without padding, near the end the 8 bytes are taken from the last 8 of
-    // the stream and moved down, so that nothing past the end is loaded.
+    // At least 57 bits from the read position, first bit in the top bit. The position must be inside the stream.
+    // Without padding, near the end the last 8 bytes are loaded and shifted, so nothing past the end is read.
     BITCURSOR_INLINE uint64_t peek() const {
       const uint32_t byte = readOffset >> 3;
       uint64_t w;

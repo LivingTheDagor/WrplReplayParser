@@ -354,8 +354,7 @@ namespace mpi {
     return nullptr;
   }
 
-  // The sync is parsed as soon as the message is applied, while the packet it came in is still there: point
-  // `data` at the bytes inside the payload instead of copying them (a ship battle sends megabytes of them).
+  // The sync is parsed while its packet is still there, so `data` is a view into the payload.
   bool TankMessage::readPayload(ParserState *state) { return this->payload.ReadView(this->data); }
 
   void TankMessage::writePayload() { this->payload.Write(this->data); }

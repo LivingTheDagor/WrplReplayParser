@@ -271,8 +271,7 @@ namespace danet {
       DEBUG_REFLECTION = 32, // like define for all vars of this object RVF_DEBUG
     };
     List<ReflectionVarMeta, false> varList;
-    /// persistentId -> the first var of varList with that id (deserialize() looks every var of a packet up by
-    /// its id; walking the list for that touched every var of the object for each packet).
+    /// persistentId -> the first var of varList with that id, for deserialize().
     /// Made by varsById() when first needed, and made again when varList is not the list it was made from.
     /// A table is never changed once it is made: copies of an object share it until then.
     struct VarTable {
