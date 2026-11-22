@@ -60,6 +60,10 @@ namespace net
     /// `padding` bytes larger than the result (bytes that may be loaded, with no defined value).
     uint32_t apply_compressed_patch_into(const uint8_t *base, uint32_t base_size, const danet::BitStream &compressed_delta,
                                          danet::BitStream &out, uint32_t padding = 0);
+    /// apply_compressed_patch_into for a delta that is unpacked already: `delta`/`delta_size` are the bytes
+    /// net::delta::decompress gives for the compressed delta.
+    uint32_t apply_patch_into(const uint8_t *base, uint32_t base_size, const uint8_t *delta, uint32_t delta_size,
+                              danet::BitStream &out, uint32_t padding = 0);
 
   } // namespace delta
 

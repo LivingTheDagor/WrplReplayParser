@@ -6,6 +6,7 @@
 #define ZSTD_STATIC_LINKING_ONLY // ZSTD_decompressBound
 #include "zstd.h"
 #include "zstd_errors.h"
+#include <atomic>
 
 namespace replay {
   constexpr size_t MAX_REPLAY_COMPRESSION_RATIO = 64;
@@ -92,13 +93,35 @@ namespace replay {
   IReplayReader::IReplayReader(IReplay &owner) : owner(owner) {}
 
 
+  static std::atomic<PartSidecarFactory> part_sidecar_factory{nullptr};
+  void set_part_sidecar_factory(PartSidecarFactory factory) { part_sidecar_factory.store(factory); }
+
   FullDecompressReplayReader::~FullDecompressReplayReader() {
+    sidecar.reset(); // it reads the decoded bytes (maybe on a thread of its own): gone before they are
     free((void *) crd.data());
     G_ASSERT(dynamic_cast<Replay *>(&this->owner));
     static_cast<Replay &>(this->owner).Data.afterParse();
   }
 
   bool FullDecompressReplayReader::getNextPacket(ReplayPacket &packet) {
+    if (next_packet >= packets.size())
+      return false;
+    const PacketRef &ref = packets[next_packet++];
+#if defined(__GNUC__)
+    // The packets are no longer read one after the other from start to end (the sizes are not, and the data of
+    // a ground-model sync that was read ahead is not either), so the start of a packet is not in the cache by
+    // itself any more: ask for the one after the next.
+    if (next_packet + 1 < packets.size())
+      __builtin_prefetch(crd.data() + packets[next_packet + 1].offset);
+#endif
+    packet.stream = danet::BitStream(reinterpret_cast<const uint8_t *>(crd.data()) + ref.offset, ref.size, false);
+    packet.timestamp_ms = ref.timestamp_ms;
+    packet.type = ref.type;
+    packet.sidecar = sidecar.get();
+    return true;
+  }
+
+  bool FullDecompressReplayReader::readPacket(ReplayPacket &packet) {
     uint32_t pkt_sz = getPacketSize(crd);
     if (pkt_sz == 0)
       return false;
@@ -168,6 +191,16 @@ namespace replay {
         ptr = shrunk;
     }
     new (&crd) InPlaceMemLoadCB(reinterpret_cast<char *>(ptr), (int) dest_len);
+
+    // find the packets now: for a server replay this runs on the thread that decodes the part ahead
+    {
+      ReplayPacket scratch{};
+      while (readPacket(scratch))
+        packets.push_back({uint32_t(scratch.stream.GetData() - ptr), scratch.stream.GetNumberOfBytesUsed(),
+                           scratch.timestamp_ms, scratch.type});
+    }
+    if (const PartSidecarFactory factory = part_sidecar_factory.load())
+      sidecar = factory(ptr, std::span<const PacketRef>(packets));
   }
 
 
@@ -189,6 +222,7 @@ namespace replay {
     if (reader.tryRead(packet.stream.GetData(), (int) pkt_sz) != pkt_sz)
       return false;
     packet.stream.SetWriteOffset(BYTES_TO_BITS(pkt_sz));
+    packet.sidecar = nullptr;
     uint16_t type_t = 0x0;
     packet.stream.Read(type_t);
     // if two packets have the same timestamp, then only the first one encodes the timestamp

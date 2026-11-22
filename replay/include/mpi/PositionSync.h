@@ -1,6 +1,12 @@
 #pragma once
 
 struct ParserState;
+namespace gmsync {
+  struct Unit;
+}
+namespace net {
+  struct DeltaComp;
+}
 namespace danet {
   template<bool Padded>
   class BitCursorT;
@@ -35,6 +41,14 @@ private:
     uint8_t turret_count = 0;
   };
   static bool GMSyncImpl(ParserState &state, danet::BitCursor &bs);
+  struct GMSyncSink;
+  /// One vehicle of a sync with a delta packet: bring its history up to the packet and parse the result.
+  /// `unpacked`: see net::DeltaComp::applyDelta. Returns false when the message cannot be read on.
+  static bool unitDelta(ParserState &state, uint16_t uid, const gmsync::Unit &unit, bool header_ok,
+                        uint32_t next_packet_no, uint32_t packet_no_delta, bool full_diff, uint16_t packed_size,
+                        const uint8_t *packed, const uint8_t *unpacked, uint32_t unpacked_size);
+  /// one vehicle of a sync whose data is not delta packed, at the position of `bs`
+  static bool unitPlain(ParserState &state, danet::BitCursor &bs, uint16_t uid, const gmsync::Unit &unit);
   static bool ParseVehicleInfo(ParserState &state, danet::PaddedBitCursor &bs, TankRef *ref, bool is_from_compress);
   static bool ParseVehicleInfoImpl(ParserState &state, danet::PaddedBitCursor &bs, TankRef *ref,
                                    bool is_from_compress);

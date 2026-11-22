@@ -8,6 +8,7 @@ add_library(MPI STATIC
         BattleMessages.cpp
         HitMessages.cpp
         PositionSync.cpp
+        GMSyncPrescan.cpp
         MpiPull.cpp
 )
 

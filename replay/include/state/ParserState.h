@@ -328,6 +328,8 @@ protected:
   std::pmr::vector<ObjectRewindState<MissionArea *, false> *> missionAreas2{get_allocator()};
 
   int current_packet_index = -1;
+  /// what the reader of the packet being parsed worked out ahead for its part (ReplayPacket::sidecar), or nullptr
+  const replay::IPartSidecar *curr_part_sidecar = nullptr;
   StateRewinder rewinder{this};
   std::array<uint8_t, 3> team_spawn_side_masks{};
   friend StateRewinder;

@@ -133,7 +133,11 @@ namespace net {
       return ok;
     }
     /// The part of readDelta after the header: bring `history` up to the packet and decode it.
-    DeltaView applyDelta(const DeltaHeader &h, const uint8_t *compressed, History *history);
+    /// `unpacked` (when not nullptr) are the bytes the packed delta unpacks to (net::delta::rle0ki_decompress
+    /// into a buffer of 10 times h.compressedSize), `unpacked_size` of them, for a caller that did that
+    /// already. Not used for a full packet.
+    DeltaView applyDelta(const DeltaHeader &h, const uint8_t *compressed, History *history,
+                         const uint8_t *unpacked = nullptr, uint32_t unpacked_size = 0);
     /// readDelta without a stream object for the result.
     template<typename Stream>
     BITCURSOR_INLINE DeltaView readDeltaView(Stream &data, History *history) {

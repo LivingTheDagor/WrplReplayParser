@@ -69,6 +69,14 @@ namespace replay {
   extern std::string packet_names[];
 
 
+  /// Something a reader worked out ahead of time about the part its packets come from (see
+  /// FullDecompressReplayReader and set_part_sidecar_factory). It belongs to the reader and lives as long as
+  /// the packets of that part do.
+  class IPartSidecar {
+  public:
+    virtual ~IPartSidecar() = default;
+  };
+
   struct ReplayPacket {
   public:
     ReplayPacketType type{};
@@ -76,5 +84,7 @@ namespace replay {
     // (Runtime state, not file data)
     // uint64_t runtimePayloadSizeBytes{};
     danet::BitStream stream;
+    /// (Runtime state, not file data) the sidecar of the part this packet is in, or nullptr
+    const IPartSidecar *sidecar = nullptr;
   };
 } // namespace replay

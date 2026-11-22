@@ -55,7 +55,11 @@ namespace net {
       ZoneScoped;
       static thread_local danet::BitStream delta{};
       net::delta::decompress(compressed_delta, delta);
-      const uint32_t size = delta.GetNumberOfBytesUsed();
+      return apply_patch_into(base, base_size, delta.GetData(), delta.GetNumberOfBytesUsed(), out, padding);
+    }
+
+    uint32_t apply_patch_into(const uint8_t *base, uint32_t base_size, const uint8_t *d, uint32_t size,
+                              danet::BitStream &out, uint32_t padding) {
       const bool inPlace = out.GetData() == base && base != nullptr;
       out.SetWriteOffset(0);
       out.reserveBits(BYTES_TO_BITS(size + padding));
@@ -63,7 +67,6 @@ namespace net {
         base = out.GetData(); // reserveBits may have moved the buffer; the bytes are the same
       const uint32_t common = std::min(base_size, size);
       uint8_t *dst = out.GetData();
-      const uint8_t *d = delta.GetData();
       if (inPlace) {
         for (uint32_t i = 0; i < common; ++i)
           dst[i] ^= d[i];

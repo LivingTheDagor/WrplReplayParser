@@ -3,6 +3,8 @@
 #include "Unit.h"
 #include "daNet/dag_netUtils.h"
 #include "daNet/bitCursor.h"
+#include "mpi/GMSyncWalk.h"
+#include "mpi/GMSyncPrescan.h"
 #include "math/dag_mathAng.h"
 
 bool separateServerSideDetection_g = true;
@@ -178,19 +180,6 @@ std::vector<std::string> unit::getUnitTagsName(std::string_view &name) {
 G_STATIC_ASSERT(sizeof(TargetDesignationControlState) == 0x50);
 
 
-template<typename Stream>
-static BITCURSOR_INLINE void DeserializeSeekerData(Stream &bs) {
-  // this will probably never be implemented unless if I actually go through and try to understand what this complex
-  // bullshit is
-  uint32_t val;
-  bs.Read(val);
-  auto read_offs = bs.GetReadOffset();
-  bs.SetReadOffset(read_offs + val);
-  // bool does_read_call_one = bs.ReadBit();
-
-  return;
-}
-
 bool dataSync::FMSync(ParserState &state, danet::BitStream &bs) {
   ZoneScoped;
   uint16_t uid = 0;
@@ -356,7 +345,7 @@ bool dataSync::FMSync(ParserState &state, danet::BitStream &bs) {
           bool bit_thing_2;
           bs.Read(bit_thing_2);
           if (bit_thing_2) {
-            DeserializeSeekerData(bs);
+            gmsync::skipSeekerData(bs);
           }
         }
       }
@@ -717,131 +706,103 @@ dataSync::AmmoSkip dataSync::skipAmmoRecords(const uint8_t *data, uint32_t bits_
   return {offset, done};
 }
 
-BITCURSOR_INLINE bool dataSync::GMSyncImpl(ParserState &state, danet::BitCursor &bs) {
-  ZoneScoped;
-  uint16_t uid_lower;
-  uint16_t uid_upper;
-  float time_at;
-  uint16_t packet_reliability_order;
-  bs.Read(uid_lower);
-  bs.Read(uid_upper);
-  uint16_t uid_lower_base = uid_lower;
-  bs.Read(time_at);
-  bs.Read(packet_reliability_order);
-  for (; uid_lower < uid_upper; uid_lower++) {
-    TankRef ref{};
-    bool bool1;
-    RET_FAIL(bs.Read(bool1));
-    if (bool1) {
-      auto curr_unit = state.getUnitEid(uid_lower);
-      // G_ASSERT(curr_unit); // this can apparently fucking happen
-      ref.ref_1 = ref.ref_2 = state.getUnitObj(uid_lower);
-      // std::string_view name = *state.g_entity_mgr.getNullable<ecs::string>(curr_unit, ECS_HASH("unit__className"));
-      bool bool2;
-      uint8_t some_val_idk;
-      bool bool4;
-      RET_FAIL(bs.Read(bool2)); // some weird flag setting based on bool value at unit + 0x90
-      if (bs.ReadBit()) {
-        RET_FAIL(bs.ReadBits<4>(&some_val_idk));
-      }
-      RET_FAIL(bs.Read(ref.val2));
-      RET_FAIL(bs.Read(ref.val3));
-      if (!ref.val2 || !ref.val3) {
-        bool bool5;
-        bool isCompressed;
-        RET_FAIL(bs.Read(bool5));
-        RET_FAIL(bs.Read(ref.val1));
-        RET_FAIL(bs.Read(ref.turret_count));
-        RET_FAIL(bs.Read(isCompressed));
-        if (isCompressed && !ref.ref_1 && curr_unit != ecs::INVALID_ENTITY_ID &&
-            state.getConfig().skip_sync_without_unit()) {
-          // ParserConfig::GMOpts::skip_sync_without_unit: nothing reads this vehicle's sync, so do not
-          // decode it. Its history is not kept up from here on, so make every slot invalid: a later
-          // delta for this uid then fails for lack of a base instead of patching a stale one.
-          auto &hist = state.NetDelta.getHistory(uid_lower);
-          for (auto &slot: hist.baseHist)
-            slot.SetWriteOffset(0);
-          hist.stats.isHistoryBroken = true;
-          RET_FAIL(state.NetDelta.netDelta.skipDelta(bs));
-        } else if (isCompressed) {
-          auto &hist = state.NetDelta.getHistory(uid_lower);
-          auto res = state.NetDelta.netDelta.readDeltaView(bs, &hist);
-          if (res.ok) {
-            danet::PaddedBitCursor res_bs{res.data, BYTES_TO_BITS(res.sizeBytes)};
-            bool ret = ParseVehicleInfo(state, res_bs, &ref, true);
-            if (ret == false && ref.ref_1 != nullptr) {
-              LOGE("Failed to parse info for ground unit {} of uid {}", ref.ref_1->unit_name, ref.ref_1->uid);
-            }
-          }
-        } else {
-          bs.AlignReadToByteBoundary();
-          // ParseVehicleInfo reads padded bytes: give it a padded copy of the rest of the message
-          const uint32_t rest_bits = bs.GetNumberOfUnreadBits();
-          std::vector<uint8_t> rest(BITS_TO_BYTES(rest_bits) + 8);
-          if (rest_bits)
-            memcpy(rest.data(), bs.GetData() + BITS_TO_BYTES(bs.GetReadOffset()), BITS_TO_BYTES(rest_bits));
-          danet::PaddedBitCursor uncompressed_bs{rest.data(), rest_bits};
-          ParseVehicleInfo(state, uncompressed_bs, &ref, false);
-          bs.SetReadOffset(bs.GetReadOffset() + uncompressed_bs.GetReadOffset());
-          G_ASSERT(false);
-        }
-        bool bool7;
-        RET_FAIL(bs.Read(bool7));
-        if (bool7) {
-          Point4 tp4; // actually 4 float reads, but meght
-          bs.Read(tp4);
-        }
-        bool bool8;
-        RET_FAIL(bs.Read(bool8));
-        if (bool8 && ref.turret_count > 0) { // maybe has_shot_gun???
-          for (int i = 0; i < ref.turret_count; i++) {
-            {
-              // none of this is used: step over all the records that are whole (see skipAmmoRecords). The
-              // reads below are for what is left, at the very end of a stream.
-              const AmmoSkip skipped = skipAmmoRecords(bs.GetData(), bs.GetNumberOfBitsUsed(), bs.GetReadOffset(),
-                                                       uint32_t(ref.turret_count - i));
-              bs.SetReadOffset(skipped.offset);
-              i += (int) skipped.records;
-              if (i >= ref.turret_count)
-                break;
-            }
-            bool t1;
-            RET_FAIL(bs.Read(t1));
-            if (t1) {
-              uint8_t v1;
-              float v2;
-              float v3;
-              uint8_t v4;
-              RET_FAIL(bs.Read(v1));
-              RET_FAIL(bs.Read(v2));
-              RET_FAIL(bs.Read(v3));
-              RET_FAIL(bs.Read(v4));
-              // new ammunition counts!!!!
-              // first val is ammo 0, second is ammo 1, ...
-              for (int j = 0; j < v4; j++) {
-                uint16_t vv;
-                bs.Read(vv);
-              }
-            }
-          }
-        }
-        bool has_sensor_info;
-        bool has_sensor_info_2;
-        bs.Read(has_sensor_info);
-        if (has_sensor_info) {
-          bs.Read(has_sensor_info_2);
-          if (has_sensor_info_2) {
-            DeserializeSeekerData(bs);
-          }
-        }
-        bs.AlignReadToByteBoundary();
-      }
+BITCURSOR_INLINE bool dataSync::unitDelta(ParserState &state, uint16_t uid, const gmsync::Unit &unit, bool header_ok,
+                                          uint32_t next_packet_no, uint32_t packet_no_delta, bool full_diff,
+                                          uint16_t packed_size, const uint8_t *packed, const uint8_t *unpacked,
+                                          uint32_t unpacked_size) {
+  auto curr_unit = state.getUnitEid(uid);
+  // G_ASSERT(curr_unit); // this can apparently fucking happen
+  TankRef ref{};
+  ref.ref_1 = ref.ref_2 = state.getUnitObj(uid);
+  // std::string_view name = *state.g_entity_mgr.getNullable<ecs::string>(curr_unit, ECS_HASH("unit__className"));
+  ref.val1 = unit.val1;
+  ref.val2 = unit.val2;
+  ref.val3 = unit.val3;
+  ref.turret_count = unit.turret_count;
+  if (!ref.ref_1 && curr_unit != ecs::INVALID_ENTITY_ID && state.getConfig().skip_sync_without_unit()) {
+    // ParserConfig::GMOpts::skip_sync_without_unit: nothing reads this vehicle's sync, so do not
+    // decode it. Its history is not kept up from here on, so make every slot invalid: a later
+    // delta for this uid then fails for lack of a base instead of patching a stale one.
+    auto &hist = state.NetDelta.getHistory(uid);
+    for (auto &slot: hist.baseHist)
+      slot.SetWriteOffset(0);
+    hist.stats.isHistoryBroken = true;
+    RET_FAIL(header_ok);
+    return true;
+  }
+  auto &hist = state.NetDelta.getHistory(uid);
+  if (!header_ok)
+    return true; // the message ended inside the header: nothing to apply
+  net::DeltaComp::DeltaHeader header;
+  header.fullDiff = full_diff;
+  header.packetNoDelta = packet_no_delta;
+  header.nextPacketNo = next_packet_no;
+  header.compressedSize = packed_size;
+  auto res = state.NetDelta.netDelta.applyDelta(header, packed, &hist, unpacked, unpacked_size);
+  if (res.ok) {
+    danet::PaddedBitCursor res_bs{res.data, BYTES_TO_BITS(res.sizeBytes)};
+    bool ret = ParseVehicleInfo(state, res_bs, &ref, true);
+    if (ret == false && ref.ref_1 != nullptr) {
+      LOGE("Failed to parse info for ground unit {} of uid {}", ref.ref_1->unit_name, ref.ref_1->uid);
     }
   }
   return true;
 }
 
+bool dataSync::unitPlain(ParserState &state, danet::BitCursor &bs, uint16_t uid, const gmsync::Unit &unit) {
+  TankRef ref{};
+  ref.ref_1 = ref.ref_2 = state.getUnitObj(uid);
+  ref.val1 = unit.val1;
+  ref.val2 = unit.val2;
+  ref.val3 = unit.val3;
+  ref.turret_count = unit.turret_count;
+  bs.AlignReadToByteBoundary();
+  // ParseVehicleInfo reads padded bytes: give it a padded copy of the rest of the message
+  const uint32_t rest_bits = bs.GetNumberOfUnreadBits();
+  std::vector<uint8_t> rest(BITS_TO_BYTES(rest_bits) + 8);
+  if (rest_bits)
+    memcpy(rest.data(), bs.GetData() + BITS_TO_BYTES(bs.GetReadOffset()), BITS_TO_BYTES(rest_bits));
+  danet::PaddedBitCursor uncompressed_bs{rest.data(), rest_bits};
+  ParseVehicleInfo(state, uncompressed_bs, &ref, false);
+  bs.SetReadOffset(bs.GetReadOffset() + uncompressed_bs.GetReadOffset());
+  G_ASSERT(false);
+  return true;
+}
+
+// what the parser does with the vehicles of a sync message (see gmsync::walk)
+struct dataSync::GMSyncSink {
+  ParserState &state;
+  const net::DeltaComp &deltaComp() const { return state.NetDelta.netDelta; }
+  BITCURSOR_INLINE bool delta(uint16_t uid, const gmsync::Unit &unit, bool header_ok,
+                              const net::DeltaComp::DeltaHeader &header, const uint8_t *packed) {
+    return unitDelta(state, uid, unit, header_ok, header.nextPacketNo, header.packetNoDelta, header.fullDiff,
+                     header.compressedSize, packed, nullptr, 0);
+  }
+  bool plain(danet::BitCursor &bs, uint16_t uid, const gmsync::Unit &unit) { return unitPlain(state, bs, uid, unit); }
+};
+
+BITCURSOR_INLINE bool dataSync::GMSyncImpl(ParserState &state, danet::BitCursor &bs) {
+  ZoneScoped;
+  GMSyncSink sink{state};
+  return gmsync::walk(bs, sink);
+}
+
 bool dataSync::GMSync(ParserState &state, danet::BitStream &bs) {
+  // A message that was read ahead (gmsync::lookup): the vehicles are listed and their deltas unpacked, what
+  // is left is the part that needs the parser state.
+  if (const gmsync::PrescanMsg *pre = gmsync::lookup(state.curr_part_sidecar, bs.GetData(), bs.GetNumberOfBitsUsed())) {
+    for (uint32_t i = 0; i < pre->count; i++) {
+      const gmsync::PrescanRec &r = pre->recs[i];
+      gmsync::Unit unit{};
+      unit.val1 = r.val1;
+      unit.turret_count = r.turret_count;
+      if (!unitDelta(state, r.uid, unit, r.headerOk, r.nextPacketNo, r.packetNoDelta, r.fullDiff, r.packedSize,
+                     r.packed, r.unpacked, r.unpackedSize))
+        return false;
+    }
+    bs.SetReadOffset(pre->endOffset);
+    return pre->result;
+  }
   danet::BitCursor cursor{bs};
   const bool ret = GMSyncImpl(state, cursor);
   cursor.writeBack(bs);

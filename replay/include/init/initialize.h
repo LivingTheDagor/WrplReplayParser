@@ -26,6 +26,11 @@ struct InitOptions {
   // set to "always"). Costs: up to 64 MB of extra address space, and freed memory stays with the process.
   // Set to false to leave malloc alone (GLIBC_TUNABLES / MALLOC_*_ environment settings then apply as usual).
   bool tune_malloc = true;
+  // Process wide: read the ground-model syncs of every decoded replay part ahead of the parser, on a thread
+  // per part (see mpi/GMSyncPrescan.h). It takes the unpacking of the sync deltas off the parsing thread:
+  // faster for anything with ground vehicles or ships, at the price of more CPU time on a second core. Same
+  // results either way. Set to false to keep all of it on the parsing thread.
+  bool sync_prescan = true;
 };
 
 void initialize(const InitOptions &options);

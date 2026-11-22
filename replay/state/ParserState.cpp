@@ -223,6 +223,7 @@ bool ParserState::ParsePacket(replay::ReplayPacket &pkt) {
   beforePacket(pkt);
   curr_time_ms = pkt.timestamp_ms;
   current_packet_index++;
+  curr_part_sidecar = pkt.sidecar;
   switch (pkt.type) {
     case replay::ReplayPacketType::EndMarker: {
       replay_length_ms = pkt.timestamp_ms;

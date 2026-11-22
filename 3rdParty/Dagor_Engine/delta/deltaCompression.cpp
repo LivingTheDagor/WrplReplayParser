@@ -155,7 +155,8 @@ namespace net {
     return result;
   }
 
-  DeltaComp::DeltaView DeltaComp::applyDelta(const DeltaHeader &h, const uint8_t *compressed, History *history) {
+  DeltaComp::DeltaView DeltaComp::applyDelta(const DeltaHeader &h, const uint8_t *compressed, History *history,
+                                             const uint8_t *unpacked, uint32_t unpacked_size) {
     const bool fullDiff = h.fullDiff;
     const uint32_t packetNoDelta = h.packetNoDelta;
     const uint32_t nextPacketNo = h.nextPacketNo;
@@ -225,6 +226,8 @@ namespace net {
       to.SetWriteOffset(0);
       to.reserveBits(BYTES_TO_BITS(compressedDelta.GetNumberOfBytesUsed() + DeltaView::PADDING));
       write_aligned_bytes(to, compressedDelta.GetData(), compressedDelta.GetNumberOfBytesUsed());
+    } else if (unpacked != nullptr) {
+      net::delta::apply_patch_into(baseData, baseSize, unpacked, unpacked_size, to, DeltaView::PADDING);
     } else {
       net::delta::apply_compressed_patch_into(baseData, baseSize, compressedDelta, to, DeltaView::PADDING);
     }

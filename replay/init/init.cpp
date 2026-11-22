@@ -6,6 +6,7 @@
 #include "ecs/componentTypesDefs.h"
 #include "init/initialize.h"
 #include "mpi/ObjectDispatcher.h"
+#include "mpi/GMSyncPrescan.h"
 #include "mpi/codegen/ReflIncludes.h"
 #include "state/ParserState.h"
 #include "translate.h"
@@ -96,6 +97,7 @@ void initialize(const InitOptions &options) {
   register_default_sigsev_handler();
   register_listener(&mpi::base);
   mpi::register_object_dispatcher(&mpi::MpiQueueObject::ObjectDispatcher);
+  gmsync::enable(options.sync_prescan);
   // p1, p2, and p5 are required, p3 and p4 are optional
 
   const std::string aces_v = ("aces.vromfs.bin");

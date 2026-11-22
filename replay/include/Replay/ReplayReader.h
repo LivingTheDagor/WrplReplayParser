@@ -5,6 +5,8 @@
 #include "ioSys/dag_zstdIo.h"
 #include <future>
 #include <memory>
+#include <span>
+#include <vector>
 
 namespace replay {
   uint32_t getPacketSize(IGenLoad &cb);
@@ -14,6 +16,20 @@ namespace replay {
   class IReplay;
   class Replay;
   class ServerReplay;
+
+  /// One packet of a decoded part: where its payload starts (behind the type and time fields), how long it
+  /// is, and those two fields.
+  struct PacketRef {
+    uint32_t offset;
+    uint32_t size;
+    uint32_t timestamp_ms;
+    ReplayPacketType type;
+  };
+  /// Makes the sidecar of a decoded part. `part` are the decoded bytes; they do not move and stay valid until
+  /// the sidecar has been destroyed. Called on the thread that decodes the part.
+  using PartSidecarFactory = std::unique_ptr<IPartSidecar> (*)(const uint8_t *part, std::span<const PacketRef> packets);
+  /// Process wide. nullptr (the start value): parts get no sidecar.
+  void set_part_sidecar_factory(PartSidecarFactory factory);
 
   class IReplayReader {
   protected:
@@ -30,6 +46,13 @@ namespace replay {
   class FullDecompressReplayReader : public IReplayReader {
     InPlaceMemLoadCB crd;
     uint32_t curr_time = 0;
+    /// Every packet of the part, found once when the part is decoded (on the thread that decodes ahead for a
+    /// server replay): getNextPacket only hands them out.
+    std::vector<PacketRef> packets;
+    size_t next_packet = 0;
+    std::unique_ptr<IPartSidecar> sidecar;
+    /// the next packet from the decoded bytes (what getNextPacket was before the list)
+    bool readPacket(ReplayPacket &packet);
     // expected_multiply_size is the expected compression ratio of the replay
     explicit FullDecompressReplayReader(Replay &replay, double expected_multiply_size = 3);
     friend Replay;
