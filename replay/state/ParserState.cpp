@@ -106,10 +106,10 @@ void ParserState::registerStateChange(IObjectRewindState *state) {
 
 class StateUpdateEvent : public IRewindEvent {
 public:
-  StateUpdateEvent(ParserState *state, std::pmr::vector<ParserState::RewindRef> &states) :
-    states(state->get_allocator()) {
-    this->states = std::move(states);
-  }
+  // An exact-size copy. The list of the state is not moved out: it keeps its buffer for the next timestamp
+  // instead of growing from nothing again (1, 2, 4, ... elements) every time.
+  StateUpdateEvent(ParserState *state, const std::pmr::vector<ParserState::RewindRef> &states) :
+    states(states.begin(), states.end(), state->get_allocator()) {}
   ~StateUpdateEvent() override = default;
   void forward(ParserState &state) override {
     for (auto &st: states) {
@@ -139,8 +139,7 @@ void ParserState::beforePacket(replay::ReplayPacket &pkt) {
   if (pkt.timestamp_ms > this->state_update_start_time_ms) {
     if (!this->curr_ms_rewind_refs.empty()) {
       auto evt = this->_new<StateUpdateEvent>(this, this->curr_ms_rewind_refs);
-      // just in case
-      this->curr_ms_rewind_refs.resize(0);
+      this->curr_ms_rewind_refs.clear(); // keeps the buffer
       this->rewinder.add_action(*this, evt);
     }
     state_update_start_time_ms = pkt.timestamp_ms;
