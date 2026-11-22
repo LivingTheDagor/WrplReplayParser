@@ -1,6 +1,10 @@
 #pragma once
 #include "memory/dag_genMemAlloc.h"
 #include <memory_resource>
+#include <new>
+#if USE_MI_HEAP == 1 && defined(__linux__)
+#include <sys/mman.h>
+#endif
 class StateRewinder;
 // #define ASAN_ENABLED
 
@@ -78,8 +82,27 @@ class StateAllocator : public std::pmr::memory_resource {
 
   StateDagAlloc dagAlloc;
 
+#if USE_MI_HEAP == 1 && defined(__linux__)
+  // Blocks from this size up (the event lists of a long battle: 155 MB of ammo events on a large naval one)
+  // come straight from the system and go straight back. mimalloc keeps a freed block resident for its purge
+  // delay (1 s), so each time such a list grew, the block it left stayed next to the new one until the end of
+  // the part. Only the memory_resource side knows the size of a block on its release, so only it does this.
+  static constexpr std::size_t big_block_bytes = std::size_t(4) << 20;
+  static bool is_big_block(std::size_t bytes, std::size_t alignment) {
+    return bytes >= big_block_bytes && alignment <= 4096;
+  }
+#endif
+
   void *do_allocate(std::size_t bytes, std::size_t alignment) override {
 #if USE_MI_HEAP == 1
+#if defined(__linux__)
+    if (is_big_block(bytes, alignment)) {
+      void *p = mmap(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+      if (p == MAP_FAILED)
+        throw std::bad_alloc();
+      return p;
+    }
+#endif
     return mi_heap_malloc_aligned(dagAlloc.heap, bytes, alignment);
 #else
     return ::malloc(bytes);
@@ -88,6 +111,12 @@ class StateAllocator : public std::pmr::memory_resource {
 
   void do_deallocate(void *p, std::size_t bytes, std::size_t alignment) override {
 #if USE_MI_HEAP == 1
+#if defined(__linux__)
+    if (is_big_block(bytes, alignment)) {
+      munmap(p, bytes);
+      return;
+    }
+#endif
     mi_free(p);
 #else
     return ::free(p);
