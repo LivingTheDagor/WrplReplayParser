@@ -258,16 +258,20 @@ namespace replay {
       this->curr_reader = s_owner.replay_files[replay_index]->getCompressedReplayReader();
       ++this->replay_index;
     } else {
-      // take the part decoded ahead (get() rethrows what its decode threw), then start on the one after it
-      if (this->next_reader.valid())
-        this->curr_reader = this->next_reader.get();
-      else
-        this->curr_reader = s_owner.replay_files[replay_index]->getReplayReader();
-      ++this->replay_index;
-      if (this->replay_index < s_owner.replay_files.size()) {
-        Replay *next = s_owner.replay_files[this->replay_index].get();
+      const size_t index = this->replay_index;
+      std::future<std::unique_ptr<IReplayReader>> ahead; // this part, when it was decoded ahead
+      if (this->next_reader.valid() && this->next_reader_index == index)
+        ahead = std::move(this->next_reader);
+      // Start on the part after this one before taking this one: at the very start that is part 1 on its
+      // thread while part 0 is decoded here, instead of one after the other.
+      if (!this->next_reader.valid() && index + 1 < s_owner.replay_files.size()) {
+        Replay *next = s_owner.replay_files[index + 1].get();
         this->next_reader = std::async(std::launch::async, [next]() { return next->getReplayReader(); });
+        this->next_reader_index = index + 1;
       }
+      // get() rethrows what the decode threw
+      this->curr_reader = ahead.valid() ? ahead.get() : s_owner.replay_files[index]->getReplayReader();
+      ++this->replay_index;
     }
     return true;
   }

@@ -87,6 +87,7 @@ namespace replay {
     /// another thread while the current part is parsed. Each part is its own Replay object, so the task
     /// shares nothing with the part being read.
     std::future<std::unique_ptr<IReplayReader>> next_reader;
+    size_t next_reader_index = 0; ///< the part next_reader is for
     bool load_replay();
 
   public:
