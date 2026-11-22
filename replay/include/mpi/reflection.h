@@ -3,6 +3,8 @@
 // Copyright (C) Gaijin Games KFT.  All rights reserved.
 //
 #pragma once
+#include <memory>
+#include <vector>
 #include <string.h>
 #include "daNet/bitStream.h"
 #include <cstddef> // for offsetof macros
@@ -269,6 +271,16 @@ namespace danet {
       DEBUG_REFLECTION = 32, // like define for all vars of this object RVF_DEBUG
     };
     List<ReflectionVarMeta, false> varList;
+    /// persistentId -> the first var of varList with that id (deserialize() looks every var of a packet up by
+    /// its id; walking the list for that touched every var of the object for each packet).
+    /// Made by varsById() when first needed, and made again when varList is not the list it was made from.
+    /// A table is never changed once it is made: copies of an object share it until then.
+    struct VarTable {
+      const ReflectionVarMeta *head = nullptr, *tail = nullptr; ///< varList it was made from
+      std::vector<ReflectionVarMeta *> byId; ///< nullptr: no var with that id
+    };
+    std::shared_ptr<const VarTable> varTable;
+    const VarTable &varsById();
     uint32_t debugWatermark;
 
     ReflectableObject *prevChanged, *nextChanged; // for changed_reflectables list

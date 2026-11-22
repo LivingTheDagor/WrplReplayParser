@@ -270,6 +270,24 @@ namespace danet {
     return ret;
   }
 
+  const ReflectableObject::VarTable &ReflectableObject::varsById() {
+    if (!varTable || varTable->head != varList.head || varTable->tail != varList.tail) {
+      auto table = std::make_shared<VarTable>();
+      table->head = varList.head;
+      table->tail = varList.tail;
+      size_t count = 0;
+      for (const ReflectionVarMeta *m = varList.head; m; m = m->next)
+        if (size_t(m->persistentId) + 1 > count)
+          count = size_t(m->persistentId) + 1;
+      table->byId.resize(count, nullptr);
+      for (ReflectionVarMeta *m = varList.head; m; m = m->next)
+        if (!table->byId[m->persistentId])
+          table->byId[m->persistentId] = m;
+      varTable = std::move(table);
+    }
+    return *varTable;
+  }
+
   bool ReflectableObject::deserialize(BitStream &bs, int /* data_size */, ParserState *state) {
     ZoneScopedN("ReflectableObject::deserialize");
     checkWatermark();
@@ -289,26 +307,15 @@ namespace danet {
     ReflectionVarMeta *v = varList.head;
     {
       ZoneScopedN("ReflectableObject::varCollection");
-      // The ids of a packet come in the order of the var list far more often than not, so look for each one
-      // from where the previous one was found and wrap around once, instead of walking the list from its
-      // head for every var. Ids are unique per object, so this finds the same var.
-      ReflectionVarMeta *hint = varList.head;
+      // by id through the table of the object: the first var of the list with that id, as a walk from the
+      // head of the list would find it
+      const VarTable &table = varsById();
+      ReflectionVarMeta *const *const byId = table.byId.data();
+      const size_t idCount = table.byId.size();
       for (uint16_t j = 0; (uint32_t) j < numVars; ++j) {
         const int id = idFieldSerializer.getFieldId(j);
-        v = nullptr;
-        for (ReflectionVarMeta *m = hint; m; m = m->next)
-          if (id == m->persistentId) {
-            v = m;
-            break;
-          }
-        if (!v)
-          for (ReflectionVarMeta *m = varList.head; m != hint; m = m->next)
-            if (id == m->persistentId) {
-              v = m;
-              break;
-            }
+        v = (id >= 0 && size_t(id) < idCount) ? byId[id] : nullptr;
         if (v) {
-          hint = v->next ? v->next : varList.head;
           G_ASSERT((v->flags & RVF_NEED_DESERIALIZE) == 0);
           v->flags |= RVF_NEED_DESERIALIZE; // mark vars that we going to deserialize
           // LOG("%s; ", v->name);
@@ -371,9 +378,11 @@ namespace danet {
     // tell to object that we done
     onAfterVarsDeserialization();
 
-    // reset service flags
-    for (v = varList.head; v; v = v->next)
-      v->flags &= ~(RVF_DESERIALIZED | RVF_NEED_DESERIALIZE);
+    // reset service flags: they are only ever set here, on the vars of this packet (the two hooks above are
+    // not overridden anywhere), so there is no need to touch every var of the object
+    for (uint16_t j = 0; j < numVars; ++j)
+      if (varsToRead[j])
+        varsToRead[j]->flags &= ~(RVF_DESERIALIZED | RVF_NEED_DESERIALIZE);
 
     return ret;
   }
