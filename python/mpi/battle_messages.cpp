@@ -145,14 +145,15 @@ void PyBattleMessages::include(py::module_ &m) {
   bind_readonly_vector_no_contain<std::pmr::vector<mpi::HitOutcome>>(m, "HitOutcomeList");
 
   py::class_<mpi::AmmoEvent>(mpi, "AmmoEvent")
-      .def_readonly("time_ms", &mpi::AmmoEvent::time_ms)
-      .def_readonly("unit", &mpi::AmmoEvent::unit)
-      .def_readonly("barrel", &mpi::AmmoEvent::barrel)
-      .def_readonly("slot", &mpi::AmmoEvent::slot,
+      // packed struct: the fields are copied out, no reference to them can be made
+      .def_property_readonly("time_ms", [](const mpi::AmmoEvent &e) { return uint32_t(e.time_ms); })
+      .def_property_readonly("unit", [](const mpi::AmmoEvent &e) { return e.unit; }, py::return_value_policy::reference)
+      .def_property_readonly("barrel", [](const mpi::AmmoEvent &e) { return uint8_t(e.barrel); })
+      .def_property_readonly("slot", [](const mpi::AmmoEvent &e) { return uint8_t(e.slot); },
                     "Which load of this gun the count is for: an index over the Unit.weapons lines whose "
                     "bullet names a set of this gun, not over the whole loadout. Always 0 on aircraft, "
                     "where WeaponData.launcher names the gun instead.")
-      .def_readonly("rounds_left", &mpi::AmmoEvent::rounds_left);
+      .def_property_readonly("rounds_left", [](const mpi::AmmoEvent &e) { return uint32_t(e.rounds_left); });
 
   bind_readonly_vector_no_contain<std::pmr::vector<mpi::AmmoEvent>>(m, "AmmoEventList");
 

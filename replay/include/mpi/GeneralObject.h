@@ -317,17 +317,22 @@ namespace mpi {
 
   /// How much is left in one barrel. A step down is that many rounds fired, and that is
   /// the only record of firing an aircraft leaves at all.
+  /// Packed: 18 bytes instead of 24 (there are millions of these on a naval battle). Fields cannot be bound
+  /// to references; copy them.
+#pragma pack(push, 1)
   struct AmmoEvent {
-    uint32_t time_ms = 0;
     unit::Unit *unit = nullptr;
+    uint32_t time_ms = 0;
+    uint32_t rounds_left = 0;
     /// Index into Unit::weapons, which pybind exposes as Unit.actual_weapons.
     uint8_t barrel = 0;
     /// Index into Unit::storage_weapons, the loadout line being counted: which shell of
     /// the several a tank took. Ground only - an aircraft sync carries no such index,
     /// and it needs none, because there the loadout line names its gun outright.
     uint8_t slot = 0;
-    uint32_t rounds_left = 0;
   };
+#pragma pack(pop)
+  static_assert(sizeof(AmmoEvent) == 18);
 
   enum ShotKind : uint8_t {
     ShotSingle = 0, ///< 0xF0B1, one round of a single shot gun

@@ -256,7 +256,7 @@ bool dataSync::FMSync(ParserState &state, danet::BitStream &bs) {
                 RET_FAIL(bs.ReadCompressed(temp_zig));
               }
             if (state.getConfig().capture_ammo_events() && rounds_left >= 0)
-              state.AmmoEvents.push_back({state.getCurrTimeMs(), unit, uint8_t(i), 0, uint32_t(rounds_left)});
+              state.AmmoEvents.push_back({unit, state.getCurrTimeMs(), uint32_t(rounds_left), uint8_t(i), 0});
           }
           uint32_t some_packed_val;
           uint32_t vals_4;
