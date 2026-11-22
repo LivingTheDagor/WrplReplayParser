@@ -127,10 +127,7 @@ namespace replay {
     auto zstd_data = replay.getData();
     auto decomp_size = (size_t) (((double) zstd_data.size()) * expected_multiply_size);
     const size_t max_decomp_size = zstd_data.size() * MAX_REPLAY_COMPRESSION_RATIO;
-    // The parts are written as streams, so the frame header has no content size and the guess above
-    // is often too small; then the whole part was decoded again into a buffer twice as large.
-    // ZSTD_decompressBound walks the block headers and gives a size that always fits, so the part
-    // is decoded once. Pages of the buffer that are not written are never touched.
+    // ZSTD_decompressBound works to get rough decompression size from stream written zstd data, which wt does.
     {
       const unsigned long long bound = ZSTD_decompressBound(zstd_data.data(), zstd_data.size());
       if (bound != ZSTD_CONTENTSIZE_ERROR && bound > decomp_size)
