@@ -39,7 +39,8 @@ namespace net {
     danet::BitStream apply_compressed_patch(const danet::BitStream &base_version,
                                             const danet::BitStream &compressed_delta, IMemAlloc *allocator) {
       ZoneScoped;
-      danet::BitStream delta{allocator};
+      // the delta only lives until diff_impl reads it, so one buffer per thread is enough
+      static thread_local danet::BitStream delta{};
       net::delta::decompress(compressed_delta, delta);
       danet::BitStream result = diff_impl(base_version, delta, allocator);
       result.SetWriteOffset(delta.GetWriteOffset());

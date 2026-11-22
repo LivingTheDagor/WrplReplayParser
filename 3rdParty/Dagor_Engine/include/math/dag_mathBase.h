@@ -172,7 +172,8 @@ INLINE real norm_ang(real a) {
 
 /// normalize angle to the range [-PI;PI]
 INLINE float norm_s_ang(float a) {
-  a = fmodf(a, 2 * PI);
+  if (!(fabsf(a) < 2 * PI)) // fmodf returns a unchanged when |a| < 2*PI, so only call it otherwise
+    a = fmodf(a, 2 * PI);
   return a > PI ? a - 2 * PI : (a < -PI ? a + 2 * PI : a);
 }
 

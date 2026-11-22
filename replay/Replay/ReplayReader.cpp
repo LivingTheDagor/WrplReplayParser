@@ -3,6 +3,7 @@
 #include "Replay/ReplayReader.h"
 #include "utils.h"
 #include "dag_assert.h"
+#define ZSTD_STATIC_LINKING_ONLY // ZSTD_decompressBound
 #include "zstd.h"
 #include "zstd_errors.h"
 
@@ -126,6 +127,12 @@ namespace replay {
     auto zstd_data = replay.getData();
     auto decomp_size = (size_t) (((double) zstd_data.size()) * expected_multiply_size);
     const size_t max_decomp_size = zstd_data.size() * MAX_REPLAY_COMPRESSION_RATIO;
+    // ZSTD_decompressBound works to get rough decompression size from stream written zstd data, which wt does.
+    {
+      const unsigned long long bound = ZSTD_decompressBound(zstd_data.data(), zstd_data.size());
+      if (bound != ZSTD_CONTENTSIZE_ERROR && bound > decomp_size)
+        decomp_size = (size_t) std::min<unsigned long long>(bound, max_decomp_size);
+    }
     size_t dest_len = 0;
     uint8_t *ptr = nullptr;
     ZSTD_ErrorCode zstd_err = ZSTD_error_dstSize_tooSmall;
