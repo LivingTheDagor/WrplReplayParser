@@ -1,5 +1,7 @@
 
 #include "VROMFs.h"
+#include <algorithm>
+#include <cstring>
 
 #include "ioSys/dag_memIo.h"
 #include "ioSys/blk_shared.h"
@@ -44,6 +46,154 @@ VROMFs::VROMFs(const std::string &fName) : fileName(fName), dir(fileName) {
   InPlaceMemLoadCB f2(raw_data->data(), (int) size);
 
   parse_raw_vromfs_data(f2);
+}
+
+VROMFs::VROMFs(const std::string &fName, const std::vector<std::string> &only) : fileName(fName), dir(fileName) {
+  ZoneScoped;
+  FullFileLoadCB f{fName};
+  if (!f.fileHandle)
+    return;
+  if (load_filtered(f, only))
+    return;
+  // not a zstd packed archive (or the stream could not be read that way): load all of it
+  f.seekto(0);
+  if (!load_raw_vromfs_data(f))
+    return;
+  InPlaceMemLoadCB f2(raw_data->data(), (int) size);
+  parse_raw_vromfs_data(f2);
+}
+
+bool VROMFs::load_filtered(IGenLoad &reader, const std::vector<std::string> &only) {
+  ZoneScoped;
+  if (!reader.readInto(hdr))
+    return false;
+  if ((hdr.label != _MAKE4C('VRFs') && hdr.label != _MAKE4C('VRFx')) || !checkTargetCode(hdr.target))
+    return false;
+  if (hdr.label == _MAKE4C('VRFx')) {
+    if (!reader.readInto(extHdr))
+      return false;
+    reader.seekrel((int) (extHdr.size - sizeof(extHdr)));
+  }
+  if (!hdr.packedSz() || !hdr.zstdPacked())
+    return false;
+  std::vector<char> packed(hdr.packedSz());
+  if (!reader.readExact(packed.data(), (int) packed.size()))
+    return false;
+  obfusc_vrom_data(packed.data(), (int) packed.size());
+
+  std::unique_ptr<ZSTD_DStream, size_t (*)(ZSTD_DStream *)> ds(ZSTD_createDStream(), ZSTD_freeDStream);
+  ZSTD_initDStream(ds.get());
+  ZSTD_inBuffer in{packed.data(), packed.size(), 0};
+  bool stream_end = false;
+  // decodes up to cap bytes into dst; fewer only at the end of the stream
+  auto pull = [&](char *dst, size_t cap, size_t &got) -> bool {
+    ZSTD_outBuffer out{dst, cap, 0};
+    while (out.pos < out.size && !stream_end) {
+      const size_t r = ZSTD_decompressStream(ds.get(), &out, &in);
+      if (ZSTD_isError(r))
+        return false;
+      if (r == 0)
+        stream_end = true;
+      else if (in.pos == in.size && out.pos < out.size)
+        return false; // truncated
+    }
+    got = out.pos;
+    return true;
+  };
+
+  // the name and offset tables are at the start: decode until they are complete
+  std::vector<char> head;
+  size_t produced = 0;
+  auto grow_head = [&](size_t need) -> bool {
+    need = std::min<size_t>(need, hdr.fullSz);
+    while (head.size() < need) {
+      const size_t at = head.size(), want = std::max<size_t>(need - at, 256 << 10);
+      head.resize(at + want);
+      size_t got = 0;
+      if (!pull(head.data() + at, want, got))
+        return false;
+      head.resize(at + got);
+      produced += got;
+      if (got < want)
+        break;
+    }
+    return head.size() >= need;
+  };
+  if (!grow_head(48))
+    return false;
+  auto rd32 = [&](size_t o) {
+    int v;
+    memcpy(&v, head.data() + o, 4);
+    return v;
+  };
+  const int names_header = rd32(0), names_count = rd32(4), data_info_offset = rd32(16), data_info_count = rd32(20);
+  if (names_header < 0 || names_count < 0 || data_info_offset < 0 || data_info_count != names_count)
+    return false;
+  if (!grow_head(std::max<size_t>(size_t(names_header) + 8 * size_t(names_count),
+                                  size_t(data_info_offset) + 16 * size_t(data_info_count))))
+    return false;
+  struct Want {
+    size_t off, size, at;
+    std::string_view name;
+  };
+  std::vector<Want> wanted;
+  size_t total = 0;
+  for (int i = 0; i < names_count; i++) {
+    uint64_t so;
+    memcpy(&so, head.data() + names_header + 8 * size_t(i), 8);
+    // the name may end past what is decoded so far
+    while (so >= head.size() || !memchr(head.data() + so, 0, head.size() - so)) {
+      if (head.size() >= hdr.fullSz || !grow_head(head.size() + (64 << 10)))
+        return false;
+    }
+    const std::string_view name(head.data() + so);
+    if (std::find(only.begin(), only.end(), name) == only.end())
+      continue;
+    const size_t off = (size_t) rd32(size_t(data_info_offset) + 16 * size_t(i));
+    const size_t sz = (size_t) rd32(size_t(data_info_offset) + 16 * size_t(i) + 4);
+    if (off + sz > hdr.fullSz)
+      return false;
+    wanted.push_back({off, sz, total, {}});
+    total += sz;
+    // names point into head, which may still grow: keep them as owned strings below
+    wanted.back().name = name;
+  }
+  std::vector<std::string> names;
+  names.reserve(wanted.size());
+  for (auto &w: wanted)
+    names.emplace_back(w.name);
+
+  auto fs = std::make_shared<std::vector<char>>(total);
+  size_t end = 0;
+  for (auto &w: wanted)
+    end = std::max(end, w.off + w.size);
+  // copy what [pos, pos + n) of the decoded stream holds of each wanted file
+  auto place = [&](const char *src, size_t pos, size_t n) {
+    for (auto &w: wanted) {
+      const size_t a = std::max(pos, w.off), b = std::min(pos + n, w.off + w.size);
+      if (a < b)
+        memcpy(fs->data() + w.at + (a - w.off), src + (a - pos), b - a);
+    }
+  };
+  place(head.data(), 0, head.size());
+  std::vector<char>().swap(head);
+  std::vector<char> chunk(1 << 20);
+  while (produced < end) {
+    size_t got = 0;
+    if (!pull(chunk.data(), chunk.size(), got) || got == 0)
+      return false;
+    place(chunk.data(), produced, got);
+    produced += got;
+  }
+
+  raw_data = fs;
+  size = (unsigned) total;
+  for (size_t i = 0; i < wanted.size(); i++) {
+    fs::path p(names[i]);
+    auto file_ = std::make_shared<VromfsFileIndex>(p, this, std::span{fs->data() + wanted[i].at, wanted[i].size});
+    dir.addFile(file_, p);
+  }
+  return true;
 }
 
 bool VROMFs::load_raw_vromfs_data(IGenLoad &reader) {

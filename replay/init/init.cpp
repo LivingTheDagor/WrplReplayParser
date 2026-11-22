@@ -39,17 +39,25 @@ void print_all_files_full_paths(const fs::path &root = fs::current_path()) {
   }
 }
 
-std::shared_future<void> load_vromfs_async(const std::string &vromfs_path, bool required) {
+/// only: if not empty, just these files of the archive are kept (see VROMFs)
+std::shared_future<void> load_vromfs_async(const std::string &vromfs_path, bool required,
+                                           const std::vector<std::string> *only = nullptr) {
   if (!file_mgr.getFile(vromfs_path)) {
     G_CHECKF(!required, "{} does not exist", vromfs_path);
     return {};
   }
-  return std::async(std::launch::async, [vromfs_path] {
+  return std::async(std::launch::async, [vromfs_path, only] {
     TracyMessage(vromfs_path.c_str(), vromfs_path.size());
-    auto vromfs = std::make_unique<VROMFs>(vromfs_path);
+    auto vromfs = only ? std::make_unique<VROMFs>(vromfs_path, *only) : std::make_unique<VROMFs>(vromfs_path);
     file_mgr.addVromfs(std::move(vromfs));
   });
 }
+
+// What init reads of lang.vromfs.bin: the tables below, and inf.csv for the order of the death reasons
+static const std::vector<std::string> lang_files_read = {
+  "lang/units_modifications.csv", "lang/units.csv",          "lang/units_weaponry.csv",   "lang/menu.csv",
+  "lang/unlocks_streaks.csv",     "lang/menu_options.csv",   "lang/missions_locations.csv", "lang/missions_dynamic.csv",
+  "lang/missions_versus.csv",     "lang/ui.csv",             "lang/inf.csv"};
 
 namespace translate {
   void add_allowed_language(Languages lang);
@@ -117,7 +125,7 @@ void initialize(const InitOptions &options) {
     font_future = load_vromfs_async(fonts_v, false);
   }
   if (options.lang) {
-    lang_future = load_vromfs_async(lang_v, false);
+    lang_future = load_vromfs_async(lang_v, false, &lang_files_read);
     if (lang_future.valid()) {
       TranslationAllowed = true;
     }

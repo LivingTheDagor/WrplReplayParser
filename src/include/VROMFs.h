@@ -116,6 +116,10 @@ protected:
 class VROMFs {
 public:
   explicit VROMFs(const std::string &fName);
+  /// Only the files named in only (paths inside the archive) are kept: the archive is decoded as a stream
+  /// and just their bytes are copied out, so the whole decoded archive is never held at once. For an
+  /// archive of which a small part is read (lang.vromfs.bin: 11 csv files of 56 MB).
+  VROMFs(const std::string &fName, const std::vector<std::string> &only);
 
   bool parseFileToDatablock(File &file, DataBlock &blk) {
     // auto data = file.readRaw();
@@ -144,6 +148,8 @@ protected:
   bool load_raw_vromfs_data(IGenLoad &reader);
 
   bool parse_raw_vromfs_data(IGenLoad &reader);
+
+  bool load_filtered(IGenLoad &reader, const std::vector<std::string> &only);
 
   std::string fileName;
   VirtualRomFsDataHdr hdr{};

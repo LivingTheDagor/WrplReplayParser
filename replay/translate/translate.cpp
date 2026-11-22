@@ -134,7 +134,7 @@ namespace translate {
     ZoneScopedN("translate::loadColumn");
     std::unique_ptr<VROMFs> archive;
     if (!source_archive.empty() && file_mgr.getFile(source_archive))
-      archive = std::make_unique<VROMFs>(source_archive);
+      archive = std::make_unique<VROMFs>(source_archive, files);
     cols[slot].assign(nkeys, NO_VALUE);
     std::vector<uint8_t> visited(nkeys, 0);
     std::array<bool, NLANG> write{};
