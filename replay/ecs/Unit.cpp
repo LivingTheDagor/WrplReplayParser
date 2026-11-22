@@ -7,6 +7,8 @@
 #include "res/grpManager.h"
 
 #include <algorithm>
+#include <bit>
+#include <cstring>
 #include <unordered_map>
 #include <mutex>
 #include "state/ParserState.h"
@@ -84,34 +86,65 @@ namespace unit {
     }
 
     // Nodes are stored in tree index order, so parents always precede children — one forward pass is sufficient.
+    //
+    // The angles are written and read back within a few instructions here and around this call (setData before,
+    // push_curr_state after), which is slow when a load does not match the stores it has to come from: a
+    // Point3 is copied as 8 + 4 bytes, and that 8-byte load has to wait for the cache when x and y were stored
+    // as two floats. So: the angles of the node done last stay in locals (a turret, then its gun), every field
+    // is loaded on its own, and x and y are stored together in one 8-byte store. Same values, same bytes.
+    unsigned last_idx = ~0u;
+    float last_x = 0.f, last_y = 0.f, last_z = 0.f;
     for (uint16_t node_idx: useful_order) {
       auto &node = nodes[node_idx];
       GeomNodeTree::Index16 parent_idx = node.parent_index;
 
-      TurretNode *parent = nullptr;
-      Point3 parent_abs = {0.f, 0.f, 0.f};
+      float abs_x = 0.f, abs_y = 0.f, abs_z = 0.f; // of the parent; the root has none
       if (parent_idx) { // non-root
-        parent = &nodes[parent_idx.index()];
-        parent_abs = parent->turret_abs;
+        if (parent_idx.index() == last_idx) {
+          abs_x = last_x;
+          abs_y = last_y;
+          abs_z = last_z;
+        } else {
+          const Point3 &parent_abs = nodes[parent_idx.index()].turret_abs;
+          abs_x = parent_abs.x;
+          abs_y = parent_abs.y;
+          abs_z = parent_abs.z;
+        }
       }
 
-      node.turret_abs = parent_abs + node.turret_rel;
-      if (node.turret_rel == Point3{0.f, 0.f, 0.f}) {
-        continue;
-      }
-      // if (!is_head_node) {
-      //   node.turret_abs = parent_abs + node.turret_rel;
-      // } else {
-      //  only accumulate Y rotation, ignore X and Z
-      //}
+      uint32_t rel_x, rel_y, rel_z; // the bits of turret_rel
+      memcpy(&rel_x, &node.turret_rel.x, 4);
+      memcpy(&rel_y, &node.turret_rel.y, 4);
+      memcpy(&rel_z, &node.turret_rel.z, 4);
+      abs_x += std::bit_cast<float>(rel_x);
+      abs_y += std::bit_cast<float>(rel_y);
+      abs_z += std::bit_cast<float>(rel_z);
+      // turret_rel == Point3{0, 0, 0}: all three are +0 or -0, that is, nothing but sign bits is set
+      if (((rel_x | rel_y | rel_z) << 1) != 0) {
+        // if (!is_head_node) {
+        //   node.turret_abs = parent_abs + node.turret_rel;
+        // } else {
+        //  only accumulate Y rotation, ignore X and Z
+        //}
 
-      // Wrap each axis into [-PI, PI]
-      {
+        // Wrap each axis into [-PI, PI]
         ZoneScopedN("TurretTree::normalizing");
-        node.turret_abs.x = norm_s_ang(node.turret_abs.x);
-        node.turret_abs.y = norm_s_ang(node.turret_abs.y);
-        node.turret_abs.z = norm_s_ang(node.turret_abs.z);
+        abs_x = norm_s_ang(abs_x);
+        abs_y = norm_s_ang(abs_y);
+        abs_z = norm_s_ang(abs_z);
       }
+      if constexpr (std::endian::native == std::endian::little) {
+        const uint64_t xy = uint64_t(std::bit_cast<uint32_t>(abs_x)) | (uint64_t(std::bit_cast<uint32_t>(abs_y)) << 32);
+        memcpy(&node.turret_abs.x, &xy, 8); // x and y
+      } else {
+        node.turret_abs.x = abs_x;
+        node.turret_abs.y = abs_y;
+      }
+      node.turret_abs.z = abs_z;
+      last_idx = node_idx;
+      last_x = abs_x;
+      last_y = abs_y;
+      last_z = abs_z;
     }
   }
 
