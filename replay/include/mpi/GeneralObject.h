@@ -62,6 +62,7 @@ namespace mpi {
 
   class TankMessage : public Message {
   public:
+    /// The sync data. After readPayload it is a view into `payload` (not a copy): valid while the packet is.
     danet::BitStream data{};
     TankMessage(IObject *o, MessageID mid) : Message(o, mid) {}
     bool readPayload(ParserState *state) override;

@@ -406,6 +406,22 @@ namespace danet {
       return true;
     }
 
+    /// Read(BitStream &) without the copy: `bs` becomes a view of the bytes inside this stream (same size and
+    /// content as the copy would have). It does not own them, so it is only valid while this stream's data is.
+    bool ReadView(BitStream &bs) const {
+      uint32_t numberOfBitsUsed;
+      if (!ReadCompressed(numberOfBitsUsed))
+        return false;
+      AlignReadToByteBoundary();
+      if (readOffset > bitsUsed || numberOfBitsUsed > bitsUsed - readOffset) // overflow-safe
+        return false;
+      const uint32_t bytes = bits2bytes(numberOfBitsUsed);
+      bs = BitStream(GetData() + bits2bytes(GetReadOffset()), bytes, false, bs.allocator);
+      bs.bitsUsed = numberOfBitsUsed;
+      SetReadOffset(GetReadOffset() + bytes2bits(bytes));
+      return true;
+    }
+
     void Write(const BitStream &bs) {
       uint32_t numberOfBitsUsed = bs.GetNumberOfBitsUsed();
       WriteCompressed(numberOfBitsUsed);
