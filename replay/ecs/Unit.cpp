@@ -264,7 +264,33 @@ namespace unit {
     data.gun_rel = gun->turret_rel;
     data.gun_abs = gun->turret_abs;
     *turret_state.reserveOne() = data;
-    turret_state.checkAndPush(&state);
+    if (state.getConfig().RecordOnChange.turrets)
+      turret_state.checkAndPushIfChanged(&state);
+    else
+      turret_state.checkAndPush(&state);
+  }
+
+  bool Unit::ammoChanged(uint8_t barrel, uint8_t slot, uint32_t rounds_left) {
+    // one record per barrel and slot, whichever message the count came in
+    if (slot == 0) {
+      if (barrel >= last_rounds_slot0.size())
+        last_rounds_slot0.resize(size_t(barrel) + 1, UINT32_MAX);
+      uint32_t &last = last_rounds_slot0[barrel];
+      if (last == rounds_left)
+        return false;
+      last = rounds_left;
+      return true;
+    }
+    const uint16_t key = uint16_t(barrel << 8 | slot);
+    for (auto &[k, last]: last_rounds_other)
+      if (k == key) {
+        if (last == rounds_left)
+          return false;
+        last = rounds_left;
+        return true;
+      }
+    last_rounds_other.emplace_back(key, rounds_left);
+    return true;
   }
 
   std::string parse_weapon_container(const DataBlock *blk) {
@@ -857,7 +883,11 @@ void BaseExtReflectable::applyMpiMessage(const mpi::Message *m) {
       break;
     }
     case MPI_PACKETS::UnitBulletRearm: {
-      auto &rec = state->AmmoEvents.emplace_back(((const mpi::UnitBulletRearmMessage *) m)->ammo);
+      const auto &ammo = ((const mpi::UnitBulletRearmMessage *) m)->ammo;
+      if (state->getConfig().RecordOnChange.ammo && owner_unit &&
+          !owner_unit->ammoChanged(ammo.barrel, ammo.slot, ammo.rounds_left))
+        break;
+      auto &rec = state->AmmoEvents.emplace_back(ammo);
       rec.unit = owner_unit;
       break;
     }

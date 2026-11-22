@@ -303,6 +303,12 @@ namespace unit {
     std::vector<std::string> fm_mods{};
     std::vector<Weapon> weapons{};
     ObjectRewindState<SpaceTimeEuler, false, false, false> positions{};
+    /// for ParserConfig::RecordOnChange.ammo: the last rounds_left recorded (sync or rearm message) per
+    /// barrel for slot 0 (UINT32_MAX = none yet), and per barrel and slot for the other slots
+    std::vector<uint32_t> last_rounds_slot0{};
+    std::vector<std::pair<uint16_t, uint32_t>> last_rounds_other{};
+    /// true when the count differs from the last one recorded for this barrel and slot, which it becomes
+    bool ammoChanged(uint8_t barrel, uint8_t slot, uint32_t rounds_left);
 
     UnitWeaponsMask weapons_mask{state};
 

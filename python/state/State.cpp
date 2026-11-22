@@ -133,6 +133,17 @@ void PyReplayState::include(py::module_ &m) {
     .def_readwrite("enable_FMSync", &ParserConfig::_FMOpts::enable_FMSync)
     .def_readwrite("capture_ammo_events", &ParserConfig::_FMOpts::capture_ammo_events);
 
+  py::class_<ParserConfig::_RecordOnChangeOpts>(m, "RecordOnChangeOpts",
+                                                 "Record a sample only when it differs from the last one of the "
+                                                 "same source (default on for all). The value at any time is the "
+                                                 "same either way; off keeps every repeat the replay sends.")
+    .def_readwrite("ammo", &ParserConfig::_RecordOnChangeOpts::ammo,
+                   "AmmoEvents: per unit, barrel and slot, only when rounds_left changes")
+    .def_readwrite("turrets", &ParserConfig::_RecordOnChangeOpts::turrets,
+                   "turret histories: only when the angles change (bit compare)")
+    .def_readwrite("positions", &ParserConfig::_RecordOnChangeOpts::positions,
+                   "tank and aircraft positions: only when position or orientation change (bit compare)");
+
   py::class_<ParserConfig::_ECSOpts>(m, "ECSOpts")
     .def_readwrite("parse_ecs", &ParserConfig::_ECSOpts::parse_ecs)
     .def_readwrite("parse_ecs_message", &ParserConfig::_ECSOpts::parse_ecs_message);
@@ -154,6 +165,7 @@ void PyReplayState::include(py::module_ &m) {
     .def_readwrite<>("FMOpts", &ParserConfig::FMOpts)
     .def_readwrite<>("ECSOpts", &ParserConfig::ECSOpts)
     .def_readwrite<>("MpiOpts", &ParserConfig::MpiOpts)
+    .def_readwrite<>("RecordOnChange", &ParserConfig::RecordOnChange)
     .def_readwrite<>("parse_chat", &ParserConfig::parse_chat)
     .def("set_unit_dispatch_state", &ParserConfig::set_unit_dispatch_state, py::arg("enabled"), py::arg("flags"))
     .def("set_oid_enabled_state", &ParserConfig::set_oid_enabled_state, py::arg("to_enable"), py::arg("flags"))

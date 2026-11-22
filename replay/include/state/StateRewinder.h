@@ -123,6 +123,10 @@ public:
   /// checkAndPush or deleteLast MUST be called next
   T *reserveOne();
 
+  /// checkAndPush, but the sample is dropped when it is bit-identical to the one before it (whatever
+  /// do_compare says): the current state stays the previous sample and no state change is recorded
+  void checkAndPushIfChanged(ParserState *state);
+
   /// if we know the last state allocated with reserveOne is invalid, then call this
   void deleteLast();
 

@@ -255,7 +255,8 @@ bool dataSync::FMSync(ParserState &state, danet::BitStream &bs) {
                 int temp_zig = 0;
                 RET_FAIL(bs.ReadCompressed(temp_zig));
               }
-            if (state.getConfig().capture_ammo_events() && rounds_left >= 0)
+            if (state.getConfig().capture_ammo_events() && rounds_left >= 0 &&
+                (!state.getConfig().RecordOnChange.ammo || unit->ammoChanged(uint8_t(i), 0, uint32_t(rounds_left))))
               state.AmmoEvents.push_back({unit, state.getCurrTimeMs(), uint32_t(rounds_left), uint8_t(i), 0});
           }
           uint32_t some_packed_val;
@@ -266,7 +267,10 @@ bool dataSync::FMSync(ParserState &state, danet::BitStream &bs) {
           Point3 someEuler;
           netutils::unpack_euler(some_packed_val, st.euler);
           *unit->positions.reserveOne() = st;
-          unit->positions.checkAndPush(&state);
+          if (state.getConfig().RecordOnChange.positions)
+            unit->positions.checkAndPushIfChanged(&state);
+          else
+            unit->positions.checkAndPush(&state);
 
           bs.Read(vals_4);
           Point3 vel;
@@ -400,7 +404,10 @@ namespace {
         auto ref = tank->positions.reserveOne();
         ref->euler = direction;
         ref->location = location;
-        tank->positions.checkAndPush(&state);
+        if (state.getConfig().RecordOnChange.positions)
+          tank->positions.checkAndPushIfChanged(&state);
+        else
+          tank->positions.checkAndPush(&state);
       }
     }
     BITCURSOR_INLINE void turret(int i, float x, float y, float z) {

@@ -1,4 +1,5 @@
 #pragma once
+#include <cstring>
 #include "ecs/EntityManager.h"
 #include "mpi/mpi.h"
 #include "mpi/codegen/ReflIncludes.h"
@@ -110,6 +111,21 @@ struct ParserConfig {
     /// synced see mpi types 0xf11a, 0xf0db
     bool parse_weapon_sync = true;
   } MpiOpts;
+
+  /// Record a sample only when it differs from the last one recorded for the same source: the replay
+  /// repeats most samples unchanged (42-73 % of turret samples, 23-77 % of tank positions, 96-99.9 % of
+  /// ammo counts). The value a reader sees at any time is the same either way (a repeat holds the value of
+  /// the sample before it); only the number of samples, and the time of a held value, change. Set a
+  /// switch to false to keep every sample as it arrives.
+  struct _RecordOnChangeOpts {
+    /// AmmoEvents: per unit, barrel and slot, only when rounds_left changes (the first count is kept)
+    bool ammo = true;
+    /// Unit turret histories (TurretDesc::turret_state): only when the turret angles change (bit compare)
+    bool turrets = true;
+    /// Unit::positions of tanks and aircraft: only when position or orientation change (bit compare).
+    /// Not the positions of weapons (rockets, bombs), whose samples are completed after they are pushed.
+    bool positions = true;
+  } RecordOnChange;
 
   bool mpi_enabled() const { return MpiOpts.parse_mpi; }
   bool reflection_enabled() const { return MpiOpts.parse_reflection; }
@@ -443,6 +459,23 @@ void ObjectRewindState<T, do_compare, take_ownership, create_default>::deleteLas
 #endif
   this->time_states.pop_back();
   state = this->time_states.empty() ? nullptr : &this->time_states.back();
+}
+
+template<typename T, bool do_compare, bool take_ownership, bool create_default>
+void ObjectRewindState<T, do_compare, take_ownership, create_default>::checkAndPushIfChanged(ParserState *state) {
+  if (this->time_states.size() > 1) {
+    const auto &prev = this->time_states[this->time_states.size() - 2];
+    if (std::memcmp(&prev.data, &this->time_states.back().data, sizeof(T)) == 0) {
+#if LDAG_DBGLEVEL > 0
+      G_ASSERT(hasReserved);
+      hasReserved = false;
+#endif
+      this->time_states.pop_back();
+      this->state = &this->time_states.back();
+      return;
+    }
+  }
+  this->checkAndPush(state);
 }
 
 template<typename T, bool do_compare, bool take_ownership, bool create_default>
