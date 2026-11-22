@@ -94,8 +94,7 @@ namespace translate {
 
   void load_csv(std::string_view path);
 
-  /// ends the loading of init: archive is where the csv files came from (it may be unmounted after this);
-  /// a language that init did not read is read from it on first use (see InitOptions::allowed_languages)
+  /// ends init loading; languages not loaded yet are read from archive on first use
   void finish_loading(std::string_view archive);
 
   /// collects the keys of a csv in file order, keeping the ones that start with prefix.

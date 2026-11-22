@@ -112,18 +112,15 @@ struct ParserConfig {
     bool parse_weapon_sync = true;
   } MpiOpts;
 
-  /// Record a sample only when it differs from the last one recorded for the same source: the replay
-  /// repeats most samples unchanged (42-73 % of turret samples, 23-77 % of tank positions, 96-99.9 % of
-  /// ammo counts). The value a reader sees at any time is the same either way (a repeat holds the value of
-  /// the sample before it); only the number of samples, and the time of a held value, change. Set a
-  /// switch to false to keep every sample as it arrives.
+  /// Record a sample only when it differs from the last one of the same source; most samples repeat. The
+  /// value at any time is the same either way, only the sample count differs. false = keep every sample.
   struct _RecordOnChangeOpts {
-    /// AmmoEvents: per unit, barrel and slot, only when rounds_left changes (the first count is kept)
+    /// AmmoEvents: per unit, barrel and slot, when rounds_left changes
     bool ammo = true;
-    /// Unit turret histories (TurretDesc::turret_state): only when the turret angles change (bit compare)
+    /// TurretDesc::turret_state: when the angles change (bit compare)
     bool turrets = true;
-    /// Unit::positions of tanks and aircraft: only when position or orientation change (bit compare).
-    /// Not the positions of weapons (rockets, bombs), whose samples are completed after they are pushed.
+    /// Unit::positions of tanks and aircraft: when they change (bit compare). Weapon positions are
+    /// completed after the push and always recorded.
     bool positions = true;
   } RecordOnChange;
 

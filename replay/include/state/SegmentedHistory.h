@@ -8,10 +8,8 @@
 #include <type_traits>
 #include <utility>
 
-/// Append-only history in fixed segments: 2, 2, 4, 8, ... elements up to about 64 KB, then 64 KB each.
-/// Elements never move once pushed, so a long history neither copies itself on growth nor keeps a
-/// doubled buffer of which half is unused. Indexing is a shift and a mask; push is a pointer bump.
-/// Not contiguous: use forEachSegment() for bulk reads.
+/// Append-only history in segments of 2, 2, 4, 8, ... elements up to about 64 KB, then 64 KB each.
+/// Elements never move, growth copies nothing. Not contiguous: use forEachSegment() for bulk reads.
 template<typename TS>
 class SegmentedHistory {
   static constexpr uint32_t S0 = 2;
@@ -221,7 +219,7 @@ public:
     --count;
     next->~TS();
     if (entered > 1 && next == segs[entered - 1]) {
-      // keep the empty segment allocated for the next push, step back to the end of the previous one
+      // keep the empty segment for the next push
       entered--;
       seg_end = segs[entered - 1] + segElems(entered - 1);
       next = seg_end;

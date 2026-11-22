@@ -35,9 +35,7 @@ namespace translate {
     static constexpr size_t NLANG = (size_t) Languages::LENGTH - 1;
     static constexpr uint32_t NO_VALUE = 0xFFFFFFFF;
     std::array<LargeStringTableAllocator, NLANG> allocator{};
-    // per language: the allocator offset of the value of each key (translate_index_t), NO_VALUE = empty.
-    // Only the languages read at init have a column from the start; the others are read from the csv files
-    // again when they are first asked for (see loadColumn), so that 20 unused languages cost no memory.
+    // per language: allocator offset of each key's value, NO_VALUE = empty. Filled at init or by loadColumn.
     std::array<std::vector<uint32_t>, NLANG> cols{};
     std::array<std::atomic<bool>, NLANG> col_ready{}; // the column is there (or being read at init)
     std::array<bool, NLANG> col_at_init{};            // the column is read by load_csv
@@ -60,8 +58,8 @@ namespace translate {
 
     translate_index_t addKey(std::string_view key);
 
-    /// write: the language slots whose values are stored. visited == nullptr: keys are added (init);
-    /// otherwise the keys exist already and visited marks the ones a row has given values to (column pass)
+    /// write: language slots to store. visited == nullptr: add keys (init); else keys exist and visited
+    /// marks those already filled (loadColumn)
     bool parseCsvV2Full(char *buffer, int len, dag::ConstSpan<int> lang_col, const std::array<bool, NLANG> &write,
                         std::vector<uint8_t> *visited, bool skip_first = true);
 
@@ -101,7 +99,7 @@ namespace translate {
       return nullptr;
     const size_t slot = static_cast<size_t>(lang) - 1;
     if (!col_ready[slot].load(std::memory_order_acquire) && !loadColumn(slot))
-      return ""; // a language that is not allowed: no values, as when every column was read at init
+      return ""; // language not allowed
     auto offs = cols[slot][index];
     if (offs == NO_VALUE) // no value filled, this means the entry was empty
       return "";
@@ -118,11 +116,9 @@ namespace translate {
     }
   }
 
-  // The first request for a language that init did not read: read that column of every csv of init
-  // again, in the same order. Rows give values to the key they name only where that row added the key
-  // at init (its first row over all files), so the column holds exactly what reading it at init would
-  // have given, at the same offsets. Once per language, under a mutex; readers of a column that is
-  // there do not lock.
+  // Reads one language column from the csv files of init, in the same order. Only the first row of a key
+  // (the one that added it) gives its value, so the column equals one read at init. Once per language,
+  // under a mutex; readers of a ready column do not lock.
   bool translate_table_t::loadColumn(size_t slot) {
     std::lock_guard lock(column_mutex);
     if (col_ready[slot].load(std::memory_order_acquire))
@@ -481,7 +477,7 @@ namespace translate {
     for (int i = 0; i < lang_col.size(); i++)
       if (lang_col[i] >= 0)
         bmap_col[lang_col[i]] = i;
-    // values are stored under the slot of their column (column n = language n + 1)
+    // column n holds language n + 1
     for (int c = 0; c <= max_col; c++)
       if (c >= (int) NLANG || !write[c])
         bmap_col[c] = -1;
@@ -580,7 +576,7 @@ namespace translate {
       // int idx = cb->getKey(key_buffer);
 
       if (visited) {
-        // column pass: the row that added the key at init is its first row; all later ones were skipped
+        // loadColumn: only the first row of a key gives its value
         if (idx == INVALID_TRANSLATE_INDEX || (*visited)[idx])
           skip_key = true;
         else

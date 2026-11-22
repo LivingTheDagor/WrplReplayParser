@@ -112,7 +112,6 @@ namespace replay {
   FullDecompressReplayReader::~FullDecompressReplayReader() {
     sidecar.reset(); // it reads the decoded bytes (maybe on a thread of its own): gone before they are
     free((void *) crd.data());
-    // the compressed bytes were let go in the ctor, as soon as the part was decoded
   }
 
   bool FullDecompressReplayReader::getNextPacket(ReplayPacket &packet) {
@@ -187,16 +186,14 @@ namespace replay {
         zstd_err = ZSTD_error_no_error;
       }
       if (zstd_err != ZSTD_error_no_error && zstd_err != ZSTD_error_dstSize_tooSmall) {
-        // the destructor does not run for a constructor that throws: give back the buffer and the data ref here
+        // no destructor runs for a throwing constructor
         free(ptr);
         replay.Data.afterParse();
         EXCEPTION("Failed to decompress zstd block: {}", ZSTD_getErrorName(zstd_err));
       }
       decomp_size *= 2;
     }
-    // The compressed bytes are not read again: let them go now (a file replay frees them when no reader holds
-    // them) instead of keeping them until the whole part has been parsed. A server replay reader keeps two parts
-    // (the current one and the one decoded ahead), so this was two compressed parts besides their decoded bytes.
+    // The compressed bytes are not read again: release them here.
     replay.Data.afterParse();
     if (zstd_err != ZSTD_error_no_error) {
       free(ptr);

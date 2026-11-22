@@ -53,7 +53,7 @@ std::shared_future<void> load_vromfs_async(const std::string &vromfs_path, bool 
   });
 }
 
-// What init reads of lang.vromfs.bin: the tables below, and inf.csv for the order of the death reasons
+// the files init reads from lang.vromfs.bin
 static const std::vector<std::string> lang_files_read = {
   "lang/units_modifications.csv", "lang/units.csv",          "lang/units_weaponry.csv",   "lang/menu.csv",
   "lang/unlocks_streaks.csv",     "lang/menu_options.csv",   "lang/missions_locations.csv", "lang/missions_dynamic.csv",
@@ -74,9 +74,7 @@ void initialize(const InitOptions &options) {
     mallopt(M_TOP_PAD, 64 << 20);
     mallopt(M_MMAP_THRESHOLD, 32 << 20);
     mallopt(M_TRIM_THRESHOLD, 256 << 20);
-    // See InitOptions::malloc_arena_max. The loading threads of init, the decode-ahead thread and the sync
-    // prescan threads would each get an arena of their own; with the trim threshold above, the memory one
-    // of them frees stays with that arena and is of no use to the others (about 100 MB per process).
+    // See InitOptions::malloc_arena_max: one arena lets all threads reuse what the others free.
     if (options.malloc_arena_max > 0)
       mallopt(M_ARENA_MAX, options.malloc_arena_max);
   }
@@ -132,8 +130,7 @@ void initialize(const InitOptions &options) {
   }
   auto aces_future = load_vromfs_async(aces_v, true);
 
-  // Nothing the parser reads lives in mis.vromfs.bin (missions, loading screens, videos, world war maps):
-  // mount it on the first lookup under one of its directories instead of holding its 16 MB from the start.
+  // The parser reads nothing from mis.vromfs.bin: mount it only on first use.
   if (options.mis)
     file_mgr.deferVromfs(mis_v, {"gamedata/missions", "loadingbg", "video", "worldwar_bg"});
 

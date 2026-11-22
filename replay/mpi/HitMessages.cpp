@@ -378,7 +378,7 @@ namespace mpi {
     bool valid = parse([&](const danet::BitStream *bs, uint32_t field_id) {
       const uint8_t idx = field_no++;
       switch (field_id) {
-        // AmmoEvent is packed: read into locals, a packed field cannot be passed by reference
+        // AmmoEvent is packed: read through locals
         case 1: {
           uint8_t v = ammo.barrel;
           const bool r = bs->Read(v);

@@ -501,9 +501,8 @@ struct FileManager {
 
   inline void add_mount(const fs::path &path) { this->real_fs_mounts.push_back(path); }
 
-  /// Mount this archive only when a lookup after init for a path under one of dirs (the directories the
-  /// archive holds, e.g. "gamedata/missions") finds nothing in the archives already mounted and nothing on
-  /// disk. Once, thread safe. For archives that are rarely read: they then cost no memory until needed.
+  /// Mount the archive on the first lookup after init under one of dirs (its directories) that the mounted
+  /// archives and the disk cannot answer. Once, thread safe.
   void deferVromfs(const std::string &vromfsPath, std::initializer_list<const char *> dirs);
 
 
@@ -515,7 +514,7 @@ protected:
   std::vector<fs::path> real_fs_mounts;
   std::unordered_map<fs::path, Directory> mounted_vromfs{};
   std::vector<std::unique_ptr<VROMFs>> loaded_vromfs;
-  // see deferVromfs: set up before init ends, loaded by the first lookup that misses after it
+  // see deferVromfs
   std::vector<std::string> deferred_paths;
   std::vector<std::string> deferred_prefixes;
   std::vector<std::unique_ptr<VROMFs>> deferred_vromfs;

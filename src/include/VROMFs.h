@@ -116,9 +116,7 @@ protected:
 class VROMFs {
 public:
   explicit VROMFs(const std::string &fName);
-  /// Only the files named in only (paths inside the archive) are kept: the archive is decoded as a stream
-  /// and just their bytes are copied out, so the whole decoded archive is never held at once. For an
-  /// archive of which a small part is read (lang.vromfs.bin: 11 csv files of 56 MB).
+  /// Keeps only the files in only: the archive is decoded as a stream and only their bytes are kept.
   VROMFs(const std::string &fName, const std::vector<std::string> &only);
 
   bool parseFileToDatablock(File &file, DataBlock &blk) {

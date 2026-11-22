@@ -145,7 +145,7 @@ void PyBattleMessages::include(py::module_ &m) {
   bind_readonly_vector_no_contain<std::pmr::vector<mpi::HitOutcome>>(m, "HitOutcomeList");
 
   py::class_<mpi::AmmoEvent>(mpi, "AmmoEvent")
-      // packed struct: the fields are copied out, no reference to them can be made
+      // packed struct: fields are returned by value
       .def_property_readonly("time_ms", [](const mpi::AmmoEvent &e) { return uint32_t(e.time_ms); })
       .def_property_readonly("unit", [](const mpi::AmmoEvent &e) { return e.unit; }, py::return_value_policy::reference)
       .def_property_readonly("barrel", [](const mpi::AmmoEvent &e) { return uint8_t(e.barrel); })

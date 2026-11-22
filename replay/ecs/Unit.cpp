@@ -271,7 +271,7 @@ namespace unit {
   }
 
   bool Unit::ammoChanged(uint8_t barrel, uint8_t slot, uint32_t rounds_left) {
-    // one record per barrel and slot, whichever message the count came in
+    // one record per barrel and slot, for sync and rearm counts alike
     if (slot == 0) {
       if (barrel >= last_rounds_slot0.size())
         last_rounds_slot0.resize(size_t(barrel) + 1, UINT32_MAX);

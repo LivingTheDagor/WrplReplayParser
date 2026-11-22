@@ -30,8 +30,7 @@ py::class_<State> bind_rewind_state(py::module_ &m, const char *name) {
       "is not supported, wrap it in list() for that. Prefer channels() for bulk access.");
 }
 
-/// One field of every sample as a read-only numpy array. The history is kept in segments, not in one
-/// buffer, so the values are copied (the history does not change once the replay is parsed).
+/// One field of every sample, copied into a read-only numpy array (the history is not contiguous).
 template<typename H, typename TS, typename Field>
 py::array channel_view(const H &hist, const TS *base, const Field *field, size_t count, const py::object &owner) {
   (void) owner;

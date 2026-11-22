@@ -317,8 +317,7 @@ namespace mpi {
 
   /// How much is left in one barrel. A step down is that many rounds fired, and that is
   /// the only record of firing an aircraft leaves at all.
-  /// Packed: 18 bytes instead of 24 (there are millions of these on a naval battle). Fields cannot be bound
-  /// to references; copy them.
+  /// Packed to 18 bytes (millions per naval battle). Fields cannot be bound to references.
 #pragma pack(push, 1)
   struct AmmoEvent {
     unit::Unit *unit = nullptr;

@@ -85,10 +85,8 @@ class StateAllocator : public std::pmr::memory_resource {
   StateDagAlloc dagAlloc;
 
 #if USE_MI_HEAP == 1 && defined(__linux__)
-  // Blocks from this size up (the event lists of a long battle: 155 MB of ammo events on a large naval one)
-  // come straight from the system and go straight back. mimalloc keeps a freed block resident for its purge
-  // delay (1 s), so each time such a list grew, the block it left stayed next to the new one until the end of
-  // the part. Only the memory_resource side knows the size of a block on its release, so only it does this.
+  // Blocks from this size up (long event lists) are mmap-ed and munmap-ed: mimalloc keeps a freed block
+  // resident for its purge delay. Only the memory_resource interface gets the true size on release.
   static constexpr std::size_t big_block_bytes = std::size_t(4) << 20;
   static bool is_big_block(std::size_t bytes, std::size_t alignment) {
     return bytes >= big_block_bytes && alignment <= 4096;
@@ -131,9 +129,7 @@ class StateAllocator : public std::pmr::memory_resource {
 public:
   using DagAllocType = StateDagAlloc *;
 
-  /// Objects of the state. Always from the state heap, never through the size-dependent mmap path of
-  /// do_allocate: _delete is often called through a base pointer (battle messages, rewind events), so the
-  /// size it could pass would be the size of the base, not of the object.
+  /// Objects of the state, from the state heap. Not the mmap path: _delete may get a base pointer.
   template<class T, class... Args>
   T *_new(Args &&...args) {
 #if USE_MI_HEAP == 1
@@ -147,8 +143,7 @@ public:
     return new (mem) T(std::forward<Args>(args)...);
   }
 
-  /// T may be a base of the object made by _new (it must then have a virtual destructor). The size is not
-  /// used: the block is freed by address alone.
+  /// T may be a base with a virtual destructor; the size is not used.
   template<class T>
   void _delete(const T *ptr) {
     if (!ptr)

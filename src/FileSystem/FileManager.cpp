@@ -26,8 +26,7 @@ std::unique_ptr<File> FileManager::getFile(const fs::path &path, bool lower, boo
   } else
     to_use = path;
   if (prioritizeVromfs) {
-    // archives mounted now first; a deferred archive (deferVromfs) only after the disk, so that looking up a
-    // file on disk does not mount it
+    // mounted archives first; deferred ones after the disk, so a file on disk does not mount them
     auto out = this->loadVromfsFile(to_use, false);
     if (out)
       return out;
@@ -77,18 +76,18 @@ SmartFSHandle FileManager::getObject(const fs::path &path, bool allow_deferred) 
     lock.lock();
   if (auto found = findIn(this->loaded_vromfs, path))
     return found;
-  // the archive itself is opened through getFile, which looks here first: no second load from inside the load
+  // set while the deferred archive itself is opened (through getFile)
   static thread_local bool loading_deferred = false;
   // an absolute path is a file on disk, never an archive entry
   if (!allow_deferred || this->in_init || this->deferred_paths.empty() || loading_deferred || path.is_absolute())
     return nullptr;
-  // only paths under what the deferred archives hold: lookups of files that exist nowhere are common
+  // only paths under the deferred archives' directories: misses elsewhere are common
   const std::string generic = path.generic_string();
   if (!std::ranges::any_of(this->deferred_prefixes, [&generic](const std::string &pre) {
         return generic.compare(0, pre.size(), pre) == 0 && (generic.size() == pre.size() || generic[pre.size()] == '/');
       }))
     return nullptr;
-  // deferred_vromfs is written once, inside call_once; every caller returns from call_once after that write
+  // deferred_vromfs is written only inside call_once
   std::call_once(this->deferred_once, [this] {
     loading_deferred = true;
     for (const auto &p: this->deferred_paths)
