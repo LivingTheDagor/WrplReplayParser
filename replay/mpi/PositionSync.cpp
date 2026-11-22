@@ -390,20 +390,82 @@ struct SubVehicleDynData {
 // The position of the stream is kept in locals while a message is parsed (see danet::BitCursor): the
 // two *Impl functions are compiled into the functions after them, which copy the cursor in and store
 // it back.
-BITCURSOR_INLINE bool dataSync::ParseVehicleInfoImpl(ParserState &state, danet::PaddedBitCursor &bs, TankRef *ref,
-                                                     bool is_from_compress) {
-  ZoneScoped;
-  if (!ref->ref_1) {
-    G_ASSERT(is_from_compress);
-    return true;
-  }
+namespace {
+  // What ParseVehicleInfo does with what it reads, for the parser: the state changes right away.
+  struct ParserVehicleSink {
+    ParserState &state;
+    unit::Unit *unit; // not nullptr
+    BITCURSOR_INLINE void position(const Point3 &direction, const Point3 &location) {
+      if (auto tank = unit->AsTank()) {
+        auto ref = tank->positions.reserveOne();
+        ref->euler = direction;
+        ref->location = location;
+        tank->positions.checkAndPush(&state);
+      }
+    }
+    BITCURSOR_INLINE void turret(int i, float x, float y, float z) {
+      // see Unit::loadWeaponData for how turret creation was disabled
+      auto weap = unit->getWeapon(i);
+      if (weap && weap->turret_desc) {
+        auto turret = weap->turret_desc.get();
+        turret->setData({x, y, z});
+      }
+    }
+    BITCURSOR_INLINE void end() {
+      if (state.getConfig().turret_parsing_enabled()) {
+        unit->calculateTurretData();
+        /*LOGI("");
+        for (auto &weap: ref->ref_1->weapons) {
+          LOGI("{};{}", state.curr_time_ms / 1000.f, weap.blk_path);
+          if (weap.turret_desc) {
+            auto turret = weap.turret_desc.get();
+            LOGI("  head: ({}) ({})", turret->head->turret_rel.toString(0), turret->head->turret_abs.toString(0));
+            LOGI("  gun:  ({}) ({})", turret->gun->turret_rel.toString(0), turret->gun->turret_abs.toString(0));
+          }
+        }*/
+        for (auto &weapon: unit->weapons) {
+          if (weapon.turret_desc) {
+            weapon.turret_desc->push_curr_state(state);
+          }
+        }
+      }
+    }
+  };
+
+  // The same for the thread that reads ground syncs ahead of the parser (gmsync, GMSyncPrescan.cpp): what
+  // would be done is written down, the parser does it later (dataSync::applyVehicleInfo).
+  struct RecordVehicleSink {
+    gmsync::VehicleInfo &info;
+    std::vector<gmsync::TurretSet> &turrets;
+    void position(const Point3 &direction, const Point3 &location) {
+      info.hasPosition = true;
+      info.dir[0] = direction.x;
+      info.dir[1] = direction.y;
+      info.dir[2] = direction.z;
+      info.pos[0] = location.x;
+      info.pos[1] = location.y;
+      info.pos[2] = location.z;
+    }
+    void turret(int i, float x, float y, float z) {
+      turrets.push_back({uint16_t(i), x, y, z});
+      info.turretCount++;
+    }
+    void end() { info.reachedEnd = true; }
+  };
+} // namespace
+
+// The fields of the vehicle data of a ground sync. What depends on the state (does the vehicle have a unit, is
+// it a tank, which weapons have a turret) is left to `sink`; the reading does not depend on it.
+template<typename Sink>
+static BITCURSOR_INLINE bool parseVehicleInfoT(danet::PaddedBitCursor &bs, bool val1, uint8_t turret_count,
+                                               Sink &sink) {
   uint8_t v1;
   RET_FAIL(bs.Read(v1));
   bool b1;
   RET_FAIL(bs.Read(b1));
   if (b1) {
     Point3 direction{};
-    if (ref->val1) {
+    if (val1) {
       float floats[4];
       RET_FAIL(bs.Read(floats)); // 4 float reads, then 1 later (usePositionHistoryForSlaves is true
       if (true) {
@@ -458,15 +520,9 @@ BITCURSOR_INLINE bool dataSync::ParseVehicleInfoImpl(ParserState &state, danet::
       unit_position.x = fv1;
       unit_position.z = fv3;
     }
-    if (ref->ref_1 && ref->ref_1->AsTank()) {
-      auto tank = ref->ref_1->AsTank();
-      auto ref = tank->positions.reserveOne();
-      ref->euler = direction;
-      ref->location = unit_position;
-      tank->positions.checkAndPush(&state);
-    }
+    sink.position(direction, unit_position);
     Point3 out_2;
-    if (ref->val1) {
+    if (val1) {
       RET_FAIL(bs.Read(out_2));
     } else {
       int16_t temp[3];
@@ -555,9 +611,7 @@ BITCURSOR_INLINE bool dataSync::ParseVehicleInfoImpl(ParserState &state, danet::
   bool b3;
   RET_FAIL(bs.Read(b2));
   RET_FAIL(bs.Read(b3));
-  float turret_horizontal = 5000;
-  for (int i = 0; i < ref->turret_count; i++) {
-    auto weap = ref->ref_1->getWeapon(i);
+  for (int i = 0; i < turret_count; i++) {
     bool bool1, bool2, bool3, bool4;
     uint8_t val1, val2;
     RET_FAIL(bs.Read(bool1));
@@ -600,19 +654,9 @@ BITCURSOR_INLINE bool dataSync::ParseVehicleInfoImpl(ParserState &state, danet::
           turret_z = unpack_s16_pi.dbg(extra_val, __FUNCTION__, __FILE__, __LINE__);
           //;LOGI("extra_val: {}", extra_val);
         }
-        // see Unit::loadWeaponData for how turret creation was disabled
-        if (weap && weap->turret_desc) {
-          auto turret = weap->turret_desc.get();
-          turret->setData({turret_x, turret_y, turret_z});
-        }
+        sink.turret(i, turret_x, turret_y, turret_z);
       }
     }
-  }
-  if (ref->ref_1 && turret_horizontal <= 4000.f && b1) {
-    auto &un_arr = ref->ref_1->positions;
-    // if (!un_arr.empty()) {
-    //   un_arr.back().turret_horizontal = turret_horizontal;
-    // }
   }
   uint8_t sensorsCount{};
   RET_FAIL(bs.Read(sensorsCount));
@@ -642,25 +686,42 @@ BITCURSOR_INLINE bool dataSync::ParseVehicleInfoImpl(ParserState &state, danet::
   for (auto &t: targets) {
     RET_FAIL(t.deserializeFrom(bs));
   }
-  if (ref->ref_1 && state.getConfig().turret_parsing_enabled()) {
-    ref->ref_1->calculateTurretData();
-    /*LOGI("");
-    for (auto &weap: ref->ref_1->weapons) {
-      LOGI("{};{}", state.curr_time_ms / 1000.f, weap.blk_path);
-      if (weap.turret_desc) {
-        auto turret = weap.turret_desc.get();
-        LOGI("  head: ({}) ({})", turret->head->turret_rel.toString(0), turret->head->turret_abs.toString(0));
-        LOGI("  gun:  ({}) ({})", turret->gun->turret_rel.toString(0), turret->gun->turret_abs.toString(0));
-      }
-    }*/
-    for (auto &weapon: ref->ref_1->weapons) {
-      if (weapon.turret_desc) {
-        weapon.turret_desc->push_curr_state(state);
-      }
-    }
-  }
+  sink.end();
   return true;
 }
+
+BITCURSOR_INLINE bool dataSync::ParseVehicleInfoImpl(ParserState &state, danet::PaddedBitCursor &bs, TankRef *ref,
+                                                     bool is_from_compress) {
+  ZoneScoped;
+  if (!ref->ref_1) {
+    G_ASSERT(is_from_compress);
+    return true;
+  }
+  ParserVehicleSink sink{state, ref->ref_1};
+  return parseVehicleInfoT(bs, ref->val1, ref->turret_count, sink);
+}
+
+bool dataSync::decodeVehicleInfo(const uint8_t *data, uint32_t size_bytes, bool val1, uint8_t turret_count,
+                                 gmsync::VehicleInfo &info, std::vector<gmsync::TurretSet> &turrets) {
+  info = gmsync::VehicleInfo{};
+  info.firstTurret = uint32_t(turrets.size());
+  danet::PaddedBitCursor bs{data, BYTES_TO_BITS(size_bytes)};
+  RecordVehicleSink sink{info, turrets};
+  info.result = parseVehicleInfoT(bs, val1, turret_count, sink);
+  return info.result;
+}
+
+void dataSync::applyVehicleInfo(ParserState &state, unit::Unit *unit, const gmsync::VehicleInfo &info,
+                                const gmsync::TurretSet *turrets) {
+  ParserVehicleSink sink{state, unit};
+  if (info.hasPosition)
+    sink.position(Point3(info.dir[0], info.dir[1], info.dir[2]), Point3(info.pos[0], info.pos[1], info.pos[2]));
+  for (uint32_t i = 0; i < info.turretCount; i++)
+    sink.turret(turrets[i].index, turrets[i].x, turrets[i].y, turrets[i].z);
+  if (info.reachedEnd)
+    sink.end();
+}
+
 
 
 bool dataSync::ParseVehicleInfo(ParserState &state, danet::PaddedBitCursor &bs, TankRef *ref,
@@ -788,6 +849,25 @@ BITCURSOR_INLINE bool dataSync::GMSyncImpl(ParserState &state, danet::BitCursor 
 }
 
 bool dataSync::GMSync(ParserState &state, danet::BitStream &bs) {
+  // A message that a thread has read all the way (gmsync::take): the histories are up to date and the vehicle
+  // data is read, what is left is what changes the state.
+  if (const gmsync::ReadyMsg *ready = gmsync::take(state.NetDelta, state.curr_part_sidecar, bs.GetData(),
+                                                   bs.GetNumberOfBitsUsed(),
+                                                   state.getConfig().skip_sync_without_unit())) {
+    for (uint32_t i = 0; i < ready->count; i++) {
+      const gmsync::ReadyUnit &u = ready->units[i];
+      if (!u.parsed)
+        continue;
+      unit::Unit *obj = state.getUnitObj(u.uid);
+      if (!obj)
+        continue; // ParseVehicleInfo does nothing without a unit
+      applyVehicleInfo(state, obj, u.info, ready->turrets + u.info.firstTurret);
+      if (!u.info.result)
+        LOGE("Failed to parse info for ground unit {} of uid {}", obj->unit_name, obj->uid);
+    }
+    bs.SetReadOffset(ready->endOffset);
+    return ready->result;
+  }
   // A message that was read ahead (gmsync::lookup): the vehicles are listed and their deltas unpacked, what
   // is left is the part that needs the parser state.
   if (const gmsync::PrescanMsg *pre = gmsync::lookup(state.curr_part_sidecar, bs.GetData(), bs.GetNumberOfBitsUsed())) {

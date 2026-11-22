@@ -1,9 +1,13 @@
 #pragma once
+#include <cstdint>
+#include <vector>
 
 struct ParserState;
 namespace gmsync {
   struct Unit;
-}
+  struct VehicleInfo;
+  struct TurretSet;
+} // namespace gmsync
 namespace net {
   struct DeltaComp;
 }
@@ -30,6 +34,17 @@ struct dataSync {
   /// as long as a record is whole and starts at least 97 bits before the end. What it leaves is for the
   /// reads of GMSync, one field at a time, which also deal with a stream that ends inside a record.
   static AmmoSkip skipAmmoRecords(const uint8_t *data, uint32_t bits_used, uint32_t offset, uint32_t max_records);
+
+  /// ParseVehicleInfo without a state, for the thread that reads ground syncs ahead (mpi/GMSyncPrescan.h):
+  /// reads the vehicle data `data` (`size_bytes`, followed by padding as a net::DeltaComp::DeltaView is) and
+  /// writes down what ParseVehicleInfo would do with it. The turrets it would set are appended to `turrets`.
+  /// Returns what ParseVehicleInfo would return for a vehicle that has a unit.
+  static bool decodeVehicleInfo(const uint8_t *data, uint32_t size_bytes, bool val1, uint8_t turret_count,
+                                gmsync::VehicleInfo &info, std::vector<gmsync::TurretSet> &turrets);
+  /// Does to `unit` (not nullptr) what ParseVehicleInfo would have done, from what decodeVehicleInfo wrote
+  /// down. `turrets` are the info.turretCount turrets of the vehicle.
+  static void applyVehicleInfo(ParserState &state, unit::Unit *unit, const gmsync::VehicleInfo &info,
+                               const gmsync::TurretSet *turrets);
 
 private:
   struct TankRef {
