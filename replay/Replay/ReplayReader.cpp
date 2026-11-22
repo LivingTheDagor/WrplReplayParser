@@ -7,6 +7,11 @@
 #include "zstd.h"
 #include "zstd_errors.h"
 #include <atomic>
+#if defined(__linux__)
+#include <sys/resource.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
 
 namespace replay {
   constexpr size_t MAX_REPLAY_COMPRESSION_RATIO = 64;
@@ -92,6 +97,16 @@ namespace replay {
 
   IReplayReader::IReplayReader(IReplay &owner) : owner(owner) {}
 
+
+  // The part decoded ahead has all the time the current part takes; the parser and the threads that read the
+  // syncs of the current part ahead of it (mpi/GMSyncPrescan.h) are waited for now. On Linux a thread has a
+  // nice value of its own: at 10 it leaves them the cores they need, and still gets a fair share when other
+  // processes keep the cores busy. Elsewhere it runs at the normal priority.
+  static void decode_ahead_priority() {
+#if defined(__linux__)
+    setpriority(PRIO_PROCESS, (id_t) syscall(SYS_gettid), 10);
+#endif
+  }
 
   static std::atomic<PartSidecarFactory> part_sidecar_factory{nullptr};
   void set_part_sidecar_factory(PartSidecarFactory factory) { part_sidecar_factory.store(factory); }
@@ -266,7 +281,10 @@ namespace replay {
       // thread while part 0 is decoded here, instead of one after the other.
       if (!this->next_reader.valid() && index + 1 < s_owner.replay_files.size()) {
         Replay *next = s_owner.replay_files[index + 1].get();
-        this->next_reader = std::async(std::launch::async, [next]() { return next->getReplayReader(); });
+        this->next_reader = std::async(std::launch::async, [next]() {
+          decode_ahead_priority();
+          return next->getReplayReader();
+        });
         this->next_reader_index = index + 1;
       }
       // get() rethrows what the decode threw
