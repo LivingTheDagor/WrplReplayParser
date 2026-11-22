@@ -21,7 +21,8 @@ struct InitOptions {
   std::vector<Languages> allowed_languages{};
   // glibc only, process wide: grow the malloc heap in 64 MB steps, keep blocks up to 32 MB on the heap and
   // keep freed memory, to avoid a page fault per 4 KB of history and allow huge pages. Costs up to 64 MB
-  // of address space, and freed memory stays with the process. false: leave malloc alone.
+  // of address space, and freed memory stays with the process. All threads share one arena.
+  // false: leave malloc alone.
   bool tune_malloc = true;
   // Process wide: read the ground-model syncs of each decoded part ahead of the parser, on a thread per
   // part (see mpi/GMSyncPrescan.h). Faster with ground vehicles or ships, uses a second core. Same results.

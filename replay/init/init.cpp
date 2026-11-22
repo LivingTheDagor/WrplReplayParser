@@ -66,6 +66,10 @@ void initialize(const InitOptions &options) {
     mallopt(M_TOP_PAD, 64 << 20);
     mallopt(M_MMAP_THRESHOLD, 32 << 20);
     mallopt(M_TRIM_THRESHOLD, 256 << 20);
+    // One malloc arena for all threads. The loading threads of init, the decode-ahead thread and the sync
+    // prescan threads would each get an arena of their own; with the trim threshold above, the memory one
+    // of them frees stays with that arena and is of no use to the others (about 100 MB per process).
+    mallopt(M_ARENA_MAX, 1);
   }
 #endif
   g_log_handler.initialize();
