@@ -1,6 +1,7 @@
 #pragma once
 #include "dag/dag_vector.h"
 #include "StateAllocator.h"
+#include "SegmentedHistory.h"
 struct ParserState;
 class StateRewinder;
 class IRewindState {};
@@ -77,10 +78,11 @@ public:
     bool operator==(const TimeState &other) const { return data == other.data; }
   };
 
-private:
-  // dag::Vector<TimeState, StateAllocator::DagAllocType> time_states;
+  /// the sample list; elements never move once pushed (segments, not one growing buffer)
+  using History = SegmentedHistory<TimeState>;
 
-  dag::Vector<TimeState> time_states;
+private:
+  History time_states;
   uint32_t curr_index{};
   TimeState *state = nullptr;
 #if LDAG_DBGLEVEL > 0

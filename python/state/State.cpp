@@ -33,19 +33,19 @@ void PyReplayState::include(py::module_ &m) {
     .def_readonly("time_ms", &ObjectRewindState<MissionArea *, false>::TimeState::time_ms)
     .def_readonly("value", &ObjectRewindState<MissionArea *, false>::TimeState::data);
 
-  bind_readonly_vector<dag::Vector<ObjectRewindState<MissionArea *, false>::TimeState>>(m, "MissionAreaTSList");
+  bind_readonly_vector<ObjectRewindState<MissionArea *, false>::History>(m, "MissionAreaTSList");
 
   py::class_<ObjectRewindState<MissionZone *, false>::TimeState>(m, "MissionZoneTS")
     .def_readonly("time_ms", &ObjectRewindState<MissionZone *, false>::TimeState::time_ms)
     .def_readonly("value", &ObjectRewindState<MissionZone *, false>::TimeState::data);
 
-  bind_readonly_vector<dag::Vector<ObjectRewindState<MissionZone *, false>::TimeState>>(m, "MissionZoneTSList");
+  bind_readonly_vector<ObjectRewindState<MissionZone *, false>::History>(m, "MissionZoneTSList");
 
   py::class_<ObjectRewindState<MissionZone *, false, true>::TimeState>(m, "MissionZone2TS")
     .def_readonly("time_ms", &ObjectRewindState<MissionZone *, false, true>::TimeState::time_ms)
     .def_readonly("value", &ObjectRewindState<MissionZone *, false, true>::TimeState::data);
 
-  bind_readonly_vector<dag::Vector<ObjectRewindState<MissionZone *, false, true>::TimeState>>(m, "MissionZone2TSList");
+  bind_readonly_vector<ObjectRewindState<MissionZone *, false, true>::History>(m, "MissionZone2TSList");
 
   bind_rewind_state<ObjectRewindState<MissionArea *, false>>(m, "MissionAreaHistory");
 

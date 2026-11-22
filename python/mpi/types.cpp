@@ -105,7 +105,7 @@ void PyMpiTypes::include(py::module_ &m) {
   .def_readonly("time_ms", &ObjectRewindState<danet::CameraData, false, false, false>::TimeState::time_ms)
   .def_readonly("value", &ObjectRewindState<danet::CameraData, false, false, false>::TimeState::data);
 
-  bind_readonly_vector<dag::Vector<ObjectRewindState<danet::CameraData, false, false, false>::TimeState>>(mpi, "CameraDataTSList");
+  bind_readonly_vector<ObjectRewindState<danet::CameraData, false, false, false>::History>(mpi, "CameraDataTSList");
 
 
   bind_rewind_state<ObjectRewindState<danet::CameraData, false, false, false>>(mpi, "CameraDataHistory")
@@ -115,17 +115,17 @@ void PyMpiTypes::include(py::module_ &m) {
       py::dict d;
       if (v.empty())
         return d;
-      const auto *b = v.data();
+      const auto *b = &v.front();
       const size_t n = v.size();
-      d["time_ms"] = channel_view(b, &b->time_ms, n, self_py);
-      d["cam_yaw"] = channel_view(b, &b->data.camera_euler.y, n, self_py);
-      d["cam_pitch"] = channel_view(b, &b->data.camera_euler.z, n, self_py);
-      d["cam_roll"] = channel_view(b, &b->data.camera_euler.x, n, self_py);
-      d["aim_yaw"] = channel_view(b, &b->data.gun_pointer.x, n, self_py);
-      d["aim_pitch"] = channel_view(b, &b->data.gun_pointer.y, n, self_py);
+      d["time_ms"] = channel_view(v, b, &b->time_ms, n, self_py);
+      d["cam_yaw"] = channel_view(v, b, &b->data.camera_euler.y, n, self_py);
+      d["cam_pitch"] = channel_view(v, b, &b->data.camera_euler.z, n, self_py);
+      d["cam_roll"] = channel_view(v, b, &b->data.camera_euler.x, n, self_py);
+      d["aim_yaw"] = channel_view(v, b, &b->data.gun_pointer.x, n, self_py);
+      d["aim_pitch"] = channel_view(v, b, &b->data.gun_pointer.y, n, self_py);
       return d;
     },
-         "All samples as read-only zero-copy numpy views over the history buffer.\n"
+         "All samples as read-only numpy arrays (copies of the history).\n"
          "Empty dict when the history is empty, otherwise every array has the same length.\n"
          "Keys: time_ms (uint32, ms); then float32 radians:\n"
          "cam_yaw, cam_pitch, cam_roll - where the camera looks;\n"

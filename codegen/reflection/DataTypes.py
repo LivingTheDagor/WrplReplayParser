@@ -639,7 +639,7 @@ extern PyCodegenObjects py_codegen_objects;
 
                 # write TimeState vector instance
                 io.write(
-                    f"  bind_readonly_vector<dag::Vector<{state_str}>>(gen, \"{full_substituted}_ts_vector\");\n\n")
+                    f"  bind_readonly_vector<danet::ReflectionVar<{full}>::History>(gen, \"{full_substituted}_ts_vector\");\n\n")
 
                 io.write(f"  bind_reflection_var<{full}>(gen, \"{full_substituted}_var\");\n")
 

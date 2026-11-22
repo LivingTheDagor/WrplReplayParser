@@ -1,6 +1,7 @@
 #pragma once
 #include "Module.h"
 #include "pybind11/numpy.h"
+#include <cstring>
 
 template<typename State>
 py::class_<State> bind_rewind_state(py::module_ &m, const char *name) {
@@ -29,10 +30,18 @@ py::class_<State> bind_rewind_state(py::module_ &m, const char *name) {
       "is not supported, wrap it in list() for that. Prefer channels() for bulk access.");
 }
 
-template<typename TS, typename Field>
-py::array channel_view(const TS *base, const Field *field, size_t count, const py::object &owner) {
-  (void) base;
-  py::array_t<Field> view({count}, {sizeof(TS)}, field, owner);
-  py::detail::array_proxy(view.ptr())->flags &= ~py::detail::npy_api::NPY_ARRAY_WRITEABLE_;
-  return view;
+/// One field of every sample as a read-only numpy array. The history is kept in segments, not in one
+/// buffer, so the values are copied (the history does not change once the replay is parsed).
+template<typename H, typename TS, typename Field>
+py::array channel_view(const H &hist, const TS *base, const Field *field, size_t count, const py::object &owner) {
+  (void) owner;
+  const size_t off = reinterpret_cast<const char *>(field) - reinterpret_cast<const char *>(base);
+  py::array_t<Field> out({static_cast<py::ssize_t>(count)});
+  Field *dst = out.mutable_data();
+  hist.forEachSegment([&](const TS *p, uint32_t n) {
+    for (uint32_t i = 0; i < n; i++)
+      std::memcpy(dst++, reinterpret_cast<const char *>(p + i) + off, sizeof(Field));
+  });
+  py::detail::array_proxy(out.ptr())->flags &= ~py::detail::npy_api::NPY_ARRAY_WRITEABLE_;
+  return out;
 }

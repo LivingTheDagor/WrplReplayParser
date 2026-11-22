@@ -385,7 +385,7 @@ template<typename T, bool do_compare, bool take_ownership, bool create_default>
 void ObjectRewindState<T, do_compare, take_ownership, create_default>::rewindForward(uint32_t expected_idx) {
   G_ASSERT(this->curr_index < this->time_states.size() - 1);
   this->curr_index++;
-  ++this->state;
+  this->state = &this->time_states[this->curr_index];
   G_ASSERT(this->curr_index == expected_idx);
   G_ASSERT(this->state == &this->time_states[this->curr_index]);
 }
@@ -393,7 +393,7 @@ template<typename T, bool do_compare, bool take_ownership, bool create_default>
 void ObjectRewindState<T, do_compare, take_ownership, create_default>::rewindBackward(uint32_t expected_idx) {
   G_ASSERT(this->curr_index > 0);
   this->curr_index--;
-  --this->state;
+  this->state = &this->time_states[this->curr_index];
   G_ASSERT(this->curr_index == expected_idx);
   G_ASSERT(this->state == &this->time_states[this->curr_index]);
 }
@@ -402,12 +402,12 @@ void ObjectRewindState<T, do_compare, take_ownership, create_default>::rewindBac
 template<typename T, bool do_compare, bool take_ownership, bool create_default>
 void ObjectRewindState<T, do_compare, take_ownership, create_default>::rewindForward() {
   this->curr_index++;
-  ++this->state;
+  this->state = &this->time_states[this->curr_index];
 }
 template<typename T, bool do_compare, bool take_ownership, bool create_default>
 void ObjectRewindState<T, do_compare, take_ownership, create_default>::rewindBackward() {
   this->curr_index--;
-  --this->state;
+  this->state = &this->time_states[this->curr_index];
 }
 #endif
 
@@ -418,10 +418,6 @@ T *ObjectRewindState<T, do_compare, take_ownership, create_default>::reserveOne(
   G_ASSERT(!hasReserved);
   hasReserved = true;
 #endif
-  // Long histories double: every growth copies the whole history, and a unit can have
-  // hundreds of thousands of samples.
-  if (this->time_states.size() == this->time_states.capacity() && this->time_states.size() >= 256)
-    this->time_states.reserve(this->time_states.size() * 2);
   auto back = &this->time_states.push_back();
   state = back;
   return &back->data;
