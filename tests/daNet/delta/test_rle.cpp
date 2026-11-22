@@ -40,6 +40,7 @@ TEST_CASE("compare new vs old rle0ki decompress", "[rle0ki]") {
       run_decompression(ret_bs, decomp_into, cb1);
       buff_eq(decomp_base.getSlice(), decomp_into.getSlice());
       run_decompression(ret_bs, decomp_into, cb2);
+      buff_eq(decomp_base.getSlice(), decomp_into.getSlice());
     }
   }
 }
