@@ -9,6 +9,10 @@
 #include "util/dag_hashedKeyMap.h"
 
 #include <unordered_set>
+#if defined(__SSE2__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
+#include <emmintrin.h>
+#define TRANSLATE_CSV_SSE2 1
+#endif
 namespace translate {
   class LargeStringTableAllocator : public StringTableAllocator {
   public:
@@ -127,6 +131,77 @@ namespace translate {
       return t;
     }
     constexpr std::array<bool, 256> CSV_SPECIAL = make_csv_special();
+
+    // The text of a csv is held with CSV_PAD zero bytes after its end (the '\0' that ends it and more), so
+    // that the scans below can read 16 bytes at a time up to the '\0' without leaving the buffer.
+    constexpr size_t CSV_PAD = 32;
+
+    /// the first byte at or after p that CSV_SPECIAL marks (there is one: the '\0' at the end)
+    inline const char *skip_plain(const char *p) {
+#if TRANSLATE_CSV_SSE2
+      const __m128i q = _mm_set1_epi8('"'), sc = _mm_set1_epi8(';'), cr = _mm_set1_epi8('\r'),
+                    lf = _mm_set1_epi8('\n'), bsl = _mm_set1_epi8('\\'), zero = _mm_setzero_si128();
+      for (;;) {
+        const __m128i v = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
+        const __m128i m = _mm_or_si128(
+          _mm_or_si128(_mm_or_si128(_mm_cmpeq_epi8(v, q), _mm_cmpeq_epi8(v, sc)),
+                       _mm_or_si128(_mm_cmpeq_epi8(v, cr), _mm_cmpeq_epi8(v, lf))),
+          _mm_or_si128(_mm_cmpeq_epi8(v, bsl), _mm_cmpeq_epi8(v, zero)));
+        const unsigned bits = (unsigned) _mm_movemask_epi8(m);
+        if (bits)
+          return p + __builtin_ctz(bits);
+        p += 16;
+      }
+#else
+      while (!CSV_SPECIAL[(unsigned char) *p])
+        ++p;
+      return p;
+#endif
+    }
+
+    /// the first i in [i, end) with b[i] one of '"', '\r', '\n', or end. Reads at most 15 bytes past end
+    /// (inside the padding).
+    inline int next_quote_or_eol(const char *b, int i, int end) {
+#if TRANSLATE_CSV_SSE2
+      const __m128i q = _mm_set1_epi8('"'), cr = _mm_set1_epi8('\r'), lf = _mm_set1_epi8('\n');
+      while (i < end) {
+        const __m128i v = _mm_loadu_si128(reinterpret_cast<const __m128i *>(b + i));
+        const __m128i m = _mm_or_si128(_mm_cmpeq_epi8(v, q), _mm_or_si128(_mm_cmpeq_epi8(v, cr), _mm_cmpeq_epi8(v, lf)));
+        const unsigned bits = (unsigned) _mm_movemask_epi8(m);
+        if (bits) {
+          const int at = i + __builtin_ctz(bits);
+          return at < end ? at : end;
+        }
+        i += 16;
+      }
+      return end;
+#else
+      while (i < end && b[i] != '"' && b[i] != '\r' && b[i] != '\n')
+        ++i;
+      return i < end ? i : end;
+#endif
+    }
+
+    /// the first i in [i, end) with b[i] == '"', or end. Reads at most 15 bytes past end.
+    inline int next_quote(const char *b, int i, int end) {
+#if TRANSLATE_CSV_SSE2
+      const __m128i q = _mm_set1_epi8('"');
+      while (i < end) {
+        const __m128i v = _mm_loadu_si128(reinterpret_cast<const __m128i *>(b + i));
+        const unsigned bits = (unsigned) _mm_movemask_epi8(_mm_cmpeq_epi8(v, q));
+        if (bits) {
+          const int at = i + __builtin_ctz(bits);
+          return at < end ? at : end;
+        }
+        i += 16;
+      }
+      return end;
+#else
+      while (i < end && b[i] != '"')
+        ++i;
+      return i;
+#endif
+    }
   } // namespace
 
   static inline int parseCsvString(const char *&p, char *out, bool key) {
@@ -145,8 +220,7 @@ namespace translate {
       // a run of plain characters: none of them can end the field or start an escape
       {
         const char *run = p;
-        while (!CSV_SPECIAL[(unsigned char) *p])
-          ++p;
+        p = skip_plain(p);
         if (p != run) {
           const size_t n = size_t(p - run);
           if (out) {
@@ -242,7 +316,7 @@ namespace translate {
     auto len = cb.fileHandle->length();
     if (len <= 0)
       return out;
-    std::vector<char> buffer((size_t) len + 2);
+    std::vector<char> buffer((size_t) len + 2 + CSV_PAD); // zero filled: see CSV_PAD
     if (cb.tryRead(buffer.data(), len) != len)
       return out;
     buffer[(size_t) len] = '\n';
@@ -334,18 +408,30 @@ namespace translate {
 
     {
       ZoneScopedN("parseCsvV2Full::count_rows");
+      // Bytes that are neither a quote nor a line break do nothing here: they are stepped over 16 at a time.
       for (int i = 0; i < len; ++i) {
+        i = next_quote_or_eol(buffer, i, len);
+        if (i >= len)
+          break;
         if (buffer[i] == quoteSymbol && i + 1 < len && buffer[i + 1] == quoteSymbol)
           i++;
         else if (buffer[i] == quoteSymbol && i + 1 < len && buffer[i + 1] != quoteSymbol)
-          while ((++i) + 1 < len)
-            if (buffer[i] == quoteSymbol) {
-              if (buffer[i + 1] == quoteSymbol) {
-                i++;
-                continue; // ignore double quote symbol
-              } else
-                break;
+          for (;;) {
+            if ((++i) + 1 >= len)
+              break;
+            // the next quote j with j + 1 < len; none: the scan ends at len - 1
+            const int j = next_quote(buffer, i, len - 1);
+            if (j >= len - 1) {
+              i = len - 1;
+              break;
             }
+            i = j;
+            if (buffer[i + 1] == quoteSymbol) {
+              i++;
+              continue; // ignore double quote symbol
+            }
+            break;
+          }
 
         if (buffer[i] == '\r' || buffer[i] == '\n') {
           if (buffer[i] == '\r' && i + 1 < len && buffer[i + 1] == '\n')
@@ -429,6 +515,8 @@ namespace translate {
 
       bool insideQuote = false;
       for (;;) {
+        // to the next quote or line break (or the end): nothing else changes anything here
+        ptr = buffer + next_quote_or_eol(buffer, int(ptr - buffer), len);
         G_ASSERTF(ptr < buffer + len, "Non-paired quotation marks in csv file {}", lastFileNameForDebug);
 
         if (ptr >= buffer + len)
@@ -465,14 +553,14 @@ namespace translate {
     auto len = cb.fileHandle->length();
     if (len == -1)
       return false;
-    auto buffer = (char *) tmpmem->alloc(len + 2);
+    auto buffer = (char *) tmpmem->alloc(len + 2 + CSV_PAD);
     if (cb.tryRead(buffer, len) != len) {
       tmpmem->free(buffer);
       return false;
     }
     ((char *) buffer)[len] = '\n';
     len++;
-    ((char *) buffer)[len] = '\0';
+    memset(buffer + len, 0, 1 + CSV_PAD); // the '\0' that ends the text, and the padding of CSV_PAD
 
     lastFileNameForDebug = filename;
     std::vector<int> lang_col;
