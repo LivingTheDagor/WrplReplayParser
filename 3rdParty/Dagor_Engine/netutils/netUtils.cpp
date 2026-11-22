@@ -175,9 +175,11 @@ namespace netutils {
   }
 
   void unpack_euler_16(std::array<int16_t, 3> packed, Point3 &res) {
-    float heading = netutils::UNPACKS<int16_t>(packed[0], PI);
-    float attitude = netutils::UNPACKS<int16_t>(packed[1], HALFPI);
-    float bank = netutils::UNPACKS<int16_t>(packed[2], PI);
+    // the same values as UNPACKS<int16_t>(.., PI) and (.., HALFPI), see FixedUnpackS
+    static const FixedUnpackS<int16_t> unpack_pi(PI), unpack_halfpi(HALFPI);
+    float heading = unpack_pi(packed[0]);
+    float attitude = unpack_halfpi(packed[1]);
+    float bank = unpack_pi(packed[2]);
 
     res.x = bank;
     res.y = heading;

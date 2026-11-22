@@ -10,6 +10,8 @@
 #include "utils.h"
 #include "vector"
 #include "dag_bitArray.h"
+#include <cstring>
+#include <limits>
 
 class Point3;
 class DataBlock;
@@ -154,6 +156,39 @@ namespace netutils {
   // format : 3 bits for axis signs (x, y, z), 11 bits for |v|, 9 for axis x, 9 for axis y
   unsigned int pack_velocity(const Point3 &vel, float max_vel);
   void unpack_velocity(unsigned int packed, Point3 &vel, float max_vel);
+
+  /// UNPACKS for a `_max` that is the same on every call: one multiplication instead of a division and a
+  /// multiplication (the division is the slow part, and a sync has ten or more of these).
+  /// s * (_max / maxs) is not the same computation as s / maxs * _max, so the factor is only used when it
+  /// gives the bits of UNPACKS for every value T can hold. That is checked when the object is made: all 2^16
+  /// values take about 0.1 ms. For a `_max` that fails the check the calls divide, like UNPACKS.
+  template<typename T>
+  class FixedUnpackS {
+  public:
+    explicit FixedUnpackS(float _max) : max(_max) {
+      const double k = double(_max) / get_maxs(T());
+      bool exact = true;
+      for (int s = std::numeric_limits<T>::min(); exact && s <= std::numeric_limits<T>::max(); ++s) {
+        const float fast = float(double(T(s)) * k);
+        const float slow = UNPACKS(T(s), _max);
+        exact = memcmp(&fast, &slow, sizeof(float)) == 0;
+      }
+      factor = exact ? k : 0.0;
+    }
+    float operator()(T s) const { return DAGOR_LIKELY(factor != 0.0) ? float(double(s) * factor) : UNPACKS(s, max); }
+    /// unpacks_dbg (the UNPACK_S16 / UNPACK_S8 macros) with this `_max`
+    float dbg(T s, const char *fn, const char *file, int l, const char *msg = "") const {
+      if (DAGOR_UNLIKELY(s == get_invalid_s(T()))) {
+        unpacks_dbg_failed(s, fn, file, l, msg);
+        return -max;
+      }
+      return (*this)(s);
+    }
+
+  private:
+    double factor;
+    float max;
+  };
 
 #define PACK_U16(s, _max)   netutils::packu<uint16_t>(s, _max, __FUNCTION__, __FILE__, __LINE__)
 #define PACK_U8(s, _max)    netutils::packu<uint8_t>(s, _max, __FUNCTION__, __FILE__, __LINE__)

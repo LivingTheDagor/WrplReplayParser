@@ -595,8 +595,10 @@ BITCURSOR_INLINE bool dataSync::ParseVehicleInfoImpl(ParserState &state, danet::
         float rot11, rot22;
         RET_FAIL(bs.Read(tv1));
         RET_FAIL(bs.Read(tv2));
-        turret_x = UNPACK_S16(tv1, PI);
-        turret_y = UNPACK_S16(tv2, PI);
+        // UNPACK_S16(.., PI) with one multiplication, see netutils::FixedUnpackS
+        static const netutils::FixedUnpackS<int16_t> unpack_s16_pi(PI);
+        turret_x = unpack_s16_pi.dbg(tv1, __FUNCTION__, __FILE__, __LINE__);
+        turret_y = unpack_s16_pi.dbg(tv2, __FUNCTION__, __FILE__, __LINE__);
         RET_FAIL(bs.Read(tv18));
         RET_FAIL(bs.Read(tv28));
         rot11 = UNPACK_S16(tv18, 180.0f);
@@ -606,7 +608,7 @@ BITCURSOR_INLINE bool dataSync::ParseVehicleInfoImpl(ParserState &state, danet::
         if (extra_stuff) {
           uint16_t extra_val;
           RET_FAIL(bs.Read(extra_val));
-          turret_z = UNPACK_S16(extra_val, PI);
+          turret_z = unpack_s16_pi.dbg(extra_val, __FUNCTION__, __FILE__, __LINE__);
           //;LOGI("extra_val: {}", extra_val);
         }
         // see Unit::loadWeaponData for how turret creation was disabled
