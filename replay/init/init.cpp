@@ -124,9 +124,10 @@ void initialize(const InitOptions &options) {
   }
   auto aces_future = load_vromfs_async(aces_v, true);
 
-  std::shared_future<void> mis_future;
+  // Nothing the parser reads lives in mis.vromfs.bin (missions, loading screens, videos, world war maps):
+  // mount it on the first lookup under one of its directories instead of holding its 16 MB from the start.
   if (options.mis)
-    mis_future = load_vromfs_async(mis_v, false);
+    file_mgr.deferVromfs(mis_v, {"gamedata/missions", "loadingbg", "video", "worldwar_bg"});
 
   auto game_future = load_vromfs_async(game_v, true);
   auto char_future = load_vromfs_async(char_v, true);
@@ -193,8 +194,6 @@ void initialize(const InitOptions &options) {
   if (blk_future.valid())
     blk_future.get();
 
-  if (mis_future.valid())
-    mis_future.get();
   if (grp_init.valid())
     grp_init.get();
   if (font_future.valid())

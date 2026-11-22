@@ -2,6 +2,8 @@
 #ifndef MYEXTENSION_FILESYSTEM_H
 #define MYEXTENSION_FILESYSTEM_H
 
+#include <mutex>
+#include <initializer_list>
 #include <unordered_map>
 #include <cassert>
 #include <variant>
@@ -487,7 +489,7 @@ struct FileManager {
 
   std::unique_ptr<File> loadRealFsFile(const fs::path &path);
 
-  std::unique_ptr<File> loadVromfsFile(const fs::path &path);
+  std::unique_ptr<File> loadVromfsFile(const fs::path &path, bool allow_deferred = true);
 
   std::unique_ptr<File> getFile(const fs::path &path, bool lower = false, bool prioritizeVromfs = true);
 
@@ -499,15 +501,26 @@ struct FileManager {
 
   inline void add_mount(const fs::path &path) { this->real_fs_mounts.push_back(path); }
 
+  /// Mount this archive only when a lookup after init for a path under one of dirs (the directories the
+  /// archive holds, e.g. "gamedata/missions") finds nothing in the archives already mounted and nothing on
+  /// disk. Once, thread safe. For archives that are rarely read: they then cost no memory until needed.
+  void deferVromfs(const std::string &vromfsPath, std::initializer_list<const char *> dirs);
+
 
   ~FileManager();
 
 protected:
-  SmartFSHandle getObject(const fs::path &path);
+  SmartFSHandle getObject(const fs::path &path, bool allow_deferred = true);
 
   std::vector<fs::path> real_fs_mounts;
   std::unordered_map<fs::path, Directory> mounted_vromfs{};
   std::vector<std::unique_ptr<VROMFs>> loaded_vromfs;
+  // see deferVromfs: set up before init ends, loaded by the first lookup that misses after it
+  std::vector<std::string> deferred_paths;
+  std::vector<std::string> deferred_prefixes;
+  std::vector<std::unique_ptr<VROMFs>> deferred_vromfs;
+  std::once_flag deferred_once;
+  SmartFSHandle findIn(const std::vector<std::unique_ptr<VROMFs>> &list, const fs::path &path);
   std::mutex init_mutex;
   bool in_init = false;
 

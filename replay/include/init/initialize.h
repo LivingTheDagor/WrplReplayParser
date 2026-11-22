@@ -16,6 +16,8 @@ struct InitOptions {
   std::string logfile_path;
   bool fonts = false;
   bool lang = true;
+  // mis.vromfs.bin (gamedata/missions, loadingbg, video, worldwar_bg): mounted on the first lookup of a path
+  // under one of those directories after init, not during init (see FileManager::deferVromfs)
   bool mis = true;
   // if any entries, then only these languages will be loaded. if empty, all languages will be loaded
   std::vector<Languages> allowed_languages{};
