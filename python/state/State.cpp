@@ -92,7 +92,10 @@ void PyReplayState::include(py::module_ &m) {
                    "allowed_languages is the list of allowed languages. if not set, then will load all languages")
     .def_readwrite("tune_malloc", &InitOptions::tune_malloc,
                    "glibc only, process wide: grow the malloc heap in large steps and keep freed memory, which avoids "
-                   "most page faults of a parse. default true; set false to leave malloc settings alone");
+                   "most page faults of a parse. default true; set false to leave malloc settings alone")
+    .def_readwrite("malloc_arena_max", &InitOptions::malloc_arena_max,
+                   "glibc only, process wide, applied with tune_malloc: most malloc arenas (M_ARENA_MAX). default 1 "
+                   "(lowest memory); set 2 when parsing several replays on threads of one process; 0 = glibc default");
 
   m.def("initialize", &initialize_wrapper, py::arg("options"),
         "Initialize the ReplayParser with the given InitOptions. game_path is required");
