@@ -192,9 +192,9 @@ namespace net::delta {
 
 
   namespace {
-    // One step of the rle0ki decoder per 4-bit code: what it appends (value, bit count) and the next
-    // state. State 0 is "normal", states 1..4 are "inside KI8" with super = state - 1. Values are
-    // at most 4 bits (two units, the first in the low bits); a zero run is value 0 with its length.
+    // Decoder step per 4-bit code: appended value, bit count, next state.
+    // State 0 is normal, states 1..4 are inside KI8 with super = state - 1.
+    // A value holds up to two units, the first in the low bits; a zero run is value 0.
     struct Rle0Step {
       uint8_t value;
       uint8_t bits;
@@ -227,8 +227,6 @@ namespace net::delta {
     constexpr std::array<Rle0Step, 5 * 16> RLE0_STEPS = make_rle0_steps();
   } // namespace
 
-  // Table-driven form of the decoder that was here before (same output and the same -1 cases):
-  // each 4-bit code is one table lookup instead of a switch with a lambda per unit.
   int rle0ki_decompress(std::span<uint8_t> dstSlice, std::span<uint8_t> srcSlice) {
     ZoneScoped;
     uint8_t *dst = dstSlice.data();
@@ -272,8 +270,7 @@ namespace net::delta {
       nbits += e.bits;
       if (DAGOR_UNLIKELY(nbits >= 64)) {
         flush8();
-        // what did not fit: the high units of a 2-unit value (nbits is even, so at most one unit),
-        // and zeros for the rest of a zero run
+        // the units that did not fit: the rest of a 2-unit value or of a zero run
         acc = before ? uint64_t(e.value) >> (64 - before) : 0;
         nbits -= 64;
         while (nbits >= 64) {

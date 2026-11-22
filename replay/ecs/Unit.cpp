@@ -246,8 +246,7 @@ namespace unit {
     // leaves the first level as the container itself: the Pantsir's TKB-1055 stayed
     // 170mm_tkb_1055_container, which has no name of its own and no turret.
     //
-    // The result only depends on the game files, and every spawn of a unit resolves the same
-    // weapons again (each try is a vromfs load and a blk parse), so keep it for the process.
+    // The result depends only on the game files, so cache it for the process.
     static std::mutex resolved_mtx;
     static std::unordered_map<std::string, std::string> resolved;
     {

@@ -39,8 +39,7 @@ namespace net {
     danet::BitStream apply_compressed_patch(const danet::BitStream &base_version,
                                             const danet::BitStream &compressed_delta, IMemAlloc *allocator) {
       ZoneScoped;
-      // the decoded delta only lives until diff_impl has read it: reuse one buffer per thread,
-      // so its 10x reserve is not allocated and zero filled for every patch
+      // the delta only lives until diff_impl reads it, so one buffer per thread is enough
       static thread_local danet::BitStream delta{};
       net::delta::decompress(compressed_delta, delta);
       danet::BitStream result = diff_impl(base_version, delta, allocator);
