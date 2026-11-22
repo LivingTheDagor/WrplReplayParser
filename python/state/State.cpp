@@ -89,7 +89,8 @@ void PyReplayState::include(py::module_ &m) {
     .def_readwrite("lang", &InitOptions::lang, "if true, will mount the lang.vromfs.bin. if false, will not load lang")
     .def_readwrite("mis", &InitOptions::mis, "if true, will mount the mis.vromfs.bin. if false, will not load mis")
     .def_readwrite("allowed_languages", &InitOptions::allowed_languages,
-                   "allowed_languages is the list of allowed languages. if not set, then will load all languages")
+                   "allowed_languages is the list of allowed languages, read at init. if not set, all languages are "
+                   "available: the default one is read at init, any other one on first use")
     .def_readwrite("tune_malloc", &InitOptions::tune_malloc,
                    "glibc only, process wide: grow the malloc heap in large steps and keep freed memory, which avoids "
                    "most page faults of a parse. default true; set false to leave malloc settings alone")

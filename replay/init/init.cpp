@@ -159,6 +159,7 @@ void initialize(const InitOptions &options) {
       // this list rather than a name, so the list is read in file order as well.
       translate::load_csv("lang/ui.csv");
       mpi::loadDeathReasons();
+      translate::finish_loading("lang.vromfs.bin");
     });
   }
   hello();

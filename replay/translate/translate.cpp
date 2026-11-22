@@ -1,5 +1,4 @@
 #include <array>
-#include "TupleArrayVector.h"
 #include "translate.h"
 #include "StringTableAllocator.h"
 #include "EASTL/bonus/tuple_vector.h"
@@ -8,7 +7,11 @@
 #include "util/dag_hash.h"
 #include "util/dag_hashedKeyMap.h"
 
+#include <atomic>
+#include <mutex>
 #include <unordered_set>
+#include "FileSystem.h"
+#include "VROMFs.h"
 #if defined(__SSE2__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
 #include <emmintrin.h>
 #define TRANSLATE_CSV_SSE2 1
@@ -29,11 +32,25 @@ namespace translate {
 
   private:
     // LENGTH-1 is to remove None
-    std::array<LargeStringTableAllocator, (size_t) Languages::LENGTH - 1> allocator{};
-    // tuple vector to hold allocator offsets for a specific language
-    // translate_index_t indexes this
-    TupleArrayVector<uint32_t, static_cast<size_t>(Languages::LENGTH) - 1, 0xFFFFFFFF> indexToOffs{500};
+    static constexpr size_t NLANG = (size_t) Languages::LENGTH - 1;
+    static constexpr uint32_t NO_VALUE = 0xFFFFFFFF;
+    std::array<LargeStringTableAllocator, NLANG> allocator{};
+    // per language: the allocator offset of the value of each key (translate_index_t), NO_VALUE = empty.
+    // Only the languages read at init have a column from the start; the others are read from the csv files
+    // again when they are first asked for (see loadColumn), so that 20 unused languages cost no memory.
+    std::array<std::vector<uint32_t>, NLANG> cols{};
+    std::array<std::atomic<bool>, NLANG> col_ready{}; // the column is there (or being read at init)
+    std::array<bool, NLANG> col_at_init{};            // the column is read by load_csv
+    bool init_langs_chosen = false;
+    std::atomic<bool> loading_done{false}; // all csv files of init are read
+    uint32_t nkeys = 0;
+    std::vector<std::string> files;   // the csv files read at init, in order
+    std::string source_archive;       // the archive they came from, read again for a column
+    std::mutex column_mutex;
     HashedKeyMap<hash_t, translate_index_t> hashToIndex;
+
+    void chooseInitLanguages();
+    bool loadColumn(size_t slot);
 
     LargeStringTableAllocator &get_allocator(Languages lang) {
       if (lang < Languages::English || lang >= Languages::LENGTH)
@@ -43,7 +60,14 @@ namespace translate {
 
     translate_index_t addKey(std::string_view key);
 
-    bool parseCsvV2Full(char *buffer, int len, dag::ConstSpan<int> lang_col, bool skip_first = true);
+    /// write: the language slots whose values are stored. visited == nullptr: keys are added (init);
+    /// otherwise the keys exist already and visited marks the ones a row has given values to (column pass)
+    bool parseCsvV2Full(char *buffer, int len, dag::ConstSpan<int> lang_col, const std::array<bool, NLANG> &write,
+                        std::vector<uint8_t> *visited, bool skip_first = true);
+
+    /// the text of a csv with the padding the parser needs (see CSV_PAD), from file_mgr or from archive
+    char *readCsv(std::string_view filename, int &len, const VROMFs *archive);
+    void langColumns(char *buffer, int len, std::string_view filename, std::vector<int> &lang_col);
 
     std::vector<char> temp_string_storage{};
 
@@ -60,18 +84,77 @@ namespace translate {
 
     void addAllowedLanguage(Languages lang) { allowed_languages.insert(lang); }
 
+    void finishLoading(std::string_view archive) {
+      source_archive = archive;
+      std::vector<char>().swap(temp_string_storage);
+      loading_done.store(true, std::memory_order_release);
+    }
+
     ~translate_table_t() = default;
   } TranslatorTable;
 
   Languages default_language = Languages::English;
+  std::string lastFileNameForDebug = "";
 
   const char *translate_table_t::get_value(translate_index_t index, Languages lang) {
-    if (lang < Languages::English || lang >= Languages::LENGTH || indexToOffs.size() <= index)
+    if (lang < Languages::English || lang >= Languages::LENGTH || nkeys <= index)
       return nullptr;
-    auto offs = indexToOffs.at(static_cast<size_t>(lang) - 1, index);
-    if (offs == 0xFFFFFFFF) // no value filled, this means the entry was empty
+    const size_t slot = static_cast<size_t>(lang) - 1;
+    if (!col_ready[slot].load(std::memory_order_acquire) && !loadColumn(slot))
+      return ""; // a language that is not allowed: no values, as when every column was read at init
+    auto offs = cols[slot][index];
+    if (offs == NO_VALUE) // no value filled, this means the entry was empty
       return "";
-    return allocator[(size_t) lang - 1].getDataRawUnsafe(offs);
+    return allocator[slot].getDataRawUnsafe(offs);
+  }
+
+  void translate_table_t::chooseInitLanguages() {
+    init_langs_chosen = true;
+    for (size_t i = 0; i < NLANG; i++) {
+      const auto lang = static_cast<Languages>(i + 1);
+      col_at_init[i] = allowed_languages.empty() ? lang == default_language : allowed_languages.contains(lang);
+      if (col_at_init[i])
+        col_ready[i].store(true, std::memory_order_release);
+    }
+  }
+
+  // The first request for a language that init did not read: read that column of every csv of init
+  // again, in the same order. Rows give values to the key they name only where that row added the key
+  // at init (its first row over all files), so the column holds exactly what reading it at init would
+  // have given, at the same offsets. Once per language, under a mutex; readers of a column that is
+  // there do not lock.
+  bool translate_table_t::loadColumn(size_t slot) {
+    std::lock_guard lock(column_mutex);
+    if (col_ready[slot].load(std::memory_order_acquire))
+      return true;
+    const auto lang = static_cast<Languages>(slot + 1);
+    if (!loading_done.load(std::memory_order_acquire) || files.empty() ||
+        (!allowed_languages.empty() && !allowed_languages.contains(lang)))
+      return false;
+    ZoneScopedN("translate::loadColumn");
+    std::unique_ptr<VROMFs> archive;
+    if (!source_archive.empty() && file_mgr.getFile(source_archive))
+      archive = std::make_unique<VROMFs>(source_archive);
+    cols[slot].assign(nkeys, NO_VALUE);
+    std::vector<uint8_t> visited(nkeys, 0);
+    std::array<bool, NLANG> write{};
+    write[slot] = true;
+    for (const auto &f: files) {
+      int len = 0;
+      char *buffer = readCsv(f, len, archive.get());
+      if (!buffer) {
+        LOGE("translate: {} for {} cannot be read again", f, fullLangList[slot + 1]);
+        continue;
+      }
+      lastFileNameForDebug = f;
+      std::vector<int> lang_col;
+      langColumns(buffer, len, f, lang_col);
+      parseCsvV2Full(buffer, len, lang_col, write, &visited);
+      tmpmem->free(buffer);
+    }
+    std::vector<char>().swap(temp_string_storage);
+    col_ready[slot].store(true, std::memory_order_release);
+    return true;
   }
 
   translate_index_t translate_table_t::get_key(std::string_view string) {
@@ -84,6 +167,8 @@ namespace translate {
   }
 
   void add_allowed_language(Languages lang) { TranslatorTable.addAllowedLanguage(lang); }
+
+  void finish_loading(std::string_view archive) { TranslatorTable.finishLoading(archive); }
 
   const char *localize(std::string_view value, Languages lang, ReturnPolicy return_policy) {
     // does key exist?
@@ -113,8 +198,6 @@ namespace translate {
     default_language = lang;
   }
 
-
-  std::string lastFileNameForDebug = "";
 
 
   void load_csv(std::string_view path) {
@@ -368,14 +451,18 @@ namespace translate {
       idx = hashToIndex.findOr(hash, INVALID_TRANSLATE_INDEX);
     if (idx != INVALID_TRANSLATE_INDEX)
       EXCEPTION("key {} already exists", key);
-    idx = indexToOffs.size();
+    idx = nkeys++;
     hashToIndex.emplace(hash, idx);
-    // not all indexes may be populated, so 0xFFFFFFFF represents 'default' value. if its seen then assume ""
-    indexToOffs.ensureOne();
+    // not all indexes may be populated, so NO_VALUE represents 'default' value. if its seen then assume ""
+    for (size_t i = 0; i < NLANG; i++)
+      if (col_at_init[i])
+        cols[i].push_back(NO_VALUE);
     return idx;
   }
 
-  bool translate_table_t::parseCsvV2Full(char *buffer, int len, dag::ConstSpan<int> lang_col, bool skip_first) {
+  bool translate_table_t::parseCsvV2Full(char *buffer, int len, dag::ConstSpan<int> lang_col,
+                                         const std::array<bool, NLANG> &write, std::vector<uint8_t> *visited,
+                                         bool skip_first) {
     ZoneScoped;
 
     int numRows = 0;
@@ -394,6 +481,10 @@ namespace translate {
     for (int i = 0; i < lang_col.size(); i++)
       if (lang_col[i] >= 0)
         bmap_col[lang_col[i]] = i;
+    // values are stored under the slot of their column (column n = language n + 1)
+    for (int c = 0; c <= max_col; c++)
+      if (c >= (int) NLANG || !write[c])
+        bmap_col[c] = -1;
 
     // Ignore first 3 bytes of UTF8 format
     if (len >= 3 && (unsigned char) buffer[0] == 0xEF && (unsigned char) buffer[1] == 0xBB &&
@@ -453,7 +544,10 @@ namespace translate {
     }
 
     const char *ptr = buffer;
-    this->indexToOffs.reserve(this->indexToOffs.size() + numRows);
+    if (!visited)
+      for (size_t c = 0; c < NLANG; c++)
+        if (col_at_init[c])
+          cols[c].reserve(nkeys + numRows);
     if (temp_string_storage.size() < size_t(len) + 16)
       temp_string_storage.resize(size_t(len) + 16);
     for (int i = 0; i < numRows; ++i) {
@@ -482,16 +576,24 @@ namespace translate {
         skip_key = true;
 
 
-      auto idx = get_key(key_buffer);
+      auto idx = skip_key ? INVALID_TRANSLATE_INDEX : get_key(key_buffer);
       // int idx = cb->getKey(key_buffer);
 
-      if (idx != INVALID_TRANSLATE_INDEX) {
-        skip_key = true;
-        LOGD3("Duplicate key in CSV: {}, row {}, file {}", key_buffer, i + 1, lastFileNameForDebug);
-      }
+      if (visited) {
+        // column pass: the row that added the key at init is its first row; all later ones were skipped
+        if (idx == INVALID_TRANSLATE_INDEX || (*visited)[idx])
+          skip_key = true;
+        else
+          (*visited)[idx] = 1;
+      } else {
+        if (idx != INVALID_TRANSLATE_INDEX) {
+          skip_key = true;
+          LOGD3("Duplicate key in CSV: {}, row {}, file {}", key_buffer, i + 1, lastFileNameForDebug);
+        }
 
-      if (!skip_key) {
-        idx = this->addKey(key_buffer);
+        if (!skip_key) {
+          idx = this->addKey(key_buffer);
+        }
       }
 
       for (int langColNo = 0; langColNo <= max_col; langColNo++) {
@@ -508,7 +610,7 @@ namespace translate {
             // lets only add an element when there is actual data
             auto &curr_allocator = this->get_allocator((Languages) (langColNo + 1));
             auto ref = curr_allocator.addDataRaw(text, l + 1);
-            this->indexToOffs.at((Languages) (langColNo), idx) = ref;
+            this->cols[langColNo][idx] = ref;
           }
         }
       }
@@ -544,26 +646,45 @@ namespace translate {
     return true;
   }
 
-  bool translate_table_t::loadCsvFull(std::string_view filename) {
-    ZoneScoped;
-    FullFileLoadCB cb{filename};
-    if (!cb.fileHandle)
-      return false;
-
-    auto len = cb.fileHandle->length();
+  char *translate_table_t::readCsv(std::string_view filename, int &out_len, const VROMFs *archive) {
+    std::unique_ptr<File> file;
+    if (archive) {
+      SmartFSHandle h;
+      for (const auto &p: fs::path(filename)) {
+        h = h ? h[p.string()] : archive->getDirectory()[p.string()];
+        if (!h)
+          break;
+      }
+      if (h && h->getFSObjectType() == isFile) {
+        auto f = h.asFile();
+        file = f->getFile(f);
+      }
+    }
+    FullFileLoadCB cb{};
+    File *fh = file.get();
+    if (!fh) {
+      cb.open(filename);
+      fh = cb.fileHandle;
+      if (!fh)
+        return nullptr;
+    }
+    LFileGeneralLoadCB rd{fh};
+    auto len = fh->length();
     if (len == -1)
-      return false;
+      return nullptr;
     auto buffer = (char *) tmpmem->alloc(len + 2 + CSV_PAD);
-    if (cb.tryRead(buffer, len) != len) {
+    if (rd.tryRead(buffer, len) != len) {
       tmpmem->free(buffer);
-      return false;
+      return nullptr;
     }
     ((char *) buffer)[len] = '\n';
     len++;
     memset(buffer + len, 0, 1 + CSV_PAD); // the '\0' that ends the text, and the padding of CSV_PAD
+    out_len = (int) len;
+    return buffer;
+  }
 
-    lastFileNameForDebug = filename;
-    std::vector<int> lang_col;
+  void translate_table_t::langColumns(char *buffer, int len, std::string_view filename, std::vector<int> &lang_col) {
     lang_col.resize(fullLangList.size() - 1);
     for (int i = 0; i < lang_col.size(); i++) {
       if (!allowed_languages.empty() && !allowed_languages.contains(static_cast<Languages>(i + 1))) {
@@ -573,8 +694,23 @@ namespace translate {
       lang_col[i] = getColForLang(buffer, len, fullLangList[i + 1]);
       G_ASSERT_LOG(lang_col[i] >= 0, "Language '{}' not found. in file {}", fullLangList[i + 1], filename);
     }
+  }
 
-    bool result = parseCsvV2Full(buffer, len, lang_col);
+  bool translate_table_t::loadCsvFull(std::string_view filename) {
+    ZoneScoped;
+    int len = 0;
+    char *buffer = readCsv(filename, len, nullptr);
+    if (!buffer)
+      return false;
+    if (!init_langs_chosen)
+      chooseInitLanguages();
+    files.emplace_back(filename);
+
+    lastFileNameForDebug = filename;
+    std::vector<int> lang_col;
+    langColumns(buffer, len, filename, lang_col);
+
+    bool result = parseCsvV2Full(buffer, len, lang_col, col_at_init, nullptr);
     tmpmem->free(buffer);
     return result;
   }

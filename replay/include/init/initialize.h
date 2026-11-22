@@ -19,7 +19,9 @@ struct InitOptions {
   // mis.vromfs.bin (gamedata/missions, loadingbg, video, worldwar_bg): mounted on the first lookup of a path
   // under one of those directories after init, not during init (see FileManager::deferVromfs)
   bool mis = true;
-  // if any entries, then only these languages will be loaded. if empty, all languages will be loaded
+  // if any entries, then only these languages will be loaded (at init). if empty, all languages are available:
+  // the default language (translate::set_default_language, English unless set before init) is read at init,
+  // any other one when it is first asked for (once, about 60 ms: lang.vromfs.bin is read again)
   std::vector<Languages> allowed_languages{};
   // glibc only, process wide: grow the malloc heap in 64 MB steps, keep blocks up to 32 MB on the heap and
   // keep freed memory, to avoid a page fault per 4 KB of history and allow huge pages. Costs up to 64 MB
