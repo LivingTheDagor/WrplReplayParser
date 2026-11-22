@@ -1,5 +1,6 @@
 add_executable(test_rle
         test_rle.cpp
+        test_rle0ki_diff.cpp
 )
 target_link_libraries(test_rle
         LOGGER::LOGGER
